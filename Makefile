@@ -1,19 +1,23 @@
 # Default database target
-DB ?= sqlite3
+DB ?= sqlite
+MIGRATION_DIR=internal/db/migrations
 
 # Database configurations
 ifeq ($(DB),postgres)
 	DRIVER := postgres
 	DSN := postgres://postgres:postgrespwd@127.0.0.1:5436/ezauthdb?sslmode=disable
-	DIR := migrations/postgres
+	DIR := $(MIGRATION_DIR)/postgres
+	BOBBIN := psql
 else ifeq ($(DB),mysql)
 	DRIVER := mysql
 	DSN := "ezauth:ezauthpwd@tcp(127.0.0.1:3366)/ezauthdb"
-	DIR := migrations/mysql
+	DIR := $(MIGRATION_DIR)/mysql
+	BOBBIN := mysql
 else
-	DRIVER := sqlite3
+	DRIVER := sqlite
 	DSN := "ezauth.db"
-	DIR := migrations/sqlite
+	DIR := $(MIGRATION_DIR)/sqlite
+	BOBBIN := sqlite
 endif
 
 # Commands
@@ -35,8 +39,14 @@ migration-create:
 	@read -p "Enter migration name: " name; \
 		goose -dir $(DIR) $(DRIVER) $(DSN) create $$name sql
 
-
-
 migrate:
 	go build -o bin/migrate cmd/migrate/main.go
 	./bin/migrate --dialect $(DB) --dsn $(DSN)
+
+bob-deps:
+	go install github.com/stephenafamo/bob/gen/bobgen-psql@latest
+	go install github.com/stephenafamo/bob/gen/bobgen-mysql@latest
+	go install github.com/stephenafamo/bob/gen/bobgen-sqlite@latest
+	
+bob-gen: bob-deps
+	DBDSN=$(DB) bobgen-${BOBBIN} -c bobgen.${DB}.yaml
