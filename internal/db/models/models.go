@@ -8,7 +8,11 @@ import (
 )
 
 // JSONMap is a helper type for JSONB/JSON columns
+<<<<<<< HEAD
 type JSONMap map[string]any
+=======
+type JSONMap map[string]interface{}
+>>>>>>> 6a80232 (migrations: add postgres and sqlite migrations (fix #2))
 
 // Value implements the driver.Valuer interface
 func (j JSONMap) Value() (driver.Value, error) {
@@ -19,7 +23,11 @@ func (j JSONMap) Value() (driver.Value, error) {
 }
 
 // Scan implements the sql.Scanner interface
+<<<<<<< HEAD
 func (j *JSONMap) Scan(value any) error {
+=======
+func (j *JSONMap) Scan(value interface{}) error {
+>>>>>>> 6a80232 (migrations: add postgres and sqlite migrations (fix #2))
 	if value == nil {
 		*j = make(JSONMap)
 		return nil
