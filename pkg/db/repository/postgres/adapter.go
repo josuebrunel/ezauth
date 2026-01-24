@@ -126,6 +126,14 @@ func (q *PSQLQueryAdapter) QueryTokenGetByToken(ctx context.Context, token strin
 	return psql.Select(sm.From(TableToken), sm.Where(psql.Quote("token").EQ(psql.Arg(token))))
 }
 
+func (q *PSQLQueryAdapter) QueryTokenRevoke(ctx context.Context, id string) bob.Query {
+	return psql.Update(
+		um.Table(TableToken),
+		um.SetCol(psql.Quote("revoked").String()).To(true),
+		um.Where(psql.Quote("id").EQ(psql.Arg(id))),
+	)
+}
+
 func (q *PSQLQueryAdapter) QueryTokenDelete(ctx context.Context, id string) bob.Query {
 	return psql.Delete(dm.From(TableToken), dm.Where(psql.Quote("id").EQ(psql.Arg(id))))
 }

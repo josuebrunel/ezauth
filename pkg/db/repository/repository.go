@@ -29,6 +29,7 @@ type IQueryAdapterToken interface {
 	QueryTokenInsert(ctx context.Context, token *models.Token) bob.Query
 	QueryTokenGetByID(ctx context.Context, id string) bob.Query
 	QueryTokenGetByToken(ctx context.Context, token string) bob.Query
+	QueryTokenRevoke(ctx context.Context, id string) bob.Query
 	QueryTokenDelete(ctx context.Context, id string) bob.Query
 }
 

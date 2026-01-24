@@ -107,6 +107,14 @@ func (q *SqliteQueryAdapter) QueryTokenGetByToken(ctx context.Context, token str
 	return sqlite.Select(sm.From(TableToken), sm.Where(sqlite.Quote("token").EQ(sqlite.Arg(token))))
 }
 
+func (q *SqliteQueryAdapter) QueryTokenRevoke(ctx context.Context, id string) bob.Query {
+	return sqlite.Update(
+		um.Table(TableToken),
+		um.SetCol(sqlite.Quote("revoked").String()).To(true),
+		um.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))),
+	)
+}
+
 func (q *SqliteQueryAdapter) QueryTokenDelete(ctx context.Context, id string) bob.Query {
 	return sqlite.Delete(dm.From(TableToken), dm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
 }
