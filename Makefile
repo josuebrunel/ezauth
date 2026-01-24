@@ -1,6 +1,6 @@
 # Default database target
 DB ?= sqlite
-MIGRATION_DIR=internal/db/migrations
+MIGRATION_DIR=pkg/db/migrations
 
 # Database configurations
 ifeq ($(DB),postgres)

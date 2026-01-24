@@ -3,7 +3,7 @@ package sqlite
 import (
 	"context"
 
-	"github.com/josuebrunel/ezauth/internal/db/models"
+	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/sqlite"
 	"github.com/stephenafamo/bob/dialect/sqlite/dialect"

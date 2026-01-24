@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"os"
 
-	"github.com/josuebrunel/ezauth/internal/db/models"
-	"github.com/josuebrunel/ezauth/internal/db/repository/postgres"
-	"github.com/josuebrunel/ezauth/internal/db/repository/sqlite"
+	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/ezauth/pkg/db/repository/postgres"
+	"github.com/josuebrunel/ezauth/pkg/db/repository/sqlite"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/scan"
 )

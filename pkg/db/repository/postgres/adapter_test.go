@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/josuebrunel/ezauth/internal/db/models"
+	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/stephenafamo/bob"
 )
 

@@ -51,6 +51,12 @@ type User struct {
 	UpdatedAt     time.Time `db:"updated_at" json:"updated_at"`
 }
 
+const (
+	TokenTypeAccess       = "access"
+	TokenTypeRefresh      = "refresh"
+	TokenTypePasswordless = "passwordless"
+)
+
 type Token struct {
 	ID        string    `db:"id" json:"id"`
 	UserID    string    `db:"user_id" json:"user_id"`
@@ -60,12 +66,4 @@ type Token struct {
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	Revoked   bool      `db:"revoked" json:"revoked"`
 	Metadata  JSONMap   `db:"metadata" json:"metadata"`
-}
-
-type PasswordlessToken struct {
-	ID        string    `db:"id" json:"id"`
-	Email     string    `db:"email" json:"email"`
-	Token     string    `db:"token" json:"token"`
-	ExpiresAt time.Time `db:"expires_at" json:"expires_at"`
-	CreatedAt time.Time `db:"created_at" json:"created_at"`
 }
