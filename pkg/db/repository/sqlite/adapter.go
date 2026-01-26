@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"context"
+	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/stephenafamo/bob"
@@ -13,18 +14,22 @@ import (
 	"github.com/stephenafamo/bob/dialect/sqlite/um"
 )
 
-// implement the SQLiteQueryAdapter
-const (
-	TableUser  = "users"
-	TableToken = "tokens"
-)
-
 type SqliteQueryAdapter struct {
 }
 
 func (q *SqliteQueryAdapter) QueryUserInsert(ctx context.Context, user *models.User) bob.Query {
 	return sqlite.Insert(
-		im.Into(TableUser),
+		im.Into(models.TableUser,
+			models.ColumnEmail,
+			models.ColumnPasswordHash,
+			models.ColumnProvider,
+			models.ColumnProviderID,
+			models.ColumnEmailVerified,
+			models.ColumnAppMetadata,
+			models.ColumnUserMetadata,
+			models.ColumnCreatedAt,
+			models.ColumnUpdatedAt,
+		),
 		im.Values(
 			sqlite.Arg(
 				user.Email,
@@ -38,53 +43,64 @@ func (q *SqliteQueryAdapter) QueryUserInsert(ctx context.Context, user *models.U
 				user.UpdatedAt,
 			),
 		),
+		im.Returning("*"),
 	)
 }
 
 func (q *SqliteQueryAdapter) QueryUserGetByEmail(ctx context.Context, email string) bob.Query {
-	return sqlite.Select(sm.From(TableUser), sm.Where(sqlite.Quote("email").EQ(sqlite.Arg(email))))
+	return sqlite.Select(sm.From(models.TableUser), sm.Where(sqlite.Quote(models.ColumnEmail).EQ(sqlite.Arg(email))))
 }
 
 func (q *SqliteQueryAdapter) QueryUserGetByID(ctx context.Context, id string) bob.Query {
-	return sqlite.Select(sm.From(TableUser), sm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
+	return sqlite.Select(sm.From(models.TableUser), sm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
 }
 
 func (q *SqliteQueryAdapter) QueryUserUpdate(ctx context.Context, user *models.User) bob.Query {
 	qm := []bob.Mod[*dialect.UpdateQuery]{
-		um.Table(TableUser),
+		um.Table(models.TableUser),
+		um.SetCol(models.ColumnUpdatedAt).ToArg(time.Now().UTC()),
 		um.Where(sqlite.Quote("id").EQ(sqlite.Arg(user.ID))),
+		um.Returning("*"),
 	}
 
 	if user.Provider != "" {
-		qm = append(qm, um.Set(sqlite.Quote("provider").EQ(sqlite.Arg(user.Provider))))
+		qm = append(qm, um.SetCol(models.ColumnProvider).ToArg(user.Provider))
+	}
+
+	if user.PasswordHash != "" {
+		qm = append(qm, um.SetCol(models.ColumnPasswordHash).ToArg(user.PasswordHash))
 	}
 
 	if user.ProviderID != nil {
-		qm = append(qm, um.Set(sqlite.Quote("provider_id").EQ(sqlite.Arg(user.ProviderID))))
+		qm = append(qm, um.SetCol(models.ColumnProviderID).ToArg(user.ProviderID))
 	}
 
 	if user.AppMetadata != nil {
-		qm = append(qm, um.Set(sqlite.Quote("app_metadata").EQ(sqlite.Arg(user.AppMetadata))))
+		qm = append(qm, um.SetCol(models.ColumnAppMetadata).ToArg(user.AppMetadata))
 	}
 
 	if user.UserMetadata != nil {
-		qm = append(qm, um.Set(sqlite.Quote("user_metadata").EQ(sqlite.Arg(user.UserMetadata))))
-	}
-
-	if user.UpdatedAt.IsZero() {
-		qm = append(qm, um.Set(sqlite.Quote("updated_at").EQ(sqlite.Arg(user.UpdatedAt))))
+		qm = append(qm, um.SetCol(models.ColumnUserMetadata).ToArg(user.UserMetadata))
 	}
 
 	return sqlite.Update(qm...)
 }
 
 func (q *SqliteQueryAdapter) QueryUserDelete(ctx context.Context, id string) bob.Query {
-	return sqlite.Delete(dm.From(TableUser), dm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
+	return sqlite.Delete(dm.From(models.TableUser), dm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
 }
 
 func (q *SqliteQueryAdapter) QueryTokenInsert(ctx context.Context, token *models.Token) bob.Query {
 	return sqlite.Insert(
-		im.Into(TableToken),
+		im.Into(models.TableToken,
+			models.ColumnUserID,
+			models.ColumnToken,
+			models.ColumnTokenType,
+			models.ColumnExpiresAt,
+			models.ColumnCreatedAt,
+			models.ColumnRevoked,
+			models.ColumnMetadata,
+		),
 		im.Values(
 			sqlite.Arg(
 				token.UserID,
@@ -96,25 +112,26 @@ func (q *SqliteQueryAdapter) QueryTokenInsert(ctx context.Context, token *models
 				token.Metadata,
 			),
 		),
+		im.Returning("*"),
 	)
 }
 
 func (q *SqliteQueryAdapter) QueryTokenGetByID(ctx context.Context, id string) bob.Query {
-	return sqlite.Select(sm.From(TableToken), sm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
+	return sqlite.Select(sm.From(models.TableToken), sm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
 }
 
 func (q *SqliteQueryAdapter) QueryTokenGetByToken(ctx context.Context, token string) bob.Query {
-	return sqlite.Select(sm.From(TableToken), sm.Where(sqlite.Quote("token").EQ(sqlite.Arg(token))))
+	return sqlite.Select(sm.From(models.TableToken), sm.Where(sqlite.Quote(models.ColumnToken).EQ(sqlite.Arg(token))))
 }
 
 func (q *SqliteQueryAdapter) QueryTokenRevoke(ctx context.Context, id string) bob.Query {
 	return sqlite.Update(
-		um.Table(TableToken),
-		um.SetCol(sqlite.Quote("revoked").String()).To(true),
+		um.Table(models.TableToken),
+		um.SetCol(models.ColumnRevoked).ToArg(true),
 		um.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))),
 	)
 }
 
 func (q *SqliteQueryAdapter) QueryTokenDelete(ctx context.Context, id string) bob.Query {
-	return sqlite.Delete(dm.From(TableToken), dm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
+	return sqlite.Delete(dm.From(models.TableToken), dm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
 }

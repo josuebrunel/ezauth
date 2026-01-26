@@ -43,10 +43,6 @@ migrate:
 	go build -o bin/migrate cmd/migrate/main.go
 	./bin/migrate --dialect $(DB) --dsn $(DSN)
 
-bob-deps:
-	go install github.com/stephenafamo/bob/gen/bobgen-psql@latest
-	go install github.com/stephenafamo/bob/gen/bobgen-mysql@latest
-	go install github.com/stephenafamo/bob/gen/bobgen-sqlite@latest
-	
-bob-gen: bob-deps
-	DBDSN=$(DB) bobgen-${BOBBIN} -c bobgen.${DB}.yaml
+test:
+	go test -failfast ./... -v -p=1 -count=1 -coverprofile .coverage.txt
+	go tool cover -func .coverage.txt

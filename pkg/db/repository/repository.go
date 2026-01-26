@@ -3,11 +3,12 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"os"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/josuebrunel/ezauth/pkg/db/repository/postgres"
 	"github.com/josuebrunel/ezauth/pkg/db/repository/sqlite"
+	"github.com/josuebrunel/ezauth/pkg/util"
+	"github.com/josuebrunel/gopkg/xlog"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/scan"
 )
@@ -38,41 +39,47 @@ type IQueryAdapter interface {
 	IQueryAdapterToken
 }
 
+type Opts struct {
+	Dialect string
+	DSN     string
+}
+
 type Repository struct {
-	db bob.DB
+	Opts Opts
+	bdb  bob.DB
+	db   *sql.DB
 	IQueryAdapter
 }
 
-func New(db *sql.DB) *Repository {
-	qAdapter := getDialectQuery()
+func New(opts Opts) *Repository {
+	qAdapter := getDialectQuery(opts.Dialect)
+	db := util.Must(getDBConnection(opts))
+	bdb := bob.NewDB(db)
 
 	return &Repository{
-		db:            bob.NewDB(db),
+		db:            db,
+		bdb:           bdb,
 		IQueryAdapter: qAdapter,
 	}
-
 }
 
-func getDialectQuery() IQueryAdapter {
-	dbDialect := os.Getenv("APP_DB_DIALECT")
-	switch dbDialect {
-	case "postgres":
-		return &postgres.PSQLQueryAdapter{}
-	case "sqlite":
-		return &sqlite.SqliteQueryAdapter{}
-	default:
-		return &postgres.PSQLQueryAdapter{}
-	}
+func (r Repository) DB() *sql.DB {
+	return r.db
+}
+
+func (r *Repository) Ping() error {
+	return r.bdb.Ping()
 }
 
 func (r *Repository) Close() error {
-	return r.db.Close()
+	return r.bdb.Close()
 }
 
 func (r Repository) UserCreate(ctx context.Context, user *models.User) (*models.User, error) {
 	query := r.QueryUserInsert(ctx, user)
-	user, err := bob.One(ctx, r.db, query, scan.StructMapper[*models.User]())
+	user, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
 	if err != nil {
+		xlog.Error("Failed to create user", "error", err)
 		return nil, err
 	}
 	return user, nil
@@ -80,8 +87,9 @@ func (r Repository) UserCreate(ctx context.Context, user *models.User) (*models.
 
 func (r Repository) UserGetByEmail(ctx context.Context, email string) (*models.User, error) {
 	query := r.QueryUserGetByEmail(ctx, email)
-	user, err := bob.One(ctx, r.db, query, scan.StructMapper[*models.User]())
+	user, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
 	if err != nil {
+		xlog.Error("Failed to get user by email", "error", err, "email", user.Email)
 		return nil, err
 	}
 	return user, nil
@@ -89,8 +97,9 @@ func (r Repository) UserGetByEmail(ctx context.Context, email string) (*models.U
 
 func (r Repository) UserGetByID(ctx context.Context, id string) (*models.User, error) {
 	query := r.QueryUserGetByID(ctx, id)
-	user, err := bob.One(ctx, r.db, query, scan.StructMapper[*models.User]())
+	user, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
 	if err != nil {
+		xlog.Error("Failed to get user by id", "error", err, "id", id)
 		return nil, err
 	}
 	return user, nil
@@ -98,8 +107,10 @@ func (r Repository) UserGetByID(ctx context.Context, id string) (*models.User, e
 
 func (r Repository) UserUpdate(ctx context.Context, user *models.User) (*models.User, error) {
 	query := r.QueryUserUpdate(ctx, user)
-	user, err := bob.One(ctx, r.db, query, scan.StructMapper[*models.User]())
+	dbg := bob.Debug(r.bdb)
+	user, err := bob.One(ctx, dbg, query, scan.StructMapper[*models.User]())
 	if err != nil {
+		xlog.Error("Failed to update user", "error", err, "email", util.Deref(user).Email)
 		return nil, err
 	}
 	return user, nil
@@ -107,23 +118,28 @@ func (r Repository) UserUpdate(ctx context.Context, user *models.User) (*models.
 
 func (r Repository) UserDelete(ctx context.Context, id string) error {
 	query := r.QueryUserDelete(ctx, id)
-	_, err := bob.Exec(ctx, r.db, query)
-	return err
+	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+		xlog.Error("Failed to delete user", "error", err, "id", id)
+		return err
+	}
+	return nil
 }
 
 func (r Repository) TokenCreate(ctx context.Context, token *models.Token) (*models.Token, error) {
 	query := r.QueryTokenInsert(ctx, token)
-	token, err := bob.One(ctx, r.db, query, scan.StructMapper[*models.Token]())
+	tk, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.Token]())
 	if err != nil {
+		xlog.Error("Failed to create token", "error", err, "token", token.Token)
 		return nil, err
 	}
-	return token, nil
+	return tk, nil
 }
 
 func (r Repository) TokenGetByID(ctx context.Context, id string) (*models.Token, error) {
 	query := r.QueryTokenGetByID(ctx, id)
-	token, err := bob.One(ctx, r.db, query, scan.StructMapper[*models.Token]())
+	token, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.Token]())
 	if err != nil {
+		xlog.Error("Failed to get token by id", "error", err, "id", id)
 		return nil, err
 	}
 	return token, nil
@@ -131,15 +147,64 @@ func (r Repository) TokenGetByID(ctx context.Context, id string) (*models.Token,
 
 func (r Repository) TokenGetByToken(ctx context.Context, tokenValue string) (*models.Token, error) {
 	query := r.QueryTokenGetByToken(ctx, tokenValue)
-	token, err := bob.One(ctx, r.db, query, scan.StructMapper[*models.Token]())
+	token, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.Token]())
 	if err != nil {
+		xlog.Error("Failed to get token by token", "error", err, "token", tokenValue)
 		return nil, err
 	}
 	return token, nil
 }
 
+func (r Repository) TokenRevoke(ctx context.Context, id string) error {
+	query := r.QueryTokenRevoke(ctx, id)
+	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+		xlog.Error("Failed to revoke token", "error", err, "id", id)
+		return err
+	}
+	return nil
+}
+
 func (r Repository) TokenDelete(ctx context.Context, id string) error {
 	query := r.QueryTokenDelete(ctx, id)
-	_, err := bob.Exec(ctx, r.db, query)
-	return err
+	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+		xlog.Error("Failed to delete token", "error", err, "id", id)
+		return err
+	}
+	return nil
+}
+
+func getDialectQuery(dbDialect string) IQueryAdapter {
+	switch dbDialect {
+	case "postgres":
+		return &postgres.PSQLQueryAdapter{}
+	case "sqlite", "sqlite3":
+		return &sqlite.SqliteQueryAdapter{}
+	default:
+		return &sqlite.SqliteQueryAdapter{}
+	}
+}
+
+func getDBConnection(opts Opts) (*sql.DB, error) {
+	var (
+		db  *sql.DB
+		err error
+	)
+
+	if opts.Dialect == DialectPSQL {
+		db, err = sql.Open(opts.Dialect, opts.DSN)
+	} else {
+		db, err = sql.Open(opts.Dialect, opts.DSN)
+	}
+
+	if err != nil {
+		xlog.Error("failed to open connection", "error", err, "dsn", opts.DSN)
+		return nil, err
+	}
+
+	if err := db.Ping(); err != nil {
+		xlog.Error("failed to ping database", "error", err)
+		return nil, err
+	}
+
+	return db, nil
 }

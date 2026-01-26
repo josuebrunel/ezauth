@@ -1,24 +1,22 @@
 package service
 
 import (
-	"errors"
-)
-
-var (
-	ErrUserNotFound = errors.New("user not found")
-	ErrInvalidToken = errors.New("invalid token")
+	"github.com/josuebrunel/ezauth/pkg/config"
+	"github.com/josuebrunel/ezauth/pkg/db/repository"
 )
 
 type Auth struct {
-	Config *Config
+	Cfg  *config.Config
+	Repo *repository.Repository
 }
 
-// New creates a new instance of EzAuth
-func New(config *Config) *Auth {
-	if config == nil {
-		config = &Config{}
-	}
+func New(cfg *config.Config) *Auth {
+	repo := repository.New(repository.Opts{
+		Dialect: cfg.DB.Dialect,
+		DSN:     cfg.DB.DSN,
+	})
 	return &Auth{
-		Config: config,
+		Cfg:  cfg,
+		Repo: repo,
 	}
 }

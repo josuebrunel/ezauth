@@ -33,11 +33,15 @@ func MigrateDown(dsn, dialect string) error {
 	return runMigration(dsn, dialect, goose.Down, "down")
 }
 
-func runMigration(dsn, dialect string, command migrationFunc, action string) error {
-	if dsn == "" {
-		return fmt.Errorf("dsn is required")
-	}
+func MigrateUpWithDBConn(db *sql.DB, dialect string) error {
+	return execGooseMigration(db, dialect, goose.Up, "up")
+}
 
+func MigrateDownWithDBConn(db *sql.DB, dialect string) error {
+	return execGooseMigration(db, dialect, goose.Down, "down")
+}
+
+func getMigrationSubDir(dialect string) (string, error) {
 	var migrationSubDir string
 	switch dialect {
 	case DialectPostgres:
@@ -48,12 +52,22 @@ func runMigration(dsn, dialect string, command migrationFunc, action string) err
 		dialect = DialectSqlite
 		migrationSubDir = "sqlite"
 	default:
-		return fmt.Errorf("unknown dialect: %s", dialect)
+		return "", fmt.Errorf("unknown dialect: %s", dialect)
 	}
+	return migrationSubDir, nil
+}
 
-	rootFS, err := fs.Sub(embedMigrations, migrationSubDir)
+func getRootFS(subDir string) (fs.FS, error) {
+	rootFS, err := fs.Sub(embedMigrations, subDir)
 	if err != nil {
-		return fmt.Errorf("failed to create migration subdir: %w", err)
+		return nil, fmt.Errorf("failed to create migration subdir: %w", err)
+	}
+	return rootFS, nil
+}
+
+func runMigration(dsn, dialect string, command migrationFunc, action string) error {
+	if dsn == "" {
+		return fmt.Errorf("dsn is required")
 	}
 
 	db, err := getDBConnection(dialect, dsn)
@@ -61,6 +75,21 @@ func runMigration(dsn, dialect string, command migrationFunc, action string) err
 		return err
 	}
 	defer db.Close()
+
+	return execGooseMigration(db, dialect, command, action)
+}
+
+func execGooseMigration(db *sql.DB, dialect string, command migrationFunc, action string) error {
+	migrationSubDir, err := getMigrationSubDir(dialect)
+	if err != nil {
+		xlog.Error("Failed to get migration dir")
+		return err
+	}
+
+	rootFS, err := getRootFS(migrationSubDir)
+	if err != nil {
+		return err
+	}
 
 	if err := goose.SetDialect(dialect); err != nil {
 		return fmt.Errorf("failed to set dialect: %w", err)
@@ -75,6 +104,7 @@ func runMigration(dsn, dialect string, command migrationFunc, action string) err
 
 	xlog.Info(fmt.Sprintf("migrations %s ran successfully", action))
 	return nil
+
 }
 
 func getDBConnection(dialect string, dsn string) (*sql.DB, error) {
