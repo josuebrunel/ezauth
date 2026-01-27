@@ -8,7 +8,7 @@ Simple and easy to use authentication library for Golang.
 
 - Email/Password Authentication (Register, Login)
 - JWT based sessions (Access & Refresh Tokens)
-- OAuth2 Support (Google, GitHub)
+- OAuth2 Support (Google, GitHub, Facebook)
 - SQLite and PostgreSQL support
 - Built-in Middleware for route protection
 
@@ -24,6 +24,25 @@ You can run `ezauth` as a separate service that handles authentication for your 
    export EZAUTH_DB_DIALECT="sqlite3"
    export EZAUTH_DB_DSN="auth.db"
    export EZAUTH_JWT_SECRET="super-secret-key"
+
+   # OAuth2 (Optional)
+   # Google
+   export EZAUTH_OAUTH2_GOOGLE_CLIENT_ID="your-google-client-id"
+   export EZAUTH_OAUTH2_GOOGLE_CLIENT_SECRET="your-google-client-secret"
+   export EZAUTH_OAUTH2_GOOGLE_REDIRECT_URL="http://localhost:8080/auth/oauth2/google/callback"
+   export EZAUTH_OAUTH2_GOOGLE_SCOPES="email,profile"
+
+   # GitHub
+   export EZAUTH_OAUTH2_GITHUB_CLIENT_ID="your-github-client-id"
+   export EZAUTH_OAUTH2_GITHUB_CLIENT_SECRET="your-github-client-secret"
+   export EZAUTH_OAUTH2_GITHUB_REDIRECT_URL="http://localhost:8080/auth/oauth2/github/callback"
+   export EZAUTH_OAUTH2_GITHUB_SCOPES="user:email"
+
+   # Facebook
+   export EZAUTH_OAUTH2_FACEBOOK_CLIENT_ID="your-facebook-client-id"
+   export EZAUTH_OAUTH2_FACEBOOK_CLIENT_SECRET="your-facebook-client-secret"
+   export EZAUTH_OAUTH2_FACEBOOK_REDIRECT_URL="http://localhost:8080/auth/oauth2/facebook/callback"
+   export EZAUTH_OAUTH2_FACEBOOK_SCOPES="email"
    ```
 
 2. **Build and Run**:
@@ -96,3 +115,5 @@ func main() {
 | GET    | `/auth/userinfo`      | Get current user info (Protected) |
 | POST   | `/auth/logout`        | Revoke refresh token (Protected)  |
 | DELETE | `/auth/user`          | Delete account (Protected)        |
+| GET    | `/auth/oauth2/{provider}/login`    | Login via OAuth2 provider      |
+| GET    | `/auth/oauth2/{provider}/callback` | OAuth2 provider callback       |
