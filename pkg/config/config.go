@@ -53,15 +53,13 @@ type Config struct {
 	TimeOut   time.Duration `json:"timeout" env:"TIMEOUT" default:"30s"`
 }
 
-var V Config
-
-func init() {
+func LoadConfig() (Config, error) {
 	var cfg Config
 
 	if err := xenv.LoadWithOptions(&cfg, xenv.Options{Prefix: "EZAUTH_"}); err != nil {
 		xlog.Error("failed to load config", "err", err)
-		panic(err)
+		return cfg, err
 	}
 
-	V = cfg
+	return cfg, nil
 }

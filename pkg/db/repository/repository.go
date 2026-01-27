@@ -52,16 +52,24 @@ type Repository struct {
 	IQueryAdapter
 }
 
-func New(opts Opts) *Repository {
-	qAdapter := getDialectQuery(opts.Dialect)
-	db := util.Must(getDBConnection(opts))
+func New(db *sql.DB, dialect string) *Repository {
+	qAdapter := getDialectQuery(dialect)
 	bdb := bob.NewDB(db)
 
 	return &Repository{
 		db:            db,
 		bdb:           bdb,
 		IQueryAdapter: qAdapter,
+		Opts:          Opts{Dialect: dialect},
 	}
+}
+
+func Open(opts Opts) (*Repository, error) {
+	db, err := getDBConnection(opts)
+	if err != nil {
+		return nil, err
+	}
+	return New(db, opts.Dialect), nil
 }
 
 func (r Repository) DB() *sql.DB {

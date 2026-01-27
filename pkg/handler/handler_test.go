@@ -27,7 +27,10 @@ func setupTestHandler(t *testing.T) *Handler {
 		JWTSecret: "test-secret",
 		Addr:      ":8080",
 	}
-	authSvc := service.New(cfg)
+	authSvc, err := service.NewFromConfig(cfg)
+	if err != nil {
+		t.Fatalf("failed to create auth service: %v", err)
+	}
 
 	// Run migrations
 	if err := migrations.MigrateUpWithDBConn(authSvc.Repo.DB(), "sqlite3"); err != nil {

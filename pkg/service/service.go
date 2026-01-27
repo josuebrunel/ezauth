@@ -10,13 +10,20 @@ type Auth struct {
 	Repo *repository.Repository
 }
 
-func New(cfg *config.Config) *Auth {
-	repo := repository.New(repository.Opts{
-		Dialect: cfg.DB.Dialect,
-		DSN:     cfg.DB.DSN,
-	})
+func New(cfg *config.Config, repo *repository.Repository) *Auth {
 	return &Auth{
 		Cfg:  cfg,
 		Repo: repo,
 	}
+}
+
+func NewFromConfig(cfg *config.Config) (*Auth, error) {
+	repo, err := repository.Open(repository.Opts{
+		Dialect: cfg.DB.Dialect,
+		DSN:     cfg.DB.DSN,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return New(cfg, repo), nil
 }

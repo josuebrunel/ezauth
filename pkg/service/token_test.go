@@ -23,7 +23,10 @@ func setupTestDB(t *testing.T) *Auth {
 		},
 		JWTSecret: "test-secret",
 	}
-	auth := New(cfg)
+	auth, err := NewFromConfig(cfg)
+	if err != nil {
+		t.Fatalf("failed to create auth service: %v", err)
+	}
 
 	// Run migrations to set up the schema
 	if err := migrations.MigrateUpWithDBConn(auth.Repo.DB(), "sqlite3"); err != nil {

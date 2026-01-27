@@ -59,7 +59,7 @@ You can run `ezauth` as a separate service that handles authentication for your 
 
 ### As a Library
 
-Embed `ezauth` directly into your existing Go application (e.g., using `chi`).
+Embed `ezauth` directly into your existing Go application.
 
 ```go
 package main
@@ -67,9 +67,8 @@ package main
 import (
     "net/http"
     "github.com/go-chi/chi/v5"
+    "github.com/josuebrunel/ezauth"
     "github.com/josuebrunel/ezauth/pkg/config"
-    "github.com/josuebrunel/ezauth/pkg/handler"
-    "github.com/josuebrunel/ezauth/pkg/service"
 )
 
 func main() {
@@ -82,23 +81,30 @@ func main() {
         JWTSecret: "your-secret",
     }
 
-    // 2. Initialize Service and Handler
-    authSvc := service.New(cfg)
-    // Pass empty string as path if you are mounting it with a prefix in your router
-    authHandler := handler.New(authSvc, "") 
+    // 2. Initialize EzAuth
+    // The second argument is the path prefix for the auth routes
+    auth, err := ezauth.New(cfg, "")
+    if err != nil {
+        panic(err)
+    }
+
+    // 3. Run migrations
+    if err := auth.Migrate(); err != nil {
+        panic(err)
+    }
 
     r := chi.NewRouter()
 
-    // 3. Mount Auth Routes
+    // 4. Mount Auth Routes
     // This exposes /auth/register, /auth/login, /auth/token/refresh, etc.
-    r.Mount("/auth", authHandler)
+    r.Mount("/auth", auth.Handler)
 
-    // 4. Protect your own routes
+    // 5. Protect your own routes
     r.Group(func(r chi.Router) {
-        r.Use(authHandler.AuthMiddleware)
+        r.Use(auth.AuthMiddleware)
 
         r.Get("/protected", func(w http.ResponseWriter, r *http.Request) {
-            userID, _ := handler.GetUserID(r.Context())
+            userID, _ := auth.GetUserID(r.Context())
             w.Write([]byte("Hello user: " + userID))
         })
     })
