@@ -47,9 +47,14 @@ func TestBasicAuthOperations(t *testing.T) {
 
 	t.Run("UserCreate", func(t *testing.T) {
 		req := &RequestBasicAuth{
-			Email:    email,
-			Password: password,
-			Data:     map[string]any{"role": "admin"},
+			Email:     email,
+			Password:  password,
+			FirstName: "John",
+			LastName:  "Doe",
+			Locale:    "en-US",
+			Timezone:  "UTC",
+			Roles:     "admin,user",
+			Data:      map[string]any{"role": "admin"},
 		}
 
 		user, err := auth.UserCreate(ctx, req)
@@ -61,6 +66,21 @@ func TestBasicAuthOperations(t *testing.T) {
 		}
 		if user.ID == "" {
 			t.Error("expected user ID to be set")
+		}
+		if user.FirstName != "John" {
+			t.Errorf("expected FirstName John, got %s", user.FirstName)
+		}
+		if user.LastName != "Doe" {
+			t.Errorf("expected LastName Doe, got %s", user.LastName)
+		}
+		if user.Locale != "en-US" {
+			t.Errorf("expected Locale en-US, got %s", user.Locale)
+		}
+		if user.Timezone != "UTC" {
+			t.Errorf("expected Timezone UTC, got %s", user.Timezone)
+		}
+		if user.Roles != "admin,user" {
+			t.Errorf("expected Roles admin,user, got %s", user.Roles)
 		}
 		createdUser = user
 	})
@@ -121,6 +141,12 @@ func TestBasicAuthOperations(t *testing.T) {
 
 	t.Run("UserUpdate", func(t *testing.T) {
 		createdUser.UserMetadata = map[string]any{"role": "superadmin"}
+		createdUser.FirstName = "Jane"
+		createdUser.LastName = "Smith"
+		createdUser.Locale = "fr-FR"
+		createdUser.Timezone = "Europe/Paris"
+		createdUser.Roles = "superadmin"
+
 		updatedUser, err := auth.UserUpdate(ctx, createdUser)
 		if err != nil {
 			t.Fatalf("UserUpdate failed: %v", err)
@@ -135,6 +161,21 @@ func TestBasicAuthOperations(t *testing.T) {
 		role := fetchedUser.UserMetadata["role"]
 		if role != "superadmin" {
 			t.Errorf("expected role 'superadmin', got %v", role)
+		}
+		if fetchedUser.FirstName != "Jane" {
+			t.Errorf("expected FirstName Jane, got %s", fetchedUser.FirstName)
+		}
+		if fetchedUser.LastName != "Smith" {
+			t.Errorf("expected LastName Smith, got %s", fetchedUser.LastName)
+		}
+		if fetchedUser.Locale != "fr-FR" {
+			t.Errorf("expected Locale fr-FR, got %s", fetchedUser.Locale)
+		}
+		if fetchedUser.Timezone != "Europe/Paris" {
+			t.Errorf("expected Timezone Europe/Paris, got %s", fetchedUser.Timezone)
+		}
+		if fetchedUser.Roles != "superadmin" {
+			t.Errorf("expected Roles superadmin, got %s", fetchedUser.Roles)
 		}
 		// Update reference
 		createdUser = updatedUser

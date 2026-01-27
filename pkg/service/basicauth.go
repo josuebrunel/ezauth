@@ -12,9 +12,14 @@ import (
 
 // RequestBasicAuth defines the parameters for basic authentication (email/password).
 type RequestBasicAuth struct {
-	Email    string         `json:"email"`
-	Password string         `json:"password"`
-	Data     map[string]any `json:"data"`
+	Email     string         `json:"email"`
+	Password  string         `json:"password"`
+	FirstName string         `json:"first_name"`
+	LastName  string         `json:"last_name"`
+	Locale    string         `json:"locale"`
+	Timezone  string         `json:"timezone"`
+	Roles     string         `json:"roles"`
+	Data      map[string]any `json:"data"`
 }
 
 // RequestPasswordReset defines the parameters for requesting a password reset.
@@ -38,6 +43,11 @@ func (a *Auth) UserCreate(ctx context.Context, req *RequestBasicAuth) (*models.U
 		Email:        req.Email,
 		PasswordHash: hash,
 		UserMetadata: req.Data,
+		FirstName:    req.FirstName,
+		LastName:     req.LastName,
+		Locale:       req.Locale,
+		Timezone:     req.Timezone,
+		Roles:        req.Roles,
 		Provider:     "local",
 	}
 	return a.Repo.UserCreate(ctx, user)

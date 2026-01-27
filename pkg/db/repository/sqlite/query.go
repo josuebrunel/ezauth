@@ -27,6 +27,13 @@ func (q *SqliteQuerier) QueryUserInsert(ctx context.Context, user *models.User) 
 			models.ColumnEmailVerified,
 			models.ColumnAppMetadata,
 			models.ColumnUserMetadata,
+			models.ColumnFirstName,
+			models.ColumnLastName,
+			models.ColumnLastActiveAt,
+			models.ColumnLocale,
+			models.ColumnTimezone,
+			models.ColumnEmailVerifiedAt,
+			models.ColumnRoles,
 			models.ColumnCreatedAt,
 			models.ColumnUpdatedAt,
 		),
@@ -38,6 +45,13 @@ func (q *SqliteQuerier) QueryUserInsert(ctx context.Context, user *models.User) 
 			sqlite.Arg(user.EmailVerified),
 			sqlite.Arg(user.AppMetadata),
 			sqlite.Arg(user.UserMetadata),
+			sqlite.Arg(user.FirstName),
+			sqlite.Arg(user.LastName),
+			sqlite.Arg(user.LastActiveAt),
+			sqlite.Arg(user.Locale),
+			sqlite.Arg(user.Timezone),
+			sqlite.Arg(user.EmailVerifiedAt),
+			sqlite.Arg(user.Roles),
 			sqlite.Arg(user.CreatedAt),
 			sqlite.Arg(user.UpdatedAt),
 		),
@@ -95,6 +109,34 @@ func (q *SqliteQuerier) QueryUserUpdate(ctx context.Context, user *models.User) 
 
 	if user.UserMetadata != nil {
 		qm = append(qm, um.SetCol(models.ColumnUserMetadata).ToArg(user.UserMetadata))
+	}
+
+	if user.FirstName != "" {
+		qm = append(qm, um.SetCol(models.ColumnFirstName).ToArg(user.FirstName))
+	}
+
+	if user.LastName != "" {
+		qm = append(qm, um.SetCol(models.ColumnLastName).ToArg(user.LastName))
+	}
+
+	if user.LastActiveAt != nil {
+		qm = append(qm, um.SetCol(models.ColumnLastActiveAt).ToArg(user.LastActiveAt))
+	}
+
+	if user.Locale != "" {
+		qm = append(qm, um.SetCol(models.ColumnLocale).ToArg(user.Locale))
+	}
+
+	if user.Timezone != "" {
+		qm = append(qm, um.SetCol(models.ColumnTimezone).ToArg(user.Timezone))
+	}
+
+	if user.EmailVerifiedAt != nil {
+		qm = append(qm, um.SetCol(models.ColumnEmailVerifiedAt).ToArg(user.EmailVerifiedAt))
+	}
+
+	if user.Roles != "" {
+		qm = append(qm, um.SetCol(models.ColumnRoles).ToArg(user.Roles))
 	}
 
 	return sqlite.Update(qm...)

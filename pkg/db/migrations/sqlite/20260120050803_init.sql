@@ -10,6 +10,13 @@ CREATE TABLE users (
     email_verified INTEGER DEFAULT 0,
     app_metadata TEXT DEFAULT '{}',
     user_metadata TEXT DEFAULT '{}',
+    first_name TEXT DEFAULT '',
+    last_name TEXT DEFAULT '',
+    last_active_at DATETIME,
+    locale TEXT DEFAULT '',
+    timezone TEXT DEFAULT '',
+    email_verified_at DATETIME,
+    roles TEXT DEFAULT '',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT unique_provider_user UNIQUE (provider, provider_id)
