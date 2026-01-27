@@ -71,17 +71,13 @@ func (a *Auth) TokenRefresh(ctx context.Context, refreshToken string) (*TokenRes
 		return nil, err
 	}
 
-	accessToken, exp, err := a.generateAccessToken(user)
-	if err != nil {
+	// Revoke old token
+	if err := a.Repo.TokenRevoke(ctx, token.ID); err != nil {
 		return nil, err
 	}
 
-	return &TokenResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		ExpiresIn:    int(time.Until(exp).Seconds()),
-		TokenType:    "Bearer",
-	}, nil
+	// Create new tokens
+	return a.TokenCreate(ctx, user)
 }
 
 func (a *Auth) TokenRevoke(ctx context.Context, refreshToken string) error {

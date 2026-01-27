@@ -1,9 +1,10 @@
 package models
 
 const (
-	TableUser           = "users"
-	TableToken          = "tokens"
-	ColumnEmail         = "email"
+	TableUser             = "users"
+	TableToken            = "tokens"
+	TablePasswordlessToken = "passwordless_tokens"
+	ColumnEmail           = "email"
 	ColumnPasswordHash  = "password_hash"
 	ColumnProvider      = "provider"
 	ColumnProviderID    = "provider_id"

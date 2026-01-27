@@ -89,7 +89,8 @@ func TestTokenOperations(t *testing.T) {
 	})
 
 	t.Run("TokenRefresh", func(t *testing.T) {
-		resp, err := auth.TokenRefresh(ctx, refreshToken)
+		oldRefreshToken := refreshToken
+		resp, err := auth.TokenRefresh(ctx, oldRefreshToken)
 		if err != nil {
 			t.Fatalf("TokenRefresh() unexpected error: %v", err)
 		}
@@ -97,9 +98,21 @@ func TestTokenOperations(t *testing.T) {
 		if resp.AccessToken == "" {
 			t.Error("expected new access token on refresh")
 		}
-		if resp.RefreshToken != refreshToken {
-			t.Errorf("expected same refresh token, got %s", resp.RefreshToken)
+		if resp.RefreshToken == oldRefreshToken {
+			t.Error("expected new refresh token (rotation), got the same one")
 		}
+
+		// Verify old token is revoked
+		storedOldToken, err := auth.Repo.TokenGetByToken(ctx, oldRefreshToken)
+		if err != nil {
+			t.Fatalf("failed to get old token: %v", err)
+		}
+		if !storedOldToken.Revoked {
+			t.Error("expected old refresh token to be revoked after refresh")
+		}
+
+		// Update refreshToken for subsequent tests
+		refreshToken = resp.RefreshToken
 	})
 
 	t.Run("TokenRevoke", func(t *testing.T) {
