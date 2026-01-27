@@ -8,7 +8,7 @@ import (
 )
 
 func GetDBConnection(dsn string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite", dsn)
+	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		xlog.Error("error connecting to the database", "error", err)
 		return nil, err

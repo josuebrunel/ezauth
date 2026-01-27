@@ -15,7 +15,7 @@ import (
 
 const (
 	DialectPSQL   = "postgres"
-	DialectSqlite = "sqlite"
+	DialectSqlite = "sqlite3"
 )
 
 type IQueryAdapterUser interface {
@@ -190,10 +190,13 @@ func getDBConnection(opts Opts) (*sql.DB, error) {
 		err error
 	)
 
-	if opts.Dialect == DialectPSQL {
-		db, err = sql.Open(opts.Dialect, opts.DSN)
-	} else {
-		db, err = sql.Open(opts.Dialect, opts.DSN)
+	switch opts.Dialect {
+	case DialectPSQL:
+		db, err = postgres.GetDBConnection(opts.DSN)
+		opts.Dialect = DialectPSQL
+	default:
+		db, err = sqlite.GetDBConnection(opts.DSN)
+		opts.Dialect = DialectSqlite
 	}
 
 	if err != nil {

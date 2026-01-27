@@ -8,7 +8,7 @@ import (
 )
 
 type Database struct {
-	Dialect string `json:"dialect" env:"DB_DIALECT" default:"sqlite"`
+	Dialect string `json:"dialect" env:"DB_DIALECT" default:"sqlite3"`
 	DSN     string `json:"dsn" env:"DB_DSN" default:"ezauth.db"`
 }
 
