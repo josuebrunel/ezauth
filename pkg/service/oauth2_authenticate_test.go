@@ -18,7 +18,7 @@ func setupOAuth2AuthTestDB(t *testing.T) *Auth {
 		},
 		JWTSecret: "test-secret",
 	}
-	auth, err := NewFromConfig(cfg)
+	auth, err := NewFromConfig(cfg, "auth")
 	if err != nil {
 		t.Fatalf("failed to create auth service: %v", err)
 	}

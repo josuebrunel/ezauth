@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
@@ -39,7 +40,18 @@ func (a *Auth) PasswordlessRequest(ctx context.Context, req RequestPasswordless)
 
 	// Send email
 	subject := "Magic Link Login"
-	body := fmt.Sprintf("Click the following link to login: %s/auth/passwordless/login?token=%s", a.Cfg.BaseURL, tokenValue)
+
+	prefix := a.PathPrefix
+	if prefix != "" {
+		if !strings.HasPrefix(prefix, "/") {
+			prefix = "/" + prefix
+		}
+		if strings.HasSuffix(prefix, "/") {
+			prefix = strings.TrimSuffix(prefix, "/")
+		}
+	}
+
+	body := fmt.Sprintf("Click the following link to login: %s%s/passwordless/login?token=%s", a.Cfg.BaseURL, prefix, tokenValue)
 	return a.Mailer.Send(req.Email, subject, body)
 }
 

@@ -27,7 +27,7 @@ func setupTestHandler(t *testing.T) *Handler {
 		JWTSecret: "test-secret",
 		Addr:      ":8080",
 	}
-	authSvc, err := service.NewFromConfig(cfg)
+	authSvc, err := service.NewFromConfig(cfg, "auth")
 	if err != nil {
 		t.Fatalf("failed to create auth service: %v", err)
 	}
