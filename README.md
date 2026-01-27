@@ -1,5 +1,7 @@
 # ezauth
 
+![CI](https://github.com/josuebrunel/ezauth/actions/workflows/ci.yml/badge.svg)
+
 Simple and easy to use authentication library for Golang.
 
 `ezauth` can be used as a standalone authentication service or embedded directly into your Go application as a library.
@@ -107,13 +109,13 @@ func main() {
 
 ## API Endpoints
 
-| Method | Endpoint              | Description                       |
-| ------ | --------------------- | --------------------------------- |
-| POST   | `/auth/register`      | Register a new user               |
-| POST   | `/auth/login`         | Login and receive tokens          |
-| POST   | `/auth/token/refresh` | Refresh access token              |
-| GET    | `/auth/userinfo`      | Get current user info (Protected) |
-| POST   | `/auth/logout`        | Revoke refresh token (Protected)  |
-| DELETE | `/auth/user`          | Delete account (Protected)        |
-| GET    | `/auth/oauth2/{provider}/login`    | Login via OAuth2 provider      |
-| GET    | `/auth/oauth2/{provider}/callback` | OAuth2 provider callback       |
+| Method | Endpoint                           | Description                       |
+| ------ | ---------------------------------- | --------------------------------- |
+| POST   | `/auth/register`                   | Register a new user               |
+| POST   | `/auth/login`                      | Login and receive tokens          |
+| POST   | `/auth/token/refresh`              | Refresh access token              |
+| GET    | `/auth/userinfo`                   | Get current user info (Protected) |
+| POST   | `/auth/logout`                     | Revoke refresh token (Protected)  |
+| DELETE | `/auth/user`                       | Delete account (Protected)        |
+| GET    | `/auth/oauth2/{provider}/login`    | Login via OAuth2 provider         |
+| GET    | `/auth/oauth2/{provider}/callback` | OAuth2 provider callback          |
