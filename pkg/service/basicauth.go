@@ -10,21 +10,25 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// RequestBasicAuth defines the parameters for basic authentication (email/password).
 type RequestBasicAuth struct {
 	Email    string         `json:"email"`
 	Password string         `json:"password"`
 	Data     map[string]any `json:"data"`
 }
 
+// RequestPasswordReset defines the parameters for requesting a password reset.
 type RequestPasswordReset struct {
 	Email string `json:"email"`
 }
 
+// RequestPasswordResetConfirm defines the parameters for confirming a password reset.
 type RequestPasswordResetConfirm struct {
 	Token    string `json:"token"`
 	Password string `json:"password"`
 }
 
+// UserCreate creates a new user with email and password.
 func (a *Auth) UserCreate(ctx context.Context, req *RequestBasicAuth) (*models.User, error) {
 	hash, err := a.UserHashPassword(req.Password)
 	if err != nil {
@@ -39,11 +43,13 @@ func (a *Auth) UserCreate(ctx context.Context, req *RequestBasicAuth) (*models.U
 	return a.Repo.UserCreate(ctx, user)
 }
 
+// UserHashPassword generates a bcrypt hash of the given password.
 func (a Auth) UserHashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 	return string(bytes), err
 }
 
+// UserAuthenticate authenticates a user with email and password.
 func (a Auth) UserAuthenticate(ctx context.Context, req RequestBasicAuth) (*models.User, error) {
 	user, err := a.Repo.UserGetByEmail(ctx, req.Email)
 	if err != nil {
@@ -56,6 +62,7 @@ func (a Auth) UserAuthenticate(ctx context.Context, req RequestBasicAuth) (*mode
 	return user, nil
 }
 
+// UserUpdatePassword updates the password for a user.
 func (a Auth) UserUpdatePassword(ctx context.Context, user *models.User, password string) (*models.User, error) {
 	hash, err := a.UserHashPassword(password)
 	if err != nil {
@@ -65,10 +72,12 @@ func (a Auth) UserUpdatePassword(ctx context.Context, user *models.User, passwor
 	return a.Repo.UserUpdate(ctx, user)
 }
 
+// UserUpdate updates the user information.
 func (a Auth) UserUpdate(ctx context.Context, user *models.User) (*models.User, error) {
 	return a.Repo.UserUpdate(ctx, user)
 }
 
+// PasswordResetRequest initiates the password reset flow.
 func (a *Auth) PasswordResetRequest(ctx context.Context, req RequestPasswordReset) error {
 	user, err := a.Repo.UserGetByEmail(ctx, req.Email)
 	if err != nil {
@@ -101,6 +110,7 @@ func (a *Auth) PasswordResetRequest(ctx context.Context, req RequestPasswordRese
 	return a.Mailer.Send(user.Email, subject, body)
 }
 
+// PasswordResetConfirm completes the password reset flow.
 func (a *Auth) PasswordResetConfirm(ctx context.Context, req RequestPasswordResetConfirm) error {
 	token, err := a.Repo.TokenGetByToken(ctx, req.Token)
 	if err != nil {

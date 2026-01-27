@@ -9,14 +9,17 @@ import (
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 )
 
+// RequestPasswordless defines the parameters for requesting a magic link.
 type RequestPasswordless struct {
 	Email string `json:"email"`
 }
 
+// RequestPasswordlessLogin defines the parameters for logging in with a magic link.
 type RequestPasswordlessLogin struct {
 	Token string `json:"token"`
 }
 
+// PasswordlessRequest initiates the passwordless (magic link) login flow.
 func (a *Auth) PasswordlessRequest(ctx context.Context, req RequestPasswordless) error {
 	tokenValue, err := a.generateRefreshToken()
 	if err != nil {
@@ -40,6 +43,7 @@ func (a *Auth) PasswordlessRequest(ctx context.Context, req RequestPasswordless)
 	return a.Mailer.Send(req.Email, subject, body)
 }
 
+// PasswordlessLogin completes the passwordless login flow.
 func (a *Auth) PasswordlessLogin(ctx context.Context, tokenValue string) (*TokenResponse, error) {
 	token, err := a.Repo.PasswordlessTokenGetByToken(ctx, tokenValue)
 	if err != nil {

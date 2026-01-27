@@ -1,3 +1,5 @@
+// Package ezauth provides a library and service for easy authentication in Go.
+// It supports Email/Password, JWT sessions, and OAuth2 (Google, GitHub, Facebook).
 package ezauth
 
 import (
@@ -12,6 +14,8 @@ import (
 	"github.com/josuebrunel/ezauth/pkg/service"
 )
 
+// EzAuth represents the main entry point for the ezauth library.
+// It encapsulates configuration, repository, service, and handler components.
 type EzAuth struct {
 	Config  *config.Config
 	Repo    *repository.Repository
@@ -19,7 +23,9 @@ type EzAuth struct {
 	Handler *handler.Handler
 }
 
-// New creates a new EzAuth instance from a config. It handles database connection.
+// New creates a new EzAuth instance from a config.
+// It handles database connection based on the provided configuration.
+// path is the base URL path where the authentication routes will be mounted (e.g., "auth").
 func New(cfg *config.Config, path string) (*EzAuth, error) {
 	repo, err := repository.Open(repository.Opts{
 		Dialect: cfg.DB.Dialect,
@@ -41,6 +47,7 @@ func New(cfg *config.Config, path string) (*EzAuth, error) {
 }
 
 // NewWithDB creates a new EzAuth instance using an existing database connection.
+// path is the base URL path where the authentication routes will be mounted (e.g., "auth").
 func NewWithDB(cfg *config.Config, db *sql.DB, path string) (*EzAuth, error) {
 	repo := repository.New(db, cfg.DB.Dialect)
 	svc := service.New(cfg, repo)

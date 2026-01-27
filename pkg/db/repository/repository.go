@@ -1,3 +1,4 @@
+// Package repository provides the data access layer for ezauth.
 package repository
 
 import (
@@ -47,11 +48,13 @@ type Querier interface {
 	PasswordlessQuerier
 }
 
+// Opts defines the options for opening a repository connection.
 type Opts struct {
 	Dialect string
 	DSN     string
 }
 
+// Repository handles all database operations.
 type Repository struct {
 	Opts Opts
 	bdb  bob.DB
@@ -59,6 +62,7 @@ type Repository struct {
 	Querier
 }
 
+// New creates a new Repository with the given database connection and dialect.
 func New(db *sql.DB, dialect string) *Repository {
 	querier := getDialectQuery(dialect)
 	bdb := bob.NewDB(db)
@@ -71,6 +75,7 @@ func New(db *sql.DB, dialect string) *Repository {
 	}
 }
 
+// Open opens a new database connection and returns a Repository.
 func Open(opts Opts) (*Repository, error) {
 	db, err := getDBConnection(opts)
 	if err != nil {
@@ -79,18 +84,22 @@ func Open(opts Opts) (*Repository, error) {
 	return New(db, opts.Dialect), nil
 }
 
+// DB returns the underlying sql.DB connection.
 func (r Repository) DB() *sql.DB {
 	return r.db
 }
 
+// Ping pings the database to check if the connection is alive.
 func (r *Repository) Ping() error {
 	return r.bdb.Ping()
 }
 
+// Close closes the database connection.
 func (r *Repository) Close() error {
 	return r.bdb.Close()
 }
 
+// UserCreate creates a new user in the database.
 func (r Repository) UserCreate(ctx context.Context, user *models.User) (*models.User, error) {
 	query := r.QueryUserInsert(ctx, user)
 	user, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
@@ -101,6 +110,7 @@ func (r Repository) UserCreate(ctx context.Context, user *models.User) (*models.
 	return user, nil
 }
 
+// UserGetByProvider retrieves a user by their OAuth2 provider and provider ID.
 func (r Repository) UserGetByProvider(ctx context.Context, provider, providerID string) (*models.User, error) {
 	query := r.QueryUserGetByProvider(ctx, provider, providerID)
 	user, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
@@ -111,6 +121,7 @@ func (r Repository) UserGetByProvider(ctx context.Context, provider, providerID 
 	return user, nil
 }
 
+// UserGetByEmail retrieves a user by their email address.
 func (r Repository) UserGetByEmail(ctx context.Context, email string) (*models.User, error) {
 	query := r.QueryUserGetByEmail(ctx, email)
 	user, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
@@ -121,6 +132,7 @@ func (r Repository) UserGetByEmail(ctx context.Context, email string) (*models.U
 	return user, nil
 }
 
+// UserGetByID retrieves a user by their ID.
 func (r Repository) UserGetByID(ctx context.Context, id string) (*models.User, error) {
 	query := r.QueryUserGetByID(ctx, id)
 	user, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
@@ -131,6 +143,7 @@ func (r Repository) UserGetByID(ctx context.Context, id string) (*models.User, e
 	return user, nil
 }
 
+// UserUpdate updates an existing user in the database.
 func (r Repository) UserUpdate(ctx context.Context, user *models.User) (*models.User, error) {
 	query := r.QueryUserUpdate(ctx, user)
 	user, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
@@ -141,6 +154,7 @@ func (r Repository) UserUpdate(ctx context.Context, user *models.User) (*models.
 	return user, nil
 }
 
+// UserDelete deletes a user from the database.
 func (r Repository) UserDelete(ctx context.Context, id string) error {
 	query := r.QueryUserDelete(ctx, id)
 	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
@@ -150,6 +164,7 @@ func (r Repository) UserDelete(ctx context.Context, id string) error {
 	return nil
 }
 
+// PasswordlessTokenCreate creates a new passwordless token in the database.
 func (r Repository) PasswordlessTokenCreate(ctx context.Context, token *models.PasswordlessToken) (*models.PasswordlessToken, error) {
 	query := r.QueryPasswordlessTokenInsert(ctx, token)
 	tk, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.PasswordlessToken]())
@@ -160,6 +175,7 @@ func (r Repository) PasswordlessTokenCreate(ctx context.Context, token *models.P
 	return tk, nil
 }
 
+// PasswordlessTokenGetByToken retrieves a passwordless token by its token value.
 func (r Repository) PasswordlessTokenGetByToken(ctx context.Context, tokenValue string) (*models.PasswordlessToken, error) {
 	query := r.QueryPasswordlessTokenGetByToken(ctx, tokenValue)
 	token, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.PasswordlessToken]())
@@ -170,6 +186,7 @@ func (r Repository) PasswordlessTokenGetByToken(ctx context.Context, tokenValue 
 	return token, nil
 }
 
+// PasswordlessTokenDelete deletes a passwordless token from the database.
 func (r Repository) PasswordlessTokenDelete(ctx context.Context, tokenValue string) error {
 	query := r.QueryPasswordlessTokenDelete(ctx, tokenValue)
 	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
@@ -179,6 +196,7 @@ func (r Repository) PasswordlessTokenDelete(ctx context.Context, tokenValue stri
 	return nil
 }
 
+// TokenCreate creates a new refresh token or password reset token in the database.
 func (r Repository) TokenCreate(ctx context.Context, token *models.Token) (*models.Token, error) {
 	query := r.QueryTokenInsert(ctx, token)
 	tk, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.Token]())
@@ -189,6 +207,7 @@ func (r Repository) TokenCreate(ctx context.Context, token *models.Token) (*mode
 	return tk, nil
 }
 
+// TokenGetByID retrieves a token by its ID.
 func (r Repository) TokenGetByID(ctx context.Context, id string) (*models.Token, error) {
 	query := r.QueryTokenGetByID(ctx, id)
 	token, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.Token]())
@@ -199,6 +218,7 @@ func (r Repository) TokenGetByID(ctx context.Context, id string) (*models.Token,
 	return token, nil
 }
 
+// TokenGetByToken retrieves a token by its token value.
 func (r Repository) TokenGetByToken(ctx context.Context, tokenValue string) (*models.Token, error) {
 	query := r.QueryTokenGetByToken(ctx, tokenValue)
 	token, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.Token]())
@@ -209,6 +229,7 @@ func (r Repository) TokenGetByToken(ctx context.Context, tokenValue string) (*mo
 	return token, nil
 }
 
+// TokenRevoke marks a token as revoked in the database.
 func (r Repository) TokenRevoke(ctx context.Context, id string) error {
 	query := r.QueryTokenRevoke(ctx, id)
 	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
@@ -218,6 +239,7 @@ func (r Repository) TokenRevoke(ctx context.Context, id string) error {
 	return nil
 }
 
+// TokenDelete deletes a token from the database.
 func (r Repository) TokenDelete(ctx context.Context, id string) error {
 	query := r.QueryTokenDelete(ctx, id)
 	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {

@@ -11,6 +11,7 @@ import (
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 )
 
+// TokenResponse defines the structure of the token response.
 type TokenResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
@@ -18,6 +19,7 @@ type TokenResponse struct {
 	TokenType    string `json:"token_type"`
 }
 
+// TokenCreate creates a new pair of access and refresh tokens for the given user.
 func (a *Auth) TokenCreate(ctx context.Context, user *models.User) (*TokenResponse, error) {
 	accessToken, exp, err := a.generateAccessToken(user)
 	if err != nil {
@@ -52,6 +54,7 @@ func (a *Auth) TokenCreate(ctx context.Context, user *models.User) (*TokenRespon
 	}, nil
 }
 
+// TokenRefresh refreshes the access and refresh tokens using a valid refresh token.
 func (a *Auth) TokenRefresh(ctx context.Context, refreshToken string) (*TokenResponse, error) {
 	token, err := a.Repo.TokenGetByToken(ctx, refreshToken)
 	if err != nil {
@@ -80,6 +83,7 @@ func (a *Auth) TokenRefresh(ctx context.Context, refreshToken string) (*TokenRes
 	return a.TokenCreate(ctx, user)
 }
 
+// TokenRevoke revokes the given refresh token.
 func (a *Auth) TokenRevoke(ctx context.Context, refreshToken string) error {
 	token, err := a.Repo.TokenGetByToken(ctx, refreshToken)
 	if err != nil {
