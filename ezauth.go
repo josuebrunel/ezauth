@@ -35,7 +35,7 @@ func New(cfg *config.Config, path string) (*EzAuth, error) {
 		return nil, err
 	}
 
-	svc := service.New(cfg, repo)
+	svc := service.New(cfg, repo, path)
 	h := handler.New(svc, path)
 
 	return &EzAuth{
@@ -50,7 +50,7 @@ func New(cfg *config.Config, path string) (*EzAuth, error) {
 // path is the base URL path where the authentication routes will be mounted (e.g., "auth").
 func NewWithDB(cfg *config.Config, db *sql.DB, path string) (*EzAuth, error) {
 	repo := repository.New(db, cfg.DB.Dialect)
-	svc := service.New(cfg, repo)
+	svc := service.New(cfg, repo, path)
 	h := handler.New(svc, path)
 
 	return &EzAuth{

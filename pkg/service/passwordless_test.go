@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 	"testing"
 )
 
@@ -25,6 +26,12 @@ func TestPasswordless(t *testing.T) {
 	sentBody := mockMailer.SentEmails[0]["body"]
 	// body := fmt.Sprintf("Click the following link to login: http://%s/auth/passwordless/login?token=%s", a.Cfg.Addr, tokenValue)
 	tokenValue := sentBody[len(sentBody)-64:]
+
+	// Verify the path prefix is present in the link
+	expectedPath := "/auth/passwordless/login"
+	if !strings.Contains(sentBody, expectedPath) {
+		t.Errorf("expected email body to contain path '%s', got '%s'", expectedPath, sentBody)
+	}
 
 	// 2. Login with magic link
 	resp, err := auth.PasswordlessLogin(ctx, tokenValue)

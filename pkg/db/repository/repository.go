@@ -8,7 +8,6 @@ import (
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/josuebrunel/ezauth/pkg/db/repository/postgres"
 	"github.com/josuebrunel/ezauth/pkg/db/repository/sqlite"
-	"github.com/josuebrunel/ezauth/pkg/util"
 	"github.com/josuebrunel/gopkg/xlog"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/scan"
@@ -102,12 +101,12 @@ func (r *Repository) Close() error {
 // UserCreate creates a new user in the database.
 func (r Repository) UserCreate(ctx context.Context, user *models.User) (*models.User, error) {
 	query := r.QueryUserInsert(ctx, user)
-	user, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
+	createdUser, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
 	if err != nil {
-		xlog.Error("Failed to create user", "error", err)
+		xlog.Error("Failed to create user", "error", err, "email", user.Email)
 		return nil, err
 	}
-	return user, nil
+	return createdUser, nil
 }
 
 // UserGetByProvider retrieves a user by their OAuth2 provider and provider ID.
@@ -146,12 +145,12 @@ func (r Repository) UserGetByID(ctx context.Context, id string) (*models.User, e
 // UserUpdate updates an existing user in the database.
 func (r Repository) UserUpdate(ctx context.Context, user *models.User) (*models.User, error) {
 	query := r.QueryUserUpdate(ctx, user)
-	user, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
+	updatedUser, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
 	if err != nil {
-		xlog.Error("Failed to update user", "error", err, "email", util.Deref(user).Email)
+		xlog.Error("Failed to update user", "error", err, "email", user.Email)
 		return nil, err
 	}
-	return user, nil
+	return updatedUser, nil
 }
 
 // UserDelete deletes a user from the database.
@@ -167,12 +166,12 @@ func (r Repository) UserDelete(ctx context.Context, id string) error {
 // PasswordlessTokenCreate creates a new passwordless token in the database.
 func (r Repository) PasswordlessTokenCreate(ctx context.Context, token *models.PasswordlessToken) (*models.PasswordlessToken, error) {
 	query := r.QueryPasswordlessTokenInsert(ctx, token)
-	tk, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.PasswordlessToken]())
+	createdToken, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.PasswordlessToken]())
 	if err != nil {
 		xlog.Error("Failed to create passwordless token", "error", err, "email", token.Email)
 		return nil, err
 	}
-	return tk, nil
+	return createdToken, nil
 }
 
 // PasswordlessTokenGetByToken retrieves a passwordless token by its token value.
@@ -199,12 +198,12 @@ func (r Repository) PasswordlessTokenDelete(ctx context.Context, tokenValue stri
 // TokenCreate creates a new refresh token or password reset token in the database.
 func (r Repository) TokenCreate(ctx context.Context, token *models.Token) (*models.Token, error) {
 	query := r.QueryTokenInsert(ctx, token)
-	tk, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.Token]())
+	createdToken, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.Token]())
 	if err != nil {
 		xlog.Error("Failed to create token", "error", err, "token", token.Token)
 		return nil, err
 	}
-	return tk, nil
+	return createdToken, nil
 }
 
 // TokenGetByID retrieves a token by its ID.

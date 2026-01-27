@@ -64,8 +64,7 @@ type Config struct {
 	BaseURL   string        `json:"base_url" env:"BASE_URL" default:"http://localhost:8080"`
 	Debug     bool          `json:"debug" env:"DEBUG" default:"false"`
 	DB        Database      `json:"db"`
-	Secret    string        `json:"secret" env:"SECRET"`
-	JWTSecret string        `json:"jwt_secret" env:"JWT_SECRET"`
+	JWTSecret string        `json:"jwt_secret" env:"JWT_SECRET" required:"true"`
 	OAuth2    OAuth2        `json:"oauth2"`
 	SMTP      SMTP          `json:"smtp"`
 	TimeOut   time.Duration `json:"timeout" env:"TIMEOUT" default:"30s"`
