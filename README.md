@@ -9,8 +9,9 @@ Simple and easy to use authentication library for Golang.
 ## Features
 
 - Email/Password Authentication (Register, Login)
-- JWT based sessions (Access & Refresh Tokens)
+- JWT based sessions (Access & Refresh Tokens, Refresh Token Rotation)
 - OAuth2 Support (Google, GitHub, Facebook)
+- Password Reset and Passwordless (Magic Link) authentication
 - SQLite and PostgreSQL support
 - Built-in Middleware for route protection
 
@@ -23,11 +24,21 @@ You can run `ezauth` as a separate service that handles authentication for your 
 1. **Configuration**: Set environment variables.
    ```bash
    export EZAUTH_ADDR=":8080"
+   export EZAUTH_BASE_URL="http://localhost:8080"
    export EZAUTH_DB_DIALECT="sqlite3"
    export EZAUTH_DB_DSN="auth.db"
    export EZAUTH_JWT_SECRET="super-secret-key"
 
+   # SMTP (Optional - for Email features)
+   export EZAUTH_SMTP_HOST="smtp.example.com"
+   export EZAUTH_SMTP_PORT="587"
+   export EZAUTH_SMTP_USER="user@example.com"
+   export EZAUTH_SMTP_PASSWORD="password"
+   export EZAUTH_SMTP_FROM="noreply@example.com"
+
    # OAuth2 (Optional)
+   export EZAUTH_OAUTH2_CALLBACK_URL="http://localhost:3000/callback"
+
    # Google
    export EZAUTH_OAUTH2_GOOGLE_CLIENT_ID="your-google-client-id"
    export EZAUTH_OAUTH2_GOOGLE_CLIENT_SECRET="your-google-client-secret"
@@ -73,17 +84,15 @@ import (
 
 func main() {
     // 1. Setup Config
-    cfg := &config.Config{
-        DB: config.Database{
-            Dialect: "sqlite3",
-            DSN:     "file:auth.db?cache=shared&mode=rwc",
-        },
-        JWTSecret: "your-secret",
+    cfg, err := config.LoadConfig()
+    if err != nil {
+        panic(err)
     }
 
     // 2. Initialize EzAuth
-    // The second argument is the path prefix for the auth routes
-    auth, err := ezauth.New(cfg, "")
+    // The second argument is the path prefix for the auth routes.
+    // You can also use ezauth.NewWithDB(&cfg, db, "auth") if you have an existing *sql.DB connection.
+    auth, err := ezauth.New(&cfg, "auth")
     if err != nil {
         panic(err)
     }
@@ -120,6 +129,10 @@ func main() {
 | POST   | `/auth/register`                   | Register a new user               |
 | POST   | `/auth/login`                      | Login and receive tokens          |
 | POST   | `/auth/token/refresh`              | Refresh access token              |
+| POST   | `/auth/password-reset/request`     | Request password reset link       |
+| POST   | `/auth/password-reset/confirm`     | Confirm password reset            |
+| POST   | `/auth/passwordless/request`       | Request magic link                |
+| GET    | `/auth/passwordless/login`         | Login via magic link              |
 | GET    | `/auth/userinfo`                   | Get current user info (Protected) |
 | POST   | `/auth/logout`                     | Revoke refresh token (Protected)  |
 | DELETE | `/auth/user`                       | Delete account (Protected)        |
