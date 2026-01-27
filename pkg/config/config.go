@@ -37,9 +37,10 @@ type OAuth2Facebook struct {
 }
 
 type OAuth2 struct {
-	Google   OAuth2Google
-	Github   OAuth2Github
-	Facebook OAuth2Facebook
+	CallbackURL string `json:"callback_url" env:"OAUTH2_CALLBACK_URL"`
+	Google      OAuth2Google
+	Github      OAuth2Github
+	Facebook    OAuth2Facebook
 }
 
 type Config struct {
