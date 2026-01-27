@@ -1,3 +1,7 @@
+NAME=ezauthapi
+SRC=cmd/ezauthapi/main.go
+BIN=./bin/${NAME}
+
 # Default database target
 DB ?= sqlite
 MIGRATION_DIR=pkg/db/migrations
@@ -46,3 +50,10 @@ migrate:
 test:
 	go test -failfast ./... -v -p=1 -count=1 -coverprofile .coverage.txt
 	go tool cover -func .coverage.txt
+
+build:
+	go build -o ${BIN} ${SRC}
+
+
+run: build
+	${BIN}
