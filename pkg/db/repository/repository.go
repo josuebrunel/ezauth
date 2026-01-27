@@ -118,8 +118,7 @@ func (r Repository) UserGetByID(ctx context.Context, id string) (*models.User, e
 
 func (r Repository) UserUpdate(ctx context.Context, user *models.User) (*models.User, error) {
 	query := r.QueryUserUpdate(ctx, user)
-	dbg := bob.Debug(r.bdb)
-	user, err := bob.One(ctx, dbg, query, scan.StructMapper[*models.User]())
+	user, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
 	if err != nil {
 		xlog.Error("Failed to update user", "error", err, "email", util.Deref(user).Email)
 		return nil, err
