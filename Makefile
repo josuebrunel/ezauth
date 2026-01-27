@@ -25,7 +25,7 @@ else
 endif
 
 # Commands
-.PHONY: migration-status migration-up migration-down migration-reset migration-create
+.PHONY: migration-status migration-up migration-down migration-reset migration-create swagger
 
 migration-status:
 	goose -dir $(DIR) $(DRIVER) $(DSN) status
@@ -58,6 +58,8 @@ tidy:
 build: tidy
 	go build -o ${BIN} ${SRC}
 
-
 run: build
 	${BIN}
+
+swagger:
+	swag init -g pkg/handler/handler.go --parseDependency

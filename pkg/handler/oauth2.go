@@ -10,6 +10,13 @@ import (
 )
 
 // OAuth2Login redirects the user to the OAuth2 provider's login page.
+// @Summary OAuth2 Login
+// @Description Redirect to the OAuth2 provider login page
+// @Tags oauth2
+// @Param provider path string true "OAuth2 Provider (google, github, facebook)"
+// @Success 307
+// @Failure 400 {object} ApiResponse[string]
+// @Router /auth/oauth2/{provider}/login [get]
 func (h *Handler) OAuth2Login(w http.ResponseWriter, r *http.Request) {
 	provider := chi.URLParam(r, "provider")
 	if provider == "" {
@@ -38,6 +45,17 @@ func (h *Handler) OAuth2Login(w http.ResponseWriter, r *http.Request) {
 }
 
 // OAuth2Callback handles the callback from the OAuth2 provider.
+// @Summary OAuth2 Callback
+// @Description Handle the callback from the OAuth2 provider
+// @Tags oauth2
+// @Param provider path string true "OAuth2 Provider (google, github, facebook)"
+// @Param code query string true "Authorization Code"
+// @Param state query string true "CSRF State"
+// @Success 200 {object} ApiResponse[service.TokenResponse]
+// @Success 302
+// @Failure 400 {object} ApiResponse[string]
+// @Failure 500 {object} ApiResponse[string]
+// @Router /auth/oauth2/{provider}/callback [get]
 func (h *Handler) OAuth2Callback(w http.ResponseWriter, r *http.Request) {
 	provider := chi.URLParam(r, "provider")
 	if provider == "" {

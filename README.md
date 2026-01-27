@@ -16,6 +16,7 @@ Simple and easy to use authentication library for Golang.
 - Extended User Profiles (First Name, Last Name, Locale, Timezone, Roles, etc.)
 - SQLite and PostgreSQL support
 - Built-in Middleware for route protection
+- Swagger API Documentation
 
 ## Usage
 
@@ -140,3 +141,13 @@ func main() {
 | DELETE | `/auth/user`                       | Delete account (Protected)        |
 | GET    | `/auth/oauth2/{provider}/login`    | Login via OAuth2 provider         |
 | GET    | `/auth/oauth2/{provider}/callback` | OAuth2 provider callback          |
+
+## Swagger Documentation
+
+To generate the Swagger documentation, run:
+
+```bash
+make swagger
+```
+
+The Swagger UI is available at `/swagger/index.html`.
