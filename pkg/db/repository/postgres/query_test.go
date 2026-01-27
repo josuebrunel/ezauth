@@ -10,8 +10,8 @@ import (
 	"github.com/stephenafamo/bob"
 )
 
-func TestPSQLQueryAdapter_UserOperations(t *testing.T) {
-	adapter := &PSQLQueryAdapter{}
+func TestPSQLQuerier_UserOperations(t *testing.T) {
+	querier := &PSQLQuerier{}
 	ctx := context.Background()
 	now := time.Now()
 
@@ -27,7 +27,7 @@ func TestPSQLQueryAdapter_UserOperations(t *testing.T) {
 	}
 
 	t.Run("Insert", func(t *testing.T) {
-		q := adapter.QueryUserInsert(ctx, user)
+		q := querier.QueryUserInsert(ctx, user)
 		sql, args, err := bob.Build(ctx, q)
 		if err != nil {
 			t.Fatalf("failed to build query: %v", err)
@@ -43,7 +43,7 @@ func TestPSQLQueryAdapter_UserOperations(t *testing.T) {
 	})
 
 	t.Run("GetByEmail", func(t *testing.T) {
-		q := adapter.QueryUserGetByEmail(ctx, user.Email)
+		q := querier.QueryUserGetByEmail(ctx, user.Email)
 		sql, args, err := bob.Build(ctx, q)
 		if err != nil {
 			t.Fatalf("failed to build query: %v", err)
@@ -61,7 +61,7 @@ func TestPSQLQueryAdapter_UserOperations(t *testing.T) {
 	})
 
 	t.Run("GetByID", func(t *testing.T) {
-		q := adapter.QueryUserGetByID(ctx, user.ID)
+		q := querier.QueryUserGetByID(ctx, user.ID)
 		sql, args, err := bob.Build(ctx, q)
 		if err != nil {
 			t.Fatalf("failed to build query: %v", err)
@@ -81,7 +81,7 @@ func TestPSQLQueryAdapter_UserOperations(t *testing.T) {
 			ID:       user.ID,
 			Provider: "google",
 		}
-		q := adapter.QueryUserUpdate(ctx, updateUser)
+		q := querier.QueryUserUpdate(ctx, updateUser)
 		sql, _, err := bob.Build(ctx, q)
 		if err != nil {
 			t.Fatalf("failed to build query: %v", err)
@@ -101,7 +101,7 @@ func TestPSQLQueryAdapter_UserOperations(t *testing.T) {
 	})
 
 	t.Run("Delete", func(t *testing.T) {
-		q := adapter.QueryUserDelete(ctx, user.ID)
+		q := querier.QueryUserDelete(ctx, user.ID)
 		sql, args, err := bob.Build(ctx, q)
 		if err != nil {
 			t.Fatalf("failed to build query: %v", err)
@@ -116,8 +116,8 @@ func TestPSQLQueryAdapter_UserOperations(t *testing.T) {
 	})
 }
 
-func TestPSQLQueryAdapter_TokenOperations(t *testing.T) {
-	adapter := &PSQLQueryAdapter{}
+func TestPSQLQuerier_TokenOperations(t *testing.T) {
+	querier := &PSQLQuerier{}
 	ctx := context.Background()
 	now := time.Now()
 
@@ -132,7 +132,7 @@ func TestPSQLQueryAdapter_TokenOperations(t *testing.T) {
 	}
 
 	t.Run("Insert", func(t *testing.T) {
-		q := adapter.QueryTokenInsert(ctx, token)
+		q := querier.QueryTokenInsert(ctx, token)
 		sql, args, err := bob.Build(ctx, q)
 		if err != nil {
 			t.Fatalf("failed to build query: %v", err)
@@ -148,7 +148,7 @@ func TestPSQLQueryAdapter_TokenOperations(t *testing.T) {
 	})
 
 	t.Run("GetByID", func(t *testing.T) {
-		q := adapter.QueryTokenGetByID(ctx, token.ID)
+		q := querier.QueryTokenGetByID(ctx, token.ID)
 		sql, args, err := bob.Build(ctx, q)
 		if err != nil {
 			t.Fatalf("failed to build query: %v", err)
@@ -166,7 +166,7 @@ func TestPSQLQueryAdapter_TokenOperations(t *testing.T) {
 	})
 
 	t.Run("GetByToken", func(t *testing.T) {
-		q := adapter.QueryTokenGetByToken(ctx, token.Token)
+		q := querier.QueryTokenGetByToken(ctx, token.Token)
 		sql, args, err := bob.Build(ctx, q)
 		if err != nil {
 			t.Fatalf("failed to build query: %v", err)
@@ -181,7 +181,7 @@ func TestPSQLQueryAdapter_TokenOperations(t *testing.T) {
 	})
 
 	t.Run("Delete", func(t *testing.T) {
-		q := adapter.QueryTokenDelete(ctx, token.ID)
+		q := querier.QueryTokenDelete(ctx, token.ID)
 		sql, args, err := bob.Build(ctx, q)
 		if err != nil {
 			t.Fatalf("failed to build query: %v", err)

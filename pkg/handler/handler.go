@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"log"
 	"net/http"
 
@@ -103,7 +102,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func GetUserID(ctx context.Context) (string, error) {
 	userID, ok := ctx.Value(userContextKey).(string)
 	if !ok {
-		return "", errors.New("user id not found in context")
+		return "", ErrUserIDNotFoundInContext
 	}
 	return userID, nil
 }
@@ -115,19 +114,19 @@ func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestBasicAuth
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteJSONResponseError(w, http.StatusBadRequest, errors.New("invalid request body"))
+		WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
 
 	user, err := h.svc.UserCreate(r.Context(), &req)
 	if err != nil {
-		WriteJSONResponseError(w, http.StatusInternalServerError, errors.New("could not create user"))
+		WriteJSONResponseError(w, http.StatusInternalServerError, ErrCouldNotCreateUser)
 		return
 	}
 
 	tokenResp, err := h.svc.TokenCreate(r.Context(), user)
 	if err != nil {
-		WriteJSONResponseError(w, http.StatusInternalServerError, errors.New("could not create token"))
+		WriteJSONResponseError(w, http.StatusInternalServerError, ErrCouldNotCreateToken)
 		return
 	}
 
@@ -137,19 +136,19 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestBasicAuth
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteJSONResponseError(w, http.StatusBadRequest, errors.New("invalid request body"))
+		WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
 
 	user, err := h.svc.UserAuthenticate(r.Context(), req)
 	if err != nil {
-		WriteJSONResponseError(w, http.StatusUnauthorized, errors.New("invalid email or password"))
+		WriteJSONResponseError(w, http.StatusUnauthorized, ErrInvalidCredentials)
 		return
 	}
 
 	tokenResp, err := h.svc.TokenCreate(r.Context(), user)
 	if err != nil {
-		WriteJSONResponseError(w, http.StatusInternalServerError, errors.New("could not create token"))
+		WriteJSONResponseError(w, http.StatusInternalServerError, ErrCouldNotCreateToken)
 		return
 	}
 
@@ -159,12 +158,12 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	var req RefreshTokenRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteJSONResponseError(w, http.StatusBadRequest, errors.New("invalid request body"))
+		WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
 
 	if req.RefreshToken == "" {
-		WriteJSONResponseError(w, http.StatusBadRequest, errors.New("refresh_token is required"))
+		WriteJSONResponseError(w, http.StatusBadRequest, ErrRefreshTokenRequired)
 		return
 	}
 
@@ -180,13 +179,13 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UserInfo(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(userContextKey).(string)
 	if !ok {
-		WriteJSONResponseError(w, http.StatusInternalServerError, errors.New("could not retrieve user from context"))
+		WriteJSONResponseError(w, http.StatusInternalServerError, ErrUserNotFoundInContext)
 		return
 	}
 
 	user, err := h.svc.Repo.UserGetByID(r.Context(), userID)
 	if err != nil {
-		WriteJSONResponseError(w, http.StatusInternalServerError, errors.New("could not retrieve user"))
+		WriteJSONResponseError(w, http.StatusInternalServerError, ErrCouldNotRetrieveUser)
 		return
 	}
 
@@ -197,17 +196,17 @@ func (h *Handler) UserInfo(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	var req LogoutRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteJSONResponseError(w, http.StatusBadRequest, errors.New("invalid request body"))
+		WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
 
 	if req.RefreshToken == "" {
-		WriteJSONResponseError(w, http.StatusBadRequest, errors.New("refresh_token is required"))
+		WriteJSONResponseError(w, http.StatusBadRequest, ErrRefreshTokenRequired)
 		return
 	}
 
 	if err := h.svc.TokenRevoke(r.Context(), req.RefreshToken); err != nil {
-		WriteJSONResponseError(w, http.StatusInternalServerError, errors.New("could not revoke token"))
+		WriteJSONResponseError(w, http.StatusInternalServerError, ErrCouldNotRevokeToken)
 		return
 	}
 
@@ -217,12 +216,12 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(userContextKey).(string)
 	if !ok {
-		WriteJSONResponseError(w, http.StatusInternalServerError, errors.New("could not retrieve user from context"))
+		WriteJSONResponseError(w, http.StatusInternalServerError, ErrUserNotFoundInContext)
 		return
 	}
 
 	if err := h.svc.Repo.UserDelete(r.Context(), userID); err != nil {
-		WriteJSONResponseError(w, http.StatusInternalServerError, errors.New("could not delete user"))
+		WriteJSONResponseError(w, http.StatusInternalServerError, ErrCouldNotDeleteUser)
 		return
 	}
 
@@ -232,12 +231,12 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) PasswordResetRequest(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestPasswordReset
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteJSONResponseError(w, http.StatusBadRequest, errors.New("invalid request body"))
+		WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
 
 	if err := h.svc.PasswordResetRequest(r.Context(), req); err != nil {
-		WriteJSONResponseError(w, http.StatusInternalServerError, errors.New("could not process password reset request"))
+		WriteJSONResponseError(w, http.StatusInternalServerError, ErrCouldNotProcessPasswordReset)
 		return
 	}
 
@@ -247,7 +246,7 @@ func (h *Handler) PasswordResetRequest(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) PasswordResetConfirm(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestPasswordResetConfirm
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteJSONResponseError(w, http.StatusBadRequest, errors.New("invalid request body"))
+		WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
 
@@ -262,12 +261,12 @@ func (h *Handler) PasswordResetConfirm(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) PasswordlessRequest(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestPasswordless
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteJSONResponseError(w, http.StatusBadRequest, errors.New("invalid request body"))
+		WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
 
 	if err := h.svc.PasswordlessRequest(r.Context(), req); err != nil {
-		WriteJSONResponseError(w, http.StatusInternalServerError, errors.New("could not process passwordless request"))
+		WriteJSONResponseError(w, http.StatusInternalServerError, ErrCouldNotProcessPasswordless)
 		return
 	}
 
@@ -277,7 +276,7 @@ func (h *Handler) PasswordlessRequest(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) PasswordlessLogin(w http.ResponseWriter, r *http.Request) {
 	token := r.URL.Query().Get("token")
 	if token == "" {
-		WriteJSONResponseError(w, http.StatusBadRequest, errors.New("token is required"))
+		WriteJSONResponseError(w, http.StatusBadRequest, ErrTokenRequired)
 		return
 	}
 
