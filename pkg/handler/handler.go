@@ -1,3 +1,4 @@
+// Package handler provides the HTTP handlers for ezauth.
 package handler
 
 import (
@@ -24,20 +25,25 @@ type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+// Handler handles all authentication-related HTTP requests.
 type Handler struct {
 	path string
 	r    *chi.Mux
 	svc  *service.Auth
 }
 
+// HandlerOption defines a functional option for configuring the Handler.
 type HandlerOption func(*Handler)
 
+// WithRouter sets a custom chi router for the Handler.
 func WithRouter(r *chi.Mux) HandlerOption {
 	return func(h *Handler) {
 		h.r = r
 	}
 }
 
+// New creates a new Handler with the given service and path.
+// path is the base URL path where the authentication routes will be mounted.
 func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 	h := &Handler{
 		path: path,
@@ -88,6 +94,7 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 	return h
 }
 
+// Run starts the HTTP server.
 func (h *Handler) Run() {
 	xlog.Info("server started", "addr", h.svc.Cfg.Addr)
 	if err := http.ListenAndServe(h.svc.Cfg.Addr, h.r); err != nil {
@@ -95,10 +102,13 @@ func (h *Handler) Run() {
 	}
 }
 
+// ServeHTTP implements the http.Handler interface.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.r.ServeHTTP(w, r)
 }
 
+// GetUserID retrieves the user ID from the request context.
+// It returns ErrUserIDNotFoundInContext if the user ID is not present.
 func GetUserID(ctx context.Context) (string, error) {
 	userID, ok := ctx.Value(userContextKey).(string)
 	if !ok {
@@ -107,10 +117,12 @@ func GetUserID(ctx context.Context) (string, error) {
 	return userID, nil
 }
 
+// Ping is a simple health check endpoint.
 func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 	WriteJSONResponse(w, http.StatusOK, "pong", nil)
 }
 
+// Register handles user registration.
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestBasicAuth
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -133,6 +145,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	WriteJSONResponse(w, http.StatusCreated, tokenResp, nil)
 }
 
+// Login handles user login and returns access and refresh tokens.
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestBasicAuth
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -155,6 +168,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	WriteJSONResponse(w, http.StatusOK, tokenResp, nil)
 }
 
+// RefreshToken handles token refreshing using a valid refresh token.
 func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	var req RefreshTokenRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -176,6 +190,7 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	WriteJSONResponse(w, http.StatusOK, tokenResp, nil)
 }
 
+// UserInfo returns information about the currently authenticated user.
 func (h *Handler) UserInfo(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(userContextKey).(string)
 	if !ok {
@@ -193,6 +208,7 @@ func (h *Handler) UserInfo(w http.ResponseWriter, r *http.Request) {
 	WriteJSONResponse(w, http.StatusOK, user, nil)
 }
 
+// Logout handles user logout by revoking the refresh token.
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	var req LogoutRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -213,6 +229,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	WriteJSONResponse(w, http.StatusOK, map[string]string{"message": "logged out successfully"}, nil)
 }
 
+// DeleteUser handles user account deletion.
 func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(userContextKey).(string)
 	if !ok {
@@ -228,6 +245,7 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	WriteJSONResponse(w, http.StatusOK, map[string]string{"message": "user deleted successfully"}, nil)
 }
 
+// PasswordResetRequest handles the request for a password reset link.
 func (h *Handler) PasswordResetRequest(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestPasswordReset
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -243,6 +261,7 @@ func (h *Handler) PasswordResetRequest(w http.ResponseWriter, r *http.Request) {
 	WriteJSONResponse(w, http.StatusOK, map[string]string{"message": "password reset link sent"}, nil)
 }
 
+// PasswordResetConfirm handles the confirmation of a password reset.
 func (h *Handler) PasswordResetConfirm(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestPasswordResetConfirm
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -258,6 +277,7 @@ func (h *Handler) PasswordResetConfirm(w http.ResponseWriter, r *http.Request) {
 	WriteJSONResponse(w, http.StatusOK, map[string]string{"message": "password has been reset successfully"}, nil)
 }
 
+// PasswordlessRequest handles the request for a magic login link.
 func (h *Handler) PasswordlessRequest(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestPasswordless
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -273,6 +293,7 @@ func (h *Handler) PasswordlessRequest(w http.ResponseWriter, r *http.Request) {
 	WriteJSONResponse(w, http.StatusOK, map[string]string{"message": "magic link sent"}, nil)
 }
 
+// PasswordlessLogin handles login using a magic link token.
 func (h *Handler) PasswordlessLogin(w http.ResponseWriter, r *http.Request) {
 	token := r.URL.Query().Get("token")
 	if token == "" {

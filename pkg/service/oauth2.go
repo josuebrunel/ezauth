@@ -15,11 +15,13 @@ import (
 	"golang.org/x/oauth2/google"
 )
 
+// OAuth2UserInfo represents the user information retrieved from an OAuth2 provider.
 type OAuth2UserInfo struct {
 	ID    string `json:"id"`
 	Email string `json:"email"`
 }
 
+// OAuth2GetConfig returns the OAuth2 configuration for the given provider.
 func (a *Auth) OAuth2GetConfig(provider string) (*oauth2.Config, error) {
 	switch provider {
 	case "google":
@@ -51,6 +53,7 @@ func (a *Auth) OAuth2GetConfig(provider string) (*oauth2.Config, error) {
 	}
 }
 
+// OAuth2GetUserInfo retrieves user information from the OAuth2 provider using the given token.
 func (a *Auth) OAuth2GetUserInfo(ctx context.Context, provider string, token *oauth2.Token) (*OAuth2UserInfo, error) {
 	var userInfoURL string
 	switch provider {
@@ -114,6 +117,8 @@ func (a *Auth) OAuth2GetUserInfo(ctx context.Context, provider string, token *oa
 	return userInfo, nil
 }
 
+// OAuth2Authenticate authenticates a user using OAuth2 information.
+// It links the OAuth2 account to an existing user or creates a new one.
 func (a *Auth) OAuth2Authenticate(ctx context.Context, provider string, userInfo *OAuth2UserInfo) (*models.User, error) {
 	// 1. Try to find user by provider and provider ID
 	user, err := a.Repo.UserGetByProvider(ctx, provider, userInfo.ID)

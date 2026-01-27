@@ -9,6 +9,7 @@ import (
 	"github.com/josuebrunel/ezauth/pkg/util"
 )
 
+// OAuth2Login redirects the user to the OAuth2 provider's login page.
 func (h *Handler) OAuth2Login(w http.ResponseWriter, r *http.Request) {
 	provider := chi.URLParam(r, "provider")
 	if provider == "" {
@@ -36,6 +37,7 @@ func (h *Handler) OAuth2Login(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
+// OAuth2Callback handles the callback from the OAuth2 provider.
 func (h *Handler) OAuth2Callback(w http.ResponseWriter, r *http.Request) {
 	provider := chi.URLParam(r, "provider")
 	if provider == "" {

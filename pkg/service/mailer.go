@@ -8,14 +8,17 @@ import (
 	"github.com/josuebrunel/gopkg/xlog"
 )
 
+// Mailer defines the interface for sending emails.
 type Mailer interface {
 	Send(to string, subject string, body string) error
 }
 
+// SMTPMailer implements the Mailer interface using SMTP.
 type SMTPMailer struct {
 	cfg config.SMTP
 }
 
+// NewSMTPMailer creates a new SMTPMailer.
 func NewSMTPMailer(cfg config.SMTP) *SMTPMailer {
 	return &SMTPMailer{cfg: cfg}
 }
@@ -32,10 +35,12 @@ func (m *SMTPMailer) Send(to string, subject string, body string) error {
 	return nil
 }
 
+// MockMailer implements the Mailer interface for testing purposes.
 type MockMailer struct {
 	SentEmails []map[string]string
 }
 
+// NewMockMailer creates a new MockMailer.
 func NewMockMailer() *MockMailer {
 	return &MockMailer{
 		SentEmails: make([]map[string]string, 0),

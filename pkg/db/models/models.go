@@ -1,3 +1,4 @@
+// Package models defines the database models for ezauth.
 package models
 
 import (
@@ -38,6 +39,7 @@ func (j *JSONMap) Scan(value any) error {
 	return json.Unmarshal(bytes, j)
 }
 
+// User represents a user in the system.
 type User struct {
 	ID            string    `db:"id" json:"id"`
 	Email         string    `db:"email" json:"email"`
@@ -58,6 +60,7 @@ const (
 	TokenTypePasswordReset = "password_reset"
 )
 
+// Token represents an authentication or action token (e.g., refresh token, password reset token).
 type Token struct {
 	ID        string    `db:"id" json:"id"`
 	UserID    string    `db:"user_id" json:"user_id"`
@@ -69,6 +72,7 @@ type Token struct {
 	Metadata  JSONMap   `db:"metadata" json:"metadata"`
 }
 
+// PasswordlessToken represents a magic link token for passwordless login.
 type PasswordlessToken struct {
 	ID        string    `db:"id" json:"id"`
 	Email     string    `db:"email" json:"email"`
