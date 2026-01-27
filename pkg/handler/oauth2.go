@@ -10,6 +10,12 @@ import (
 )
 
 // OAuth2Login redirects the user to the OAuth2 provider's login page.
+// @Summary OAuth2 Login
+// @Description Redirect to OAuth2 provider for login
+// @Tags oauth2
+// @Param provider path string true "OAuth2 provider (google, github, facebook)"
+// @Success 307 "Temporary Redirect"
+// @Router /auth/oauth2/{provider}/login [get]
 func (h *Handler) OAuth2Login(w http.ResponseWriter, r *http.Request) {
 	provider := chi.URLParam(r, "provider")
 	if provider == "" {
@@ -38,6 +44,15 @@ func (h *Handler) OAuth2Login(w http.ResponseWriter, r *http.Request) {
 }
 
 // OAuth2Callback handles the callback from the OAuth2 provider.
+// @Summary OAuth2 Callback
+// @Description Callback for OAuth2 login
+// @Tags oauth2
+// @Param provider path string true "OAuth2 provider (google, github, facebook)"
+// @Param code query string true "OAuth2 authorization code"
+// @Param state query string true "OAuth2 state for CSRF protection"
+// @Success 200 {object} ApiResponse[service.TokenResponse] "If EZAUTH_OAUTH2_CALLBACK_URL is not set"
+// @Success 302 "Found - Redirects to EZAUTH_OAUTH2_CALLBACK_URL if set"
+// @Router /auth/oauth2/{provider}/callback [get]
 func (h *Handler) OAuth2Callback(w http.ResponseWriter, r *http.Request) {
 	provider := chi.URLParam(r, "provider")
 	if provider == "" {

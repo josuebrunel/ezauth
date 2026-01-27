@@ -1,0 +1,479 @@
+basePath: /
+definitions:
+  handler.ApiResponse-map_string_string:
+    properties:
+      data:
+        $ref: '#/definitions/map_string_string'
+      error: {}
+    type: object
+  handler.ApiResponse-models_User:
+    properties:
+      data:
+        $ref: '#/definitions/models.User'
+      error: {}
+    type: object
+  handler.ApiResponse-service_TokenResponse:
+    properties:
+      data:
+        $ref: '#/definitions/service.TokenResponse'
+      error: {}
+    type: object
+  handler.ApiResponse-string:
+    properties:
+      data:
+        type: string
+      error: {}
+    type: object
+  handler.LogoutRequest:
+    properties:
+      refresh_token:
+        type: string
+    type: object
+  handler.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        type: string
+    type: object
+  map_string_string:
+    additionalProperties:
+      type: string
+    type: object
+  models.JSONMap:
+    additionalProperties: {}
+    type: object
+  models.User:
+    properties:
+      app_metadata:
+        $ref: '#/definitions/models.JSONMap'
+      created_at:
+        type: string
+      email:
+        type: string
+      email_verified:
+        type: boolean
+      email_verified_at:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: string
+      last_active_at:
+        type: string
+      last_name:
+        type: string
+      locale:
+        type: string
+      provider:
+        type: string
+      provider_id:
+        type: string
+      roles:
+        type: string
+      timezone:
+        type: string
+      updated_at:
+        type: string
+      user_metadata:
+        $ref: '#/definitions/models.JSONMap'
+    type: object
+  service.RequestBasicAuth:
+    properties:
+      data:
+        additionalProperties: {}
+        type: object
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      locale:
+        type: string
+      password:
+        type: string
+      roles:
+        type: string
+      timezone:
+        type: string
+    type: object
+  service.RequestPasswordReset:
+    properties:
+      email:
+        type: string
+    type: object
+  service.RequestPasswordResetConfirm:
+    properties:
+      password:
+        type: string
+      token:
+        type: string
+    type: object
+  service.RequestPasswordless:
+    properties:
+      email:
+        type: string
+    type: object
+  service.TokenResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    name: Josue Brunel
+    url: https://github.com/josuebrunel/ezauth
+  description: Simple and easy to use authentication library for Golang.
+  license:
+    name: MIT
+    url: https://github.com/josuebrunel/ezauth/blob/main/LICENSE
+  termsOfService: http://swagger.io/terms/
+  title: ezauth API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and return tokens
+      parameters:
+      - description: Login Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestBasicAuth'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      summary: Login
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Revoke refresh token
+      parameters:
+      - description: Logout Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.LogoutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      summary: Logout
+      tags:
+      - auth
+  /auth/oauth2/{provider}/callback:
+    get:
+      description: Callback for OAuth2 login
+      parameters:
+      - description: OAuth2 provider (google, github, facebook)
+        in: path
+        name: provider
+        required: true
+        type: string
+      - description: OAuth2 authorization code
+        in: query
+        name: code
+        required: true
+        type: string
+      - description: OAuth2 state for CSRF protection
+        in: query
+        name: state
+        required: true
+        type: string
+      responses:
+        "200":
+          description: If EZAUTH_OAUTH2_CALLBACK_URL is not set
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
+        "302":
+          description: Found - Redirects to EZAUTH_OAUTH2_CALLBACK_URL if set
+      summary: OAuth2 Callback
+      tags:
+      - oauth2
+  /auth/oauth2/{provider}/login:
+    get:
+      description: Redirect to OAuth2 provider for login
+      parameters:
+      - description: OAuth2 provider (google, github, facebook)
+        in: path
+        name: provider
+        required: true
+        type: string
+      responses:
+        "307":
+          description: Temporary Redirect
+      summary: OAuth2 Login
+      tags:
+      - oauth2
+  /auth/password-reset/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Confirm password reset using token
+      parameters:
+      - description: Password Reset Confirm Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestPasswordResetConfirm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      summary: Password Reset Confirm
+      tags:
+      - auth
+  /auth/password-reset/request:
+    post:
+      consumes:
+      - application/json
+      description: Request a password reset link
+      parameters:
+      - description: Password Reset Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestPasswordReset'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      summary: Password Reset Request
+      tags:
+      - auth
+  /auth/passwordless/login:
+    get:
+      description: Login using magic link token
+      parameters:
+      - description: Magic link token
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      summary: Passwordless Login
+      tags:
+      - auth
+  /auth/passwordless/request:
+    post:
+      consumes:
+      - application/json
+      description: Request a magic login link
+      parameters:
+      - description: Passwordless Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestPasswordless'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      summary: Passwordless Request
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user
+      parameters:
+      - description: Registration Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestBasicAuth'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      summary: Register
+      tags:
+      - auth
+  /auth/token/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refresh access token using refresh token
+      parameters:
+      - description: Refresh Token Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      summary: Refresh Token
+      tags:
+      - auth
+  /auth/user:
+    delete:
+      description: Delete current user account
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      summary: Delete User
+      tags:
+      - user
+  /auth/userinfo:
+    get:
+      description: Get current user information
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-models_User'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      summary: User Info
+      tags:
+      - user
+  /ping:
+    get:
+      description: Health check endpoint
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      summary: Ping
+      tags:
+      - health
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

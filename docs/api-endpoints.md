@@ -1,5 +1,12 @@
 # API Endpoints
 
+`ezauth` provides an interactive Swagger UI to explore and test the API. By default, it is available at `/swagger/index.html` when running the service.
+
+## Swagger UI
+
+If you are running the service locally with default settings, you can access the Swagger UI at:
+[http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html)
+
 All `ezauth` responses follow a consistent format:
 
 ```json

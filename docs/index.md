@@ -24,4 +24,5 @@
 - **[Installation](./installation.md)**: How to get `ezauth`.
 - **[Configuration](./configuration.md)**: Details on all environment variables.
 - **[API Endpoints](./api-endpoints.md)**: Comprehensive API reference.
+- **[Swagger UI](./api-endpoints.md#swagger-ui)**: Interactive API documentation.
 - **[Architecture](./architecture.md)**: Understanding `EzAuth`, `Handler`, and `Service`.
