@@ -11,6 +11,8 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/josuebrunel/ezauth/pkg/service"
 	"github.com/josuebrunel/gopkg/xlog"
+	httpSwagger "github.com/swaggo/http-swagger"
+	_ "github.com/josuebrunel/ezauth/docs"
 )
 
 type contextKey string
@@ -44,6 +46,13 @@ func WithRouter(r *chi.Mux) HandlerOption {
 
 // New creates a new Handler with the given service and path.
 // path is the base URL path where the authentication routes will be mounted.
+// @title EzAuth API
+// @version 1.0
+// @description Authentication service/library for Go.
+// @BasePath /
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 	h := &Handler{
 		path: path,
@@ -64,6 +73,7 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 	}
 
 	h.r.Get("/ping", h.Ping)
+	h.r.Get("/swagger/*", httpSwagger.WrapHandler)
 
 	// Initialize routes
 	routePath := "/" + h.path
@@ -118,11 +128,26 @@ func GetUserID(ctx context.Context) (string, error) {
 }
 
 // Ping is a simple health check endpoint.
+// @Summary Ping health check
+// @Description Checks if the server is running
+// @Tags system
+// @Success 200 {object} ApiResponse[string]
+// @Router /ping [get]
 func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 	WriteJSONResponse(w, http.StatusOK, "pong", nil)
 }
 
 // Register handles user registration.
+// @Summary Register a new user
+// @Description Register a new user with basic authentication
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body service.RequestBasicAuth true "Registration Request"
+// @Success 201 {object} ApiResponse[service.TokenResponse]
+// @Failure 400 {object} ApiResponse[string]
+// @Failure 500 {object} ApiResponse[string]
+// @Router /auth/register [post]
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestBasicAuth
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -146,6 +171,17 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 // Login handles user login and returns access and refresh tokens.
+// @Summary Login user
+// @Description Login with email and password
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body service.RequestBasicAuth true "Login Request"
+// @Success 200 {object} ApiResponse[service.TokenResponse]
+// @Failure 400 {object} ApiResponse[string]
+// @Failure 401 {object} ApiResponse[string]
+// @Failure 500 {object} ApiResponse[string]
+// @Router /auth/login [post]
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestBasicAuth
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -169,6 +205,16 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 // RefreshToken handles token refreshing using a valid refresh token.
+// @Summary Refresh access token
+// @Description Get a new access token using a refresh token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body RefreshTokenRequest true "Refresh Token Request"
+// @Success 200 {object} ApiResponse[service.TokenResponse]
+// @Failure 400 {object} ApiResponse[string]
+// @Failure 401 {object} ApiResponse[string]
+// @Router /auth/token/refresh [post]
 func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	var req RefreshTokenRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -191,6 +237,14 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 }
 
 // UserInfo returns information about the currently authenticated user.
+// @Summary Get user info
+// @Description Retrieve information about the authenticated user
+// @Tags user
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} ApiResponse[models.User]
+// @Failure 500 {object} ApiResponse[string]
+// @Router /auth/userinfo [get]
 func (h *Handler) UserInfo(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(userContextKey).(string)
 	if !ok {
@@ -209,6 +263,17 @@ func (h *Handler) UserInfo(w http.ResponseWriter, r *http.Request) {
 }
 
 // Logout handles user logout by revoking the refresh token.
+// @Summary Logout user
+// @Description Revoke the user's refresh token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body LogoutRequest true "Logout Request"
+// @Security BearerAuth
+// @Success 200 {object} ApiResponse[map[string]string]
+// @Failure 400 {object} ApiResponse[string]
+// @Failure 500 {object} ApiResponse[string]
+// @Router /auth/logout [post]
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	var req LogoutRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -230,6 +295,14 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteUser handles user account deletion.
+// @Summary Delete user
+// @Description Delete the authenticated user's account
+// @Tags user
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} ApiResponse[map[string]string]
+// @Failure 500 {object} ApiResponse[string]
+// @Router /auth/user [delete]
 func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(userContextKey).(string)
 	if !ok {
@@ -246,6 +319,16 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 }
 
 // PasswordResetRequest handles the request for a password reset link.
+// @Summary Request password reset
+// @Description Send a password reset link to the user's email
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body service.RequestPasswordReset true "Password Reset Request"
+// @Success 200 {object} ApiResponse[map[string]string]
+// @Failure 400 {object} ApiResponse[string]
+// @Failure 500 {object} ApiResponse[string]
+// @Router /auth/password-reset/request [post]
 func (h *Handler) PasswordResetRequest(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestPasswordReset
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -262,6 +345,15 @@ func (h *Handler) PasswordResetRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 // PasswordResetConfirm handles the confirmation of a password reset.
+// @Summary Confirm password reset
+// @Description Reset password using the token sent via email
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body service.RequestPasswordResetConfirm true "Password Reset Confirmation"
+// @Success 200 {object} ApiResponse[map[string]string]
+// @Failure 400 {object} ApiResponse[string]
+// @Router /auth/password-reset/confirm [post]
 func (h *Handler) PasswordResetConfirm(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestPasswordResetConfirm
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -278,6 +370,16 @@ func (h *Handler) PasswordResetConfirm(w http.ResponseWriter, r *http.Request) {
 }
 
 // PasswordlessRequest handles the request for a magic login link.
+// @Summary Request magic link
+// @Description Send a magic login link to the user's email
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body service.RequestPasswordless true "Passwordless Request"
+// @Success 200 {object} ApiResponse[map[string]string]
+// @Failure 400 {object} ApiResponse[string]
+// @Failure 500 {object} ApiResponse[string]
+// @Router /auth/passwordless/request [post]
 func (h *Handler) PasswordlessRequest(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestPasswordless
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -294,6 +396,15 @@ func (h *Handler) PasswordlessRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 // PasswordlessLogin handles login using a magic link token.
+// @Summary Magic link login
+// @Description Authenticate using the token from the magic link
+// @Tags auth
+// @Produce json
+// @Param token query string true "Magic Link Token"
+// @Success 200 {object} ApiResponse[service.TokenResponse]
+// @Failure 400 {object} ApiResponse[string]
+// @Failure 401 {object} ApiResponse[string]
+// @Router /auth/passwordless/login [get]
 func (h *Handler) PasswordlessLogin(w http.ResponseWriter, r *http.Request) {
 	token := r.URL.Query().Get("token")
 	if token == "" {
