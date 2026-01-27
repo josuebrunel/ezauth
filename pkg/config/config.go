@@ -42,6 +42,14 @@ type OAuth2 struct {
 	Facebook OAuth2Facebook
 }
 
+type SMTP struct {
+	Host     string `json:"host" env:"SMTP_HOST"`
+	Port     int    `json:"port" env:"SMTP_PORT" default:"587"`
+	Username string `json:"username" env:"SMTP_USERNAME"`
+	Password string `json:"password" env:"SMTP_PASSWORD"`
+	From     string `json:"from" env:"SMTP_FROM"`
+}
+
 type Config struct {
 	Addr      string        `json:"addr" env:"ADDR" default:":8080"`
 	Debug     bool          `json:"debug" env:"DEBUG" default:"false"`
@@ -49,6 +57,7 @@ type Config struct {
 	Secret    string        `json:"secret" env:"SECRET"`
 	JWTSecret string        `json:"jwt_secret" env:"JWT_SECRET"`
 	OAuth2    OAuth2        `json:"oauth2"`
+	SMTP      SMTP          `json:"smtp"`
 	TimeOut   time.Duration `json:"timeout" env:"TIMEOUT" default:"30s"`
 }
 

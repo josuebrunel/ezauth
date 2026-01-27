@@ -9,6 +9,7 @@ Simple and easy to use authentication library for Golang.
 - Email/Password Authentication (Register, Login)
 - JWT based sessions (Access & Refresh Tokens)
 - OAuth2 Support (Google, GitHub, Facebook)
+- SMTP Mailer Service support
 - SQLite and PostgreSQL support
 - Built-in Middleware for route protection
 
@@ -43,6 +44,13 @@ You can run `ezauth` as a separate service that handles authentication for your 
    export EZAUTH_OAUTH2_FACEBOOK_CLIENT_SECRET="your-facebook-client-secret"
    export EZAUTH_OAUTH2_FACEBOOK_REDIRECT_URL="http://localhost:8080/auth/oauth2/facebook/callback"
    export EZAUTH_OAUTH2_FACEBOOK_SCOPES="email"
+
+   # SMTP (Optional)
+   export EZAUTH_SMTP_HOST="smtp.gmail.com"
+   export EZAUTH_SMTP_PORT=587
+   export EZAUTH_SMTP_USERNAME="your-email@gmail.com"
+   export EZAUTH_SMTP_PASSWORD="your-app-password"
+   export EZAUTH_SMTP_FROM="your-email@gmail.com"
    ```
 
 2. **Build and Run**:
