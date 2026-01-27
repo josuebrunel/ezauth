@@ -41,6 +41,7 @@ func TestConfig(t *testing.T) {
 			"EZAUTH_JWT_SECRET":                  "myjwtsecret",
 			"EZAUTH_OAUTH2_GOOGLE_CLIENT_ID":     "g_id",
 			"EZAUTH_OAUTH2_GITHUB_CLIENT_SECRET": "gh_secret",
+			"EZAUTH_OAUTH2_CALLBACK_URL":         "http://localhost:3000/callback",
 		}
 
 		for k, v := range envVars {
@@ -77,6 +78,9 @@ func TestConfig(t *testing.T) {
 		}
 		if cfg.OAuth2.Github.ClientSecret != "gh_secret" {
 			t.Errorf("expected OAuth2.Github.ClientSecret 'gh_secret', got '%s'", cfg.OAuth2.Github.ClientSecret)
+		}
+		if cfg.OAuth2.CallbackURL != "http://localhost:3000/callback" {
+			t.Errorf("expected OAuth2.CallbackURL 'http://localhost:3000/callback', got '%s'", cfg.OAuth2.CallbackURL)
 		}
 	})
 }

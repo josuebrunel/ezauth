@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/josuebrunel/ezauth/pkg/util"
@@ -91,6 +92,22 @@ func (h *Handler) OAuth2Callback(w http.ResponseWriter, r *http.Request) {
 	tokenResp, err := h.svc.TokenCreate(r.Context(), user)
 	if err != nil {
 		WriteJSONResponseError(w, http.StatusInternalServerError, fmt.Errorf("failed to create token: %w", err))
+		return
+	}
+
+	if h.svc.Cfg.OAuth2.CallbackURL != "" {
+		u, err := url.Parse(h.svc.Cfg.OAuth2.CallbackURL)
+		if err != nil {
+			WriteJSONResponseError(w, http.StatusInternalServerError, fmt.Errorf("failed to parse callback url: %w", err))
+			return
+		}
+		q := u.Query()
+		q.Set("access_token", tokenResp.AccessToken)
+		q.Set("refresh_token", tokenResp.RefreshToken)
+		q.Set("expires_in", fmt.Sprintf("%d", tokenResp.ExpiresIn))
+		q.Set("token_type", tokenResp.TokenType)
+		u.RawQuery = q.Encode()
+		http.Redirect(w, r, u.String(), http.StatusFound)
 		return
 	}
 
