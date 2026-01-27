@@ -52,9 +52,10 @@ type User struct {
 }
 
 const (
-	TokenTypeAccess       = "access"
-	TokenTypeRefresh      = "refresh"
-	TokenTypePasswordless = "passwordless"
+	TokenTypeAccess        = "access"
+	TokenTypeRefresh       = "refresh"
+	TokenTypePasswordless  = "passwordless"
+	TokenTypePasswordReset = "password_reset"
 )
 
 type Token struct {
@@ -66,4 +67,12 @@ type Token struct {
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	Revoked   bool      `db:"revoked" json:"revoked"`
 	Metadata  JSONMap   `db:"metadata" json:"metadata"`
+}
+
+type PasswordlessToken struct {
+	ID        string    `db:"id" json:"id"`
+	Email     string    `db:"email" json:"email"`
+	Token     string    `db:"token" json:"token"`
+	ExpiresAt time.Time `db:"expires_at" json:"expires_at"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
 }

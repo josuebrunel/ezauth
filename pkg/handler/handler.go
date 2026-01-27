@@ -70,6 +70,10 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 		r.Post("/register", h.Register)
 		r.Post("/login", h.Login)
 		r.Post("/token/refresh", h.RefreshToken)
+		r.Post("/password-reset/request", h.PasswordResetRequest)
+		r.Post("/password-reset/confirm", h.PasswordResetConfirm)
+		r.Post("/passwordless/request", h.PasswordlessRequest)
+		r.Get("/passwordless/login", h.PasswordlessLogin)
 		r.Get("/oauth2/{provider}/login", h.OAuth2Login)
 		r.Get("/oauth2/{provider}/callback", h.OAuth2Callback)
 
@@ -223,4 +227,65 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	WriteJSONResponse(w, http.StatusOK, map[string]string{"message": "user deleted successfully"}, nil)
+}
+
+func (h *Handler) PasswordResetRequest(w http.ResponseWriter, r *http.Request) {
+	var req service.RequestPasswordReset
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		WriteJSONResponseError(w, http.StatusBadRequest, errors.New("invalid request body"))
+		return
+	}
+
+	if err := h.svc.PasswordResetRequest(r.Context(), req); err != nil {
+		WriteJSONResponseError(w, http.StatusInternalServerError, errors.New("could not process password reset request"))
+		return
+	}
+
+	WriteJSONResponse(w, http.StatusOK, map[string]string{"message": "password reset link sent"}, nil)
+}
+
+func (h *Handler) PasswordResetConfirm(w http.ResponseWriter, r *http.Request) {
+	var req service.RequestPasswordResetConfirm
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		WriteJSONResponseError(w, http.StatusBadRequest, errors.New("invalid request body"))
+		return
+	}
+
+	if err := h.svc.PasswordResetConfirm(r.Context(), req); err != nil {
+		WriteJSONResponseError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	WriteJSONResponse(w, http.StatusOK, map[string]string{"message": "password has been reset successfully"}, nil)
+}
+
+func (h *Handler) PasswordlessRequest(w http.ResponseWriter, r *http.Request) {
+	var req service.RequestPasswordless
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		WriteJSONResponseError(w, http.StatusBadRequest, errors.New("invalid request body"))
+		return
+	}
+
+	if err := h.svc.PasswordlessRequest(r.Context(), req); err != nil {
+		WriteJSONResponseError(w, http.StatusInternalServerError, errors.New("could not process passwordless request"))
+		return
+	}
+
+	WriteJSONResponse(w, http.StatusOK, map[string]string{"message": "magic link sent"}, nil)
+}
+
+func (h *Handler) PasswordlessLogin(w http.ResponseWriter, r *http.Request) {
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		WriteJSONResponseError(w, http.StatusBadRequest, errors.New("token is required"))
+		return
+	}
+
+	tokenResp, err := h.svc.PasswordlessLogin(r.Context(), token)
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusUnauthorized, err)
+		return
+	}
+
+	WriteJSONResponse(w, http.StatusOK, tokenResp, nil)
 }

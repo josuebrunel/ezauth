@@ -35,9 +35,16 @@ type IQueryAdapterToken interface {
 	QueryTokenDelete(ctx context.Context, id string) bob.Query
 }
 
+type IQueryAdapterPasswordless interface {
+	QueryPasswordlessTokenInsert(ctx context.Context, token *models.PasswordlessToken) bob.Query
+	QueryPasswordlessTokenGetByToken(ctx context.Context, token string) bob.Query
+	QueryPasswordlessTokenDelete(ctx context.Context, token string) bob.Query
+}
+
 type IQueryAdapter interface {
 	IQueryAdapterUser
 	IQueryAdapterToken
+	IQueryAdapterPasswordless
 }
 
 type Opts struct {
@@ -138,6 +145,35 @@ func (r Repository) UserDelete(ctx context.Context, id string) error {
 	query := r.QueryUserDelete(ctx, id)
 	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
 		xlog.Error("Failed to delete user", "error", err, "id", id)
+		return err
+	}
+	return nil
+}
+
+func (r Repository) PasswordlessTokenCreate(ctx context.Context, token *models.PasswordlessToken) (*models.PasswordlessToken, error) {
+	query := r.QueryPasswordlessTokenInsert(ctx, token)
+	tk, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.PasswordlessToken]())
+	if err != nil {
+		xlog.Error("Failed to create passwordless token", "error", err, "email", token.Email)
+		return nil, err
+	}
+	return tk, nil
+}
+
+func (r Repository) PasswordlessTokenGetByToken(ctx context.Context, tokenValue string) (*models.PasswordlessToken, error) {
+	query := r.QueryPasswordlessTokenGetByToken(ctx, tokenValue)
+	token, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.PasswordlessToken]())
+	if err != nil {
+		xlog.Error("Failed to get passwordless token by token", "error", err, "token", tokenValue)
+		return nil, err
+	}
+	return token, nil
+}
+
+func (r Repository) PasswordlessTokenDelete(ctx context.Context, tokenValue string) error {
+	query := r.QueryPasswordlessTokenDelete(ctx, tokenValue)
+	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+		xlog.Error("Failed to delete passwordless token", "error", err, "token", tokenValue)
 		return err
 	}
 	return nil

@@ -30,17 +30,15 @@ func (q *PSQLQueryAdapter) QueryUserInsert(ctx context.Context, user *models.Use
 			models.ColumnUpdatedAt,
 		),
 		im.Values(
-			psql.Arg(
-				user.Email,
-				user.PasswordHash,
-				user.Provider,
-				user.ProviderID,
-				user.EmailVerified,
-				user.AppMetadata,
-				user.UserMetadata,
-				user.CreatedAt,
-				user.UpdatedAt,
-			),
+			psql.Arg(user.Email),
+			psql.Arg(user.PasswordHash),
+			psql.Arg(user.Provider),
+			psql.Arg(user.ProviderID),
+			psql.Arg(user.EmailVerified),
+			psql.Arg(user.AppMetadata),
+			psql.Arg(user.UserMetadata),
+			psql.Arg(user.CreatedAt),
+			psql.Arg(user.UpdatedAt),
 		),
 		im.Returning("*"),
 	)
@@ -125,15 +123,13 @@ func (q *PSQLQueryAdapter) QueryTokenInsert(ctx context.Context, token *models.T
 			models.ColumnMetadata,
 		),
 		im.Values(
-			psql.Arg(
-				token.UserID,
-				token.Token,
-				token.TokenType,
-				token.ExpiresAt,
-				token.CreatedAt,
-				token.Revoked,
-				token.Metadata,
-			),
+			psql.Arg(token.UserID),
+			psql.Arg(token.Token),
+			psql.Arg(token.TokenType),
+			psql.Arg(token.ExpiresAt),
+			psql.Arg(token.CreatedAt),
+			psql.Arg(token.Revoked),
+			psql.Arg(token.Metadata),
 		),
 	)
 }
@@ -156,4 +152,36 @@ func (q *PSQLQueryAdapter) QueryTokenRevoke(ctx context.Context, id string) bob.
 
 func (q *PSQLQueryAdapter) QueryTokenDelete(ctx context.Context, id string) bob.Query {
 	return psql.Delete(dm.From(psql.Quote(models.TableToken)), dm.Where(psql.Quote("id").EQ(psql.Arg(id))))
+}
+
+func (q *PSQLQueryAdapter) QueryPasswordlessTokenInsert(ctx context.Context, token *models.PasswordlessToken) bob.Query {
+	return psql.Insert(
+		im.Into(psql.Quote(models.TablePasswordlessToken),
+			models.ColumnEmail,
+			models.ColumnToken,
+			models.ColumnExpiresAt,
+			models.ColumnCreatedAt,
+		),
+		im.Values(
+			psql.Arg(token.Email),
+			psql.Arg(token.Token),
+			psql.Arg(token.ExpiresAt),
+			psql.Arg(token.CreatedAt),
+		),
+		im.Returning("*"),
+	)
+}
+
+func (q *PSQLQueryAdapter) QueryPasswordlessTokenGetByToken(ctx context.Context, token string) bob.Query {
+	return psql.Select(
+		sm.From(psql.Quote(models.TablePasswordlessToken)),
+		sm.Where(psql.Quote(models.ColumnToken).EQ(psql.Arg(token))),
+	)
+}
+
+func (q *PSQLQueryAdapter) QueryPasswordlessTokenDelete(ctx context.Context, token string) bob.Query {
+	return psql.Delete(
+		dm.From(psql.Quote(models.TablePasswordlessToken)),
+		dm.Where(psql.Quote(models.ColumnToken).EQ(psql.Arg(token))),
+	)
 }

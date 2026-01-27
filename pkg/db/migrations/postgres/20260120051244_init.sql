@@ -51,20 +51,6 @@ CREATE INDEX idx_tokens_type ON tokens(token_type);
 CREATE INDEX idx_tokens_expires_at ON tokens(expires_at);
 
 -- Passwordless tokens table
-CREATE TABLE passwordless_tokens (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    email VARCHAR(255) NOT NULL,
-    token TEXT NOT NULL UNIQUE,
-    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_passwordless_email ON passwordless_tokens(email);
-
-CREATE INDEX idx_passwordless_token ON passwordless_tokens(token);
-
-CREATE INDEX idx_passwordless_expires_at ON passwordless_tokens(expires_at);
-
 -- Function to update updated_at timestamp
 CREATE
 OR REPLACE FUNCTION update_updated_at_column() RETURNS TRIGGER AS $$ BEGIN NEW.updated_at = NOW();
@@ -97,8 +83,6 @@ COMMENT ON COLUMN tokens.token_type IS 'Type of token: access, refresh, or passw
 DROP TRIGGER IF EXISTS update_users_updated_at ON users;
 
 DROP FUNCTION IF EXISTS update_updated_at_column();
-
-DROP TABLE IF EXISTS passwordless_tokens;
 
 DROP TABLE IF EXISTS tokens;
 

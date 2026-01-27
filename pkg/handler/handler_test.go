@@ -189,6 +189,98 @@ func TestHandler_RegisterAndLoginFlow(t *testing.T) {
 	})
 }
 
+func TestHandler_PasswordReset(t *testing.T) {
+	h := setupTestHandler(t)
+	email := "reset@example.com"
+	password := "old-password"
+
+	// 1. Register user
+	reqBody := map[string]any{"email": email, "password": password}
+	body, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	h.ServeHTTP(httptest.NewRecorder(), req)
+
+	// 2. Request reset
+	reqBody = map[string]any{"email": email}
+	body, _ = json.Marshal(reqBody)
+	req = httptest.NewRequest(http.MethodPost, "/auth/password-reset/request", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	// 3. Get token from mock mailer
+	mockMailer := h.svc.Mailer.(*service.MockMailer)
+	sentBody := mockMailer.SentEmails[0]["body"]
+	tokenValue := sentBody[len(sentBody)-64:]
+
+	// 4. Confirm reset
+	newPassword := "new-password"
+	reqBody = map[string]any{"token": tokenValue, "password": newPassword}
+	body, _ = json.Marshal(reqBody)
+	req = httptest.NewRequest(http.MethodPost, "/auth/password-reset/confirm", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// 5. Login with new password
+	reqBody = map[string]any{"email": email, "password": newPassword}
+	body, _ = json.Marshal(reqBody)
+	req = httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 after password reset, got %d", w.Code)
+	}
+}
+
+func TestHandler_Passwordless(t *testing.T) {
+	h := setupTestHandler(t)
+	email := "magic@example.com"
+
+	// 1. Request magic link
+	reqBody := map[string]any{"email": email}
+	body, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest(http.MethodPost, "/auth/passwordless/request", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	// 2. Get token from mock mailer
+	mockMailer := h.svc.Mailer.(*service.MockMailer)
+	sentBody := mockMailer.SentEmails[0]["body"]
+	tokenValue := sentBody[len(sentBody)-64:]
+
+	// 3. Login with magic link
+	req = httptest.NewRequest(http.MethodGet, "/auth/passwordless/login?token="+tokenValue, nil)
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp testResponse[service.TokenResponse]
+	json.NewDecoder(w.Body).Decode(&resp)
+	if resp.Data.AccessToken == "" {
+		t.Error("expected access token")
+	}
+}
+
 func TestHandler_Unauthorized(t *testing.T) {
 	h := setupTestHandler(t)
 

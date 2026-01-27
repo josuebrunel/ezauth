@@ -6,14 +6,23 @@ import (
 )
 
 type Auth struct {
-	Cfg  *config.Config
-	Repo *repository.Repository
+	Cfg    *config.Config
+	Repo   *repository.Repository
+	Mailer Mailer
 }
 
 func New(cfg *config.Config, repo *repository.Repository) *Auth {
+	var mailer Mailer
+	if cfg.SMTP.Host != "" {
+		mailer = NewSMTPMailer(cfg.SMTP)
+	} else {
+		mailer = NewMockMailer()
+	}
+
 	return &Auth{
-		Cfg:  cfg,
-		Repo: repo,
+		Cfg:    cfg,
+		Repo:   repo,
+		Mailer: mailer,
 	}
 }
 
