@@ -18,7 +18,7 @@ const (
 	DialectSqlite = "sqlite3"
 )
 
-type IQueryAdapterUser interface {
+type UserQuerier interface {
 	QueryUserInsert(ctx context.Context, user *models.User) bob.Query
 	QueryUserGetByEmail(ctx context.Context, email string) bob.Query
 	QueryUserGetByID(ctx context.Context, id string) bob.Query
@@ -27,7 +27,7 @@ type IQueryAdapterUser interface {
 	QueryUserDelete(ctx context.Context, id string) bob.Query
 }
 
-type IQueryAdapterToken interface {
+type TokenQuerier interface {
 	QueryTokenInsert(ctx context.Context, token *models.Token) bob.Query
 	QueryTokenGetByID(ctx context.Context, id string) bob.Query
 	QueryTokenGetByToken(ctx context.Context, token string) bob.Query
@@ -35,16 +35,16 @@ type IQueryAdapterToken interface {
 	QueryTokenDelete(ctx context.Context, id string) bob.Query
 }
 
-type IQueryAdapterPasswordless interface {
+type PasswordlessQuerier interface {
 	QueryPasswordlessTokenInsert(ctx context.Context, token *models.PasswordlessToken) bob.Query
 	QueryPasswordlessTokenGetByToken(ctx context.Context, token string) bob.Query
 	QueryPasswordlessTokenDelete(ctx context.Context, token string) bob.Query
 }
 
-type IQueryAdapter interface {
-	IQueryAdapterUser
-	IQueryAdapterToken
-	IQueryAdapterPasswordless
+type Querier interface {
+	UserQuerier
+	TokenQuerier
+	PasswordlessQuerier
 }
 
 type Opts struct {
@@ -56,18 +56,18 @@ type Repository struct {
 	Opts Opts
 	bdb  bob.DB
 	db   *sql.DB
-	IQueryAdapter
+	Querier
 }
 
 func New(db *sql.DB, dialect string) *Repository {
-	qAdapter := getDialectQuery(dialect)
+	querier := getDialectQuery(dialect)
 	bdb := bob.NewDB(db)
 
 	return &Repository{
-		db:            db,
-		bdb:           bdb,
-		IQueryAdapter: qAdapter,
-		Opts:          Opts{Dialect: dialect},
+		db:      db,
+		bdb:     bdb,
+		Querier: querier,
+		Opts:    Opts{Dialect: dialect},
 	}
 }
 
@@ -227,14 +227,14 @@ func (r Repository) TokenDelete(ctx context.Context, id string) error {
 	return nil
 }
 
-func getDialectQuery(dbDialect string) IQueryAdapter {
+func getDialectQuery(dbDialect string) Querier {
 	switch dbDialect {
 	case "postgres":
-		return &postgres.PSQLQueryAdapter{}
+		return &postgres.PSQLQuerier{}
 	case "sqlite", "sqlite3":
-		return &sqlite.SqliteQueryAdapter{}
+		return &sqlite.SqliteQuerier{}
 	default:
-		return &sqlite.SqliteQueryAdapter{}
+		return &sqlite.SqliteQuerier{}
 	}
 }
 
