@@ -47,17 +47,35 @@ func (q *PSQLQueryAdapter) QueryUserInsert(ctx context.Context, user *models.Use
 }
 
 func (q *PSQLQueryAdapter) QueryUserGetByEmail(ctx context.Context, email string) bob.Query {
-	return psql.Select(sm.From(models.TableUser), sm.Where(psql.Quote(models.ColumnEmail).EQ(psql.Arg(email))))
+	return psql.Select(sm.From(psql.Quote(models.TableUser)), sm.Where(psql.Quote(models.ColumnEmail).EQ(psql.Arg(email))))
 }
 
 func (q *PSQLQueryAdapter) QueryUserGetByID(ctx context.Context, id string) bob.Query {
-	return psql.Select(sm.From(models.TableUser), sm.Where(psql.Quote("id").EQ(psql.Arg(id))))
+	return psql.Select(sm.From(psql.Quote(models.TableUser)), sm.Where(psql.Quote("id").EQ(psql.Arg(id))))
+}
+
+func (q *PSQLQueryAdapter) QueryUserGetByProvider(ctx context.Context, provider, providerID string) bob.Query {
+	return psql.Select(
+		sm.From(psql.Quote(models.TableUser)),
+		sm.Where(
+			psql.Quote(models.ColumnProvider).EQ(psql.Arg(provider)).
+				And(psql.Quote(models.ColumnProviderID).EQ(psql.Arg(providerID))),
+		),
+	)
 }
 
 func (q *PSQLQueryAdapter) QueryUserUpdate(ctx context.Context, user *models.User) bob.Query {
 	qm := []bob.Mod[*dialect.UpdateQuery]{
-		um.Table(models.TableUser),
+		um.Table(psql.Quote(models.TableUser)),
 		um.Where(psql.Quote("id").EQ(psql.Arg(user.ID))),
+	}
+
+	if user.Email != "" {
+		qm = append(qm, um.Set(psql.Quote(models.ColumnEmail).EQ(psql.Arg(user.Email))))
+	}
+
+	if user.PasswordHash != "" {
+		qm = append(qm, um.Set(psql.Quote(models.ColumnPasswordHash).EQ(psql.Arg(user.PasswordHash))))
 	}
 
 	if user.Provider != "" {
@@ -67,6 +85,8 @@ func (q *PSQLQueryAdapter) QueryUserUpdate(ctx context.Context, user *models.Use
 	if user.ProviderID != nil {
 		qm = append(qm, um.Set(psql.Quote(models.ColumnProviderID).EQ(psql.Arg(user.ProviderID))))
 	}
+
+	qm = append(qm, um.Set(psql.Quote(models.ColumnEmailVerified).EQ(psql.Arg(user.EmailVerified))))
 
 	if user.AppMetadata != nil {
 		qm = append(qm, um.Set(psql.Quote(models.ColumnAppMetadata).EQ(psql.Arg(user.AppMetadata))))
@@ -80,20 +100,22 @@ func (q *PSQLQueryAdapter) QueryUserUpdate(ctx context.Context, user *models.Use
 		qm = append(qm, um.Set(psql.Quote(models.ColumnUpdatedAt).EQ(psql.Arg(user.UpdatedAt))))
 	}
 
+	qm = append(qm, um.Returning("*"))
+
 	return psql.Update(qm...)
 }
 
 func (q *PSQLQueryAdapter) QueryUserCheckPasswordHash(ctx context.Context, email, passwordHash string) bob.Query {
-	return psql.Select(sm.From(models.TableUser), sm.Where(psql.Quote(models.ColumnEmail).EQ(psql.Arg(email)).And(psql.Quote(models.ColumnPasswordHash).EQ(psql.Arg(passwordHash)))))
+	return psql.Select(sm.From(psql.Quote(models.TableUser)), sm.Where(psql.Quote(models.ColumnEmail).EQ(psql.Arg(email)).And(psql.Quote(models.ColumnPasswordHash).EQ(psql.Arg(passwordHash)))))
 }
 
 func (q *PSQLQueryAdapter) QueryUserDelete(ctx context.Context, id string) bob.Query {
-	return psql.Delete(dm.From(models.TableUser), dm.Where(psql.Quote("id").EQ(psql.Arg(id))))
+	return psql.Delete(dm.From(psql.Quote(models.TableUser)), dm.Where(psql.Quote("id").EQ(psql.Arg(id))))
 }
 
 func (q *PSQLQueryAdapter) QueryTokenInsert(ctx context.Context, token *models.Token) bob.Query {
 	return psql.Insert(
-		im.Into(models.TableToken,
+		im.Into(psql.Quote(models.TableToken),
 			models.ColumnUserID,
 			models.ColumnToken,
 			models.ColumnTokenType,
@@ -117,21 +139,21 @@ func (q *PSQLQueryAdapter) QueryTokenInsert(ctx context.Context, token *models.T
 }
 
 func (q *PSQLQueryAdapter) QueryTokenGetByID(ctx context.Context, id string) bob.Query {
-	return psql.Select(sm.From(models.TableToken), sm.Where(psql.Quote("id").EQ(psql.Arg(id))))
+	return psql.Select(sm.From(psql.Quote(models.TableToken)), sm.Where(psql.Quote("id").EQ(psql.Arg(id))))
 }
 
 func (q *PSQLQueryAdapter) QueryTokenGetByToken(ctx context.Context, token string) bob.Query {
-	return psql.Select(sm.From(models.TableToken), sm.Where(psql.Quote(models.ColumnToken).EQ(psql.Arg(token))))
+	return psql.Select(sm.From(psql.Quote(models.TableToken)), sm.Where(psql.Quote(models.ColumnToken).EQ(psql.Arg(token))))
 }
 
 func (q *PSQLQueryAdapter) QueryTokenRevoke(ctx context.Context, id string) bob.Query {
 	return psql.Update(
-		um.Table(models.TableToken),
+		um.Table(psql.Quote(models.TableToken)),
 		um.SetCol(psql.Quote(models.ColumnRevoked).String()).To(true),
 		um.Where(psql.Quote("id").EQ(psql.Arg(id))),
 	)
 }
 
 func (q *PSQLQueryAdapter) QueryTokenDelete(ctx context.Context, id string) bob.Query {
-	return psql.Delete(dm.From(models.TableToken), dm.Where(psql.Quote("id").EQ(psql.Arg(id))))
+	return psql.Delete(dm.From(psql.Quote(models.TableToken)), dm.Where(psql.Quote("id").EQ(psql.Arg(id))))
 }

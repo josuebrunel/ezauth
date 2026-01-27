@@ -22,6 +22,7 @@ type IQueryAdapterUser interface {
 	QueryUserInsert(ctx context.Context, user *models.User) bob.Query
 	QueryUserGetByEmail(ctx context.Context, email string) bob.Query
 	QueryUserGetByID(ctx context.Context, id string) bob.Query
+	QueryUserGetByProvider(ctx context.Context, provider, providerID string) bob.Query
 	QueryUserUpdate(ctx context.Context, user *models.User) bob.Query
 	QueryUserDelete(ctx context.Context, id string) bob.Query
 }
@@ -85,11 +86,21 @@ func (r Repository) UserCreate(ctx context.Context, user *models.User) (*models.
 	return user, nil
 }
 
+func (r Repository) UserGetByProvider(ctx context.Context, provider, providerID string) (*models.User, error) {
+	query := r.QueryUserGetByProvider(ctx, provider, providerID)
+	user, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
+	if err != nil {
+		xlog.Error("Failed to get user by provider", "error", err, "provider", provider, "provider_id", providerID)
+		return nil, err
+	}
+	return user, nil
+}
+
 func (r Repository) UserGetByEmail(ctx context.Context, email string) (*models.User, error) {
 	query := r.QueryUserGetByEmail(ctx, email)
 	user, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
 	if err != nil {
-		xlog.Error("Failed to get user by email", "error", err, "email", user.Email)
+		xlog.Error("Failed to get user by email", "error", err, "email", email)
 		return nil, err
 	}
 	return user, nil

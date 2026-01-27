@@ -55,12 +55,26 @@ func (q *SqliteQueryAdapter) QueryUserGetByID(ctx context.Context, id string) bo
 	return sqlite.Select(sm.From(models.TableUser), sm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
 }
 
+func (q *SqliteQueryAdapter) QueryUserGetByProvider(ctx context.Context, provider, providerID string) bob.Query {
+	return sqlite.Select(
+		sm.From(models.TableUser),
+		sm.Where(
+			sqlite.Quote(models.ColumnProvider).EQ(sqlite.Arg(provider)).
+				And(sqlite.Quote(models.ColumnProviderID).EQ(sqlite.Arg(providerID))),
+		),
+	)
+}
+
 func (q *SqliteQueryAdapter) QueryUserUpdate(ctx context.Context, user *models.User) bob.Query {
 	qm := []bob.Mod[*dialect.UpdateQuery]{
 		um.Table(models.TableUser),
 		um.SetCol(models.ColumnUpdatedAt).ToArg(time.Now().UTC()),
 		um.Where(sqlite.Quote("id").EQ(sqlite.Arg(user.ID))),
 		um.Returning("*"),
+	}
+
+	if user.Email != "" {
+		qm = append(qm, um.SetCol(models.ColumnEmail).ToArg(user.Email))
 	}
 
 	if user.Provider != "" {
@@ -74,6 +88,8 @@ func (q *SqliteQueryAdapter) QueryUserUpdate(ctx context.Context, user *models.U
 	if user.ProviderID != nil {
 		qm = append(qm, um.SetCol(models.ColumnProviderID).ToArg(user.ProviderID))
 	}
+
+	qm = append(qm, um.SetCol(models.ColumnEmailVerified).ToArg(user.EmailVerified))
 
 	if user.AppMetadata != nil {
 		qm = append(qm, um.SetCol(models.ColumnAppMetadata).ToArg(user.AppMetadata))
