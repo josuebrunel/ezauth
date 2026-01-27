@@ -31,25 +31,41 @@ type Handler struct {
 	svc  *service.Auth
 }
 
-func New(svc *service.Auth, path string) *Handler {
-	r := chi.NewRouter()
+type HandlerOption func(*Handler)
 
+func WithRouter(r *chi.Mux) HandlerOption {
+	return func(h *Handler) {
+		h.r = r
+	}
+}
+
+func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 	h := &Handler{
 		path: path,
-		r:    r,
+		r:    chi.NewRouter(),
 		svc:  svc,
 	}
 
-	// Initialize middlewares
-	h.r.Use(middleware.Logger)
-	h.r.Use(middleware.RequestID)
-	h.r.Use(middleware.RealIP)
-	h.r.Use(middleware.Recoverer)
+	for _, opt := range options {
+		opt(h)
+	}
+
+	// Default middlewares if router was newly created
+	if len(options) == 0 {
+		h.r.Use(middleware.Logger)
+		h.r.Use(middleware.RequestID)
+		h.r.Use(middleware.RealIP)
+		h.r.Use(middleware.Recoverer)
+	}
 
 	h.r.Get("/ping", h.Ping)
 
 	// Initialize routes
-	h.r.Route("/"+h.path, func(r chi.Router) {
+	routePath := "/" + h.path
+	if h.path == "" {
+		routePath = "/"
+	}
+	h.r.Route(routePath, func(r chi.Router) {
 		// Public routes
 		r.Post("/register", h.Register)
 		r.Post("/login", h.Login)

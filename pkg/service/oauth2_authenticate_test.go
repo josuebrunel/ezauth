@@ -18,7 +18,10 @@ func setupOAuth2AuthTestDB(t *testing.T) *Auth {
 		},
 		JWTSecret: "test-secret",
 	}
-	auth := New(cfg)
+	auth, err := NewFromConfig(cfg)
+	if err != nil {
+		t.Fatalf("failed to create auth service: %v", err)
+	}
 	if err := migrations.MigrateUpWithDBConn(auth.Repo.DB(), "sqlite"); err != nil {
 		t.Fatalf("failed to run migrations: %v", err)
 	}
