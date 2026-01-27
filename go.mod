@@ -13,6 +13,8 @@ require (
 	github.com/pressly/goose/v3 v3.26.0
 	github.com/stephenafamo/bob v0.42.0
 	github.com/stephenafamo/scan v0.7.0
+	github.com/swaggo/http-swagger v1.3.4
+	github.com/swaggo/swag v1.16.6
 	golang.org/x/crypto v0.46.0
 	golang.org/x/oauth2 v0.34.0
 )
@@ -32,8 +34,6 @@ require (
 	github.com/qdm12/reprint v0.0.0-20200326205758-722754a53494 // indirect
 	github.com/sethvargo/go-retry v0.3.0 // indirect
 	github.com/swaggo/files v0.0.0-20220610200504-28940afbdbfe // indirect
-	github.com/swaggo/http-swagger v1.3.4 // indirect
-	github.com/swaggo/swag v1.16.6 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/net v0.47.0 // indirect

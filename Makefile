@@ -62,4 +62,4 @@ run: build
 	${BIN}
 
 swagger:
-	swag init -g pkg/handler/handler.go --parseDependency
+	swag init -g pkg/handler/handler.go --parseDependency -o pkg/handler/docs

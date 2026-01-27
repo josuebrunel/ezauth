@@ -12,7 +12,7 @@ import (
 	"github.com/josuebrunel/ezauth/pkg/service"
 	"github.com/josuebrunel/gopkg/xlog"
 	httpSwagger "github.com/swaggo/http-swagger"
-	_ "github.com/josuebrunel/ezauth/docs"
+	_ "github.com/josuebrunel/ezauth/pkg/handler/docs"
 )
 
 type contextKey string
