@@ -13,6 +13,13 @@ CREATE TABLE users (
     email_verified BOOLEAN DEFAULT FALSE,
     app_metadata JSONB DEFAULT '{}' :: jsonb,
     user_metadata JSONB DEFAULT '{}' :: jsonb,
+    first_name VARCHAR(255) DEFAULT '',
+    last_name VARCHAR(255) DEFAULT '',
+    last_active_at TIMESTAMP WITH TIME ZONE,
+    locale VARCHAR(50) DEFAULT '',
+    timezone VARCHAR(100) DEFAULT '',
+    email_verified_at TIMESTAMP WITH TIME ZONE,
+    roles TEXT DEFAULT '',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     CONSTRAINT unique_provider_user UNIQUE (provider, provider_id)

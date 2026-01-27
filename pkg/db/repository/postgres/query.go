@@ -26,6 +26,13 @@ func (q *PSQLQuerier) QueryUserInsert(ctx context.Context, user *models.User) bo
 			models.ColumnEmailVerified,
 			models.ColumnAppMetadata,
 			models.ColumnUserMetadata,
+			models.ColumnFirstName,
+			models.ColumnLastName,
+			models.ColumnLastActiveAt,
+			models.ColumnLocale,
+			models.ColumnTimezone,
+			models.ColumnEmailVerifiedAt,
+			models.ColumnRoles,
 			models.ColumnCreatedAt,
 			models.ColumnUpdatedAt,
 		),
@@ -37,6 +44,13 @@ func (q *PSQLQuerier) QueryUserInsert(ctx context.Context, user *models.User) bo
 			psql.Arg(user.EmailVerified),
 			psql.Arg(user.AppMetadata),
 			psql.Arg(user.UserMetadata),
+			psql.Arg(user.FirstName),
+			psql.Arg(user.LastName),
+			psql.Arg(user.LastActiveAt),
+			psql.Arg(user.Locale),
+			psql.Arg(user.Timezone),
+			psql.Arg(user.EmailVerifiedAt),
+			psql.Arg(user.Roles),
 			psql.Arg(user.CreatedAt),
 			psql.Arg(user.UpdatedAt),
 		),
@@ -92,6 +106,34 @@ func (q *PSQLQuerier) QueryUserUpdate(ctx context.Context, user *models.User) bo
 
 	if user.UserMetadata != nil {
 		qm = append(qm, um.Set(psql.Quote(models.ColumnUserMetadata).EQ(psql.Arg(user.UserMetadata))))
+	}
+
+	if user.FirstName != "" {
+		qm = append(qm, um.Set(psql.Quote(models.ColumnFirstName).EQ(psql.Arg(user.FirstName))))
+	}
+
+	if user.LastName != "" {
+		qm = append(qm, um.Set(psql.Quote(models.ColumnLastName).EQ(psql.Arg(user.LastName))))
+	}
+
+	if user.LastActiveAt != nil {
+		qm = append(qm, um.Set(psql.Quote(models.ColumnLastActiveAt).EQ(psql.Arg(user.LastActiveAt))))
+	}
+
+	if user.Locale != "" {
+		qm = append(qm, um.Set(psql.Quote(models.ColumnLocale).EQ(psql.Arg(user.Locale))))
+	}
+
+	if user.Timezone != "" {
+		qm = append(qm, um.Set(psql.Quote(models.ColumnTimezone).EQ(psql.Arg(user.Timezone))))
+	}
+
+	if user.EmailVerifiedAt != nil {
+		qm = append(qm, um.Set(psql.Quote(models.ColumnEmailVerifiedAt).EQ(psql.Arg(user.EmailVerifiedAt))))
+	}
+
+	if user.Roles != "" {
+		qm = append(qm, um.Set(psql.Quote(models.ColumnRoles).EQ(psql.Arg(user.Roles))))
 	}
 
 	if user.UpdatedAt.IsZero() {

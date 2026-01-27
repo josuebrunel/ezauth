@@ -12,6 +12,7 @@ Simple and easy to use authentication library for Golang.
 - JWT based sessions (Access & Refresh Tokens, Refresh Token Rotation)
 - OAuth2 Support (Google, GitHub, Facebook)
 - Password Reset and Passwordless (Magic Link) authentication
+- Extended User Profiles (First Name, Last Name, Locale, Timezone, Roles, etc.)
 - SQLite and PostgreSQL support
 - Built-in Middleware for route protection
 
