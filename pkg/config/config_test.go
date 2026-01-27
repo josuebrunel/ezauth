@@ -23,8 +23,8 @@ func TestConfig(t *testing.T) {
 		if cfg.Debug != false {
 			t.Errorf("expected default Debug 'false', got '%v'", cfg.Debug)
 		}
-		if cfg.DB.Dialect != "sqlite" {
-			t.Errorf("expected default DB.Dialect 'sqlite', got '%s'", cfg.DB.Dialect)
+		if cfg.DB.Dialect != "sqlite3" {
+			t.Errorf("expected default DB.Dialect 'sqlite3', got '%s'", cfg.DB.Dialect)
 		}
 		if cfg.OAuth2.Google.Name != "google" {
 			t.Errorf("expected default OAuth2.Google.Name 'google', got '%s'", cfg.OAuth2.Google.Name)

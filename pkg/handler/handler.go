@@ -54,6 +54,8 @@ func New(svc *service.Auth, path string) *Handler {
 		r.Post("/register", h.Register)
 		r.Post("/login", h.Login)
 		r.Post("/token/refresh", h.RefreshToken)
+		r.Get("/oauth2/{provider}/login", h.OAuth2Login)
+		r.Get("/oauth2/{provider}/callback", h.OAuth2Callback)
 
 		// Protected routes
 		r.Group(func(r chi.Router) {
