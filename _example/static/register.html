@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - EzAuth Example</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <style>
+        .container { max-width: 400px; margin-top: 50px; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <article>
+            <header>Register</header>
+            <form id="registerForm">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required>
+
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+
+                <button type="submit">Register</button>
+            </form>
+            <hr>
+            <p style="text-align: center;">Already have an account? <a href="/login.html">Login</a></p>
+        </article>
+    </main>
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': 'my-super-secret-api-key'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('access_token', result.data.access_token);
+                    localStorage.setItem('refresh_token', result.data.refresh_token);
+                    window.location.href = '/dashboard.html';
+                } else {
+                     alert('Registration failed: ' + (result.data || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('An error occurred');
+            }
+        });
+    </script>
+</body>
+</html>
