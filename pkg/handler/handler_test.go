@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -380,6 +381,106 @@ func TestHandler_Unauthorized(t *testing.T) {
 
 		if w.Code != http.StatusUnauthorized {
 			t.Errorf("expected status 401, got %d", w.Code)
+		}
+	})
+}
+
+func TestHandler_RegisterAndLogin_Form(t *testing.T) {
+	h := setupTestHandler(t)
+
+	email := "form@example.com"
+	password := "password123"
+
+	// 1. Register with Form
+	t.Run("Register_Form", func(t *testing.T) {
+		form := url.Values{}
+		form.Add("email", email)
+		form.Add("password", password)
+		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBufferString(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		h.ServeHTTP(w, req)
+
+		if w.Code != http.StatusCreated {
+			t.Errorf("expected status 201, got %d: %s", w.Code, w.Body.String())
+		}
+
+		var resp testResponse[service.TokenResponse]
+		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if resp.Data.AccessToken == "" {
+			t.Error("expected access token to be present")
+		}
+	})
+
+	// 2. Login with Form
+	t.Run("Login_Form", func(t *testing.T) {
+		form := url.Values{}
+		form.Add("email", email)
+		form.Add("password", password)
+		req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBufferString(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		h.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status 200, got %d: %s", w.Code, w.Body.String())
+		}
+
+		var resp testResponse[service.TokenResponse]
+		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if resp.Data.AccessToken == "" {
+			t.Error("expected access token")
+		}
+	})
+}
+
+func TestHandler_PublicRoutes_NoApiKey(t *testing.T) {
+	h := setupTestHandler(t)
+	email := "noapikey@example.com"
+	password := "password123"
+
+	// 1. Register without X-API-Key
+	t.Run("Register_NoApiKey", func(t *testing.T) {
+		reqBody := map[string]any{
+			"email":    email,
+			"password": password,
+		}
+		body, _ := json.Marshal(reqBody)
+		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		// No X-API-Key
+		w := httptest.NewRecorder()
+
+		h.ServeHTTP(w, req)
+
+		if w.Code != http.StatusCreated {
+			t.Errorf("expected status 201, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	// 2. Login without X-API-Key
+	t.Run("Login_NoApiKey", func(t *testing.T) {
+		reqBody := map[string]any{
+			"email":    email,
+			"password": password,
+		}
+		body, _ := json.Marshal(reqBody)
+		req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		// No X-API-Key
+		w := httptest.NewRecorder()
+
+		h.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status 200, got %d: %s", w.Code, w.Body.String())
 		}
 	})
 }

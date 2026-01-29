@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -87,18 +88,19 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 		// Routes that CANNOT have API Key (callbacks)
 		r.Get("/oauth2/{provider}/callback", h.OAuth2Callback)
 
+		// Public Routes
+		r.Post("/register", h.Register)
+		r.Post("/login", h.Login)
+		r.Post("/token/refresh", h.RefreshToken)
+		r.Post("/password-reset/request", h.PasswordResetRequest)
+		r.Post("/password-reset/confirm", h.PasswordResetConfirm)
+		r.Post("/passwordless/request", h.PasswordlessRequest)
+		r.Get("/passwordless/login", h.PasswordlessLogin)
+		r.Get("/oauth2/{provider}/login", h.OAuth2Login)
+
 		// Routes protected by API Key
 		r.Group(func(r chi.Router) {
 			r.Use(h.APIKeyMiddleware)
-
-			r.Post("/register", h.Register)
-			r.Post("/login", h.Login)
-			r.Post("/token/refresh", h.RefreshToken)
-			r.Post("/password-reset/request", h.PasswordResetRequest)
-			r.Post("/password-reset/confirm", h.PasswordResetConfirm)
-			r.Post("/passwordless/request", h.PasswordlessRequest)
-			r.Get("/passwordless/login", h.PasswordlessLogin)
-			r.Get("/oauth2/{provider}/login", h.OAuth2Login)
 
 			// Protected routes
 			r.Group(func(r chi.Router) {
@@ -150,19 +152,33 @@ func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 // @Summary Register a new user
 // @Description Register a new user with basic authentication
 // @Tags auth
-// @Accept json
+// @Accept json,x-www-form-urlencoded
 // @Produce json
 // @Param request body service.RequestBasicAuth true "Registration Request"
-// @Security ApiKeyAuth
 // @Success 201 {object} ApiResponse[service.TokenResponse]
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 500 {object} ApiResponse[string]
 // @Router /auth/register [post]
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestBasicAuth
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
-		return
+
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
+		if err := r.ParseForm(); err != nil {
+			WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
+			return
+		}
+		req.Email = r.FormValue("email")
+		req.Password = r.FormValue("password")
+		req.FirstName = r.FormValue("first_name")
+		req.LastName = r.FormValue("last_name")
+		req.Locale = r.FormValue("locale")
+		req.Timezone = r.FormValue("timezone")
+		req.Roles = r.FormValue("roles")
+	} else {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
+			return
+		}
 	}
 
 	user, err := h.svc.UserCreate(r.Context(), &req)
@@ -184,10 +200,9 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 // @Summary Login user
 // @Description Login with email and password
 // @Tags auth
-// @Accept json
+// @Accept json,x-www-form-urlencoded
 // @Produce json
 // @Param request body service.RequestBasicAuth true "Login Request"
-// @Security ApiKeyAuth
 // @Success 200 {object} ApiResponse[service.TokenResponse]
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 401 {object} ApiResponse[string]
@@ -195,9 +210,19 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 // @Router /auth/login [post]
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestBasicAuth
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
-		return
+
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
+		if err := r.ParseForm(); err != nil {
+			WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
+			return
+		}
+		req.Email = r.FormValue("email")
+		req.Password = r.FormValue("password")
+	} else {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
+			return
+		}
 	}
 
 	user, err := h.svc.UserAuthenticate(r.Context(), req)
@@ -219,19 +244,27 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 // @Summary Refresh access token
 // @Description Get a new access token using a refresh token
 // @Tags auth
-// @Accept json
+// @Accept json,x-www-form-urlencoded
 // @Produce json
 // @Param request body RefreshTokenRequest true "Refresh Token Request"
-// @Security ApiKeyAuth
 // @Success 200 {object} ApiResponse[service.TokenResponse]
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 401 {object} ApiResponse[string]
 // @Router /auth/token/refresh [post]
 func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	var req RefreshTokenRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
-		return
+
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
+		if err := r.ParseForm(); err != nil {
+			WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
+			return
+		}
+		req.RefreshToken = r.FormValue("refresh_token")
+	} else {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
+			return
+		}
 	}
 
 	if req.RefreshToken == "" {
@@ -279,7 +312,7 @@ func (h *Handler) UserInfo(w http.ResponseWriter, r *http.Request) {
 // @Summary Logout user
 // @Description Revoke the user's refresh token
 // @Tags auth
-// @Accept json
+// @Accept json,x-www-form-urlencoded
 // @Produce json
 // @Param request body LogoutRequest true "Logout Request"
 // @Security BearerAuth
@@ -290,9 +323,18 @@ func (h *Handler) UserInfo(w http.ResponseWriter, r *http.Request) {
 // @Router /auth/logout [post]
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	var req LogoutRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
-		return
+
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
+		if err := r.ParseForm(); err != nil {
+			WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
+			return
+		}
+		req.RefreshToken = r.FormValue("refresh_token")
+	} else {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
+			return
+		}
 	}
 
 	if req.RefreshToken == "" {
@@ -337,19 +379,27 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 // @Summary Request password reset
 // @Description Send a password reset link to the user's email
 // @Tags auth
-// @Accept json
+// @Accept json,x-www-form-urlencoded
 // @Produce json
 // @Param request body service.RequestPasswordReset true "Password Reset Request"
-// @Security ApiKeyAuth
 // @Success 200 {object} ApiResponse[map[string]string]
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 500 {object} ApiResponse[string]
 // @Router /auth/password-reset/request [post]
 func (h *Handler) PasswordResetRequest(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestPasswordReset
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
-		return
+
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
+		if err := r.ParseForm(); err != nil {
+			WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
+			return
+		}
+		req.Email = r.FormValue("email")
+	} else {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
+			return
+		}
 	}
 
 	if err := h.svc.PasswordResetRequest(r.Context(), req); err != nil {
@@ -364,18 +414,27 @@ func (h *Handler) PasswordResetRequest(w http.ResponseWriter, r *http.Request) {
 // @Summary Confirm password reset
 // @Description Reset password using the token sent via email
 // @Tags auth
-// @Accept json
+// @Accept json,x-www-form-urlencoded
 // @Produce json
 // @Param request body service.RequestPasswordResetConfirm true "Password Reset Confirmation"
-// @Security ApiKeyAuth
 // @Success 200 {object} ApiResponse[map[string]string]
 // @Failure 400 {object} ApiResponse[string]
 // @Router /auth/password-reset/confirm [post]
 func (h *Handler) PasswordResetConfirm(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestPasswordResetConfirm
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
-		return
+
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
+		if err := r.ParseForm(); err != nil {
+			WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
+			return
+		}
+		req.Token = r.FormValue("token")
+		req.Password = r.FormValue("password")
+	} else {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
+			return
+		}
 	}
 
 	if err := h.svc.PasswordResetConfirm(r.Context(), req); err != nil {
@@ -390,19 +449,27 @@ func (h *Handler) PasswordResetConfirm(w http.ResponseWriter, r *http.Request) {
 // @Summary Request magic link
 // @Description Send a magic login link to the user's email
 // @Tags auth
-// @Accept json
+// @Accept json,x-www-form-urlencoded
 // @Produce json
 // @Param request body service.RequestPasswordless true "Passwordless Request"
-// @Security ApiKeyAuth
 // @Success 200 {object} ApiResponse[map[string]string]
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 500 {object} ApiResponse[string]
 // @Router /auth/passwordless/request [post]
 func (h *Handler) PasswordlessRequest(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestPasswordless
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
-		return
+
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
+		if err := r.ParseForm(); err != nil {
+			WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
+			return
+		}
+		req.Email = r.FormValue("email")
+	} else {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
+			return
+		}
 	}
 
 	if err := h.svc.PasswordlessRequest(r.Context(), req); err != nil {
@@ -419,7 +486,6 @@ func (h *Handler) PasswordlessRequest(w http.ResponseWriter, r *http.Request) {
 // @Tags auth
 // @Produce json
 // @Param token query string true "Magic Link Token"
-// @Security ApiKeyAuth
 // @Success 200 {object} ApiResponse[service.TokenResponse]
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 401 {object} ApiResponse[string]
