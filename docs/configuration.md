@@ -7,9 +7,9 @@
 | Variable | Description | Default |
 | -------- | ----------- | ------- |
 | `EZAUTH_ADDR` | The address the server listens on. | `:8080` |
+| `EZAUTH_API_KEY` | Master API Key for protecting endpoints. | |
 | `EZAUTH_BASE_URL` | The base URL of the auth service (used for emails). | `http://localhost:8080` |
 | `EZAUTH_DEBUG` | Enable debug logging. | `false` |
-| `EZAUTH_SECRET` | Secret key used for various internal encryptions. | |
 | `EZAUTH_JWT_SECRET` | Secret key used to sign JWT tokens. | |
 | `EZAUTH_TIMEOUT` | Request timeout duration. | `30s` |
 

@@ -1,5 +1,7 @@
 # API Endpoints
 
+All endpoints (except `OAuth2 Callback`) require a valid API Key passed via the `X-API-Key` header.
+
 All `ezauth` responses follow a consistent format:
 
 ```json
@@ -127,7 +129,7 @@ The callback URL handled by `ezauth`. After success, it redirects to the `EZAUTH
 
 ## Protected Endpoints
 
-These endpoints require an `Authorization: Bearer <access_token>` header.
+These endpoints require an `Authorization: Bearer <access_token>` header (in addition to `X-API-Key`).
 
 ### User Info
 `GET /auth/userinfo`

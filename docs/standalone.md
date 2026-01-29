@@ -44,6 +44,8 @@ docker-compose up -d
 
 ## Integrating with your Application
 
+**Important**: All requests to the `ezauth` API (except OAuth2 callbacks) must include the `X-API-Key` header with the configured API key.
+
 Once `ezauth` is running, your application can:
 1.  **Direct Users to Login/Register**: Your frontend can send `POST` requests to `ezauth`'s `/auth/login` or `/auth/register` endpoints.
 2.  **Secure Your Routes**: Your main application should verify the JWT access tokens issued by `ezauth`. Since `ezauth` uses standard JWTs, you can use any JWT library to verify the signature (using `EZAUTH_JWT_SECRET`).

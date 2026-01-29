@@ -14,6 +14,7 @@ import (
 // @Description Redirect to the OAuth2 provider login page
 // @Tags oauth2
 // @Param provider path string true "OAuth2 Provider (google, github, facebook)"
+// @Security ApiKeyAuth
 // @Success 307
 // @Failure 400 {object} ApiResponse[string]
 // @Router /auth/oauth2/{provider}/login [get]

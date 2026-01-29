@@ -62,6 +62,7 @@ type SMTP struct {
 type Config struct {
 	Addr      string        `json:"addr" env:"ADDR" default:":8080"`
 	BaseURL   string        `json:"base_url" env:"BASE_URL" default:"http://localhost:8080"`
+	ApiKey    string        `json:"api_key" env:"API_KEY" required:"true"`
 	Debug     bool          `json:"debug" env:"DEBUG" default:"false"`
 	DB        Database      `json:"db"`
 	JWTSecret string        `json:"jwt_secret" env:"JWT_SECRET" required:"true"`

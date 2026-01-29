@@ -4,8 +4,10 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/josuebrunel/ezauth/pkg/db/models"
 )
 
 // AuthMiddleware is a middleware that authenticates requests using a JWT bearer token.
@@ -48,5 +50,46 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 		}
 		ctx := context.WithValue(r.Context(), userContextKey, userID)
 		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// APIKeyMiddleware checks for a valid API key in the X-API-Key header.
+func (h *Handler) APIKeyMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		apiKey := r.Header.Get("X-API-Key")
+		if apiKey == "" {
+			WriteJSONResponseError(w, http.StatusUnauthorized, ErrAPIKeyRequired)
+			return
+		}
+
+		// Check against config first
+		if apiKey == h.svc.Cfg.ApiKey {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// Check against database
+		token, err := h.svc.Repo.TokenGetByToken(r.Context(), apiKey)
+		if err != nil {
+			WriteJSONResponseError(w, http.StatusUnauthorized, ErrInvalidAPIKey)
+			return
+		}
+
+		if token.TokenType != models.TokenTypeApiKey {
+			WriteJSONResponseError(w, http.StatusUnauthorized, ErrInvalidAPIKey)
+			return
+		}
+
+		if token.Revoked {
+			WriteJSONResponseError(w, http.StatusUnauthorized, ErrInvalidAPIKey)
+			return
+		}
+
+		if !token.ExpiresAt.IsZero() && token.ExpiresAt.Before(time.Now()) {
+			WriteJSONResponseError(w, http.StatusUnauthorized, ErrInvalidAPIKey)
+			return
+		}
+
+		next.ServeHTTP(w, r)
 	})
 }

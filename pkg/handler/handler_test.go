@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -26,6 +27,7 @@ func setupTestHandler(t *testing.T) *Handler {
 		},
 		JWTSecret: "test-secret",
 		Addr:      ":8080",
+		ApiKey:    "test-api-key",
 	}
 	authSvc, err := service.NewFromConfig(cfg, "auth")
 	if err != nil {
@@ -63,6 +65,7 @@ func TestHandler_RegisterAndLoginFlow(t *testing.T) {
 		body, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-API-Key", "test-api-key")
 		w := httptest.NewRecorder()
 
 		h.ServeHTTP(w, req)
@@ -92,6 +95,7 @@ func TestHandler_RegisterAndLoginFlow(t *testing.T) {
 		body, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-API-Key", "test-api-key")
 		w := httptest.NewRecorder()
 
 		h.ServeHTTP(w, req)
@@ -113,6 +117,7 @@ func TestHandler_RegisterAndLoginFlow(t *testing.T) {
 	t.Run("UserInfo", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/auth/userinfo", nil)
 		req.Header.Set("Authorization", "Bearer "+accessToken)
+		req.Header.Set("X-API-Key", "test-api-key")
 		w := httptest.NewRecorder()
 
 		h.ServeHTTP(w, req)
@@ -138,6 +143,7 @@ func TestHandler_RegisterAndLoginFlow(t *testing.T) {
 		body, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/auth/token/refresh", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-API-Key", "test-api-key")
 		w := httptest.NewRecorder()
 
 		h.ServeHTTP(w, req)
@@ -166,6 +172,7 @@ func TestHandler_RegisterAndLoginFlow(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/auth/logout", bytes.NewBuffer(body))
 		req.Header.Set("Authorization", "Bearer "+accessToken)
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-API-Key", "test-api-key")
 		w := httptest.NewRecorder()
 
 		h.ServeHTTP(w, req)
@@ -179,6 +186,7 @@ func TestHandler_RegisterAndLoginFlow(t *testing.T) {
 	t.Run("DeleteUser", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodDelete, "/auth/user", nil)
 		req.Header.Set("Authorization", "Bearer "+accessToken)
+		req.Header.Set("X-API-Key", "test-api-key")
 		w := httptest.NewRecorder()
 
 		h.ServeHTTP(w, req)
@@ -187,6 +195,43 @@ func TestHandler_RegisterAndLoginFlow(t *testing.T) {
 			t.Errorf("expected status 200, got %d: %s", w.Code, w.Body.String())
 		}
 	})
+}
+
+func TestHandler_ApiKeyFromDB(t *testing.T) {
+	h := setupTestHandler(t)
+	ctx := context.Background()
+
+	// Create a user and an API key token
+	user, err := h.svc.Repo.UserCreate(ctx, &models.User{
+		Email: "apikey@example.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	apiKeyToken := "db-api-key-123"
+	_, err = h.svc.Repo.TokenCreate(ctx, &models.Token{
+		UserID:    user.ID,
+		Token:     apiKeyToken,
+		TokenType: models.TokenTypeApiKey,
+		ExpiresAt: time.Now().Add(1 * time.Hour),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Now make a request with this API Key
+	// Using /auth/register with empty body. If auth passes, it returns 400. If auth fails, 401.
+	req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer([]byte(`{}`)))
+	req.Header.Set("X-API-Key", apiKeyToken)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	h.ServeHTTP(w, req)
+
+	if w.Code == http.StatusUnauthorized {
+		t.Error("expected authorized request with DB api key, got 401")
+	}
 }
 
 func TestHandler_PasswordReset(t *testing.T) {
@@ -199,6 +244,7 @@ func TestHandler_PasswordReset(t *testing.T) {
 	body, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-api-key")
 	h.ServeHTTP(httptest.NewRecorder(), req)
 
 	// 2. Request reset
@@ -206,6 +252,7 @@ func TestHandler_PasswordReset(t *testing.T) {
 	body, _ = json.Marshal(reqBody)
 	req = httptest.NewRequest(http.MethodPost, "/auth/password-reset/request", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-api-key")
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
 
@@ -224,6 +271,7 @@ func TestHandler_PasswordReset(t *testing.T) {
 	body, _ = json.Marshal(reqBody)
 	req = httptest.NewRequest(http.MethodPost, "/auth/password-reset/confirm", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-api-key")
 	w = httptest.NewRecorder()
 	h.ServeHTTP(w, req)
 
@@ -236,6 +284,7 @@ func TestHandler_PasswordReset(t *testing.T) {
 	body, _ = json.Marshal(reqBody)
 	req = httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-api-key")
 	w = httptest.NewRecorder()
 	h.ServeHTTP(w, req)
 
@@ -253,6 +302,7 @@ func TestHandler_Passwordless(t *testing.T) {
 	body, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest(http.MethodPost, "/auth/passwordless/request", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-api-key")
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
 
@@ -267,6 +317,7 @@ func TestHandler_Passwordless(t *testing.T) {
 
 	// 3. Login with magic link
 	req = httptest.NewRequest(http.MethodGet, "/auth/passwordless/login?token="+tokenValue, nil)
+	req.Header.Set("X-API-Key", "test-api-key")
 	w = httptest.NewRecorder()
 	h.ServeHTTP(w, req)
 
@@ -284,8 +335,32 @@ func TestHandler_Passwordless(t *testing.T) {
 func TestHandler_Unauthorized(t *testing.T) {
 	h := setupTestHandler(t)
 
+	t.Run("UserInfo_NoApiKey", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/auth/userinfo", nil)
+		w := httptest.NewRecorder()
+
+		h.ServeHTTP(w, req)
+
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("expected status 401, got %d", w.Code)
+		}
+	})
+
+	t.Run("UserInfo_InvalidApiKey", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/auth/userinfo", nil)
+		req.Header.Set("X-API-Key", "invalid-api-key")
+		w := httptest.NewRecorder()
+
+		h.ServeHTTP(w, req)
+
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("expected status 401, got %d", w.Code)
+		}
+	})
+
 	t.Run("UserInfo_NoToken", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/auth/userinfo", nil)
+		req.Header.Set("X-API-Key", "test-api-key")
 		w := httptest.NewRecorder()
 
 		h.ServeHTTP(w, req)
@@ -298,6 +373,7 @@ func TestHandler_Unauthorized(t *testing.T) {
 	t.Run("UserInfo_InvalidToken", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/auth/userinfo", nil)
 		req.Header.Set("Authorization", "Bearer invalid-token")
+		req.Header.Set("X-API-Key", "test-api-key")
 		w := httptest.NewRecorder()
 
 		h.ServeHTTP(w, req)

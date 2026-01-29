@@ -21,4 +21,6 @@ var (
 	ErrCouldNotProcessPasswordless = errors.New("could not process passwordless request")
 	ErrUserIDNotFoundInContext   = errors.New("user id not found in context")
 	ErrUnexpectedSigningMethod   = errors.New("unexpected signing method")
+	ErrAPIKeyRequired            = errors.New("x-api-key header required")
+	ErrInvalidAPIKey             = errors.New("invalid api key")
 )
