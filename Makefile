@@ -12,11 +12,6 @@ ifeq ($(DB),postgres)
 	DSN := postgres://postgres:postgrespwd@127.0.0.1:5436/ezauthdb?sslmode=disable
 	DIR := $(MIGRATION_DIR)/postgres
 	BOBBIN := psql
-else ifeq ($(DB),mysql)
-	DRIVER := mysql
-	DSN := "ezauth:ezauthpwd@tcp(127.0.0.1:3366)/ezauthdb"
-	DIR := $(MIGRATION_DIR)/mysql
-	BOBBIN := mysql
 else
 	DRIVER := sqlite
 	DSN := "ezauth.db"

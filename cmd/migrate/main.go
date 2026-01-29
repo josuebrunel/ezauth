@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	dialect := flag.String("dialect", "sqlite", "database dialect (postgres, mysql, sqlite3)")
+	dialect := flag.String("dialect", "sqlite", "database dialect (postgres, sqlite3)")
 	dsn := flag.String("dsn", "", "database connection string")
 	up := flag.Bool("up", false, "run migrations up")
 	down := flag.Bool("down", false, "run migrations down")

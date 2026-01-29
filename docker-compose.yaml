@@ -11,19 +11,5 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  mysql:
-    image: mysql:8.0
-    container_name: ezauth-mysql
-    ports:
-      - "3366:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: ezauthpwd
-      MYSQL_DATABASE: ezauthdb
-      MYSQL_USER: ezauth
-      MYSQL_PASSWORD: ezauthpwd
-    volumes:
-      - mysql_data:/var/lib/mysql
-
 volumes:
   postgres_data:
-  mysql_data:
