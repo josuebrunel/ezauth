@@ -51,6 +51,18 @@ CREATE INDEX idx_tokens_type ON tokens(token_type);
 CREATE INDEX idx_tokens_expires_at ON tokens(expires_at);
 
 -- Passwordless tokens table
+CREATE TABLE passwordless_tokens (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    email TEXT NOT NULL,
+    token TEXT NOT NULL UNIQUE,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_passwordless_email ON passwordless_tokens(email);
+CREATE INDEX idx_passwordless_token ON passwordless_tokens(token);
+CREATE INDEX idx_passwordless_expires_at ON passwordless_tokens(expires_at);
+
 -- Trigger to update updated_at (SQLite version)
 CREATE TRIGGER update_users_updated_at
 AFTER
@@ -68,6 +80,8 @@ END;
 -- +goose StatementEnd
 -- +goose Down
 -- +goose StatementBegin
+DROP TABLE IF EXISTS passwordless_tokens;
+
 DROP TRIGGER IF EXISTS update_users_updated_at;
 
 DROP TABLE IF EXISTS tokens;
