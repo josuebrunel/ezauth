@@ -44,10 +44,24 @@ CREATE INDEX idx_tokens_user_id ON tokens(user_id);
 CREATE INDEX idx_tokens_token ON tokens(token);
 CREATE INDEX idx_tokens_type ON tokens(token_type);
 CREATE INDEX idx_tokens_expires_at ON tokens(expires_at);
+
+-- Passwordless tokens table
+CREATE TABLE passwordless_tokens (
+    id VARCHAR(36) PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    token VARCHAR(255) NOT NULL UNIQUE,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_passwordless_email ON passwordless_tokens(email);
+CREATE INDEX idx_passwordless_token ON passwordless_tokens(token);
+CREATE INDEX idx_passwordless_expires_at ON passwordless_tokens(expires_at);
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
+DROP TABLE IF EXISTS passwordless_tokens;
 DROP TABLE IF EXISTS tokens;
 DROP TABLE IF EXISTS users;
 -- +goose StatementEnd
