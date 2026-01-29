@@ -190,34 +190,3 @@ func (q *SqliteQuerier) QueryTokenDelete(ctx context.Context, id string) bob.Que
 	return sqlite.Delete(dm.From(models.TableToken), dm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
 }
 
-func (q *SqliteQuerier) QueryPasswordlessTokenInsert(ctx context.Context, token *models.PasswordlessToken) bob.Query {
-	return sqlite.Insert(
-		im.Into(models.TablePasswordlessToken,
-			models.ColumnEmail,
-			models.ColumnToken,
-			models.ColumnExpiresAt,
-			models.ColumnCreatedAt,
-		),
-		im.Values(
-			sqlite.Arg(token.Email),
-			sqlite.Arg(token.Token),
-			sqlite.Arg(token.ExpiresAt),
-			sqlite.Arg(token.CreatedAt),
-		),
-		im.Returning("*"),
-	)
-}
-
-func (q *SqliteQuerier) QueryPasswordlessTokenGetByToken(ctx context.Context, token string) bob.Query {
-	return sqlite.Select(
-		sm.From(models.TablePasswordlessToken),
-		sm.Where(sqlite.Quote(models.ColumnToken).EQ(sqlite.Arg(token))),
-	)
-}
-
-func (q *SqliteQuerier) QueryPasswordlessTokenDelete(ctx context.Context, token string) bob.Query {
-	return sqlite.Delete(
-		dm.From(models.TablePasswordlessToken),
-		dm.Where(sqlite.Quote(models.ColumnToken).EQ(sqlite.Arg(token))),
-	)
-}
