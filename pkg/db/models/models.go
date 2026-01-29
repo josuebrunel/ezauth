@@ -80,11 +80,3 @@ type Token struct {
 	Metadata  JSONMap   `db:"metadata" json:"metadata"`
 }
 
-// PasswordlessToken represents a magic link token for passwordless login.
-type PasswordlessToken struct {
-	ID        string    `db:"id" json:"id"`
-	Email     string    `db:"email" json:"email"`
-	Token     string    `db:"token" json:"token"`
-	ExpiresAt time.Time `db:"expires_at" json:"expires_at"`
-	CreatedAt time.Time `db:"created_at" json:"created_at"`
-}

@@ -22,19 +22,35 @@ type RequestPasswordlessLogin struct {
 
 // PasswordlessRequest initiates the passwordless (magic link) login flow.
 func (a *Auth) PasswordlessRequest(ctx context.Context, req RequestPasswordless) error {
+	// Find or create user
+	user, err := a.Repo.UserGetByEmail(ctx, req.Email)
+	if err != nil {
+		// User doesn't exist, create one to attach the token to
+		user = &models.User{
+			Email:         req.Email,
+			Provider:      "local",
+			EmailVerified: false,
+		}
+		user, err = a.Repo.UserCreate(ctx, user)
+		if err != nil {
+			return err
+		}
+	}
+
 	tokenValue, err := a.generateRefreshToken()
 	if err != nil {
 		return err
 	}
 
-	token := &models.PasswordlessToken{
-		Email:     req.Email,
+	token := &models.Token{
+		UserID:    user.ID,
 		Token:     tokenValue,
+		TokenType: models.TokenTypePasswordless,
 		ExpiresAt: time.Now().Add(15 * time.Minute),
 		CreatedAt: time.Now(),
 	}
 
-	if _, err := a.Repo.PasswordlessTokenCreate(ctx, token); err != nil {
+	if _, err := a.Repo.TokenCreate(ctx, token); err != nil {
 		return err
 	}
 
@@ -57,33 +73,36 @@ func (a *Auth) PasswordlessRequest(ctx context.Context, req RequestPasswordless)
 
 // PasswordlessLogin completes the passwordless login flow.
 func (a *Auth) PasswordlessLogin(ctx context.Context, tokenValue string) (*TokenResponse, error) {
-	token, err := a.Repo.PasswordlessTokenGetByToken(ctx, tokenValue)
+	token, err := a.Repo.TokenGetByToken(ctx, tokenValue)
 	if err != nil {
 		return nil, errors.New("invalid or expired magic link")
 	}
 
-	if time.Now().After(token.ExpiresAt) {
-		a.Repo.PasswordlessTokenDelete(ctx, tokenValue)
+	if token.TokenType != models.TokenTypePasswordless {
+		return nil, errors.New("invalid token type")
+	}
+
+	if time.Now().After(token.ExpiresAt) || token.Revoked {
+		a.Repo.TokenRevoke(ctx, token.ID)
 		return nil, errors.New("magic link expired")
 	}
 
-	// Find or create user
-	user, err := a.Repo.UserGetByEmail(ctx, token.Email)
+	user, err := a.Repo.UserGetByID(ctx, token.UserID)
 	if err != nil {
-		// User doesn't exist, create one
-		user = &models.User{
-			Email:         token.Email,
-			Provider:      "local",
-			EmailVerified: true,
-		}
-		user, err = a.Repo.UserCreate(ctx, user)
-		if err != nil {
+		return nil, err
+	}
+
+	if !user.EmailVerified {
+		now := time.Now()
+		user.EmailVerified = true
+		user.EmailVerifiedAt = &now
+		if _, err := a.Repo.UserUpdate(ctx, user); err != nil {
 			return nil, err
 		}
 	}
 
 	// Consume token
-	if err := a.Repo.PasswordlessTokenDelete(ctx, tokenValue); err != nil {
+	if err := a.Repo.TokenRevoke(ctx, token.ID); err != nil {
 		return nil, err
 	}
 

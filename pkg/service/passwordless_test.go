@@ -55,9 +55,13 @@ func TestPasswordless(t *testing.T) {
 		t.Error("expected email to be verified")
 	}
 
-	// 4. Verify token was deleted
-	_, err = auth.Repo.PasswordlessTokenGetByToken(ctx, tokenValue)
-	if err == nil {
-		t.Error("expected token to be deleted after use, but it still exists")
+	// 4. Verify token was revoked
+	token, err := auth.Repo.TokenGetByToken(ctx, tokenValue)
+	if err != nil {
+		t.Fatalf("failed to get token: %v", err)
+	}
+
+	if !token.Revoked {
+		t.Error("expected token to be revoked after use")
 	}
 }

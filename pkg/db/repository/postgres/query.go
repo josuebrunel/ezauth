@@ -196,34 +196,3 @@ func (q *PSQLQuerier) QueryTokenDelete(ctx context.Context, id string) bob.Query
 	return psql.Delete(dm.From(psql.Quote(models.TableToken)), dm.Where(psql.Quote("id").EQ(psql.Arg(id))))
 }
 
-func (q *PSQLQuerier) QueryPasswordlessTokenInsert(ctx context.Context, token *models.PasswordlessToken) bob.Query {
-	return psql.Insert(
-		im.Into(psql.Quote(models.TablePasswordlessToken),
-			models.ColumnEmail,
-			models.ColumnToken,
-			models.ColumnExpiresAt,
-			models.ColumnCreatedAt,
-		),
-		im.Values(
-			psql.Arg(token.Email),
-			psql.Arg(token.Token),
-			psql.Arg(token.ExpiresAt),
-			psql.Arg(token.CreatedAt),
-		),
-		im.Returning("*"),
-	)
-}
-
-func (q *PSQLQuerier) QueryPasswordlessTokenGetByToken(ctx context.Context, token string) bob.Query {
-	return psql.Select(
-		sm.From(psql.Quote(models.TablePasswordlessToken)),
-		sm.Where(psql.Quote(models.ColumnToken).EQ(psql.Arg(token))),
-	)
-}
-
-func (q *PSQLQuerier) QueryPasswordlessTokenDelete(ctx context.Context, token string) bob.Query {
-	return psql.Delete(
-		dm.From(psql.Quote(models.TablePasswordlessToken)),
-		dm.Where(psql.Quote(models.ColumnToken).EQ(psql.Arg(token))),
-	)
-}
