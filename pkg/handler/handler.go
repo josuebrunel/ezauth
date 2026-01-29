@@ -53,6 +53,9 @@ func WithRouter(r *chi.Mux) HandlerOption {
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name X-API-Key
 func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 	h := &Handler{
 		path: path,
@@ -81,23 +84,29 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 		routePath = "/"
 	}
 	h.r.Route(routePath, func(r chi.Router) {
-		// Public routes
-		r.Post("/register", h.Register)
-		r.Post("/login", h.Login)
-		r.Post("/token/refresh", h.RefreshToken)
-		r.Post("/password-reset/request", h.PasswordResetRequest)
-		r.Post("/password-reset/confirm", h.PasswordResetConfirm)
-		r.Post("/passwordless/request", h.PasswordlessRequest)
-		r.Get("/passwordless/login", h.PasswordlessLogin)
-		r.Get("/oauth2/{provider}/login", h.OAuth2Login)
+		// Routes that CANNOT have API Key (callbacks)
 		r.Get("/oauth2/{provider}/callback", h.OAuth2Callback)
 
-		// Protected routes
+		// Routes protected by API Key
 		r.Group(func(r chi.Router) {
-			r.Use(h.AuthMiddleware)
-			r.Get("/userinfo", h.UserInfo)
-			r.Post("/logout", h.Logout)
-			r.Delete("/user", h.DeleteUser)
+			r.Use(h.APIKeyMiddleware)
+
+			r.Post("/register", h.Register)
+			r.Post("/login", h.Login)
+			r.Post("/token/refresh", h.RefreshToken)
+			r.Post("/password-reset/request", h.PasswordResetRequest)
+			r.Post("/password-reset/confirm", h.PasswordResetConfirm)
+			r.Post("/passwordless/request", h.PasswordlessRequest)
+			r.Get("/passwordless/login", h.PasswordlessLogin)
+			r.Get("/oauth2/{provider}/login", h.OAuth2Login)
+
+			// Protected routes
+			r.Group(func(r chi.Router) {
+				r.Use(h.AuthMiddleware)
+				r.Get("/userinfo", h.UserInfo)
+				r.Post("/logout", h.Logout)
+				r.Delete("/user", h.DeleteUser)
+			})
 		})
 	})
 
@@ -144,6 +153,7 @@ func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param request body service.RequestBasicAuth true "Registration Request"
+// @Security ApiKeyAuth
 // @Success 201 {object} ApiResponse[service.TokenResponse]
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 500 {object} ApiResponse[string]
@@ -177,6 +187,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param request body service.RequestBasicAuth true "Login Request"
+// @Security ApiKeyAuth
 // @Success 200 {object} ApiResponse[service.TokenResponse]
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 401 {object} ApiResponse[string]
@@ -211,6 +222,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param request body RefreshTokenRequest true "Refresh Token Request"
+// @Security ApiKeyAuth
 // @Success 200 {object} ApiResponse[service.TokenResponse]
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 401 {object} ApiResponse[string]
@@ -242,6 +254,7 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 // @Tags user
 // @Produce json
 // @Security BearerAuth
+// @Security ApiKeyAuth
 // @Success 200 {object} ApiResponse[models.User]
 // @Failure 500 {object} ApiResponse[string]
 // @Router /auth/userinfo [get]
@@ -270,6 +283,7 @@ func (h *Handler) UserInfo(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param request body LogoutRequest true "Logout Request"
 // @Security BearerAuth
+// @Security ApiKeyAuth
 // @Success 200 {object} ApiResponse[map[string]string]
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 500 {object} ApiResponse[string]
@@ -300,6 +314,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 // @Tags user
 // @Produce json
 // @Security BearerAuth
+// @Security ApiKeyAuth
 // @Success 200 {object} ApiResponse[map[string]string]
 // @Failure 500 {object} ApiResponse[string]
 // @Router /auth/user [delete]
@@ -325,6 +340,7 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param request body service.RequestPasswordReset true "Password Reset Request"
+// @Security ApiKeyAuth
 // @Success 200 {object} ApiResponse[map[string]string]
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 500 {object} ApiResponse[string]
@@ -351,6 +367,7 @@ func (h *Handler) PasswordResetRequest(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param request body service.RequestPasswordResetConfirm true "Password Reset Confirmation"
+// @Security ApiKeyAuth
 // @Success 200 {object} ApiResponse[map[string]string]
 // @Failure 400 {object} ApiResponse[string]
 // @Router /auth/password-reset/confirm [post]
@@ -376,6 +393,7 @@ func (h *Handler) PasswordResetConfirm(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param request body service.RequestPasswordless true "Passwordless Request"
+// @Security ApiKeyAuth
 // @Success 200 {object} ApiResponse[map[string]string]
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 500 {object} ApiResponse[string]
@@ -401,6 +419,7 @@ func (h *Handler) PasswordlessRequest(w http.ResponseWriter, r *http.Request) {
 // @Tags auth
 // @Produce json
 // @Param token query string true "Magic Link Token"
+// @Security ApiKeyAuth
 // @Success 200 {object} ApiResponse[service.TokenResponse]
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 401 {object} ApiResponse[string]

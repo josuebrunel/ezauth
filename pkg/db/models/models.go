@@ -65,6 +65,7 @@ const (
 	TokenTypeRefresh       = "refresh"
 	TokenTypePasswordless  = "passwordless"
 	TokenTypePasswordReset = "password_reset"
+	TokenTypeApiKey        = "apikey"
 )
 
 // Token represents an authentication or action token (e.g., refresh token, password reset token).

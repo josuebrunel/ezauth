@@ -15,6 +15,7 @@ Simple and easy to use authentication library for Golang.
 - Password Reset and Passwordless (Magic Link) authentication
 - Extended User Profiles (First Name, Last Name, Locale, Timezone, Roles, etc.)
 - SQLite and PostgreSQL support
+- API Key Protection for endpoints
 - Built-in Middleware for route protection
 - Swagger API Documentation
 
@@ -27,6 +28,7 @@ You can run `ezauth` as a separate service that handles authentication for your 
 1. **Configuration**: Set environment variables.
    ```bash
    export EZAUTH_ADDR=":8080"
+   export EZAUTH_API_KEY="your-master-api-key"
    export EZAUTH_BASE_URL="http://localhost:8080"
    export EZAUTH_DB_DIALECT="sqlite3"
    export EZAUTH_DB_DSN="auth.db"
