@@ -58,6 +58,18 @@ type SMTP struct {
 	From     string `json:"from" env:"SMTP_FROM"`
 }
 
+// Redirects defines the redirection URLs after successful actions.
+type Redirects struct {
+	AfterLogin    string `json:"after_login" env:"REDIRECT_AFTER_LOGIN" default:"/"`
+	AfterRegister string `json:"after_register" env:"REDIRECT_AFTER_REGISTER" default:"/"`
+}
+
+// Pages defines the URLs for the authentication pages.
+type Pages struct {
+	Login    string `json:"login" env:"LOGIN_PAGE_URL" default:"/login"`
+	Register string `json:"register" env:"REGISTER_PAGE_URL" default:"/register"`
+}
+
 // Config defines the overall configuration for ezauth.
 type Config struct {
 	Addr      string        `json:"addr" env:"ADDR" default:":8080"`
@@ -68,6 +80,8 @@ type Config struct {
 	JWTSecret string        `json:"jwt_secret" env:"JWT_SECRET" required:"true"`
 	OAuth2    OAuth2        `json:"oauth2"`
 	SMTP      SMTP          `json:"smtp"`
+	Redirects Redirects     `json:"redirects"`
+	Pages     Pages         `json:"pages"`
 	TimeOut   time.Duration `json:"timeout" env:"TIMEOUT" default:"30s"`
 }
 

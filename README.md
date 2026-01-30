@@ -41,6 +41,12 @@ You can run `ezauth` as a separate service that handles authentication for your 
    export EZAUTH_SMTP_PASSWORD="password"
    export EZAUTH_SMTP_FROM="noreply@example.com"
 
+   # Pages & Redirects (For Form-based auth)
+   export EZAUTH_REDIRECT_AFTER_LOGIN="/"
+   export EZAUTH_REDIRECT_AFTER_REGISTER="/"
+   export EZAUTH_LOGIN_PAGE_URL="/login"
+   export EZAUTH_REGISTER_PAGE_URL="/register"
+
    # OAuth2 (Optional)
    export EZAUTH_OAUTH2_CALLBACK_URL="http://localhost:3000/callback"
 
@@ -115,7 +121,22 @@ func main() {
 
     // 5. Protect your own routes
     r.Group(func(r chi.Router) {
-        r.Use(auth.AuthMiddleware)
+        // Option A: Use AuthMiddleware for API Token protection
+        // r.Use(auth.AuthMiddleware)
+
+        // Option B: Retrieve session tokens for Form-based auth
+        r.Use(func(next http.Handler) http.Handler {
+            return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+                // Access session tokens
+                tokens, ok := auth.Handler.GetSessionTokens(r.Context())
+                if !ok {
+                     http.Redirect(w, r, "/login", http.StatusFound)
+                     return
+                }
+                // ... logic to validate tokens ...
+                next.ServeHTTP(w, r)
+            })
+        })
 
         r.Get("/protected", func(w http.ResponseWriter, r *http.Request) {
             userID, _ := auth.GetUserID(r.Context())
@@ -127,22 +148,58 @@ func main() {
 }
 ```
 
+## Session Management (Cookies)
+
+When using the Form-based handlers, `ezauth` manages sessions using HTTP-only cookies via the `scs` session manager. The cookie name is `ezauthsess`.
+
+Inside the session, the Access Token and Refresh Token are stored under the key `tokens`.
+
+You can retrieve them in your application using the helper method:
+
+```go
+tokens, ok := auth.Handler.GetSessionTokens(ctx)
+if ok {
+    accessToken := tokens["access_token"]
+    refreshToken := tokens["refresh_token"]
+    // ...
+}
+```
+
 ## API Endpoints
+
+### Form-based Handlers (Cookies & Redirects)
+
+These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, and redirect.
 
 | Method | Endpoint                           | Description                       |
 | ------ | ---------------------------------- | --------------------------------- |
 | POST   | `/auth/register`                   | Register a new user               |
-| POST   | `/auth/login`                      | Login and receive tokens          |
-| POST   | `/auth/token/refresh`              | Refresh access token              |
+| POST   | `/auth/login`                      | Login and set cookies             |
+| POST   | `/auth/logout`                     | Clear cookies and logout          |
 | POST   | `/auth/password-reset/request`     | Request password reset link       |
 | POST   | `/auth/password-reset/confirm`     | Confirm password reset            |
 | POST   | `/auth/passwordless/request`       | Request magic link                |
 | GET    | `/auth/passwordless/login`         | Login via magic link              |
-| GET    | `/auth/userinfo`                   | Get current user info (Protected) |
-| POST   | `/auth/logout`                     | Revoke refresh token (Protected)  |
-| DELETE | `/auth/user`                       | Delete account (Protected)        |
 | GET    | `/auth/oauth2/{provider}/login`    | Login via OAuth2 provider         |
 | GET    | `/auth/oauth2/{provider}/callback` | OAuth2 provider callback          |
+
+
+### API Handlers (JSON)
+
+These endpoints accept `application/json` and return JSON responses.
+
+| Method | Endpoint                           | Description                       |
+| ------ | ---------------------------------- | --------------------------------- |
+| POST   | `/auth/api/register`               | Register a new user               |
+| POST   | `/auth/api/login`                  | Login and receive tokens          |
+| POST   | `/auth/api/token/refresh`          | Refresh access token              |
+| POST   | `/auth/api/password-reset/request` | Request password reset link       |
+| POST   | `/auth/api/password-reset/confirm` | Confirm password reset            |
+| POST   | `/auth/api/passwordless/request`   | Request magic link                |
+| GET    | `/auth/api/passwordless/login`     | Login via magic link              |
+| GET    | `/auth/api/userinfo`               | Get current user info (Protected) |
+| POST   | `/auth/api/logout`                 | Revoke refresh token (Protected)  |
+| DELETE | `/auth/api/user`                   | Delete account (Protected)        |
 
 ## Swagger Documentation
 
