@@ -3,10 +3,13 @@ package handler
 
 import (
 	"context"
+	"encoding/gob"
 	"encoding/json"
 	"log"
 	"net/http"
 
+	csrf "filippo.io/csrf/gorilla"
+	"github.com/alexedwards/scs/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/josuebrunel/ezauth/pkg/service"
@@ -29,9 +32,10 @@ type RefreshTokenRequest struct {
 
 // Handler handles all authentication-related HTTP requests.
 type Handler struct {
-	path string
-	r    *chi.Mux
-	svc  *service.Auth
+	path    string
+	r       *chi.Mux
+	svc     *service.Auth
+	Session *scs.SessionManager
 }
 
 // HandlerOption defines a functional option for configuring the Handler.
@@ -42,6 +46,11 @@ func WithRouter(r *chi.Mux) HandlerOption {
 	return func(h *Handler) {
 		h.r = r
 	}
+}
+
+func init() {
+	// Register types for session
+	gob.Register(map[string]string{})
 }
 
 // New creates a new Handler with the given service and path.
@@ -63,6 +72,13 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 		svc:  svc,
 	}
 
+	// Initialize Session Manager
+	h.Session = scs.New()
+	h.Session.Cookie.Name = "ezauthsess"
+	h.Session.Cookie.HttpOnly = true
+	h.Session.Cookie.Secure = h.svc.Cfg.BaseURL != "http://localhost:8080"
+	h.Session.Cookie.Persist = true
+
 	for _, opt := range options {
 		opt(h)
 	}
@@ -73,6 +89,7 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 		h.r.Use(middleware.RequestID)
 		h.r.Use(middleware.RealIP)
 		h.r.Use(middleware.Recoverer)
+		h.r.Use(h.Session.LoadAndSave)
 	}
 
 	h.r.Get("/ping", h.Ping)
@@ -87,25 +104,37 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 		// Routes that CANNOT have API Key (callbacks)
 		r.Get("/oauth2/{provider}/callback", h.OAuth2Callback)
 
+		// Form handlers (HTML Forms)
+		r.Post("/register", h.FormRegister)
+		r.Post("/login", h.FormLogin)
+		r.Post("/logout", h.FormLogout)
+		r.Post("/password-reset/request", h.FormPasswordResetRequest)
+		r.Post("/password-reset/confirm", h.FormPasswordResetConfirm)
+		r.Post("/passwordless/request", h.FormPasswordlessRequest)
+		r.Get("/passwordless/login", h.FormPasswordlessLogin)
+		r.Get("/oauth2/{provider}/login", h.OAuth2Login)
+
 		// Routes protected by API Key
 		r.Group(func(r chi.Router) {
 			r.Use(h.APIKeyMiddleware)
 
-			r.Post("/register", h.Register)
-			r.Post("/login", h.Login)
-			r.Post("/token/refresh", h.RefreshToken)
-			r.Post("/password-reset/request", h.PasswordResetRequest)
-			r.Post("/password-reset/confirm", h.PasswordResetConfirm)
-			r.Post("/passwordless/request", h.PasswordlessRequest)
-			r.Get("/passwordless/login", h.PasswordlessLogin)
-			r.Get("/oauth2/{provider}/login", h.OAuth2Login)
+			// API Handlers (JSON)
+			r.Route("/api", func(r chi.Router) {
+				r.Post("/register", h.Register)
+				r.Post("/login", h.Login)
+				r.Post("/token/refresh", h.RefreshToken)
+				r.Post("/password-reset/request", h.PasswordResetRequest)
+				r.Post("/password-reset/confirm", h.PasswordResetConfirm)
+				r.Post("/passwordless/request", h.PasswordlessRequest)
+				r.Get("/passwordless/login", h.PasswordlessLogin)
 
-			// Protected routes
-			r.Group(func(r chi.Router) {
-				r.Use(h.AuthMiddleware)
-				r.Get("/userinfo", h.UserInfo)
-				r.Post("/logout", h.Logout)
-				r.Delete("/user", h.DeleteUser)
+				// Protected routes
+				r.Group(func(r chi.Router) {
+					r.Use(h.AuthMiddleware)
+					r.Get("/userinfo", h.UserInfo)
+					r.Post("/logout", h.Logout)
+					r.Delete("/user", h.DeleteUser)
+				})
 			})
 		})
 	})

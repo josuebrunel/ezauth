@@ -3,6 +3,8 @@ module github.com/josuebrunel/ezauth
 go 1.25.4
 
 require (
+	filippo.io/csrf v0.2.1
+	github.com/alexedwards/scs/v2 v2.9.0
 	github.com/go-chi/chi/v5 v5.2.4
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/josuebrunel/gopkg/xenv v0.0.1

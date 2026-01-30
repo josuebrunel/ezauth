@@ -132,5 +132,8 @@ func (h *Handler) OAuth2Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	WriteJSONResponse(w, http.StatusOK, tokenResp, nil)
+	// If no callback URL is set, we assume it's a direct login flow
+	// We set cookies and redirect to the default "after login" page
+	h.setAuthCookies(r.Context(), tokenResp)
+	http.Redirect(w, r, h.svc.Cfg.Redirects.AfterLogin, http.StatusFound)
 }
