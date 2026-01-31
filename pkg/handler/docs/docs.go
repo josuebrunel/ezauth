@@ -17,6 +17,11 @@ const docTemplate = `{
     "paths": {
         "/auth/login": {
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Login with email and password",
                 "consumes": [
                     "application/json"
@@ -72,6 +77,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
                     }
                 ],
                 "description": "Revoke the user's refresh token",
@@ -175,6 +183,11 @@ const docTemplate = `{
         },
         "/auth/oauth2/{provider}/login": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Redirect to the OAuth2 provider login page",
                 "tags": [
                     "oauth2"
@@ -204,6 +217,11 @@ const docTemplate = `{
         },
         "/auth/password-reset/confirm": {
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Reset password using the token sent via email",
                 "consumes": [
                     "application/json"
@@ -244,6 +262,11 @@ const docTemplate = `{
         },
         "/auth/password-reset/request": {
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Send a password reset link to the user's email",
                 "consumes": [
                     "application/json"
@@ -290,6 +313,11 @@ const docTemplate = `{
         },
         "/auth/passwordless/login": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Authenticate using the token from the magic link",
                 "produces": [
                     "application/json"
@@ -331,6 +359,11 @@ const docTemplate = `{
         },
         "/auth/passwordless/request": {
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Send a magic login link to the user's email",
                 "consumes": [
                     "application/json"
@@ -377,6 +410,11 @@ const docTemplate = `{
         },
         "/auth/register": {
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Register a new user with basic authentication",
                 "consumes": [
                     "application/json"
@@ -423,6 +461,11 @@ const docTemplate = `{
         },
         "/auth/token/refresh": {
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Get a new access token using a refresh token",
                 "consumes": [
                     "application/json"
@@ -472,6 +515,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
                     }
                 ],
                 "description": "Delete the authenticated user's account",
@@ -503,6 +549,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
                     }
                 ],
                 "description": "Retrieve information about the authenticated user",
@@ -739,6 +788,11 @@ const docTemplate = `{
         }
     },
     "securityDefinitions": {
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "name": "X-API-Key",
+            "in": "header"
+        },
         "BearerAuth": {
             "type": "apiKey",
             "name": "Authorization",

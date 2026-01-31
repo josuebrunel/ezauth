@@ -1,8 +1,10 @@
 # API Endpoints
 
-All endpoints (except `OAuth2 Callback`) require a valid API Key passed via the `X-API-Key` header.
+`ezauth` provides two sets of endpoints:
+1.  **Form Handlers (`/auth/*`)**: Designed for browser clients. They handle redirects, use HTTP-only cookies for sessions, and require CSRF protection for POST requests.
+2.  **JSON API (`/auth/api/*`)**: Designed for mobile apps or SPAs. They return JSON responses and require API Key authentication.
 
-All `ezauth` responses follow a consistent format:
+All `ezauth` JSON API responses follow a consistent format:
 
 ```json
 {
@@ -11,10 +13,53 @@ All `ezauth` responses follow a consistent format:
 }
 ```
 
-## Public Endpoints
+## Form Handlers (Browser)
+
+These endpoints accept `application/x-www-form-urlencoded` and redirect upon success or failure. Authentication tokens are stored in an HTTP-only cookie named `ezauthsess`.
+
+POST requests to these endpoints must include a valid CSRF token in the `X-CSRF-Token` header.
+
+### Get CSRF Token
+`GET /auth/csrf`
+
+Returns a JSON object containing the CSRF token.
+
+**Response:**
+```json
+{ "csrf_token": "..." }
+```
+
+### Register (Form)
+`POST /auth/register`
+`GET /auth/register` (Redirects to configured Register Page)
+
+### Login (Form)
+`POST /auth/login`
+`GET /auth/login` (Redirects to configured Login Page)
+
+### Logout (Form)
+`POST /auth/logout`
+
+### Password Reset (Form)
+`POST /auth/password-reset/request`
+`POST /auth/password-reset/confirm`
+
+### Passwordless (Form)
+`POST /auth/passwordless/request`
+`GET /auth/passwordless/login?token=...`
+
+### OAuth2
+`GET /auth/oauth2/{provider}/login` (Initiates login)
+`GET /auth/oauth2/{provider}/callback` (Callback handler)
+
+---
+
+## JSON API Endpoints (`/api`)
+
+All these endpoints require a valid API Key passed via the `X-API-Key` header.
 
 ### Register
-`POST /auth/register`
+`POST /auth/api/register`
 
 Creates a new user and returns authentication tokens.
 
@@ -45,7 +90,7 @@ Creates a new user and returns authentication tokens.
 ```
 
 ### Login
-`POST /auth/login`
+`POST /auth/api/login`
 
 Authenticates a user and returns tokens.
 
@@ -60,7 +105,7 @@ Authenticates a user and returns tokens.
 **Response Data:** Same as Register.
 
 ### Refresh Token
-`POST /auth/token/refresh`
+`POST /auth/api/token/refresh`
 
 Exchange a refresh token for a new set of tokens (access and refresh).
 
@@ -74,7 +119,7 @@ Exchange a refresh token for a new set of tokens (access and refresh).
 **Response Data:** Same as Register.
 
 ### Password Reset Request
-`POST /auth/password-reset/request`
+`POST /auth/api/password-reset/request`
 
 Sends a password reset link to the user's email.
 
@@ -86,7 +131,7 @@ Sends a password reset link to the user's email.
 ```
 
 ### Password Reset Confirm
-`POST /auth/password-reset/confirm`
+`POST /auth/api/password-reset/confirm`
 
 Resets the user's password using a token received via email.
 
@@ -99,7 +144,7 @@ Resets the user's password using a token received via email.
 ```
 
 ### Passwordless Request (Magic Link)
-`POST /auth/passwordless/request`
+`POST /auth/api/passwordless/request`
 
 Sends a magic login link to the user's email.
 
@@ -111,28 +156,18 @@ Sends a magic login link to the user's email.
 ```
 
 ### Passwordless Login
-`GET /auth/passwordless/login?token=...`
+`GET /auth/api/passwordless/login?token=...`
 
 Authenticates a user using a magic link token.
 
 **Response Data:** Same as Register.
-
-### OAuth2 Login
-`GET /auth/oauth2/{provider}/login`
-
-Redirects the user to the OAuth2 provider (google, github, facebook).
-
-### OAuth2 Callback
-`GET /auth/oauth2/{provider}/callback`
-
-The callback URL handled by `ezauth`. After success, it redirects to the `EZAUTH_OAUTH2_CALLBACK_URL` with the tokens as query parameters.
 
 ## Protected Endpoints
 
 These endpoints require an `Authorization: Bearer <access_token>` header (in addition to `X-API-Key`).
 
 ### User Info
-`GET /auth/userinfo`
+`GET /auth/api/userinfo`
 
 Returns the profile information for the currently authenticated user.
 
@@ -152,7 +187,7 @@ Returns the profile information for the currently authenticated user.
 ```
 
 ### Logout
-`POST /auth/logout`
+`POST /auth/api/logout`
 
 Revokes the provided refresh token.
 
@@ -164,6 +199,6 @@ Revokes the provided refresh token.
 ```
 
 ### Delete User
-`DELETE /auth/user`
+`DELETE /auth/api/user`
 
 Deletes the currently authenticated user's account.
