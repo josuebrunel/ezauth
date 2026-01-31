@@ -23,6 +23,9 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Fetch tags
+        run: git fetch --tags --force
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
