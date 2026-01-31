@@ -14,6 +14,13 @@ func (h *Handler) FormRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	data := make(map[string]any)
+	for key, values := range r.Form {
+		if len(values) > 0 && len(key) > 5 && key[:5] == "meta_" {
+			data[key[5:]] = values[0]
+		}
+	}
+
 	req := &service.RequestBasicAuth{
 		Email:     r.FormValue("email"),
 		Password:  r.FormValue("password"),
@@ -22,6 +29,7 @@ func (h *Handler) FormRegister(w http.ResponseWriter, r *http.Request) {
 		Locale:    r.FormValue("locale"),
 		Timezone:  r.FormValue("timezone"),
 		Roles:     r.FormValue("roles"),
+		Data:      data,
 	}
 
 	user, err := h.svc.UserCreate(r.Context(), req)

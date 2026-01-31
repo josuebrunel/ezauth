@@ -156,3 +156,44 @@ func TestFormHandler_RegisterAndLoginFlow(t *testing.T) {
 		// Ideally we check validity, but just ensuring the flow works is enough here.
 	})
 }
+
+func TestFormHandler_RegisterWithMetadata(t *testing.T) {
+	h := setupFormTestHandler(t)
+	email := "metauser@example.com"
+	password := "password123"
+
+	t.Run("RegisterWithMetaFields", func(t *testing.T) {
+		form := url.Values{}
+		form.Add("email", email)
+		form.Add("password", password)
+		form.Add("meta_theme", "dark")
+		form.Add("meta_newsletter", "true")
+
+		req := httptest.NewRequest(http.MethodPost, "/auth/register", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		h.ServeHTTP(w, req)
+
+		if w.Code != http.StatusFound {
+			t.Errorf("expected status 302, got %d", w.Code)
+		}
+
+		// Verify user metadata in DB
+		user, err := h.svc.Repo.UserGetByEmail(req.Context(), email)
+		if err != nil {
+			t.Fatalf("failed to get user: %v", err)
+		}
+
+		if user.UserMetadata == nil {
+			t.Fatal("expected user metadata to be set")
+		}
+
+		if val, ok := user.UserMetadata["theme"]; !ok || val != "dark" {
+			t.Errorf("expected metadata theme=dark, got %v", val)
+		}
+		if val, ok := user.UserMetadata["newsletter"]; !ok || val != "true" {
+			t.Errorf("expected metadata newsletter=true, got %v", val)
+		}
+	})
+}

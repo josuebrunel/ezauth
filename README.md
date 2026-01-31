@@ -205,14 +205,14 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 
 #### Form Field Reference
 
-| Endpoint                       | Required Fields       | Optional Fields                                          |
-| :----------------------------- | :-------------------- | :------------------------------------------------------- |
-| `/auth/register`               | `email`, `password`   | `first_name`, `last_name`, `locale`, `timezone`, `roles` |
-| `/auth/login`                  | `email`, `password`   |                                                          |
-| `/auth/password-reset/request` | `email`               |                                                          |
-| `/auth/password-reset/confirm` | `token`, `password`   |                                                          |
-| `/auth/passwordless/request`   | `email`               |                                                          |
-| `/auth/passwordless/login`     | `token` (query param) |                                                          |
+| Endpoint                       | Required Fields       | Optional Fields                                                    |
+| :----------------------------- | :-------------------- | :----------------------------------------------------------------- |
+| `/auth/register`               | `email`, `password`   | `first_name`, `last_name`, `locale`, `timezone`, `roles`, `meta_*` |
+| `/auth/login`                  | `email`, `password`   |                                                                    |
+| `/auth/password-reset/request` | `email`               |                                                                    |
+| `/auth/password-reset/confirm` | `token`, `password`   |                                                                    |
+| `/auth/passwordless/request`   | `email`               |                                                                    |
+| `/auth/passwordless/login`     | `token` (query param) |                                                                    |
 
 
 ### API Handlers (JSON)
