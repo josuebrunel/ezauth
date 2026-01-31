@@ -34,3 +34,6 @@ nav:
   - Reference:
       - API Endpoints: api-endpoints.md
       - Architecture: architecture.md
+      - Handler: references/handler.md
+      - Service: references/service.md
+      - Repository: references/repository.md

@@ -17,18 +17,21 @@ type EzAuth struct {
 ```
 
 ### `Service` (Business Logic)
+
 The `service` package (located in `pkg/service/`) contains the core authentication logic. It is independent of the HTTP layer. This is where you'll find logic for:
-- User authentication and hashing.
-- Token generation and validation (JWT and Refresh Tokens).
-- Password reset and passwordless flows.
-- Interaction with the Mailer.
+
+* User authentication and hashing.
+* Token generation and validation (JWT and Refresh Tokens).
+* Password reset and passwordless flows.
+* Interaction with the Mailer.
 
 ### `Handler` (HTTP Layer)
 The `handler` package (located in `pkg/handler/`) defines the RESTful API. It uses the `service` package to perform actions. It is responsible for:
-- Routing requests (using `chi`).
-- Parsing and validating request bodies.
-- Enforcing authentication via middleware.
-- Formatting JSON responses.
+
+* Routing requests (using `chi`).
+* Parsing and validating request bodies.
+* Enforcing authentication via middleware.
+* Formatting JSON responses.
 
 ### `Repository` (Data Persistence)
 The `repository` package (located in `pkg/db/repository/`) handles all database interactions. It uses `bob` as a query builder and supports multiple database dialects.
@@ -46,5 +49,5 @@ The `config` package (located in `pkg/config/`) handles loading configuration fr
 
 ## Extension Points
 
-- **Mailer**: You can provide your own implementation of the `Mailer` interface if you need to use a service other than SMTP (e.g., SendGrid, Mailgun).
-- **Custom Router**: You can pass your own `chi.Router` to the `Handler` if you want to add global middlewares or customize the routing behavior.
+* **Mailer**: You can provide your own implementation of the `Mailer` interface if you need to use a service other than SMTP (e.g., SendGrid, Mailgun).
+* **Custom Router**: You can pass your own `chi.Router` to the `Handler` if you want to add global middlewares or customize the routing behavior.
