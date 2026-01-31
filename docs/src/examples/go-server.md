@@ -14,6 +14,17 @@ The application is a simple dashboard that requires user authentication. It uses
 *   Route protection
 *   Profile updates
 
+## Running the Example
+
+You can run the example using Docker Compose:
+
+```bash
+cd _example/go-server
+docker compose up --build
+```
+
+The server will be available at `http://localhost:3000`.
+
 ## Code Breakdown
 
 ### 1. Initialization
@@ -111,5 +122,22 @@ r.Post("/profile", func(w http.ResponseWriter, r *http.Request) {
     }
 
     http.Redirect(w, r, "/dashboard", http.StatusFound)
+})
+
+// Delete Profile
+r.Post("/profile/delete", func(w http.ResponseWriter, r *http.Request) {
+    if !auth.IsAuthenticated(r.Context()) {
+        http.Redirect(w, r, "/signin", http.StatusSeeOther)
+        return
+    }
+
+    user, _ := auth.GetSessionUser(r.Context())
+
+    if err := auth.Service.UserDelete(r.Context(), user.ID); err != nil {
+        http.Error(w, "Failed to delete profile", http.StatusInternalServerError)
+        return
+    }
+
+    http.Redirect(w, r, "/signin", http.StatusFound)
 })
 ```

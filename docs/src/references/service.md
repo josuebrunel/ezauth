@@ -63,6 +63,14 @@ Updates user profile information.
 func (a Auth) UserUpdate(ctx context.Context, user *models.User) (*models.User, error)
 ```
 
+### `UserDelete`
+
+Deletes a user by their ID.
+
+```go
+func (a Auth) UserDelete(ctx context.Context, id string) error
+```
+
 ## Token Operations
 
 ### `TokenCreate`
