@@ -43,6 +43,10 @@ jobs:
               run: |
                   git config user.name github-actions[bot]
                   git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+
+                  # Sync build output to docs folder, preserving the src directory
+                  rsync -av --delete --exclude 'src' _site/ docs/
+
                   git add docs/
                   git commit -m "Deploy docs to docs/ folder" || echo "No changes to commit"
                   git push

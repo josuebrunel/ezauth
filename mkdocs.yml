@@ -3,8 +3,8 @@ site_description: Simple and easy to use authentication library for Golang.
 repo_url: https://github.com/josuebrunel/ezauth
 repo_name: josuebrunel/ezauth
 
-docs_dir: doc_src
-site_dir: docs
+docs_dir: docs/src
+site_dir: _site
 
 theme:
   name: material
