@@ -1,0 +1,39 @@
+{{ define "content" }}
+<article>
+    <header>Sign Up</header>
+    <form action="/auth/register" method="post">
+        <fieldset>
+            <div class="grid">
+                <label>
+                    First Name
+                    <input name="first_name" type="text" autocomplete="given-name">
+                </label>
+                <label>
+                    Last Name
+                    <input name="last_name" type="text" autocomplete="family-name">
+                </label>
+            </div>
+            <label>
+                Email
+                <input name="email" type="email" autocomplete="email" required>
+            </label>
+            <label>
+                Password
+                <input name="password" type="password" autocomplete="new-password" required minlength="8">
+            </label>
+            <label>
+                Confirm Password
+                <input name="password_confirm" type="password" autocomplete="new-password" required minlength="8">
+            </label>
+            <label>
+                Theme (Meta)
+                <select name="meta_theme">
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                </select>
+            </label>
+        </fieldset>
+        <input type="submit" value="Sign Up">
+    </form>
+</article>
+{{ end }}

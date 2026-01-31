@@ -37,3 +37,6 @@ nav:
       - Handler: references/handler.md
       - Service: references/service.md
       - Repository: references/repository.md
+  - Examples:
+      - Go Server: examples/go-server.md
+      - Javascript Client: examples/javascript-client.md

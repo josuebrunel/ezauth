@@ -68,6 +68,32 @@ func main() {
 		})
 	})
 
+	r.Post("/profile", func(w http.ResponseWriter, r *http.Request) {
+		user, err := auth.GetSessionUser(r.Context())
+		if err != nil {
+			http.Redirect(w, r, "/signin", http.StatusSeeOther)
+			return
+		}
+
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "Invalid request", http.StatusBadRequest)
+			return
+		}
+
+		user.FirstName = r.FormValue("first_name")
+		user.LastName = r.FormValue("last_name")
+
+		// Call the service to update the user
+		// Note: We need to access the Repository or Service directly
+		// Since auth exposes Service, we use it.
+		if _, err := auth.Service.UserUpdate(r.Context(), user); err != nil {
+			http.Error(w, "Failed to update profile", http.StatusInternalServerError)
+			return
+		}
+
+		http.Redirect(w, r, "/dashboard", http.StatusFound)
+	})
+
 	r.Get("/dashboard", func(w http.ResponseWriter, r *http.Request) {
 		user, err := auth.GetSessionUser(r.Context())
 
@@ -78,7 +104,7 @@ func main() {
 
 		renderTemplate(w, "dashboard.html", map[string]interface{}{
 			"Title": "Dashboard - Dashy",
-			"Email": user.Email,
+			"User":  user,
 		})
 	})
 

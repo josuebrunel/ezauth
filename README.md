@@ -243,3 +243,10 @@ make swagger
 ```
 
 The Swagger UI is available at `/swagger/index.html`.
+
+## Examples
+
+Check out the `_example` directory for ready-to-use examples:
+
+*   [`go-server`](_example/go-server): A complete, plug-and-play example showing how to integrate `ezauth` with a Go web server.
+*   [`javascript-client`](_example/javascript-client): An example JavaScript client interacting with the `ezauth` API.
