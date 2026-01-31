@@ -147,7 +147,40 @@ user, err := auth.Service.UserCreate(ctx, &service.RequestBasicAuth{
 tokens, err := auth.Service.TokenCreate(ctx, user)
 ```
 
+
+
+## Form Field Reference
+
+When using the form-based endpoints (e.g., `/auth/register`, `/auth/login`), `ezauth` expects the following form fields in the POST request body (`application/x-www-form-urlencoded`):
+
+### Registration (`/auth/register`)
+-   `email` (Required)
+-   `password` (Required)
+-   `first_name` (Optional)
+-   `last_name` (Optional)
+-   `locale` (Optional)
+-   `timezone` (Optional)
+-   `roles` (Optional, comma-separated)
+
+### Login (`/auth/login`)
+-   `email` (Required)
+-   `password` (Required)
+
+### Password Reset Request (`/auth/password-reset/request`)
+-   `email` (Required)
+
+### Password Reset Confirm (`/auth/password-reset/confirm`)
+-   `token` (Required, usually passed via hidden input or query param)
+-   `password` (Required, the new password)
+
+### Magic Link Request (`/auth/passwordless/request`)
+-   `email` (Required)
+
+### Magic Link Login (`/auth/passwordless/login`)
+-   `token` (Required, passed as a query parameter: `?token=...`)
+
 ## Using an Existing Database Connection
+
 
 If your application already has a `*sql.DB` connection, you can use `NewWithDB`:
 
