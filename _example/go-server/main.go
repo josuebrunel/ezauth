@@ -14,16 +14,29 @@ import (
 	"github.com/josuebrunel/ezauth/pkg/config"
 )
 
-var templates map[string]*template.Template
+var (
+	templates   map[string]*template.Template
+	defaultEnvs = map[string]string{
+		"EZAUTH_API_KEY":                 "my-api-key",
+		"EZAUTH_JWT_SECRET":              "my-jwt-key",
+		"EZAUTH_LOGIN_PAGE_URL":          "/signin",
+		"EZAUTH_REGISTER_PAGE_URL":       "/signup",
+		"EZAUTH_REDIRECT_AFTER_LOGIN":    "/dashboard",
+		"EZAUTH_REDIRECT_AFTER_REGISTER": "/signin",
+	}
+)
+
+func setEnv() {
+	for k, v := range defaultEnvs {
+		if os.Getenv(k) == "" {
+			os.Setenv(k, v)
+		}
+	}
+}
 
 func main() {
 	// set env var
-	os.Setenv("EZAUTH_API_KEY", "my-api-key")
-	os.Setenv("EZAUTH_JWT_SECRET", "my-jwt-key")
-	os.Setenv("EZAUTH_LOGIN_PAGE_URL", "/signin")
-	os.Setenv("EZAUTH_REGISTER_PAGE_URL", "/signup")
-	os.Setenv("EZAUTH_REDIRECT_AFTER_LOGIN", "/dashboard")
-	os.Setenv("EZAUTH_REDIRECT_AFTER_REGISTER", "/signin")
+	setEnv()
 
 	// initialize auth
 	cfg, err := config.LoadConfig()
@@ -92,6 +105,23 @@ func main() {
 		}
 
 		http.Redirect(w, r, "/dashboard", http.StatusFound)
+	})
+
+	r.Post("/profile/delete", func(w http.ResponseWriter, r *http.Request) {
+		user, err := auth.GetSessionUser(r.Context())
+		if err != nil {
+			http.Redirect(w, r, "/signin", http.StatusSeeOther)
+			return
+		}
+
+		if err := auth.Service.UserDelete(r.Context(), user.ID); err != nil {
+			http.Error(w, "Failed to delete profile", http.StatusInternalServerError)
+			return
+		}
+
+		// Clear session cookie if possible, or just redirect to signin
+		// The library handles session clearing on logout, but here we just deleted the user.
+		http.Redirect(w, r, "/signin", http.StatusFound)
 	})
 
 	r.Get("/dashboard", func(w http.ResponseWriter, r *http.Request) {

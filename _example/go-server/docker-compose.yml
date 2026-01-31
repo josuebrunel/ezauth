@@ -1,0 +1,46 @@
+services:
+  app:
+    container_name: ezauth-go-server
+    build:
+      context: ../../
+      dockerfile: _example/go-server/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - EZAUTH_ADDR=:3000
+      - EZAUTH_API_KEY=my-api-key
+      - EZAUTH_JWT_SECRET=super-secret-key
+      - EZAUTH_DB_DIALECT=postgres
+      - EZAUTH_DB_DSN=postgres://user:password@postgres:5432/ezauth?sslmode=disable
+      - EZAUTH_LOGIN_PAGE_URL=/signin
+      - EZAUTH_REGISTER_PAGE_URL=/signup
+      - EZAUTH_REDIRECT_AFTER_LOGIN=/dashboard
+      - EZAUTH_REDIRECT_AFTER_REGISTER=/signin
+    depends_on:
+      - postgres
+    volumes:
+      # Mount views so we can edit them without rebuilding
+      - ./views:/app/views
+    networks:
+      - ezauth
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: ezauth-postgres
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=ezauth
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    ports:
+      - "3001:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ezauth
+
+volumes:
+  postgres_data:
+
+networks:
+  ezauth:

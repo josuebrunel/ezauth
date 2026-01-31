@@ -63,5 +63,16 @@
         </div>
         <button type="submit">Update</button>
     </form>
+
+    <hr>
+
+    <details>
+        <summary role="button" class="secondary outline">Danger Zone</summary>
+        <p>Deleting your account is irreversible.</p>
+        <form action="/profile/delete" method="post"
+            onsubmit="return confirm('Are you sure you want to delete your account? This action cannot be undone.');">
+            <button type="submit" class="contrast">Delete Account</button>
+        </form>
+    </details>
 </article>
 {{ end }}
