@@ -58,3 +58,12 @@ run: build
 
 swagger:
 	swag init -g pkg/handler/handler.go --parseDependency -o pkg/handler/docs
+
+doc.build:
+	mkdocs build
+
+doc.serve:
+	mkdocs serve
+
+doc.gh-pages:
+	mkdocs gh-deploy
