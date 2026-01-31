@@ -32,6 +32,17 @@ Used for sending password reset and magic link emails.
 | `EZAUTH_SMTP_PASSWORD` | SMTP password. | |
 | `EZAUTH_SMTP_FROM` | The email address to send from. | `noreply@example.com` |
 
+## Form/Redirect Settings
+
+Used for the Form-based handlers (browser flows).
+
+| Variable | Description | Default |
+| -------- | ----------- | ------- |
+| `EZAUTH_REDIRECT_AFTER_LOGIN` | URL to redirect to after successful login. | `/` |
+| `EZAUTH_REDIRECT_AFTER_REGISTER` | URL to redirect to after successful registration. | `/` |
+| `EZAUTH_LOGIN_PAGE_URL` | URL of your custom Login page (for redirects). | `/login` |
+| `EZAUTH_REGISTER_PAGE_URL` | URL of your custom Register page (for redirects). | `/register` |
+
 ## OAuth2 Settings
 
 ### General
