@@ -32,6 +32,11 @@ func (h *Handler) FormRegister(w http.ResponseWriter, r *http.Request) {
 		Data:      data,
 	}
 
+	if req.Password != r.FormValue("password_confirm") {
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.Register, "passwords do not match")
+		return
+	}
+
 	user, err := h.svc.UserCreate(r.Context(), req)
 	if err != nil {
 		h.redirectWithError(w, r, h.svc.Cfg.Pages.Register, err.Error())

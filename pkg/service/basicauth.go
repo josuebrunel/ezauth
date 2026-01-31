@@ -35,6 +35,9 @@ type RequestPasswordResetConfirm struct {
 
 // UserCreate creates a new user with email and password.
 func (a *Auth) UserCreate(ctx context.Context, req *RequestBasicAuth) (*models.User, error) {
+	if err := a.validatePassword(req.Password); err != nil {
+		return nil, err
+	}
 	hash, err := a.UserHashPassword(req.Password)
 	if err != nil {
 		return nil, err
@@ -59,6 +62,13 @@ func (a Auth) UserHashPassword(password string) (string, error) {
 	return string(bytes), err
 }
 
+func (a Auth) validatePassword(password string) error {
+	if len(password) < 8 {
+		return errors.New("password must be at least 8 characters long")
+	}
+	return nil
+}
+
 // UserAuthenticate authenticates a user with email and password.
 func (a Auth) UserAuthenticate(ctx context.Context, req RequestBasicAuth) (*models.User, error) {
 	user, err := a.Repo.UserGetByEmail(ctx, req.Email)
@@ -74,6 +84,9 @@ func (a Auth) UserAuthenticate(ctx context.Context, req RequestBasicAuth) (*mode
 
 // UserUpdatePassword updates the password for a user.
 func (a Auth) UserUpdatePassword(ctx context.Context, user *models.User, password string) (*models.User, error) {
+	if err := a.validatePassword(password); err != nil {
+		return nil, err
+	}
 	hash, err := a.UserHashPassword(password)
 	if err != nil {
 		return nil, err

@@ -57,6 +57,7 @@ func TestFormHandler_RegisterAndLoginFlow(t *testing.T) {
 		form := url.Values{}
 		form.Add("email", email)
 		form.Add("password", password)
+		form.Add("password_confirm", password)
 
 		req := httptest.NewRequest(http.MethodPost, "/auth/register", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -166,6 +167,7 @@ func TestFormHandler_RegisterWithMetadata(t *testing.T) {
 		form := url.Values{}
 		form.Add("email", email)
 		form.Add("password", password)
+		form.Add("password_confirm", password)
 		form.Add("meta_theme", "dark")
 		form.Add("meta_newsletter", "true")
 
@@ -194,6 +196,34 @@ func TestFormHandler_RegisterWithMetadata(t *testing.T) {
 		}
 		if val, ok := user.UserMetadata["newsletter"]; !ok || val != "true" {
 			t.Errorf("expected metadata newsletter=true, got %v", val)
+		}
+	})
+}
+
+func TestFormHandler_RegisterMismatchPasswords(t *testing.T) {
+	h := setupFormTestHandler(t)
+	email := "mismatch@example.com"
+	password := "password123"
+
+	t.Run("RegisterMismatchPasswords", func(t *testing.T) {
+		form := url.Values{}
+		form.Add("email", email)
+		form.Add("password", password)
+		form.Add("password_confirm", "differentpassword")
+
+		req := httptest.NewRequest(http.MethodPost, "/auth/register", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		h.ServeHTTP(w, req)
+
+		if w.Code != http.StatusFound {
+			t.Errorf("expected status 302, got %d", w.Code)
+		}
+
+		location := w.Header().Get("Location")
+		if !strings.Contains(location, "error=passwords+do+not+match") { // Check encoded error message
+			t.Errorf("expected error 'passwords do not match' in redirect, got %s", location)
 		}
 	})
 }

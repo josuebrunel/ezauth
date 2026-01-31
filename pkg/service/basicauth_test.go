@@ -85,6 +85,20 @@ func TestBasicAuthOperations(t *testing.T) {
 		createdUser = user
 	})
 
+	t.Run("UserCreate_ShortPassword", func(t *testing.T) {
+		req := &RequestBasicAuth{
+			Email:    "short@example.com",
+			Password: "short",
+		}
+		_, err := auth.UserCreate(ctx, req)
+		if err == nil {
+			t.Fatal("expected error for short password, got nil")
+		}
+		if err.Error() != "password must be at least 8 characters long" {
+			t.Errorf("expected 'password must be at least 8 characters long', got '%v'", err)
+		}
+	})
+
 	t.Run("UserAuthenticate_Success", func(t *testing.T) {
 		req := RequestBasicAuth{
 			Email:    email,
