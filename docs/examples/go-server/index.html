@@ -851,6 +851,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#running-the-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running the Example
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#code-breakdown" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1004,6 +1015,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#running-the-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running the Example
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#code-breakdown" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1107,6 +1129,12 @@
 <li>Route protection</li>
 <li>Profile updates</li>
 </ul>
+<h2 id="running-the-example">Running the Example</h2>
+<p>You can run the example using Docker Compose:</p>
+<pre><code class="language-bash">cd _example/go-server
+docker compose up --build
+</code></pre>
+<p>The server will be available at <code>http://localhost:3000</code>.</p>
 <h2 id="code-breakdown">Code Breakdown</h2>
 <h3 id="1-initialization">1. Initialization</h3>
 <p>Initialize <code>ezauth</code> with configuration loaded from environment variables.</p>
@@ -1184,6 +1212,23 @@ r.Use(auth.Handler.Session.LoadAndSave)
     }
 
     http.Redirect(w, r, &quot;/dashboard&quot;, http.StatusFound)
+})
+
+// Delete Profile
+r.Post(&quot;/profile/delete&quot;, func(w http.ResponseWriter, r *http.Request) {
+    if !auth.IsAuthenticated(r.Context()) {
+        http.Redirect(w, r, &quot;/signin&quot;, http.StatusSeeOther)
+        return
+    }
+
+    user, _ := auth.GetSessionUser(r.Context())
+
+    if err := auth.Service.UserDelete(r.Context(), user.ID); err != nil {
+        http.Error(w, &quot;Failed to delete profile&quot;, http.StatusInternalServerError)
+        return
+    }
+
+    http.Redirect(w, r, &quot;/signin&quot;, http.StatusFound)
 })
 </code></pre>
 

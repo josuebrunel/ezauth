@@ -816,6 +816,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#userdelete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UserDelete
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1215,6 +1226,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#userdelete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UserDelete
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1385,6 +1407,10 @@
 <h3 id="userupdate"><code>UserUpdate</code></h3>
 <p>Updates user profile information.</p>
 <pre><code class="language-go">func (a Auth) UserUpdate(ctx context.Context, user *models.User) (*models.User, error)
+</code></pre>
+<h3 id="userdelete"><code>UserDelete</code></h3>
+<p>Deletes a user by their ID.</p>
+<pre><code class="language-go">func (a Auth) UserDelete(ctx context.Context, id string) error
 </code></pre>
 <h2 id="token-operations">Token Operations</h2>
 <h3 id="tokencreate"><code>TokenCreate</code></h3>
