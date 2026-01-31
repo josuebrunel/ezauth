@@ -87,61 +87,59 @@ Embed `ezauth` directly into your existing Go application.
 package main
 
 import (
+    "fmt"
+    "log"
     "net/http"
+    "os"
+
     "github.com/go-chi/chi/v5"
+    "github.com/go-chi/chi/v5/middleware"
     "github.com/josuebrunel/ezauth"
     "github.com/josuebrunel/ezauth/pkg/config"
 )
 
 func main() {
     // 1. Setup Config
+    os.Setenv("EZAUTH_API_KEY", "my-api-key")
+    os.Setenv("EZAUTH_JWT_SECRET", "my-jwt-key")
+    
     cfg, err := config.LoadConfig()
     if err != nil {
-        panic(err)
+        log.Fatalf("Failed to load config: %v", err)
     }
 
     // 2. Initialize EzAuth
-    // The second argument is the path prefix for the auth routes.
-    // You can also use ezauth.NewWithDB(&cfg, db, "auth") if you have an existing *sql.DB connection.
-    auth, err := ezauth.New(&cfg, "auth")
+    auth, err := ezauth.New(&cfg, "")
     if err != nil {
-        panic(err)
+        log.Fatalf("Failed to initialize auth: %v", err)
     }
 
     // 3. Run migrations
     if err := auth.Migrate(); err != nil {
-        panic(err)
+        log.Fatalf("Failed to migrate: %v", err)
     }
 
     r := chi.NewRouter()
+    r.Use(middleware.Logger)
+    r.Use(middleware.Recoverer)
 
-    // 4. Mount Auth Routes
-    // This exposes /auth/register, /auth/login, /auth/token/refresh, etc.
+    // 4. IMPORTANT: Add session middleware so that GetSessionUser works in handlers
+    r.Use(auth.Handler.Session.LoadAndSave)
+
+    // 5. Mount Auth Routes
     r.Mount("/auth", auth.Handler)
 
-    // 5. Protect your own routes
-    r.Group(func(r chi.Router) {
-        // Option A: Use AuthMiddleware for API Token protection
-        // r.Use(auth.AuthMiddleware)
+    // Protected Route Example
+    r.Get("/dashboard", func(w http.ResponseWriter, r *http.Request) {
+        // Retrieve the authenticated user
+        user, err := auth.GetSessionUser(r.Context())
 
-        // Option B: Retrieve session tokens for Form-based auth
-        r.Use(func(next http.Handler) http.Handler {
-            return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-                // Access session tokens
-                tokens, ok := auth.Handler.GetSessionTokens(r.Context())
-                if !ok {
-                     http.Redirect(w, r, "/login", http.StatusFound)
-                     return
-                }
-                // ... logic to validate tokens ...
-                next.ServeHTTP(w, r)
-            })
-        })
+        if err != nil {
+            http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+            return
+        }
 
-        r.Get("/protected", func(w http.ResponseWriter, r *http.Request) {
-            userID, _ := auth.GetUserID(r.Context())
-            w.Write([]byte("Hello user: " + userID))
-        })
+        w.Write([]byte(fmt.Sprintf("Welcome, %s!", user.Email)))
     })
 
     http.ListenAndServe(":3000", r)
@@ -165,23 +163,45 @@ if ok {
 }
 ```
 
+### Retrieving the Authenticated User
+
+You can retrieve the full user object from the session using `auth.GetSessionUser(ctx)`.
+
+> [!IMPORTANT]
+> You **MUST** mount the session middleware on your router for this to work.
+
+```go
+// 1. Mount session middleware
+r.Use(auth.Handler.Session.LoadAndSave)
+
+// 2. In your handler
+r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+    user, err := auth.GetSessionUser(r.Context())
+    if err != nil {
+        // User not authenticated
+        return
+    }
+    fmt.Println("User:", user.Email)
+})
+```
+
 ## API Endpoints
 
 ### Form-based Handlers (Cookies & Redirects)
 
 These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, and redirect.
 
-| Method | Endpoint                           | Description                       |
-| ------ | ---------------------------------- | --------------------------------- |
-| POST   | `/auth/register`                   | Register a new user               |
-| POST   | `/auth/login`                      | Login and set cookies             |
-| POST   | `/auth/logout`                     | Clear cookies and logout          |
-| POST   | `/auth/password-reset/request`     | Request password reset link       |
-| POST   | `/auth/password-reset/confirm`     | Confirm password reset            |
-| POST   | `/auth/passwordless/request`       | Request magic link                |
-| GET    | `/auth/passwordless/login`         | Login via magic link              |
-| GET    | `/auth/oauth2/{provider}/login`    | Login via OAuth2 provider         |
-| GET    | `/auth/oauth2/{provider}/callback` | OAuth2 provider callback          |
+| Method | Endpoint                           | Description                 |
+| ------ | ---------------------------------- | --------------------------- |
+| POST   | `/auth/register`                   | Register a new user         |
+| POST   | `/auth/login`                      | Login and set cookies       |
+| POST   | `/auth/logout`                     | Clear cookies and logout    |
+| POST   | `/auth/password-reset/request`     | Request password reset link |
+| POST   | `/auth/password-reset/confirm`     | Confirm password reset      |
+| POST   | `/auth/passwordless/request`       | Request magic link          |
+| GET    | `/auth/passwordless/login`         | Login via magic link        |
+| GET    | `/auth/oauth2/{provider}/login`    | Login via OAuth2 provider   |
+| GET    | `/auth/oauth2/{provider}/callback` | OAuth2 provider callback    |
 
 
 ### API Handlers (JSON)

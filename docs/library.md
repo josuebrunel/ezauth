@@ -4,59 +4,110 @@ Embedding `ezauth` directly into your Go application provides the most seamless 
 
 ## Basic Integration
 
-Here is a complete example of how to integrate `ezauth` into a `chi` router:
+Here is a complete example of how to integrate `ezauth` into a `chi` router, ensuring the session middleware is correctly configured:
 
 ```go
 package main
 
 import (
+    "fmt"
+    "log"
     "net/http"
+    "os"
+
     "github.com/go-chi/chi/v5"
+    "github.com/go-chi/chi/v5/middleware"
     "github.com/josuebrunel/ezauth"
     "github.com/josuebrunel/ezauth/pkg/config"
 )
 
 func main() {
     // 1. Setup Config
-    // LoadConfig reads from environment variables with the EZAUTH_ prefix.
+    os.Setenv("EZAUTH_API_KEY", "my-api-key")
+    os.Setenv("EZAUTH_JWT_SECRET", "my-jwt-key")
+    // ... set other necessary env vars
+
     cfg, err := config.LoadConfig()
     if err != nil {
-        panic(err)
+        log.Fatalf("Failed to load config: %v", err)
     }
 
     // 2. Initialize EzAuth
-    // "auth" is the path prefix where the routes will be mounted.
-    auth, err := ezauth.New(&cfg, "auth")
+    auth, err := ezauth.New(&cfg, "")
     if err != nil {
-        panic(err)
+        log.Fatalf("Failed to initialize auth: %v", err)
     }
 
     // 3. Run migrations
-    // Ensure the database schema is up to date.
     if err := auth.Migrate(); err != nil {
-        panic(err)
+        log.Fatalf("Failed to migrate: %v", err)
     }
 
     r := chi.NewRouter()
+    r.Use(middleware.Logger)
+    r.Use(middleware.Recoverer)
 
-    // 4. Mount Auth Routes
-    // This exposes /auth/register, /auth/login, etc.
-    // auth.Handler implements http.Handler.
+    // 4. IMPORTANT: Add session middleware so that GetSessionUser works in handlers
+    r.Use(auth.Handler.Session.LoadAndSave)
+
+    // 5. Mount Auth Routes
     r.Mount("/auth", auth.Handler)
 
-    // 5. Protect your own routes
-    r.Group(func(r chi.Router) {
-        r.Use(auth.AuthMiddleware)
-
-        r.Get("/protected", func(w http.ResponseWriter, r *http.Request) {
-            // Retrieve the userID from the context
-            userID, _ := auth.GetUserID(r.Context())
-            w.Write([]byte("Hello user: " + userID))
-        })
+    // Public Route (Login)
+    r.Get("/signin", func(w http.ResponseWriter, r *http.Request) {
+        w.Write([]byte("Login Page"))
     })
 
+    // Protected Route
+    r.Get("/dashboard", func(w http.ResponseWriter, r *http.Request) {
+        // Retrieve the authenticated user
+        user, err := auth.GetSessionUser(r.Context())
+
+        if err != nil {
+            http.Redirect(w, r, "/signin", http.StatusSeeOther)
+            return
+        }
+
+        w.Write([]byte(fmt.Sprintf("Welcome, %s!", user.Email)))
+    })
+
+    fmt.Println("Server starting on :3000")
     http.ListenAndServe(":3000", r)
 }
+```
+
+## Retrieving Authenticated User
+
+To retrieve the authenticated user from the session cookies, you **must** mount the session middleware.
+
+```go
+// 1. Mount session middleware (Required for GetSessionUser)
+r.Use(auth.Handler.Session.LoadAndSave)
+
+// 2. Access the user in your handler
+r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+    user, err := auth.GetSessionUser(r.Context())
+    if err != nil {
+        // User is not authenticated or session expired
+        return
+    }
+    // Access user fields
+    fmt.Println(user.Email)
+})
+```
+
+### Optimizing with Middleware
+
+If you use `GetSessionUser` frequently, you can use the `LoadUserMiddleware` to pre-load the user into the context. This avoids repeated DB lookups if multiple handlers/middlewares need the user info in the same request.
+
+```go
+r.Use(auth.LoadUserMiddleware)
+
+r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+    // This will be fast as it retrieves from context
+    user, err := auth.GetSessionUser(r.Context())
+    // ...
+})
 ```
 
 ## Core Components

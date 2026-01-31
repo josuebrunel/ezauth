@@ -9,6 +9,7 @@ import (
 
 	"github.com/josuebrunel/ezauth/pkg/config"
 	"github.com/josuebrunel/ezauth/pkg/db/migrations"
+	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/josuebrunel/ezauth/pkg/db/repository"
 	"github.com/josuebrunel/ezauth/pkg/handler"
 	"github.com/josuebrunel/ezauth/pkg/service"
@@ -74,4 +75,14 @@ func (e *EzAuth) AuthMiddleware(next http.Handler) http.Handler {
 // GetUserID retrieves the user ID from the request context.
 func (e *EzAuth) GetUserID(ctx context.Context) (string, error) {
 	return handler.GetUserID(ctx)
+}
+
+// GetSessionUser returns the authenticated user from the context or session.
+func (e *EzAuth) GetSessionUser(ctx context.Context) (*models.User, error) {
+	return e.Handler.GetSessionUser(ctx)
+}
+
+// LoadUserMiddleware returns the middleware that loads the user into the context.
+func (e *EzAuth) LoadUserMiddleware(next http.Handler) http.Handler {
+	return e.Handler.LoadUserMiddleware(next)
 }

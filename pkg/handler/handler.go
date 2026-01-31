@@ -12,15 +12,30 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	_ "github.com/josuebrunel/ezauth/pkg/handler/docs"
 	"github.com/josuebrunel/ezauth/pkg/service"
 	"github.com/josuebrunel/gopkg/xlog"
 	httpSwagger "github.com/swaggo/http-swagger"
-	_ "github.com/josuebrunel/ezauth/pkg/handler/docs"
 )
 
 type contextKey string
 
-const userContextKey = contextKey("userID")
+const (
+	userContextKey       = contextKey("userID")
+	userObjectContextKey = contextKey("user")
+)
+
+// LoadUserMiddleware is a middleware that loads the authenticated user into the context.
+// This allows downstream handlers to use GetSessionUser(ctx) without the Handler instance.
+func (h *Handler) LoadUserMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		if user, err := h.GetSessionUser(ctx); err == nil {
+			ctx = context.WithValue(ctx, userObjectContextKey, user)
+		}
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
 
 type LogoutRequest struct {
 	RefreshToken string `json:"refresh_token"`

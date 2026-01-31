@@ -1,0 +1,18 @@
+{{ define "content" }}
+<article>
+    <header>Sign In</header>
+    <form action="/auth/login" method="post">
+        <fieldset>
+            <label>
+                Email
+                <input name="email" type="email" autocomplete="email" required>
+            </label>
+            <label>
+                Password
+                <input name="password" type="password" autocomplete="current-password" required>
+            </label>
+        </fieldset>
+        <input type="submit" value="Sign In">
+    </form>
+</article>
+{{ end }}
