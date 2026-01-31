@@ -105,14 +105,30 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 		r.Get("/oauth2/{provider}/callback", h.OAuth2Callback)
 
 		// Form handlers (HTML Forms)
-		r.Post("/register", h.FormRegister)
-		r.Post("/login", h.FormLogin)
-		r.Post("/logout", h.FormLogout)
-		r.Post("/password-reset/request", h.FormPasswordResetRequest)
-		r.Post("/password-reset/confirm", h.FormPasswordResetConfirm)
-		r.Post("/passwordless/request", h.FormPasswordlessRequest)
-		r.Get("/passwordless/login", h.FormPasswordlessLogin)
-		r.Get("/oauth2/{provider}/login", h.OAuth2Login)
+		r.Group(func(r chi.Router) {
+			// CSRF Middleware
+			r.Use(csrf.Protect([]byte(h.svc.Cfg.JWTSecret), csrf.Secure(h.svc.Cfg.BaseURL != "http://localhost:8080")))
+
+			r.Get("/csrf", func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("X-CSRF-Token", csrf.Token(r))
+				WriteJSONResponse(w, http.StatusOK, map[string]string{"csrf_token": csrf.Token(r)}, nil)
+			})
+
+			r.Get("/register", func(w http.ResponseWriter, r *http.Request) {
+				http.Redirect(w, r, h.svc.Cfg.Pages.Register, http.StatusFound)
+			})
+			r.Post("/register", h.FormRegister)
+			r.Get("/login", func(w http.ResponseWriter, r *http.Request) {
+				http.Redirect(w, r, h.svc.Cfg.Pages.Login, http.StatusFound)
+			})
+			r.Post("/login", h.FormLogin)
+			r.Post("/logout", h.FormLogout)
+			r.Post("/password-reset/request", h.FormPasswordResetRequest)
+			r.Post("/password-reset/confirm", h.FormPasswordResetConfirm)
+			r.Post("/passwordless/request", h.FormPasswordlessRequest)
+			r.Get("/passwordless/login", h.FormPasswordlessLogin)
+			r.Get("/oauth2/{provider}/login", h.OAuth2Login)
+		})
 
 		// Routes protected by API Key
 		r.Group(func(r chi.Router) {
