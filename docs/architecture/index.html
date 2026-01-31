@@ -14,6 +14,8 @@
         <link rel="prev" href="../api-endpoints/">
       
       
+        <link rel="next" href="../references/handler/">
+      
       
         
       
@@ -523,6 +525,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -760,6 +768,208 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../references/handler/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Handler
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../references/service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Service
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../references/repository/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Repository
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/go-server/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Go Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/javascript-client/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Javascript Client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -920,17 +1130,21 @@
 }
 </code></pre>
 <h3 id="service-business-logic"><code>Service</code> (Business Logic)</h3>
-<p>The <code>service</code> package (located in <code>pkg/service/</code>) contains the core authentication logic. It is independent of the HTTP layer. This is where you'll find logic for:
-- User authentication and hashing.
-- Token generation and validation (JWT and Refresh Tokens).
-- Password reset and passwordless flows.
-- Interaction with the Mailer.</p>
+<p>The <code>service</code> package (located in <code>pkg/service/</code>) contains the core authentication logic. It is independent of the HTTP layer. This is where you'll find logic for:</p>
+<ul>
+<li>User authentication and hashing.</li>
+<li>Token generation and validation (JWT and Refresh Tokens).</li>
+<li>Password reset and passwordless flows.</li>
+<li>Interaction with the Mailer.</li>
+</ul>
 <h3 id="handler-http-layer"><code>Handler</code> (HTTP Layer)</h3>
-<p>The <code>handler</code> package (located in <code>pkg/handler/</code>) defines the RESTful API. It uses the <code>service</code> package to perform actions. It is responsible for:
-- Routing requests (using <code>chi</code>).
-- Parsing and validating request bodies.
-- Enforcing authentication via middleware.
-- Formatting JSON responses.</p>
+<p>The <code>handler</code> package (located in <code>pkg/handler/</code>) defines the RESTful API. It uses the <code>service</code> package to perform actions. It is responsible for:</p>
+<ul>
+<li>Routing requests (using <code>chi</code>).</li>
+<li>Parsing and validating request bodies.</li>
+<li>Enforcing authentication via middleware.</li>
+<li>Formatting JSON responses.</li>
+</ul>
 <h3 id="repository-data-persistence"><code>Repository</code> (Data Persistence)</h3>
 <p>The <code>repository</code> package (located in <code>pkg/db/repository/</code>) handles all database interactions. It uses <code>bob</code> as a query builder and supports multiple database dialects.</p>
 <h3 id="config-configuration"><code>Config</code> (Configuration)</h3>
