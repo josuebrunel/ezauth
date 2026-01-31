@@ -155,8 +155,8 @@ Inside the session, the Access Token and Refresh Token are stored under the key 
 You can retrieve them in your application using the helper method:
 
 ```go
-tokens, ok := auth.Handler.GetSessionTokens(ctx)
-if ok {
+tokens, err := auth.GetSessionTokens(ctx)
+if err == nil {
     accessToken := tokens["access_token"]
     refreshToken := tokens["refresh_token"]
     // ...

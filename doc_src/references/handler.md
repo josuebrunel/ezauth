@@ -60,6 +60,14 @@ Retrieves the authenticated user. It checks:
 func (h *Handler) GetSessionUser(ctx context.Context) (*models.User, error)
 ```
 
+### `GetSessionTokens`
+
+Retrieves the access and refresh tokens from the session cookies.
+
+```go
+func (h *Handler) GetSessionTokens(ctx context.Context) (map[string]string, bool)
+```
+
 ### `IsAuthenticated`
 
 Checks if the request is authenticated. It returns `true` if a user can be retrieved from the context or session.

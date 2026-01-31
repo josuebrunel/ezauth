@@ -5,6 +5,7 @@ package ezauth
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"net/http"
 
 	"github.com/josuebrunel/ezauth/pkg/config"
@@ -75,6 +76,15 @@ func (e *EzAuth) AuthMiddleware(next http.Handler) http.Handler {
 // GetUserID retrieves the user ID from the request context.
 func (e *EzAuth) GetUserID(ctx context.Context) (string, error) {
 	return handler.GetUserID(ctx)
+}
+
+// GetSessionToken retrieves the session token from the request context.
+func (e *EzAuth) GetSessionTokens(ctx context.Context) (map[string]string, error) {
+	tokens, bool := e.Handler.GetSessionTokens(ctx)
+	if !bool {
+		return nil, errors.New("session tokens not found")
+	}
+	return tokens, nil
 }
 
 // GetSessionUser returns the authenticated user from the context or session.
