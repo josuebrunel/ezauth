@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/stephenafamo/bob"
@@ -17,6 +18,12 @@ type PSQLQuerier struct {
 }
 
 func (q *PSQLQuerier) QueryUserInsert(ctx context.Context, user *models.User) bob.Query {
+	if user.CreatedAt.IsZero() {
+		user.CreatedAt = time.Now().UTC()
+	}
+	if user.UpdatedAt.IsZero() {
+		user.UpdatedAt = time.Now().UTC()
+	}
 	return psql.Insert(
 		im.Into(psql.Quote(models.TableUser),
 			models.ColumnEmail,
@@ -79,6 +86,7 @@ func (q *PSQLQuerier) QueryUserGetByProvider(ctx context.Context, provider, prov
 func (q *PSQLQuerier) QueryUserUpdate(ctx context.Context, user *models.User) bob.Query {
 	qm := []bob.Mod[*dialect.UpdateQuery]{
 		um.Table(psql.Quote(models.TableUser)),
+		um.Set(psql.Quote(models.ColumnUpdatedAt).EQ(psql.Arg(time.Now().UTC()))),
 		um.Where(psql.Quote("id").EQ(psql.Arg(user.ID))),
 	}
 
@@ -136,10 +144,6 @@ func (q *PSQLQuerier) QueryUserUpdate(ctx context.Context, user *models.User) bo
 		qm = append(qm, um.Set(psql.Quote(models.ColumnRoles).EQ(psql.Arg(user.Roles))))
 	}
 
-	if user.UpdatedAt.IsZero() {
-		qm = append(qm, um.Set(psql.Quote(models.ColumnUpdatedAt).EQ(psql.Arg(user.UpdatedAt))))
-	}
-
 	qm = append(qm, um.Returning("*"))
 
 	return psql.Update(qm...)
@@ -195,4 +199,3 @@ func (q *PSQLQuerier) QueryTokenRevoke(ctx context.Context, id string) bob.Query
 func (q *PSQLQuerier) QueryTokenDelete(ctx context.Context, id string) bob.Query {
 	return psql.Delete(dm.From(psql.Quote(models.TableToken)), dm.Where(psql.Quote("id").EQ(psql.Arg(id))))
 }
-

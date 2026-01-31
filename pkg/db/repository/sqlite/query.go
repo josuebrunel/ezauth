@@ -18,6 +18,12 @@ type SqliteQuerier struct {
 }
 
 func (q *SqliteQuerier) QueryUserInsert(ctx context.Context, user *models.User) bob.Query {
+	if user.CreatedAt.IsZero() {
+		user.CreatedAt = time.Now().UTC()
+	}
+	if user.UpdatedAt.IsZero() {
+		user.UpdatedAt = time.Now().UTC()
+	}
 	return sqlite.Insert(
 		im.Into(models.TableUser,
 			models.ColumnEmail,
@@ -189,4 +195,3 @@ func (q *SqliteQuerier) QueryTokenRevoke(ctx context.Context, id string) bob.Que
 func (q *SqliteQuerier) QueryTokenDelete(ctx context.Context, id string) bob.Query {
 	return sqlite.Delete(dm.From(models.TableToken), dm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
 }
-
