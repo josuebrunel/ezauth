@@ -37,4 +37,12 @@ jobs:
 
             - run: pip install mkdocs-material
 
-            - run: mkdocs gh-deploy --force
+            - run: mkdocs build
+
+            - name: Deploy to docs folder
+              run: |
+                  git config user.name github-actions[bot]
+                  git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+                  git add docs/
+                  git commit -m "Deploy docs to docs/ folder" || echo "No changes to commit"
+                  git push
