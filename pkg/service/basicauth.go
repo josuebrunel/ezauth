@@ -100,6 +100,11 @@ func (a Auth) UserUpdate(ctx context.Context, user *models.User) (*models.User, 
 	return a.Repo.UserUpdate(ctx, user)
 }
 
+// UserDelete deletes a user by ID.
+func (a Auth) UserDelete(ctx context.Context, id string) error {
+	return a.Repo.UserDelete(ctx, id)
+}
+
 // PasswordResetRequest initiates the password reset flow.
 func (a *Auth) PasswordResetRequest(ctx context.Context, req RequestPasswordReset) error {
 	user, err := a.Repo.UserGetByEmail(ctx, req.Email)
