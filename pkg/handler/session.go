@@ -79,3 +79,9 @@ func (h *Handler) GetSessionUser(ctx context.Context) (*models.User, error) {
 
 	return user, nil
 }
+
+// IsAuthenticated checks if the request is authenticated.
+func (h *Handler) IsAuthenticated(ctx context.Context) bool {
+	_, err := h.GetSessionUser(ctx)
+	return err == nil
+}

@@ -60,6 +60,14 @@ Retrieves the authenticated user. It checks:
 func (h *Handler) GetSessionUser(ctx context.Context) (*models.User, error)
 ```
 
+### `IsAuthenticated`
+
+Checks if the request is authenticated. It returns `true` if a user can be retrieved from the context or session.
+
+```go
+func (h *Handler) IsAuthenticated(ctx context.Context) bool
+```
+
 ## HTTP Handlers
 
 The following methods are attached to routes internally by `New`, but are public if you need to wrap or mock them.

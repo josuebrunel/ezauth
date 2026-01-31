@@ -86,3 +86,8 @@ func (e *EzAuth) GetSessionUser(ctx context.Context) (*models.User, error) {
 func (e *EzAuth) LoadUserMiddleware(next http.Handler) http.Handler {
 	return e.Handler.LoadUserMiddleware(next)
 }
+
+// IsAuthenticated checks if the request is authenticated.
+func (e *EzAuth) IsAuthenticated(ctx context.Context) bool {
+	return e.Handler.IsAuthenticated(ctx)
+}

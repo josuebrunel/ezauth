@@ -95,12 +95,12 @@ func main() {
 	})
 
 	r.Get("/dashboard", func(w http.ResponseWriter, r *http.Request) {
-		user, err := auth.GetSessionUser(r.Context())
-
-		if err != nil {
+		if !auth.IsAuthenticated(r.Context()) {
 			http.Redirect(w, r, "/signin", http.StatusSeeOther)
 			return
 		}
+
+		user, _ := auth.GetSessionUser(r.Context())
 
 		renderTemplate(w, "dashboard.html", map[string]interface{}{
 			"Title": "Dashboard - Dashy",

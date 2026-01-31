@@ -176,11 +176,12 @@ r.Use(auth.Handler.Session.LoadAndSave)
 
 // 2. In your handler
 r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-    user, err := auth.GetSessionUser(r.Context())
-    if err != nil {
-        // User not authenticated
+    if !auth.IsAuthenticated(r.Context()) {
+        http.Redirect(w, r, "/login", http.StatusSeeOther)
         return
     }
+
+    user, _ := auth.GetSessionUser(r.Context())
     fmt.Println("User:", user.Email)
 })
 ```
