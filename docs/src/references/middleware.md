@@ -7,6 +7,7 @@
 ### `LoginRequired`
 
 Checks if a user is authenticated. This middleware is "content-aware":
+
 -   **Browser Request**: Redirects to the configured Login Page.
 -   **API Request** (`/api/*` or `Accept: application/json`): Returns `401 Unauthorized`.
 
