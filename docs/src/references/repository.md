@@ -29,7 +29,7 @@ func New(db *sql.DB, dialect string) *Repository
 ## User Methods
 
 ### `UserCreate`
-Inserts a new user record.
+Inserts a new user record. automatically sets `CreatedAt` and `UpdatedAt` to the current UTC time if they are not provided.
 
 ```go
 func (r Repository) UserCreate(ctx context.Context, user *models.User) (*models.User, error)
@@ -57,7 +57,7 @@ func (r Repository) UserGetByProvider(ctx context.Context, provider, providerID 
 ```
 
 ### `UserUpdate`
-Updates an existing user record.
+Updates an existing user record. Automatically updates `UpdatedAt` to the current UTC time.
 
 ```go
 func (r Repository) UserUpdate(ctx context.Context, user *models.User) (*models.User, error)

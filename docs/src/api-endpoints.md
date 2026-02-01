@@ -1,6 +1,7 @@
 # API Endpoints
 
 `ezauth` provides two sets of endpoints:
+
 1.  **Form Handlers (`/auth/*`)**: Designed for browser clients. They handle redirects, use HTTP-only cookies for sessions, and require CSRF protection for POST requests.
 2.  **JSON API (`/auth/api/*`)**: Designed for mobile apps or SPAs. They return JSON responses and require API Key authentication.
 
@@ -33,9 +34,21 @@ Returns a JSON object containing the CSRF token.
 `POST /auth/register`
 `GET /auth/register` (Redirects to configured Register Page)
 
+**Parameters:**
+*   `email` (required)
+*   `password` (required)
+*   `password_confirm` (required, must match password)
+*   `first_name`
+*   `last_name`
+*   `meta_*` (Any field prefixed with `meta_` will be stored in `UserMetadata`)
+
 ### Login (Form)
 `POST /auth/login`
 `GET /auth/login` (Redirects to configured Login Page)
+
+**Parameters:**
+*   `email` (required)
+*   `password` (required)
 
 ### Logout (Form)
 `POST /auth/logout`

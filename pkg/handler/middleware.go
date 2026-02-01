@@ -93,3 +93,25 @@ func (h *Handler) APIKeyMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
+// LoginRequired is a middleware that checks if the request is authenticated.
+// If the user is not authenticated, it redirects to the login page (for browser requests)
+// or returns a 401 Unauthorized error (for API requests).
+func (h *Handler) LoginRequired(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !h.IsAuthenticated(r.Context()) {
+			// Check if it's an API request (JSON) or a browser request
+			// We can check the Accept header or the path prefix
+			// For simplicity, let's assume /api/ paths are JSON
+			if strings.HasPrefix(r.URL.Path, "/auth/api") || strings.Contains(r.Header.Get("Accept"), "application/json") {
+				WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
+				return
+			}
+
+			// redirect to login
+			http.Redirect(w, r, h.svc.Cfg.Pages.Login, http.StatusFound)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}

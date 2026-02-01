@@ -41,12 +41,12 @@ Implements the `http.Handler` interface, allowing the `Handler` to be mounted on
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 ```
 
-### `LoadUserMiddleware`
+### `ServeHTTP`
 
-Middleware that loads the authenticated user into the request context. This is required if you want to use `GetSessionUser(ctx)` in downstream handlers without reference to the `Handler` instance.
+Implements the `http.Handler` interface, allowing the `Handler` to be mounted on any Go HTTP router.
 
 ```go
-func (h *Handler) LoadUserMiddleware(next http.Handler) http.Handler
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 ```
 
 ### `GetSessionUser`

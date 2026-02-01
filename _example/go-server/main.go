@@ -81,60 +81,51 @@ func main() {
 		})
 	})
 
-	r.Post("/profile", func(w http.ResponseWriter, r *http.Request) {
-		user, err := auth.GetSessionUser(r.Context())
-		if err != nil {
-			http.Redirect(w, r, "/signin", http.StatusSeeOther)
-			return
-		}
+	// Protected Routes
+	r.Group(func(r chi.Router) {
+		r.Use(auth.Handler.LoginRequired)
 
-		if err := r.ParseForm(); err != nil {
-			http.Error(w, "Invalid request", http.StatusBadRequest)
-			return
-		}
+		r.Get("/dashboard", func(w http.ResponseWriter, r *http.Request) {
+			// Get user details
+			user, _ := auth.GetSessionUser(r.Context())
 
-		user.FirstName = r.FormValue("first_name")
-		user.LastName = r.FormValue("last_name")
+			renderTemplate(w, "dashboard.html", map[string]interface{}{
+				"Title": "Dashboard - Dashy",
+				"User":  user,
+			})
+		})
 
-		// Call the service to update the user
-		// Note: We need to access the Repository or Service directly
-		// Since auth exposes Service, we use it.
-		if _, err := auth.Service.UserUpdate(r.Context(), user); err != nil {
-			http.Error(w, "Failed to update profile", http.StatusInternalServerError)
-			return
-		}
+		r.Post("/profile", func(w http.ResponseWriter, r *http.Request) {
+			user, _ := auth.GetSessionUser(r.Context())
 
-		http.Redirect(w, r, "/dashboard", http.StatusFound)
-	})
+			if err := r.ParseForm(); err != nil {
+				http.Error(w, "Invalid request", http.StatusBadRequest)
+				return
+			}
 
-	r.Post("/profile/delete", func(w http.ResponseWriter, r *http.Request) {
-		user, err := auth.GetSessionUser(r.Context())
-		if err != nil {
-			http.Redirect(w, r, "/signin", http.StatusSeeOther)
-			return
-		}
+			// Update fields
+			user.FirstName = r.FormValue("first_name")
+			user.LastName = r.FormValue("last_name")
 
-		if err := auth.Service.UserDelete(r.Context(), user.ID); err != nil {
-			http.Error(w, "Failed to delete profile", http.StatusInternalServerError)
-			return
-		}
+			// Save using Service
+			if _, err := auth.Service.UserUpdate(r.Context(), user); err != nil {
+				http.Error(w, "Failed to update profile", http.StatusInternalServerError)
+				return
+			}
 
-		// Clear session cookie if possible, or just redirect to signin
-		// The library handles session clearing on logout, but here we just deleted the user.
-		http.Redirect(w, r, "/signin", http.StatusFound)
-	})
+			http.Redirect(w, r, "/dashboard", http.StatusFound)
+		})
 
-	r.Get("/dashboard", func(w http.ResponseWriter, r *http.Request) {
-		if !auth.IsAuthenticated(r.Context()) {
-			http.Redirect(w, r, "/signin", http.StatusSeeOther)
-			return
-		}
+		// Delete Profile
+		r.Post("/profile/delete", func(w http.ResponseWriter, r *http.Request) {
+			user, _ := auth.GetSessionUser(r.Context())
 
-		user, _ := auth.GetSessionUser(r.Context())
+			if err := auth.Service.UserDelete(r.Context(), user.ID); err != nil {
+				http.Error(w, "Failed to delete profile", http.StatusInternalServerError)
+				return
+			}
 
-		renderTemplate(w, "dashboard.html", map[string]interface{}{
-			"Title": "Dashboard - Dashy",
-			"User":  user,
+			http.Redirect(w, r, "/signin", http.StatusFound)
 		})
 	})
 
