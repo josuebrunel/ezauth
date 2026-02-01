@@ -1000,10 +1000,16 @@
 <h2 id="building-and-running">Building and Running</h2>
 <ol>
 <li>
-<p><strong>Clone the Repository</strong>:
+<p><strong>Download Binary (Recommended)</strong>:
+    Download the latest release for your platform from <a href="https://github.com/josuebrunel/ezauth/releases">GitHub Releases</a>.</p>
+</li>
+<li>
+<p><strong>Build from Source</strong>:
+    If you prefer to build from source:
     <code>bash
     git clone https://github.com/josuebrunel/ezauth.git
-    cd ezauth</code></p>
+    cd ezauth
+    go build -o ezauthapi ./cmd/ezauthapi</code></p>
 </li>
 <li>
 <p><strong>Configure</strong>:
@@ -1011,11 +1017,6 @@
     <code>bash
     cp example.env .env
     # Edit .env with your settings</code></p>
-</li>
-<li>
-<p><strong>Build</strong>:
-    <code>bash
-    go build -o ezauthapi ./cmd/ezauthapi</code></p>
 </li>
 <li>
 <p><strong>Run Migrations</strong>:
@@ -1036,10 +1037,12 @@
 </code></pre>
 <h2 id="integrating-with-your-application">Integrating with your Application</h2>
 <p><strong>Important</strong>: All requests to the <code>ezauth</code> API (except OAuth2 callbacks) must include the <code>X-API-Key</code> header with the configured API key.</p>
-<p>Once <code>ezauth</code> is running, your application can:
-1.  <strong>Direct Users to Login/Register</strong>: Your frontend can send <code>POST</code> requests to <code>ezauth</code>'s <code>/auth/login</code> or <code>/auth/register</code> endpoints.
-2.  <strong>Secure Your Routes</strong>: Your main application should verify the JWT access tokens issued by <code>ezauth</code>. Since <code>ezauth</code> uses standard JWTs, you can use any JWT library to verify the signature (using <code>EZAUTH_JWT_SECRET</code>).
-3.  <strong>Retrieve User Info</strong>: Send a <code>GET</code> request to <code>/auth/userinfo</code> with the <code>Authorization: Bearer &lt;access_token&gt;</code> header.</p>
+<p>Once <code>ezauth</code> is running, your application can:</p>
+<ol>
+<li><strong>Direct Users to Login/Register</strong>: Your frontend can send <code>POST</code> requests to <code>ezauth</code>'s <code>/auth/login</code> or <code>/auth/register</code> endpoints.</li>
+<li><strong>Secure Your Routes</strong>: Your main application should verify the JWT access tokens issued by <code>ezauth</code>. Since <code>ezauth</code> uses standard JWTs, you can use any JWT library to verify the signature (using <code>EZAUTH_JWT_SECRET</code>).</li>
+<li><strong>Retrieve User Info</strong>: Send a <code>GET</code> request to <code>/auth/userinfo</code> with the <code>Authorization: Bearer &lt;access_token&gt;</code> header.</li>
+</ol>
 
 
 
