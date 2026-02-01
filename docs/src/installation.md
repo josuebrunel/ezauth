@@ -12,7 +12,9 @@ go get github.com/josuebrunel/ezauth
 
 ## As a Standalone Service
 
-If you want to run `ezauth` as a service, you can clone the repository and build the binary:
+If you want to run `ezauth` as a service, you can download the latest binary from the [GitHub Releases](https://github.com/josuebrunel/ezauth/releases) page.
+
+Alternatively, you can clone the repository and build the binary:
 
 ```bash
 git clone https://github.com/josuebrunel/ezauth.git
