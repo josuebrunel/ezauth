@@ -756,10 +756,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#loadusermiddleware" class="md-nav__link">
+  <a href="#servehttp_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        LoadUserMiddleware
+        ServeHTTP
       
     </span>
   </a>
@@ -1144,10 +1144,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#loadusermiddleware" class="md-nav__link">
+  <a href="#servehttp_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        LoadUserMiddleware
+        ServeHTTP
       
     </span>
   </a>
@@ -1299,9 +1299,9 @@
 <p>Implements the <code>http.Handler</code> interface, allowing the <code>Handler</code> to be mounted on any Go HTTP router.</p>
 <pre><code class="language-go">func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 </code></pre>
-<h3 id="loadusermiddleware"><code>LoadUserMiddleware</code></h3>
-<p>Middleware that loads the authenticated user into the request context. This is required if you want to use <code>GetSessionUser(ctx)</code> in downstream handlers without reference to the <code>Handler</code> instance.</p>
-<pre><code class="language-go">func (h *Handler) LoadUserMiddleware(next http.Handler) http.Handler
+<h3 id="servehttp_1"><code>ServeHTTP</code></h3>
+<p>Implements the <code>http.Handler</code> interface, allowing the <code>Handler</code> to be mounted on any Go HTTP router.</p>
+<pre><code class="language-go">func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 </code></pre>
 <h3 id="getsessionuser"><code>GetSessionUser</code></h3>
 <p>Retrieves the authenticated user. It checks:</p>

@@ -1406,9 +1406,11 @@
 
 
 <h1 id="api-endpoints">API Endpoints</h1>
-<p><code>ezauth</code> provides two sets of endpoints:
-1.  <strong>Form Handlers (<code>/auth/*</code>)</strong>: Designed for browser clients. They handle redirects, use HTTP-only cookies for sessions, and require CSRF protection for POST requests.
-2.  <strong>JSON API (<code>/auth/api/*</code>)</strong>: Designed for mobile apps or SPAs. They return JSON responses and require API Key authentication.</p>
+<p><code>ezauth</code> provides two sets of endpoints:</p>
+<ol>
+<li><strong>Form Handlers (<code>/auth/*</code>)</strong>: Designed for browser clients. They handle redirects, use HTTP-only cookies for sessions, and require CSRF protection for POST requests.</li>
+<li><strong>JSON API (<code>/auth/api/*</code>)</strong>: Designed for mobile apps or SPAs. They return JSON responses and require API Key authentication.</li>
+</ol>
 <p>All <code>ezauth</code> JSON API responses follow a consistent format:</p>
 <pre><code class="language-json">{
   &quot;error&quot;: &quot;Error message if any, else null&quot;,
@@ -1427,9 +1429,19 @@
 <h3 id="register-form">Register (Form)</h3>
 <p><code>POST /auth/register</code>
 <code>GET /auth/register</code> (Redirects to configured Register Page)</p>
+<p><strong>Parameters:</strong>
+*   <code>email</code> (required)
+*   <code>password</code> (required)
+*   <code>password_confirm</code> (required, must match password)
+*   <code>first_name</code>
+*   <code>last_name</code>
+*   <code>meta_*</code> (Any field prefixed with <code>meta_</code> will be stored in <code>UserMetadata</code>)</p>
 <h3 id="login-form">Login (Form)</h3>
 <p><code>POST /auth/login</code>
 <code>GET /auth/login</code> (Redirects to configured Login Page)</p>
+<p><strong>Parameters:</strong>
+*   <code>email</code> (required)
+*   <code>password</code> (required)</p>
 <h3 id="logout-form">Logout (Form)</h3>
 <p><code>POST /auth/logout</code></p>
 <h3 id="password-reset-form">Password Reset (Form)</h3>
