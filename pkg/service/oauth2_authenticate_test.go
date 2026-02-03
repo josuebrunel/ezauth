@@ -6,7 +6,7 @@ import (
 
 	"github.com/josuebrunel/ezauth/pkg/config"
 	"github.com/josuebrunel/ezauth/pkg/db/migrations"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 func setupOAuth2AuthTestDB(t *testing.T) *Auth {

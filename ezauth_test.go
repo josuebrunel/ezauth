@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/config"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 func TestEzAuth(t *testing.T) {

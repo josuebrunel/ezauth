@@ -4,11 +4,11 @@ import (
 	"database/sql"
 
 	"github.com/josuebrunel/gopkg/xlog"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 func GetDBConnection(dsn string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", dsn)
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		xlog.Error("error connecting to the database", "error", err)
 		return nil, err

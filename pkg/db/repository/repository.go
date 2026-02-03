@@ -16,7 +16,7 @@ import (
 
 const (
 	DialectPSQL   = "postgres"
-	DialectSqlite = "sqlite3"
+	DialectSqlite = "sqlite"
 	DialectMysql  = "mysql"
 )
 

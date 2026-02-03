@@ -11,12 +11,12 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 const (
 	DialectPostgres = "postgres"
-	DialectSqlite   = "sqlite3"
+	DialectSqlite   = "sqlite"
 	DialectMysql    = "mysql"
 )
 
@@ -46,8 +46,7 @@ func getMigrationSubDir(dialect string) (string, error) {
 	switch dialect {
 	case DialectPostgres:
 		migrationSubDir = "postgres"
-	case DialectSqlite, "sqlite":
-		dialect = DialectSqlite
+	case DialectSqlite, "sqlite3":
 		migrationSubDir = "sqlite"
 	case DialectMysql:
 		migrationSubDir = "mysql"

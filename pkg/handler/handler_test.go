@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,7 +15,7 @@ import (
 	"github.com/josuebrunel/ezauth/pkg/db/migrations"
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/josuebrunel/ezauth/pkg/service"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 func setupTestHandler(t *testing.T) *Handler {
@@ -22,12 +23,18 @@ func setupTestHandler(t *testing.T) *Handler {
 	dsn := fmt.Sprintf("file:%d?mode=memory&cache=shared", time.Now().UnixNano())
 	cfg := &config.Config{
 		DB: config.Database{
-			Dialect: "sqlite3",
+			Dialect: "sqlite",
 			DSN:     dsn,
 		},
 		JWTSecret: "test-secret",
 		Addr:      ":8080",
 		ApiKey:    "test-api-key",
+		EmailTemplates: config.EmailTemplates{
+			PasswordlessSubject:  "Magic Link Login",
+			PasswordlessBody:     "Click the following link to login: {{.Link}}",
+			PasswordResetSubject: "Password Reset Request",
+			PasswordResetBody:    "Click the following link to reset your password: {{.Link}}",
+		},
 	}
 	authSvc, err := service.NewFromConfig(cfg, "auth")
 	if err != nil {
@@ -35,7 +42,7 @@ func setupTestHandler(t *testing.T) *Handler {
 	}
 
 	// Run migrations
-	if err := migrations.MigrateUpWithDBConn(authSvc.Repo.DB(), "sqlite3"); err != nil {
+	if err := migrations.MigrateUpWithDBConn(authSvc.Repo.DB(), "sqlite"); err != nil {
 		t.Fatalf("failed to run migrations: %v", err)
 	}
 
@@ -263,7 +270,11 @@ func TestHandler_PasswordReset(t *testing.T) {
 	// 3. Get token from mock mailer
 	mockMailer := h.svc.Mailer.(*service.MockMailer)
 	sentBody := mockMailer.SentEmails[0]["body"]
-	tokenValue := sentBody[len(sentBody)-64:]
+	tokenStart := strings.Index(sentBody, "token=")
+	if tokenStart == -1 {
+		t.Fatalf("could not find token in email body: %s", sentBody)
+	}
+	tokenValue := sentBody[tokenStart+6:]
 
 	// 4. Confirm reset
 	newPassword := "new-password"
@@ -313,7 +324,11 @@ func TestHandler_Passwordless(t *testing.T) {
 	// 2. Get token from mock mailer
 	mockMailer := h.svc.Mailer.(*service.MockMailer)
 	sentBody := mockMailer.SentEmails[0]["body"]
-	tokenValue := sentBody[len(sentBody)-64:]
+	tokenStart := strings.Index(sentBody, "token=")
+	if tokenStart == -1 {
+		t.Fatalf("could not find token in email body: %s", sentBody)
+	}
+	tokenValue := sentBody[tokenStart+6:]
 
 	// 3. Login with magic link
 	req = httptest.NewRequest(http.MethodGet, "/auth/api/passwordless/login?token="+tokenValue, nil)
