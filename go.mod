@@ -10,7 +10,7 @@ require (
 	github.com/gofrs/uuid/v5 v5.4.0
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/josuebrunel/gopkg/xenv v0.0.1
-	github.com/josuebrunel/gopkg/xlog v0.0.1
+	github.com/josuebrunel/gopkg/xlog v0.1.0
 	github.com/lib/pq v1.10.9
 	github.com/pressly/goose/v3 v3.26.0
 	github.com/stephenafamo/bob v0.42.0
