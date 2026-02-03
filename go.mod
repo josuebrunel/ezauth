@@ -1,6 +1,6 @@
 module github.com/josuebrunel/ezauth
 
-go 1.25.4
+go 1.24
 
 require (
 	filippo.io/csrf v0.2.1

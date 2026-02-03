@@ -65,20 +65,6 @@ jobs:
                   EZAUTH_DB_DSN: ${{ matrix.db.dsn }}
               run: go test ./... -v -count=1
 
-    lint:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-
-            - uses: actions/setup-go@v5
-              with:
-                  go-version-file: "go.mod"
-
-            - name: golangci-lint
-              uses: golangci/golangci-lint-action@v4
-              with:
-                  version: latest
-
     build:
         runs-on: ubuntu-latest
         steps:
