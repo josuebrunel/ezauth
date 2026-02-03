@@ -457,6 +457,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#email-templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Email Templates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#formredirect-settings" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1078,6 +1089,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#email-templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Email Templates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#formredirect-settings" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1270,6 +1292,40 @@
 <td><code>EZAUTH_SMTP_FROM</code></td>
 <td>The email address to send from.</td>
 <td><code>noreply@example.com</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="email-templates">Email Templates</h2>
+<p>Customize the subject and body of emails sent by <code>ezauth</code>. Templates use Go <code>text/template</code> syntax.</p>
+<p><strong>Available variables:</strong> <code>{{.Link}}</code> (action URL), <code>{{.Token}}</code> (raw token), <code>{{.Email}}</code> (user's email)</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EZAUTH_EMAIL_PASSWORDLESS_SUBJECT</code></td>
+<td>Subject for magic link emails.</td>
+<td><code>Magic Link Login</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_EMAIL_PASSWORDLESS_BODY</code></td>
+<td>Body for magic link emails.</td>
+<td><code>Click the following link to login: {{.Link}}</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_EMAIL_PASSWORD_RESET_SUBJECT</code></td>
+<td>Subject for password reset emails.</td>
+<td><code>Password Reset Request</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_EMAIL_PASSWORD_RESET_BODY</code></td>
+<td>Body for password reset emails.</td>
+<td><code>Click the following link to reset your password: {{.Link}}</code></td>
 </tr>
 </tbody>
 </table>
