@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
@@ -132,9 +133,28 @@ func (a *Auth) PasswordResetRequest(ctx context.Context, req RequestPasswordRese
 		return err
 	}
 
-	// Send email
-	subject := "Password Reset Request"
-	body := fmt.Sprintf("You requested a password reset. Please use the following token: %s", tokenValue)
+	// Build reset link
+	prefix := a.PathPrefix
+	if prefix != "" {
+		if !strings.HasPrefix(prefix, "/") {
+			prefix = "/" + prefix
+		}
+		if strings.HasSuffix(prefix, "/") {
+			prefix = strings.TrimSuffix(prefix, "/")
+		}
+	}
+
+	link := fmt.Sprintf("%s%s/password-reset/confirm?token=%s", a.Cfg.BaseURL, prefix, tokenValue)
+
+	// Render email templates
+	data := EmailTemplateData{
+		Link:  link,
+		Token: tokenValue,
+		Email: user.Email,
+	}
+	subject := RenderTemplate(a.Cfg.EmailTemplates.PasswordResetSubject, data)
+	body := RenderTemplate(a.Cfg.EmailTemplates.PasswordResetBody, data)
+
 	return a.Mailer.Send(user.Email, subject, body)
 }
 

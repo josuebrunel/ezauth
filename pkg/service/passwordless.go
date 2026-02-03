@@ -55,8 +55,6 @@ func (a *Auth) PasswordlessRequest(ctx context.Context, req RequestPasswordless)
 	}
 
 	// Send email
-	subject := "Magic Link Login"
-
 	prefix := a.PathPrefix
 	if prefix != "" {
 		if !strings.HasPrefix(prefix, "/") {
@@ -67,7 +65,17 @@ func (a *Auth) PasswordlessRequest(ctx context.Context, req RequestPasswordless)
 		}
 	}
 
-	body := fmt.Sprintf("Click the following link to login: %s%s/passwordless/login?token=%s", a.Cfg.BaseURL, prefix, tokenValue)
+	link := fmt.Sprintf("%s%s/passwordless/login?token=%s", a.Cfg.BaseURL, prefix, tokenValue)
+
+	// Render email templates
+	data := EmailTemplateData{
+		Link:  link,
+		Token: tokenValue,
+		Email: req.Email,
+	}
+	subject := RenderTemplate(a.Cfg.EmailTemplates.PasswordlessSubject, data)
+	body := RenderTemplate(a.Cfg.EmailTemplates.PasswordlessBody, data)
+
 	return a.Mailer.Send(req.Email, subject, body)
 }
 

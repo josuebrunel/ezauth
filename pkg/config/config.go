@@ -58,6 +58,16 @@ type SMTP struct {
 	From     string `json:"from" env:"SMTP_FROM"`
 }
 
+// EmailTemplates defines customizable email templates.
+// Templates use Go text/template syntax with {{.Variable}} placeholders.
+// Available variables: {{.Link}}, {{.Token}}, {{.Email}}
+type EmailTemplates struct {
+	PasswordlessSubject  string `json:"passwordless_subject" env:"EMAIL_PASSWORDLESS_SUBJECT" default:"Magic Link Login"`
+	PasswordlessBody     string `json:"passwordless_body" env:"EMAIL_PASSWORDLESS_BODY" default:"Click the following link to login: {{.Link}}"`
+	PasswordResetSubject string `json:"password_reset_subject" env:"EMAIL_PASSWORD_RESET_SUBJECT" default:"Password Reset Request"`
+	PasswordResetBody    string `json:"password_reset_body" env:"EMAIL_PASSWORD_RESET_BODY" default:"Click the following link to reset your password: {{.Link}}"`
+}
+
 // Redirects defines the redirection URLs after successful actions.
 type Redirects struct {
 	AfterLogin    string `json:"after_login" env:"REDIRECT_AFTER_LOGIN" default:"/"`
@@ -72,17 +82,18 @@ type Pages struct {
 
 // Config defines the overall configuration for ezauth.
 type Config struct {
-	Addr      string        `json:"addr" env:"ADDR" default:":8080"`
-	BaseURL   string        `json:"base_url" env:"BASE_URL" default:"http://localhost:8080"`
-	ApiKey    string        `json:"api_key" env:"API_KEY" required:"true"`
-	Debug     bool          `json:"debug" env:"DEBUG" default:"false"`
-	DB        Database      `json:"db"`
-	JWTSecret string        `json:"jwt_secret" env:"JWT_SECRET" required:"true"`
-	OAuth2    OAuth2        `json:"oauth2"`
-	SMTP      SMTP          `json:"smtp"`
-	Redirects Redirects     `json:"redirects"`
-	Pages     Pages         `json:"pages"`
-	TimeOut   time.Duration `json:"timeout" env:"TIMEOUT" default:"30s"`
+	Addr           string         `json:"addr" env:"ADDR" default:":8080"`
+	BaseURL        string         `json:"base_url" env:"BASE_URL" default:"http://localhost:8080"`
+	ApiKey         string         `json:"api_key" env:"API_KEY" required:"true"`
+	Debug          bool           `json:"debug" env:"DEBUG" default:"false"`
+	DB             Database       `json:"db"`
+	JWTSecret      string         `json:"jwt_secret" env:"JWT_SECRET" required:"true"`
+	OAuth2         OAuth2         `json:"oauth2"`
+	SMTP           SMTP           `json:"smtp"`
+	EmailTemplates EmailTemplates `json:"email_templates"`
+	Redirects      Redirects      `json:"redirects"`
+	Pages          Pages          `json:"pages"`
+	TimeOut        time.Duration  `json:"timeout" env:"TIMEOUT" default:"30s"`
 }
 
 // LoadConfig loads the configuration from environment variables.

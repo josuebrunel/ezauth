@@ -41,6 +41,13 @@ You can run `ezauth` as a separate service that handles authentication for your 
    export EZAUTH_SMTP_PASSWORD="password"
    export EZAUTH_SMTP_FROM="noreply@example.com"
 
+   # Email Templates (Optional - customize email content)
+   # Uses Go text/template syntax: {{.Link}}, {{.Token}}, {{.Email}}
+   export EZAUTH_EMAIL_PASSWORDLESS_SUBJECT="Magic Link Login"
+   export EZAUTH_EMAIL_PASSWORDLESS_BODY="Click the following link to login: {{.Link}}"
+   export EZAUTH_EMAIL_PASSWORD_RESET_SUBJECT="Password Reset Request"
+   export EZAUTH_EMAIL_PASSWORD_RESET_BODY="Click the following link to reset your password: {{.Link}}"
+
    # Pages & Redirects (For Form-based auth)
    export EZAUTH_REDIRECT_AFTER_LOGIN="/"
    export EZAUTH_REDIRECT_AFTER_REGISTER="/"

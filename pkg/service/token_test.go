@@ -22,6 +22,12 @@ func setupTestDB(t *testing.T) *Auth {
 			DSN:     dsn,
 		},
 		JWTSecret: "test-secret",
+		EmailTemplates: config.EmailTemplates{
+			PasswordlessSubject:  "Magic Link Login",
+			PasswordlessBody:     "Click the following link to login: {{.Link}}",
+			PasswordResetSubject: "Password Reset Request",
+			PasswordResetBody:    "Click the following link to reset your password: {{.Link}}",
+		},
 	}
 	auth, err := NewFromConfig(cfg, "auth")
 	if err != nil {

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
@@ -36,9 +37,13 @@ func TestPasswordReset(t *testing.T) {
 		t.Fatalf("expected 1 email sent, got %d", len(mockMailer.SentEmails))
 	}
 
-	// Extract token from body - "You requested a password reset. Please use the following token: <token>"
+	// Extract token from body - URL contains "?token=<token>"
 	sentBody := mockMailer.SentEmails[0]["body"]
-	tokenValue := sentBody[len(sentBody)-64:] // It's a 32-byte hex string = 64 chars
+	tokenStart := strings.Index(sentBody, "token=")
+	if tokenStart == -1 {
+		t.Fatalf("could not find token in email body: %s", sentBody)
+	}
+	tokenValue := sentBody[tokenStart+6:] // Skip "token="
 
 	// 3. Confirm password reset
 	newPassword := "new-password"
