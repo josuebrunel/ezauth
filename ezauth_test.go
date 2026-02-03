@@ -2,19 +2,22 @@ package ezauth
 
 import (
 	"context"
-	"fmt"
 	"testing"
-	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/config"
+	"github.com/josuebrunel/ezauth/pkg/util"
+
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
 	_ "modernc.org/sqlite"
 )
 
 func TestEzAuth(t *testing.T) {
-	dsn := fmt.Sprintf("file:%d?mode=memory&cache=shared", time.Now().UnixNano())
+	dialect, dsn := util.GetTestDBConfig("ezauth_test")
+
 	cfg := &config.Config{
 		DB: config.Database{
-			Dialect: "sqlite3",
+			Dialect: dialect,
 			DSN:     dsn,
 		},
 		JWTSecret: "test-secret",

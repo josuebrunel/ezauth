@@ -1,6 +1,6 @@
 # ezauth
 
-![CI](https://github.com/josuebrunel/ezauth/actions/workflows/ci.yml/badge.svg)
+[![Tests](https://github.com/josuebrunel/ezauth/actions/workflows/ci.yml/badge.svg)](https://github.com/josuebrunel/ezauth/actions/workflows/ci.yml)
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://josuebrunel.github.io/ezauth/)
 
 Simple and easy to use authentication library for Golang.

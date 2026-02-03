@@ -6,14 +6,19 @@ import (
 
 	"github.com/josuebrunel/ezauth/pkg/config"
 	"github.com/josuebrunel/ezauth/pkg/db/migrations"
+	"github.com/josuebrunel/ezauth/pkg/util"
+
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
 	_ "modernc.org/sqlite"
 )
 
 func setupOAuth2AuthTestDB(t *testing.T) *Auth {
-	dsn := "file:oauth2auth_test?mode=memory&cache=shared"
+	dialect, dsn := util.GetTestDBConfig("oauth2_test")
+
 	cfg := &config.Config{
 		DB: config.Database{
-			Dialect: "sqlite3",
+			Dialect: dialect,
 			DSN:     dsn,
 		},
 		JWTSecret: "test-secret",
@@ -22,7 +27,7 @@ func setupOAuth2AuthTestDB(t *testing.T) *Auth {
 	if err != nil {
 		t.Fatalf("failed to create auth service: %v", err)
 	}
-	if err := migrations.MigrateUpWithDBConn(auth.Repo.DB(), "sqlite"); err != nil {
+	if err := migrations.MigrateUpWithDBConn(auth.Repo.DB(), dialect); err != nil {
 		t.Fatalf("failed to run migrations: %v", err)
 	}
 	return auth
@@ -32,10 +37,12 @@ func TestOAuth2Authenticate(t *testing.T) {
 	auth := setupOAuth2AuthTestDB(t)
 	ctx := context.Background()
 
+	providerID := util.RandomString(16)
+
 	t.Run("NewUser", func(t *testing.T) {
 		userInfo := &OAuth2UserInfo{
-			ID:    "google-123",
-			Email: "google-user@example.com",
+			ID:    providerID,
+			Email: util.UniqueEmail("google"),
 		}
 		user, err := auth.OAuth2Authenticate(ctx, "google", userInfo)
 		if err != nil {
@@ -56,9 +63,10 @@ func TestOAuth2Authenticate(t *testing.T) {
 	})
 
 	t.Run("ExistingUserByProvider", func(t *testing.T) {
+		updatedEmail := util.UniqueEmail("updated_google")
 		userInfo := &OAuth2UserInfo{
-			ID:    "google-123",
-			Email: "updated-google-user@example.com",
+			ID:    providerID,
+			Email: updatedEmail,
 		}
 		user, err := auth.OAuth2Authenticate(ctx, "google", userInfo)
 		if err != nil {
@@ -69,7 +77,7 @@ func TestOAuth2Authenticate(t *testing.T) {
 		}
 
 		// Verify in DB
-		fetched, err := auth.Repo.UserGetByProvider(ctx, "google", "google-123")
+		fetched, err := auth.Repo.UserGetByProvider(ctx, "google", providerID)
 		if err != nil {
 			t.Fatalf("failed to fetch user from DB: %v", err)
 		}
@@ -80,14 +88,15 @@ func TestOAuth2Authenticate(t *testing.T) {
 
 	t.Run("ExistingUserByEmail", func(t *testing.T) {
 		// Create a local user first
-		localEmail := "local-user@example.com"
+		localEmail := util.UniqueEmail("local")
 		auth.UserCreate(ctx, &RequestBasicAuth{
 			Email:    localEmail,
 			Password: "password",
 		})
 
+		githubProviderID := util.RandomString(16)
 		userInfo := &OAuth2UserInfo{
-			ID:    "github-456",
+			ID:    githubProviderID,
 			Email: localEmail,
 		}
 		user, err := auth.OAuth2Authenticate(ctx, "github", userInfo)

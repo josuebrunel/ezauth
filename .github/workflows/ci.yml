@@ -1,36 +1,99 @@
-name: CI
+name: Tests
 
 on:
-  push:
-    branches: ["main", "master"]
-  pull_request:
-    branches: ["main", "master"]
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
 
 jobs:
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    test:
+        runs-on: ubuntu-latest
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: 'go.mod'
+        strategy:
+            fail-fast: false
+            matrix:
+                db:
+                    - name: sqlite
+                      dialect: sqlite
+                      dsn: "file:test.db?mode=memory&cache=shared"
+                    - name: postgres
+                      dialect: postgres
+                      dsn: "postgres://postgres:postgres@localhost:5432/testdb?sslmode=disable"
+                    - name: mysql
+                      dialect: mysql
+                      dsn: "root:mysql@tcp(localhost:3306)/testdb?parseTime=true&multiStatements=true"
 
-      - name: Install SQLite
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y sqlite3 libsqlite3-dev
+        services:
+            postgres:
+                image: postgres:15-alpine
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: testdb
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
 
-      - name: Run Tests
-        run: |
-          make build
-          make test
+            mysql:
+                image: mysql:8
+                env:
+                    MYSQL_ROOT_PASSWORD: mysql
+                    MYSQL_DATABASE: testdb
+                ports:
+                    - 3306:3306
+                options: >-
+                    --health-cmd "mysqladmin ping"
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
 
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ezauthapi-binary
-          path: bin/ezauthapi
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-go@v5
+              with:
+                  go-version-file: "go.mod"
+
+            - name: Run tests (${{ matrix.db.name }})
+              env:
+                  EZAUTH_DB_DIALECT: ${{ matrix.db.dialect }}
+                  EZAUTH_DB_DSN: ${{ matrix.db.dsn }}
+              run: go test ./... -v -count=1
+
+    lint:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-go@v5
+              with:
+                  go-version-file: "go.mod"
+
+            - name: golangci-lint
+              uses: golangci/golangci-lint-action@v4
+              with:
+                  version: latest
+
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-go@v5
+              with:
+                  go-version-file: "go.mod"
+
+            - name: Build
+              run: |
+                  go build -o bin/ezauthapi ./cmd/ezauthapi
+
+            - name: Upload Artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ezauthapi-binary
+                  path: bin/ezauthapi

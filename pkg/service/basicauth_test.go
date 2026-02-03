@@ -7,17 +7,19 @@ import (
 	"github.com/josuebrunel/ezauth/pkg/config"
 	"github.com/josuebrunel/ezauth/pkg/db/migrations"
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/ezauth/pkg/util"
+
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
 	_ "modernc.org/sqlite"
 )
 
 func setupBasicAuthTestDB(t *testing.T) *Auth {
-	// Use a unique DSN for each test run to ensure isolation
-	dsn := "file:basicauth_test?mode=memory&cache=shared"
+	dialect, dsn := util.GetTestDBConfig("basicauth_test")
 
-	// Create Auth service with the migrated in-memory DB
 	cfg := &config.Config{
 		DB: config.Database{
-			Dialect: "sqlite3",
+			Dialect: dialect,
 			DSN:     dsn,
 		},
 		JWTSecret: "test-secret",
@@ -27,8 +29,7 @@ func setupBasicAuthTestDB(t *testing.T) *Auth {
 		t.Fatalf("failed to create auth service: %v", err)
 	}
 
-	// Run migrations to set up the schema
-	if err := migrations.MigrateUpWithDBConn(auth.Repo.DB(), "sqlite"); err != nil {
+	if err := migrations.MigrateUpWithDBConn(auth.Repo.DB(), dialect); err != nil {
 		t.Fatalf("failed to run migrations: %v", err)
 	}
 
@@ -39,7 +40,7 @@ func TestBasicAuthOperations(t *testing.T) {
 	auth := setupBasicAuthTestDB(t)
 	ctx := context.Background()
 
-	email := "test@basicauth.com"
+	email := util.UniqueEmail("basicauth")
 	password := "securepass123"
 	newPassword := "newsecurepass456"
 
@@ -87,7 +88,7 @@ func TestBasicAuthOperations(t *testing.T) {
 
 	t.Run("UserCreate_ShortPassword", func(t *testing.T) {
 		req := &RequestBasicAuth{
-			Email:    "short@example.com",
+			Email:    util.UniqueEmail("short"),
 			Password: "short",
 		}
 		_, err := auth.UserCreate(ctx, req)

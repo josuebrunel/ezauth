@@ -4,13 +4,15 @@ import (
 	"context"
 	"strings"
 	"testing"
+
+	"github.com/josuebrunel/ezauth/pkg/util"
 )
 
 func TestPasswordless(t *testing.T) {
 	auth := setupTestDB(t)
 	ctx := context.Background()
 
-	email := "magic@example.com"
+	email := util.UniqueEmail("magic")
 
 	// 1. Request magic link
 	err := auth.PasswordlessRequest(ctx, RequestPasswordless{Email: email})

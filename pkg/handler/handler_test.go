@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -15,15 +14,19 @@ import (
 	"github.com/josuebrunel/ezauth/pkg/db/migrations"
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/josuebrunel/ezauth/pkg/service"
+	"github.com/josuebrunel/ezauth/pkg/util"
+
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
 	_ "modernc.org/sqlite"
 )
 
 func setupTestHandler(t *testing.T) *Handler {
-	// Use in-memory SQLite database
-	dsn := fmt.Sprintf("file:%d?mode=memory&cache=shared", time.Now().UnixNano())
+	dialect, dsn := util.GetTestDBConfig("handler_test")
+
 	cfg := &config.Config{
 		DB: config.Database{
-			Dialect: "sqlite",
+			Dialect: dialect,
 			DSN:     dsn,
 		},
 		JWTSecret: "test-secret",
@@ -41,8 +44,7 @@ func setupTestHandler(t *testing.T) *Handler {
 		t.Fatalf("failed to create auth service: %v", err)
 	}
 
-	// Run migrations
-	if err := migrations.MigrateUpWithDBConn(authSvc.Repo.DB(), "sqlite"); err != nil {
+	if err := migrations.MigrateUpWithDBConn(authSvc.Repo.DB(), dialect); err != nil {
 		t.Fatalf("failed to run migrations: %v", err)
 	}
 
@@ -58,7 +60,7 @@ type testResponse[T any] struct {
 func TestHandler_RegisterAndLoginFlow(t *testing.T) {
 	h := setupTestHandler(t)
 
-	email := "test@example.com"
+	email := util.UniqueEmail("handler")
 	password := "password123"
 	var accessToken string
 	var refreshToken string
@@ -210,13 +212,13 @@ func TestHandler_ApiKeyFromDB(t *testing.T) {
 
 	// Create a user and an API key token
 	user, err := h.svc.Repo.UserCreate(ctx, &models.User{
-		Email: "apikey@example.com",
+		Email: util.UniqueEmail("apikey"),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	apiKeyToken := "db-api-key-123"
+	apiKeyToken := util.RandomString(16)
 	_, err = h.svc.Repo.TokenCreate(ctx, &models.Token{
 		UserID:    user.ID,
 		Token:     apiKeyToken,
@@ -243,7 +245,7 @@ func TestHandler_ApiKeyFromDB(t *testing.T) {
 
 func TestHandler_PasswordReset(t *testing.T) {
 	h := setupTestHandler(t)
-	email := "reset@example.com"
+	email := util.UniqueEmail("reset")
 	password := "old-password"
 
 	// 1. Register user
@@ -306,7 +308,7 @@ func TestHandler_PasswordReset(t *testing.T) {
 
 func TestHandler_Passwordless(t *testing.T) {
 	h := setupTestHandler(t)
-	email := "magic@example.com"
+	email := util.UniqueEmail("magic")
 
 	// 1. Request magic link
 	reqBody := map[string]any{"email": email}

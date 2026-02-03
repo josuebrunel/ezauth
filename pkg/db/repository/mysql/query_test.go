@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/ezauth/pkg/util"
 	"github.com/stephenafamo/bob"
 )
 
@@ -17,7 +18,7 @@ func TestMysqlQuerier_UserOperations(t *testing.T) {
 
 	user := &models.User{
 		ID:            "user-123",
-		Email:         "test@example.com",
+		Email:         util.UniqueEmail("test"),
 		PasswordHash:  "hash",
 		Provider:      "local",
 		ProviderID:    nil,

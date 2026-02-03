@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/ezauth/pkg/util"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/sqlite"
 	"github.com/stephenafamo/bob/dialect/sqlite/dialect"
@@ -18,6 +19,9 @@ type SqliteQuerier struct {
 }
 
 func (q *SqliteQuerier) QueryUserInsert(ctx context.Context, user *models.User) bob.Query {
+	if user.ID == "" {
+		user.ID = util.NewIDStripped()
+	}
 	if user.CreatedAt.IsZero() {
 		user.CreatedAt = time.Now().UTC()
 	}
@@ -26,6 +30,7 @@ func (q *SqliteQuerier) QueryUserInsert(ctx context.Context, user *models.User) 
 	}
 	return sqlite.Insert(
 		im.Into(models.TableUser,
+			"id",
 			models.ColumnEmail,
 			models.ColumnPasswordHash,
 			models.ColumnProvider,
@@ -44,6 +49,7 @@ func (q *SqliteQuerier) QueryUserInsert(ctx context.Context, user *models.User) 
 			models.ColumnUpdatedAt,
 		),
 		im.Values(
+			sqlite.Arg(user.ID),
 			sqlite.Arg(user.Email),
 			sqlite.Arg(user.PasswordHash),
 			sqlite.Arg(user.Provider),
@@ -153,8 +159,15 @@ func (q *SqliteQuerier) QueryUserDelete(ctx context.Context, id string) bob.Quer
 }
 
 func (q *SqliteQuerier) QueryTokenInsert(ctx context.Context, token *models.Token) bob.Query {
+	if token.ID == "" {
+		token.ID = util.NewIDStripped()
+	}
+	if token.CreatedAt.IsZero() {
+		token.CreatedAt = time.Now().UTC()
+	}
 	return sqlite.Insert(
 		im.Into(models.TableToken,
+			"id",
 			models.ColumnUserID,
 			models.ColumnToken,
 			models.ColumnTokenType,
@@ -164,6 +177,7 @@ func (q *SqliteQuerier) QueryTokenInsert(ctx context.Context, token *models.Toke
 			models.ColumnMetadata,
 		),
 		im.Values(
+			sqlite.Arg(token.ID),
 			sqlite.Arg(token.UserID),
 			sqlite.Arg(token.Token),
 			sqlite.Arg(token.TokenType),

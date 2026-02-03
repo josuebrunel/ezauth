@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/ezauth/pkg/util"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/mysql"
 	"github.com/stephenafamo/bob/dialect/mysql/dialect"
@@ -18,6 +19,9 @@ type MysqlQuerier struct {
 }
 
 func (q *MysqlQuerier) QueryUserInsert(ctx context.Context, user *models.User) bob.Query {
+	if user.ID == "" {
+		user.ID = util.NewIDStripped()
+	}
 	if user.CreatedAt.IsZero() {
 		user.CreatedAt = time.Now().UTC()
 	}
@@ -26,6 +30,7 @@ func (q *MysqlQuerier) QueryUserInsert(ctx context.Context, user *models.User) b
 	}
 	return mysql.Insert(
 		im.Into(models.TableUser,
+			"id",
 			models.ColumnEmail,
 			models.ColumnPasswordHash,
 			models.ColumnProvider,
@@ -44,6 +49,7 @@ func (q *MysqlQuerier) QueryUserInsert(ctx context.Context, user *models.User) b
 			models.ColumnUpdatedAt,
 		),
 		im.Values(
+			mysql.Arg(user.ID),
 			mysql.Arg(user.Email),
 			mysql.Arg(user.PasswordHash),
 			mysql.Arg(user.Provider),
@@ -151,8 +157,15 @@ func (q *MysqlQuerier) QueryUserDelete(ctx context.Context, id string) bob.Query
 }
 
 func (q *MysqlQuerier) QueryTokenInsert(ctx context.Context, token *models.Token) bob.Query {
+	if token.ID == "" {
+		token.ID = util.NewIDStripped()
+	}
+	if token.CreatedAt.IsZero() {
+		token.CreatedAt = time.Now().UTC()
+	}
 	return mysql.Insert(
 		im.Into(models.TableToken,
+			"id",
 			models.ColumnUserID,
 			models.ColumnToken,
 			models.ColumnTokenType,
@@ -162,6 +175,7 @@ func (q *MysqlQuerier) QueryTokenInsert(ctx context.Context, token *models.Token
 			models.ColumnMetadata,
 		),
 		im.Values(
+			mysql.Arg(token.ID),
 			mysql.Arg(token.UserID),
 			mysql.Arg(token.Token),
 			mysql.Arg(token.TokenType),

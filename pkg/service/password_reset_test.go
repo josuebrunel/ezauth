@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/ezauth/pkg/util"
 )
 
 func TestPasswordReset(t *testing.T) {
@@ -13,7 +14,7 @@ func TestPasswordReset(t *testing.T) {
 	ctx := context.Background()
 
 	// 1. Create a user
-	email := "reset@example.com"
+	email := util.UniqueEmail("reset")
 	password := "old-password"
 	user := &models.User{
 		Email:    email,

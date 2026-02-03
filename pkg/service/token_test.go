@@ -7,18 +7,20 @@ import (
 	"github.com/josuebrunel/ezauth/pkg/config"
 	"github.com/josuebrunel/ezauth/pkg/db/migrations"
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/ezauth/pkg/util"
 	"github.com/josuebrunel/gopkg/xlog"
+
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
 	_ "modernc.org/sqlite"
 )
 
 func setupTestDB(t *testing.T) *Auth {
-	// Use a unique DSN for each test run to ensure isolation
-	dsn := "file:token_test?mode=memory&cache=shared"
+	dialect, dsn := util.GetTestDBConfig("token_test")
 
-	// Create Auth service with the migrated in-memory DB
 	cfg := &config.Config{
 		DB: config.Database{
-			Dialect: "sqlite3",
+			Dialect: dialect,
 			DSN:     dsn,
 		},
 		JWTSecret: "test-secret",
@@ -34,8 +36,7 @@ func setupTestDB(t *testing.T) *Auth {
 		t.Fatalf("failed to create auth service: %v", err)
 	}
 
-	// Run migrations to set up the schema
-	if err := migrations.MigrateUpWithDBConn(auth.Repo.DB(), "sqlite3"); err != nil {
+	if err := migrations.MigrateUpWithDBConn(auth.Repo.DB(), dialect); err != nil {
 		t.Fatalf("failed to run migrations: %v", err)
 	}
 
@@ -51,7 +52,7 @@ func TestTokenOperations(t *testing.T) {
 
 	// Create a dummy user for testing
 	user := &models.User{
-		Email:        "test@example.com",
+		Email:        util.UniqueEmail("token"),
 		PasswordHash: "some-hash",
 		Provider:     "local",
 		UserMetadata: models.JSONMap{"name": "Test User"},

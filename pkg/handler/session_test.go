@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/ezauth/pkg/util"
 )
 
 func TestGetSessionUser_Standalone(t *testing.T) {
@@ -18,7 +19,7 @@ func TestGetSessionUser_Standalone(t *testing.T) {
 	}
 
 	// 2. Context with user
-	user := &models.User{Email: "test@example.com"}
+	user := &models.User{Email: util.UniqueEmail("test")}
 	ctx = context.WithValue(ctx, userObjectContextKey, user)
 	got, err := GetSessionUser(ctx)
 	if err != nil {
@@ -35,7 +36,7 @@ func TestHandler_GetSessionUser(t *testing.T) {
 
 	// Create user in DB
 	user, err := h.svc.Repo.UserCreate(ctx, &models.User{
-		Email: "handler@example.com",
+		Email: util.UniqueEmail("handler"),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -103,7 +104,7 @@ func TestLoadUserMiddleware(t *testing.T) {
 
 	// Create user in DB
 	user, err := h.svc.Repo.UserCreate(ctx, &models.User{
-		Email: "middleware@example.com",
+		Email: util.UniqueEmail("middleware"),
 	})
 	if err != nil {
 		t.Fatal(err)

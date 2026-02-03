@@ -1,25 +1,28 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/config"
 	"github.com/josuebrunel/ezauth/pkg/db/migrations"
 	"github.com/josuebrunel/ezauth/pkg/service"
+	"github.com/josuebrunel/ezauth/pkg/util"
+
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
+	_ "modernc.org/sqlite"
 )
 
 func setupFormTestHandler(t *testing.T) *Handler {
-	// Use in-memory SQLite database
-	dsn := fmt.Sprintf("file:%d?mode=memory&cache=shared", time.Now().UnixNano())
+	dialect, dsn := util.GetTestDBConfig("form_test")
+
 	cfg := &config.Config{
 		DB: config.Database{
-			Dialect: "sqlite3",
+			Dialect: dialect,
 			DSN:     dsn,
 		},
 		JWTSecret: "test-secret",
@@ -39,8 +42,7 @@ func setupFormTestHandler(t *testing.T) *Handler {
 		t.Fatalf("failed to create auth service: %v", err)
 	}
 
-	// Run migrations
-	if err := migrations.MigrateUpWithDBConn(authSvc.Repo.DB(), "sqlite3"); err != nil {
+	if err := migrations.MigrateUpWithDBConn(authSvc.Repo.DB(), dialect); err != nil {
 		t.Fatalf("failed to run migrations: %v", err)
 	}
 
@@ -49,7 +51,7 @@ func setupFormTestHandler(t *testing.T) *Handler {
 
 func TestFormHandler_RegisterAndLoginFlow(t *testing.T) {
 	h := setupFormTestHandler(t)
-	email := "formuser@example.com"
+	email := util.UniqueEmail("formuser")
 	password := "password123"
 
 	// 1. Form Register
@@ -160,7 +162,7 @@ func TestFormHandler_RegisterAndLoginFlow(t *testing.T) {
 
 func TestFormHandler_RegisterWithMetadata(t *testing.T) {
 	h := setupFormTestHandler(t)
-	email := "metauser@example.com"
+	email := util.UniqueEmail("metauser")
 	password := "password123"
 
 	t.Run("RegisterWithMetaFields", func(t *testing.T) {
@@ -202,7 +204,7 @@ func TestFormHandler_RegisterWithMetadata(t *testing.T) {
 
 func TestFormHandler_RegisterMismatchPasswords(t *testing.T) {
 	h := setupFormTestHandler(t)
-	email := "mismatch@example.com"
+	email := util.UniqueEmail("mismatch")
 	password := "password123"
 
 	t.Run("RegisterMismatchPasswords", func(t *testing.T) {

@@ -12,6 +12,11 @@ ifeq ($(DB),postgres)
 	DSN := postgres://postgres:postgrespwd@127.0.0.1:5436/ezauthdb?sslmode=disable
 	DIR := $(MIGRATION_DIR)/postgres
 	BOBBIN := psql
+else ifeq ($(DB),mysql)
+	DRIVER := mysql
+	DSN := root:mysqlpwd@tcp(127.0.0.1:3306)/ezauthdb?parseTime=true
+	DIR := $(MIGRATION_DIR)/mysql
+	BOBBIN := mysql
 else
 	DRIVER := sqlite
 	DSN := "ezauth.db"
@@ -67,3 +72,40 @@ doc.serve:
 
 doc.gh-pages:
 	mkdocs gh-deploy
+
+# Docker database containers for testing
+.PHONY: db-up db-down db-logs
+
+db-up:
+	@echo "Starting database containers..."
+	@docker compose up -d
+	@echo "Waiting for databases to be ready..."
+	@sleep 5
+
+db-down:
+	@echo "Stopping database containers..."
+	@docker compose down
+
+db-logs:
+	@docker compose logs -f
+
+# Run tests on specific database
+.PHONY: test-sqlite test-postgres test-mysql test-all-dbs
+
+test-sqlite:
+	@echo "=== Testing SQLite ==="
+	EZAUTH_DB_DIALECT=sqlite EZAUTH_DB_DSN="file:test.db?mode=memory&cache=shared" \
+		go test ./... -v -count=1
+
+test-postgres: db-up
+	@echo "=== Testing PostgreSQL ==="
+	EZAUTH_DB_DIALECT=postgres EZAUTH_DB_DSN="postgres://postgres:postgrespwd@127.0.0.1:5436/ezauthdb?sslmode=disable" \
+		go test ./... -v -count=1
+
+test-mysql: db-up
+	@echo "=== Testing MySQL ==="
+	EZAUTH_DB_DIALECT=mysql EZAUTH_DB_DSN="root:mysqlpwd@tcp(127.0.0.1:3306)/ezauthdb?parseTime=true&multiStatements=true" \
+		go test ./... -v -count=1
+
+test-all-dbs: db-up test-sqlite test-postgres test-mysql
+	@echo "=== All database tests completed ==="

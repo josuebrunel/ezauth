@@ -96,6 +96,15 @@ func (r *Repository) Close() error {
 // UserCreate creates a new user in the database.
 func (r Repository) UserCreate(ctx context.Context, user *models.User) (*models.User, error) {
 	query := r.QueryUserInsert(ctx, user)
+
+	if r.Opts.Dialect == DialectMysql {
+		if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+			xlog.Error("Failed to create user", "error", err, "email", user.Email)
+			return nil, err
+		}
+		return r.UserGetByID(ctx, user.ID)
+	}
+
 	createdUser, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
 	if err != nil {
 		xlog.Error("Failed to create user", "error", err, "email", user.Email)
@@ -140,6 +149,15 @@ func (r Repository) UserGetByID(ctx context.Context, id string) (*models.User, e
 // UserUpdate updates an existing user in the database.
 func (r Repository) UserUpdate(ctx context.Context, user *models.User) (*models.User, error) {
 	query := r.QueryUserUpdate(ctx, user)
+
+	if r.Opts.Dialect == DialectMysql {
+		if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+			xlog.Error("Failed to update user", "error", err, "email", user.Email)
+			return nil, err
+		}
+		return r.UserGetByID(ctx, user.ID)
+	}
+
 	updatedUser, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
 	if err != nil {
 		xlog.Error("Failed to update user", "error", err, "email", user.Email)
@@ -161,9 +179,19 @@ func (r Repository) UserDelete(ctx context.Context, id string) error {
 // TokenCreate creates a new refresh token or password reset token in the database.
 func (r Repository) TokenCreate(ctx context.Context, token *models.Token) (*models.Token, error) {
 	query := r.QueryTokenInsert(ctx, token)
+
+	if r.Opts.Dialect == DialectMysql {
+		if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+			xlog.Error("Failed to create token", "error", err)
+			return nil, err
+		}
+		// Since we generate ID in Go, we can use it to fetch
+		return r.TokenGetByID(ctx, token.ID)
+	}
+
 	createdToken, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.Token]())
 	if err != nil {
-		xlog.Error("Failed to create token", "error", err, "token", token.Token)
+		xlog.Error("Failed to create token", "error", err)
 		return nil, err
 	}
 	return createdToken, nil

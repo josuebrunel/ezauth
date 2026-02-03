@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/ezauth/pkg/util"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/dialect"
@@ -18,6 +19,9 @@ type PSQLQuerier struct {
 }
 
 func (q *PSQLQuerier) QueryUserInsert(ctx context.Context, user *models.User) bob.Query {
+	if user.ID == "" {
+		user.ID = util.NewID()
+	}
 	if user.CreatedAt.IsZero() {
 		user.CreatedAt = time.Now().UTC()
 	}
@@ -26,6 +30,7 @@ func (q *PSQLQuerier) QueryUserInsert(ctx context.Context, user *models.User) bo
 	}
 	return psql.Insert(
 		im.Into(psql.Quote(models.TableUser),
+			"id",
 			models.ColumnEmail,
 			models.ColumnPasswordHash,
 			models.ColumnProvider,
@@ -44,6 +49,7 @@ func (q *PSQLQuerier) QueryUserInsert(ctx context.Context, user *models.User) bo
 			models.ColumnUpdatedAt,
 		),
 		im.Values(
+			psql.Arg(user.ID),
 			psql.Arg(user.Email),
 			psql.Arg(user.PasswordHash),
 			psql.Arg(user.Provider),
@@ -158,8 +164,15 @@ func (q *PSQLQuerier) QueryUserDelete(ctx context.Context, id string) bob.Query 
 }
 
 func (q *PSQLQuerier) QueryTokenInsert(ctx context.Context, token *models.Token) bob.Query {
+	if token.ID == "" {
+		token.ID = util.NewID()
+	}
+	if token.CreatedAt.IsZero() {
+		token.CreatedAt = time.Now().UTC()
+	}
 	return psql.Insert(
 		im.Into(psql.Quote(models.TableToken),
+			"id",
 			models.ColumnUserID,
 			models.ColumnToken,
 			models.ColumnTokenType,
@@ -169,6 +182,7 @@ func (q *PSQLQuerier) QueryTokenInsert(ctx context.Context, token *models.Token)
 			models.ColumnMetadata,
 		),
 		im.Values(
+			psql.Arg(token.ID),
 			psql.Arg(token.UserID),
 			psql.Arg(token.Token),
 			psql.Arg(token.TokenType),
@@ -192,7 +206,7 @@ func (q *PSQLQuerier) QueryTokenGetByToken(ctx context.Context, token string) bo
 func (q *PSQLQuerier) QueryTokenRevoke(ctx context.Context, id string) bob.Query {
 	return psql.Update(
 		um.Table(psql.Quote(models.TableToken)),
-		um.SetCol(psql.Quote(models.ColumnRevoked).String()).To(true),
+		um.SetCol(models.ColumnRevoked).To(true),
 		um.Where(psql.Quote("id").EQ(psql.Arg(id))),
 	)
 }
