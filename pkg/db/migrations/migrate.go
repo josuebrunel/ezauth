@@ -9,6 +9,7 @@ import (
 	"github.com/josuebrunel/gopkg/xlog"
 	"github.com/pressly/goose/v3"
 
+	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -16,9 +17,10 @@ import (
 const (
 	DialectPostgres = "postgres"
 	DialectSqlite   = "sqlite3"
+	DialectMysql    = "mysql"
 )
 
-//go:embed postgres sqlite
+//go:embed postgres sqlite mysql
 var embedMigrations embed.FS
 
 type migrationFunc func(db *sql.DB, dir string, opts ...goose.OptionsFunc) error
@@ -47,6 +49,8 @@ func getMigrationSubDir(dialect string) (string, error) {
 	case DialectSqlite, "sqlite":
 		dialect = DialectSqlite
 		migrationSubDir = "sqlite"
+	case DialectMysql:
+		migrationSubDir = "mysql"
 	default:
 		return "", fmt.Errorf("unknown dialect: %s", dialect)
 	}

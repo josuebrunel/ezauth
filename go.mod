@@ -6,6 +6,7 @@ require (
 	filippo.io/csrf v0.2.1
 	github.com/alexedwards/scs/v2 v2.9.0
 	github.com/go-chi/chi/v5 v5.2.4
+	github.com/go-sql-driver/mysql v1.9.3
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/josuebrunel/gopkg/xenv v0.0.1
 	github.com/josuebrunel/gopkg/xlog v0.0.1
@@ -22,6 +23,7 @@ require (
 
 require (
 	cloud.google.com/go/compute/metadata v0.3.0 // indirect
+	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/aarondl/opt v0.0.0-20250607033636-982744e1bd65 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect

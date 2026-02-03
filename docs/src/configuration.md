@@ -15,10 +15,10 @@
 
 ## Database Settings
 
-| Variable            | Description                                 | Default     |
-| ------------------- | ------------------------------------------- | ----------- |
-| `EZAUTH_DB_DIALECT` | Database dialect (`sqlite3` or `postgres`). | `sqlite3`   |
-| `EZAUTH_DB_DSN`     | Database connection string.                 | `ezauth.db` |
+| Variable            | Description                                           | Default     |
+| ------------------- | ----------------------------------------------------- | ----------- |
+| `EZAUTH_DB_DIALECT` | Database dialect (`sqlite3`, `postgres`, or `mysql`). | `sqlite3`   |
+| `EZAUTH_DB_DSN`     | Database connection string.                           | `ezauth.db` |
 
 ## SMTP Settings
 

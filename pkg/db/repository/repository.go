@@ -6,6 +6,7 @@ import (
 	"database/sql"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/ezauth/pkg/db/repository/mysql"
 	"github.com/josuebrunel/ezauth/pkg/db/repository/postgres"
 	"github.com/josuebrunel/ezauth/pkg/db/repository/sqlite"
 	"github.com/josuebrunel/gopkg/xlog"
@@ -16,6 +17,7 @@ import (
 const (
 	DialectPSQL   = "postgres"
 	DialectSqlite = "sqlite3"
+	DialectMysql  = "mysql"
 )
 
 type UserQuerier interface {
@@ -213,6 +215,8 @@ func getDialectQuery(dbDialect string) Querier {
 	switch dbDialect {
 	case "postgres":
 		return &postgres.PSQLQuerier{}
+	case "mysql":
+		return &mysql.MysqlQuerier{}
 	case "sqlite", "sqlite3":
 		return &sqlite.SqliteQuerier{}
 	default:
@@ -230,6 +234,9 @@ func getDBConnection(opts Opts) (*sql.DB, error) {
 	case DialectPSQL:
 		db, err = postgres.GetDBConnection(opts.DSN)
 		opts.Dialect = DialectPSQL
+	case DialectMysql:
+		db, err = mysql.GetDBConnection(opts.DSN)
+		opts.Dialect = DialectMysql
 	default:
 		db, err = sqlite.GetDBConnection(opts.DSN)
 		opts.Dialect = DialectSqlite
