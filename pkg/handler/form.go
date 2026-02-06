@@ -2,7 +2,6 @@ package handler
 
 import (
 	"net/http"
-	"net/url"
 
 	"github.com/josuebrunel/ezauth/pkg/service"
 )
@@ -111,11 +110,7 @@ func (h *Handler) FormPasswordlessRequest(w http.ResponseWriter, r *http.Request
 	}
 
 	// Redirect back to login with success message
-	u, _ := url.Parse(h.svc.Cfg.Pages.Login)
-	q := u.Query()
-	q.Set("success", "magic link sent")
-	u.RawQuery = q.Encode()
-	http.Redirect(w, r, u.String(), http.StatusFound)
+	h.redirectWithSuccess(w, r, h.svc.Cfg.Pages.Login, "magic link sent")
 }
 
 // FormPasswordlessLogin handles login using a magic link token.
@@ -152,11 +147,7 @@ func (h *Handler) FormPasswordResetRequest(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	u, _ := url.Parse(h.svc.Cfg.Pages.Login)
-	q := u.Query()
-	q.Set("success", "password reset link sent")
-	u.RawQuery = q.Encode()
-	http.Redirect(w, r, u.String(), http.StatusFound)
+	h.redirectWithSuccess(w, r, h.svc.Cfg.Pages.Login, "password reset link sent")
 }
 
 // FormPasswordResetConfirm handles the confirmation of a password reset via form.
@@ -176,21 +167,15 @@ func (h *Handler) FormPasswordResetConfirm(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	u, _ := url.Parse(h.svc.Cfg.Pages.Login)
-	q := u.Query()
-	q.Set("success", "password has been reset successfully")
-	u.RawQuery = q.Encode()
-	http.Redirect(w, r, u.String(), http.StatusFound)
+	h.redirectWithSuccess(w, r, h.svc.Cfg.Pages.Login, "password has been reset successfully")
 }
 
 func (h *Handler) redirectWithError(w http.ResponseWriter, r *http.Request, target string, errMsg string) {
-	u, err := url.Parse(target)
-	if err != nil {
-		http.Error(w, errMsg, http.StatusBadRequest)
-		return
-	}
-	q := u.Query()
-	q.Set("error", errMsg)
-	u.RawQuery = q.Encode()
-	http.Redirect(w, r, u.String(), http.StatusFound)
+	h.SetFlash(r.Context(), "error", errMsg)
+	http.Redirect(w, r, target, http.StatusFound)
+}
+
+func (h *Handler) redirectWithSuccess(w http.ResponseWriter, r *http.Request, target string, msg string) {
+	h.SetFlash(r.Context(), "success", msg)
+	http.Redirect(w, r, target, http.StatusFound)
 }

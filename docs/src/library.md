@@ -110,6 +110,29 @@ r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 })
 ```
 
+## Handling Flash Messages
+
+Form-based handlers use flash messages for errors and success notifications. Flash messages are stored in the session and are automatically cleared after being read (one-time display).
+
+```go
+r.Get("/login", func(w http.ResponseWriter, r *http.Request) {
+    // Get and clear any error flash message
+    if errMsg := auth.GetErrorMessage(r.Context()); errMsg != "" {
+        // Display error to user (e.g., "invalid credentials")
+    }
+
+    // Get and clear any success flash message  
+    if successMsg := auth.GetSuccessMessage(r.Context()); successMsg != "" {
+        // Display success to user (e.g., "password reset link sent")
+    }
+
+    // Render login page...
+})
+```
+
+> [!NOTE]
+> Flash messages are set automatically by the form handlers (e.g., `FormLogin`, `FormRegister`) when errors occur or actions succeed. You just need to retrieve and display them in your page handlers.
+
 ## Core Components
 
 When you initialize `ezauth`, you get access to several key components through the `EzAuth` struct:

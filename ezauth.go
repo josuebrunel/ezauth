@@ -101,3 +101,15 @@ func (e *EzAuth) LoadUserMiddleware(next http.Handler) http.Handler {
 func (e *EzAuth) IsAuthenticated(ctx context.Context) bool {
 	return e.Handler.IsAuthenticated(ctx)
 }
+
+// GetErrorMessage retrieves and clears any error flash message from the session.
+// Flash messages are one-time messages set during form handling (e.g., login errors).
+func (e *EzAuth) GetErrorMessage(ctx context.Context) string {
+	return e.Handler.GetErrorMessage(ctx)
+}
+
+// GetSuccessMessage retrieves and clears any success flash message from the session.
+// Flash messages are one-time messages set during form handling (e.g., password reset success).
+func (e *EzAuth) GetSuccessMessage(ctx context.Context) string {
+	return e.Handler.GetSuccessMessage(ctx)
+}

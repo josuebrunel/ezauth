@@ -193,6 +193,25 @@ r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 })
 ```
 
+### Handling Errors and Success Messages
+
+When using form-based handlers, errors and success messages are stored as flash messages in the session. Flash messages are one-time messages that are automatically cleared after being read.
+
+```go
+r.Get("/login", func(w http.ResponseWriter, r *http.Request) {
+    // Get flash messages (auto-cleared after read)
+    errorMsg := auth.GetErrorMessage(r.Context())
+    successMsg := auth.GetSuccessMessage(r.Context())
+
+    // Pass to template for display
+    data := map[string]string{
+        "Error":   errorMsg,
+        "Success": successMsg,
+    }
+    tmpl.Execute(w, data)
+})
+```
+
 ## API Endpoints
 
 ### Form-based Handlers (Cookies & Redirects)

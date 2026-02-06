@@ -224,8 +224,9 @@ func TestFormHandler_RegisterMismatchPasswords(t *testing.T) {
 		}
 
 		location := w.Header().Get("Location")
-		if !strings.Contains(location, "error=passwords+do+not+match") { // Check encoded error message
-			t.Errorf("expected error 'passwords do not match' in redirect, got %s", location)
+		// With flash messages, we expect a clean redirect URL (no error= query param)
+		if location != "/register" {
+			t.Errorf("expected redirect to /register, got %s", location)
 		}
 	})
 }
