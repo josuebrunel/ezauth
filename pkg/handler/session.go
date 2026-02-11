@@ -28,8 +28,19 @@ func (h *Handler) clearAuthCookies(ctx context.Context) {
 
 // GetSessionTokens retrieves the tokens from the session.
 // This helper is useful for middleware or other components that need access to the session tokens.
-func (h *Handler) GetSessionTokens(ctx context.Context) (map[string]string, bool) {
-	tokens, ok := h.Session.Get(ctx, sessionTokensKey).(map[string]string)
+// Returns (nil, false) if session data is not available in the context.
+func (h *Handler) GetSessionTokens(ctx context.Context) (tokens map[string]string, ok bool) {
+	// Recover from panic if session data is not in context
+	defer func() {
+		if r := recover(); r != nil {
+			// Session middleware not loaded, which is expected in some scenarios
+			xlog.Debug("session data not available in context", "error", r)
+			tokens = nil
+			ok = false
+		}
+	}()
+	
+	tokens, ok = h.Session.Get(ctx, sessionTokensKey).(map[string]string)
 	return tokens, ok
 }
 
