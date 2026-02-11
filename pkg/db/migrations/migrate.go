@@ -25,15 +25,16 @@ var embedMigrations embed.FS
 
 type migrationFunc func(db *sql.DB, dir string, opts ...goose.OptionsFunc) error
 
-func MigrateUp(dsn, dialect string) error {
-	return runMigration(dsn, dialect, goose.Up, "up")
+func MigrateUp(dsn, dialect, schema string) error {
+	return runMigration(dsn, dialect, schema, goose.Up, "up")
 }
 
-func MigrateDown(dsn, dialect string) error {
-	return runMigration(dsn, dialect, goose.Down, "down")
+func MigrateDown(dsn, dialect, schema string) error {
+	return runMigration(dsn, dialect, schema, goose.Down, "down")
 }
 
 func MigrateUpWithDBConn(db *sql.DB, dialect string) error {
+	// For existing DB connection, we assume schema setup is already done or not needed
 	return execGooseMigration(db, dialect, goose.Up, "up")
 }
 
@@ -64,7 +65,7 @@ func getRootFS(subDir string) (fs.FS, error) {
 	return rootFS, nil
 }
 
-func runMigration(dsn, dialect string, command migrationFunc, action string) error {
+func runMigration(dsn, dialect, schema string, command migrationFunc, action string) error {
 	if dsn == "" {
 		return fmt.Errorf("dsn is required")
 	}
@@ -74,6 +75,18 @@ func runMigration(dsn, dialect string, command migrationFunc, action string) err
 		return err
 	}
 	defer db.Close()
+
+	if dialect == DialectPostgres && schema != "" {
+		// Set the search path to the specified schema
+		if _, err := db.Exec("CREATE SCHEMA IF NOT EXISTS " + schema); err != nil {
+			xlog.Error("failed to create schema", "error", err, "schema", schema)
+			return err
+		}
+		if _, err := db.Exec("SET search_path TO " + schema); err != nil {
+			xlog.Error("failed to set search_path", "error", err, "schema", schema)
+			return err
+		}
+	}
 
 	return execGooseMigration(db, dialect, command, action)
 }

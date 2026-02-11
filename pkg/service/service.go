@@ -37,6 +37,7 @@ func NewFromConfig(cfg *config.Config, pathPrefix string) (*Auth, error) {
 	repo, err := repository.Open(repository.Opts{
 		Dialect: cfg.DB.Dialect,
 		DSN:     cfg.DB.DSN,
+		Schema:  cfg.DB.Schema,
 	})
 	if err != nil {
 		return nil, err

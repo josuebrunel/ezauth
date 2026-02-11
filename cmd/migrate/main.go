@@ -11,6 +11,7 @@ import (
 func main() {
 	dialect := flag.String("dialect", "sqlite", "database dialect (postgres, sqlite3)")
 	dsn := flag.String("dsn", "", "database connection string")
+	schema := flag.String("schema", "", "database schema (postgres only)")
 	up := flag.Bool("up", false, "run migrations up")
 	down := flag.Bool("down", false, "run migrations down")
 	flag.Parse()
@@ -21,7 +22,7 @@ func main() {
 	}
 
 	if *up {
-		if err := migrations.MigrateUp(*dsn, *dialect); err != nil {
+		if err := migrations.MigrateUp(*dsn, *dialect, *schema); err != nil {
 			xlog.Error("failed to run migrations up", "error", err)
 			os.Exit(1)
 		}
@@ -29,7 +30,7 @@ func main() {
 	}
 
 	if *down {
-		if err := migrations.MigrateDown(*dsn, *dialect); err != nil {
+		if err := migrations.MigrateDown(*dsn, *dialect, *schema); err != nil {
 			xlog.Error("failed to run migrations down", "error", err)
 			os.Exit(1)
 		}

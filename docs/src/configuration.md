@@ -19,6 +19,7 @@
 | ------------------- | ----------------------------------------------------- | ----------- |
 | `EZAUTH_DB_DIALECT` | Database dialect (`sqlite3`, `postgres`, or `mysql`). | `sqlite3`   |
 | `EZAUTH_DB_DSN`     | Database connection string.                           | `ezauth.db` |
+| `EZAUTH_DB_SCHEMA`  | Database schema (PostgreSQL only).                    | `public`    |
 
 ## SMTP Settings
 

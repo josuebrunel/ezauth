@@ -12,6 +12,7 @@ import (
 type Database struct {
 	Dialect string `json:"dialect" env:"DB_DIALECT" default:"sqlite3"`
 	DSN     string `json:"dsn" env:"DB_DSN" default:"ezauth.db"`
+	Schema  string `json:"schema" env:"DB_SCHEMA"`
 }
 
 // OAuth2Google defines the settings for Google OAuth2.

@@ -32,6 +32,7 @@ You can run `ezauth` as a separate service that handles authentication for your 
    export EZAUTH_BASE_URL="http://localhost:8080"
    export EZAUTH_DB_DIALECT="sqlite3"  # or "postgres" or "mysql"
    export EZAUTH_DB_DSN="auth.db"      # for mysql: "user:pass@tcp(localhost:3306)/dbname?parseTime=true"
+   export EZAUTH_DB_SCHEMA="public"    # Optional: Database schema (PostgreSQL only)
    export EZAUTH_JWT_SECRET="super-secret-key"
 
    # SMTP (Optional - for Email features)

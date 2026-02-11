@@ -46,6 +46,7 @@ type Querier interface {
 type Opts struct {
 	Dialect string
 	DSN     string
+	Schema  string
 }
 
 // Repository handles all database operations.
@@ -262,6 +263,17 @@ func getDBConnection(opts Opts) (*sql.DB, error) {
 	case DialectPSQL:
 		db, err = postgres.GetDBConnection(opts.DSN)
 		opts.Dialect = DialectPSQL
+		if err == nil && opts.Schema != "" {
+			// Set the search path to the specified schema
+			if _, err := db.Exec("CREATE SCHEMA IF NOT EXISTS " + opts.Schema); err != nil {
+				xlog.Error("failed to create schema", "error", err, "schema", opts.Schema)
+				return nil, err
+			}
+			if _, err := db.Exec("SET search_path TO " + opts.Schema); err != nil {
+				xlog.Error("failed to set search_path", "error", err, "schema", opts.Schema)
+				return nil, err
+			}
+		}
 	case DialectMysql:
 		db, err = mysql.GetDBConnection(opts.DSN)
 		opts.Dialect = DialectMysql
