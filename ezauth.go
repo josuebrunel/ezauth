@@ -104,6 +104,11 @@ func (e *EzAuth) LoadUserMiddleware(next http.Handler) http.Handler {
 	return e.Handler.LoadUserMiddleware(next)
 }
 
+// LoginRequiredMiddleware returns the middleware that requires the request to be authenticated.
+func (e *EzAuth) LoginRequiredMiddleware(next http.Handler) http.Handler {
+	return e.Handler.LoginRequiredMiddleware(next)
+}
+
 // IsAuthenticated checks if the request is authenticated.
 func (e *EzAuth) IsAuthenticated(ctx context.Context) bool {
 	return e.Handler.IsAuthenticated(ctx)

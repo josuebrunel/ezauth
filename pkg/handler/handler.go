@@ -31,6 +31,7 @@ func (h *Handler) LoadUserMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		if user, err := h.GetSessionUser(ctx); err == nil {
+			ctx = context.WithValue(ctx, userContextKey, user.ID)
 			ctx = context.WithValue(ctx, userObjectContextKey, user)
 		}
 		next.ServeHTTP(w, r.WithContext(ctx))

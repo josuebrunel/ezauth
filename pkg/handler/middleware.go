@@ -94,10 +94,10 @@ func (h *Handler) APIKeyMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// LoginRequired is a middleware that checks if the request is authenticated.
+// LoginRequiredMiddleware is a middleware that requires the request to be authenticated.
 // If the user is not authenticated, it redirects to the login page (for browser requests)
 // or returns a 401 Unauthorized error (for API requests).
-func (h *Handler) LoginRequired(next http.Handler) http.Handler {
+func (h *Handler) LoginRequiredMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !h.IsAuthenticated(r.Context()) {
 			// Check if it's an API request (JSON) or a browser request
