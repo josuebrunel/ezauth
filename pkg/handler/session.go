@@ -30,11 +30,11 @@ func (h *Handler) clearAuthCookies(ctx context.Context) {
 // This helper is useful for middleware or other components that need access to the session tokens.
 // Returns (nil, false) if session data is not available in the context.
 func (h *Handler) GetSessionTokens(ctx context.Context) (tokens map[string]string, ok bool) {
-	// Recover from panic if session data is not in context
+	// The scs library panics when accessing session data without LoadAndSave middleware.
+	// We recover from this panic to gracefully handle scenarios where the middleware
+	// isn't loaded, which can happen when using LoadUserMiddleware without session support.
 	defer func() {
-		if r := recover(); r != nil {
-			// Session middleware not loaded, which is expected in some scenarios
-			xlog.Debug("session data not available in context", "error", r)
+		if recover() != nil {
 			tokens = nil
 			ok = false
 		}
