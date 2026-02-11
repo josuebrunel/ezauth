@@ -34,8 +34,8 @@ func TestMysqlQuerier_UserOperations(t *testing.T) {
 			t.Fatalf("failed to build query: %v", err)
 		}
 
-		if !strings.Contains(sql, "INSERT") || !strings.Contains(sql, "users") {
-			t.Errorf("expected INSERT INTO users, got %q", sql)
+		if !strings.Contains(sql, "INSERT") || !strings.Contains(sql, "ezauth_users") {
+			t.Errorf("expected INSERT INTO ezauth_users, got %q", sql)
 		}
 		if len(args) < 5 {
 			t.Errorf("expected at least 5 args, got %d", len(args))
@@ -49,7 +49,7 @@ func TestMysqlQuerier_UserOperations(t *testing.T) {
 			t.Fatalf("failed to build query: %v", err)
 		}
 
-		if !strings.Contains(sql, "SELECT") || !strings.Contains(sql, "users") {
+		if !strings.Contains(sql, "SELECT") || !strings.Contains(sql, "ezauth_users") {
 			t.Errorf("unexpected SQL: %s", sql)
 		}
 		if !strings.Contains(sql, "email") {
@@ -86,7 +86,7 @@ func TestMysqlQuerier_UserOperations(t *testing.T) {
 			t.Fatalf("failed to build query: %v", err)
 		}
 
-		if !strings.Contains(sql, "UPDATE") || !strings.Contains(sql, "users") {
+		if !strings.Contains(sql, "UPDATE") || !strings.Contains(sql, "ezauth_users") {
 			t.Errorf("unexpected SQL: %s", sql)
 		}
 		if !strings.Contains(sql, "provider") {
@@ -104,7 +104,7 @@ func TestMysqlQuerier_UserOperations(t *testing.T) {
 			t.Fatalf("failed to build query: %v", err)
 		}
 
-		if !strings.Contains(sql, "DELETE FROM") || !strings.Contains(sql, "users") {
+		if !strings.Contains(sql, "DELETE FROM") || !strings.Contains(sql, "ezauth_users") {
 			t.Errorf("unexpected SQL: %s", sql)
 		}
 		if len(args) != 1 || args[0] != user.ID {
@@ -135,8 +135,8 @@ func TestMysqlQuerier_TokenOperations(t *testing.T) {
 			t.Fatalf("failed to build query: %v", err)
 		}
 
-		if !strings.Contains(sql, "INSERT") || !strings.Contains(sql, "tokens") {
-			t.Errorf("expected INSERT INTO tokens, got %q", sql)
+		if !strings.Contains(sql, "INSERT") || !strings.Contains(sql, "ezauth_tokens") {
+			t.Errorf("expected INSERT INTO ezauth_tokens, got %q", sql)
 		}
 		if len(args) < 5 {
 			t.Errorf("expected args, got %d", len(args))
@@ -150,7 +150,7 @@ func TestMysqlQuerier_TokenOperations(t *testing.T) {
 			t.Fatalf("failed to build query: %v", err)
 		}
 
-		if !strings.Contains(sql, "SELECT") || !strings.Contains(sql, "tokens") {
+		if !strings.Contains(sql, "SELECT") || !strings.Contains(sql, "ezauth_tokens") {
 			t.Errorf("unexpected SQL: %s", sql)
 		}
 		if !strings.Contains(sql, "id") {
@@ -183,11 +183,12 @@ func TestMysqlQuerier_TokenOperations(t *testing.T) {
 			t.Fatalf("failed to build query: %v", err)
 		}
 
-		if !strings.Contains(sql, "DELETE FROM") || !strings.Contains(sql, "tokens") {
+		if !strings.Contains(sql, "DELETE FROM") || !strings.Contains(sql, "ezauth_tokens") {
 			t.Errorf("unexpected SQL: %s", sql)
 		}
 		if len(args) != 1 || args[0] != token.ID {
 			t.Errorf("unexpected args: %v", args)
 		}
 	})
+
 }

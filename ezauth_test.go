@@ -2,6 +2,7 @@ package ezauth
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 
 	"github.com/josuebrunel/ezauth/pkg/config"
@@ -14,6 +15,29 @@ import (
 
 func TestEzAuth(t *testing.T) {
 	dialect, dsn := util.GetTestDBConfig("ezauth_test")
+
+	t.Cleanup(func() {
+		db, err := sql.Open(dialect, dsn)
+		if err != nil {
+			t.Logf("failed to open db for cleanup: %v", err)
+			return
+		}
+		defer db.Close()
+
+		switch dialect {
+		case "postgres":
+			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_tokens CASCADE")
+			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_users CASCADE")
+		case "mysql":
+			_, _ = db.Exec("SET FOREIGN_KEY_CHECKS=0")
+			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_tokens")
+			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_users")
+			_, _ = db.Exec("SET FOREIGN_KEY_CHECKS=1")
+		case "sqlite", "sqlite3":
+			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_tokens")
+			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_users")
+		}
+	})
 
 	cfg := &config.Config{
 		DB: config.Database{

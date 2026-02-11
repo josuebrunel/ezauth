@@ -16,6 +16,8 @@ func TestPSQLQuerier_UserOperations(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now()
 
+	// Cleanup at the end
+
 	user := &models.User{
 		ID:            "user-123",
 		Email:         util.UniqueEmail("test"),
@@ -34,7 +36,7 @@ func TestPSQLQuerier_UserOperations(t *testing.T) {
 			t.Fatalf("failed to build query: %v", err)
 		}
 
-		expected := "INSERT INTO \"users\""
+		expected := "INSERT INTO \"ezauth_users\""
 		if !strings.Contains(sql, expected) {
 			t.Errorf("expected SQL to contain %q, got %q", expected, sql)
 		}
@@ -50,7 +52,7 @@ func TestPSQLQuerier_UserOperations(t *testing.T) {
 			t.Fatalf("failed to build query: %v", err)
 		}
 
-		if !strings.Contains(sql, "SELECT") || !strings.Contains(sql, "FROM \"users\"") {
+		if !strings.Contains(sql, "SELECT") || !strings.Contains(sql, "FROM \"ezauth_users\"") {
 			t.Errorf("unexpected SQL: %s", sql)
 		}
 		if !strings.Contains(sql, "\"email\" = $1") {
@@ -88,7 +90,7 @@ func TestPSQLQuerier_UserOperations(t *testing.T) {
 			t.Fatalf("failed to build query: %v", err)
 		}
 
-		if !strings.Contains(sql, "UPDATE \"users\"") {
+		if !strings.Contains(sql, "UPDATE \"ezauth_users\"") {
 			t.Errorf("unexpected SQL: %s", sql)
 		}
 		// Check if provider is being updated
@@ -108,7 +110,7 @@ func TestPSQLQuerier_UserOperations(t *testing.T) {
 			t.Fatalf("failed to build query: %v", err)
 		}
 
-		if !strings.Contains(sql, "DELETE FROM \"users\"") {
+		if !strings.Contains(sql, "DELETE FROM \"ezauth_users\"") {
 			t.Errorf("unexpected SQL: %s", sql)
 		}
 		if len(args) != 1 || args[0] != user.ID {
@@ -139,7 +141,7 @@ func TestPSQLQuerier_TokenOperations(t *testing.T) {
 			t.Fatalf("failed to build query: %v", err)
 		}
 
-		expected := "INSERT INTO \"tokens\""
+		expected := "INSERT INTO \"ezauth_tokens\""
 		if !strings.Contains(sql, expected) {
 			t.Errorf("expected SQL to contain %q, got %q", expected, sql)
 		}
@@ -155,7 +157,7 @@ func TestPSQLQuerier_TokenOperations(t *testing.T) {
 			t.Fatalf("failed to build query: %v", err)
 		}
 
-		if !strings.Contains(sql, "SELECT") || !strings.Contains(sql, "FROM \"tokens\"") {
+		if !strings.Contains(sql, "SELECT") || !strings.Contains(sql, "FROM \"ezauth_tokens\"") {
 			t.Errorf("unexpected SQL: %s", sql)
 		}
 		if !strings.Contains(sql, "\"id\" = $1") {
@@ -188,7 +190,7 @@ func TestPSQLQuerier_TokenOperations(t *testing.T) {
 			t.Fatalf("failed to build query: %v", err)
 		}
 
-		if !strings.Contains(sql, "DELETE FROM \"tokens\"") {
+		if !strings.Contains(sql, "DELETE FROM \"ezauth_tokens\"") {
 			t.Errorf("unexpected SQL: %s", sql)
 		}
 		if len(args) != 1 || args[0] != token.ID {

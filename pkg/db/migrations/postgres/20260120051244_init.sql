@@ -1,11 +1,11 @@
 -- +goose Up
 -- +goose StatementBegin
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Enable pgcrypto extension for UUID generation (more standard than uuid-ossp)
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Users table
-CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE IF NOT EXISTS ezauth_users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash TEXT,
     provider VARCHAR(50) NOT NULL DEFAULT 'local',
@@ -22,23 +22,23 @@ CREATE TABLE users (
     roles TEXT DEFAULT '',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    CONSTRAINT unique_provider_user UNIQUE (provider, provider_id)
+    CONSTRAINT unique_ezauth_provider_user UNIQUE (provider, provider_id)
 );
 
 -- Create index on email for faster lookups
-CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_ezauth_users_email ON ezauth_users(email);
 
-CREATE INDEX idx_users_provider ON users(provider, provider_id);
+CREATE INDEX IF NOT EXISTS idx_ezauth_users_provider ON ezauth_users(provider, provider_id);
 
 -- GIN indexes for JSONB columns to enable fast queries on metadata
-CREATE INDEX idx_users_app_metadata ON users USING GIN (app_metadata);
+CREATE INDEX IF NOT EXISTS idx_ezauth_users_app_metadata ON ezauth_users USING GIN (app_metadata);
 
-CREATE INDEX idx_users_user_metadata ON users USING GIN (user_metadata);
+CREATE INDEX IF NOT EXISTS idx_ezauth_users_user_metadata ON ezauth_users USING GIN (user_metadata);
 
 -- Tokens table (replaces sessions)
-CREATE TABLE tokens (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS ezauth_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES ezauth_users(id) ON DELETE CASCADE,
     token TEXT NOT NULL UNIQUE,
     token_type VARCHAR(50) NOT NULL,
     -- 'access', 'refresh', 'passwordless'
@@ -49,13 +49,13 @@ CREATE TABLE tokens (
 );
 
 -- Indexes for tokens table
-CREATE INDEX idx_tokens_user_id ON tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_ezauth_tokens_user_id ON ezauth_tokens(user_id);
 
-CREATE INDEX idx_tokens_token ON tokens(token);
+CREATE INDEX IF NOT EXISTS idx_ezauth_tokens_token ON ezauth_tokens(token);
 
-CREATE INDEX idx_tokens_type ON tokens(token_type);
+CREATE INDEX IF NOT EXISTS idx_ezauth_tokens_type ON ezauth_tokens(token_type);
 
-CREATE INDEX idx_tokens_expires_at ON tokens(expires_at);
+CREATE INDEX IF NOT EXISTS idx_ezauth_tokens_expires_at ON ezauth_tokens(expires_at);
 
 -- Function to update updated_at timestamp
 CREATE
@@ -68,32 +68,32 @@ END;
 $$ language 'plpgsql';
 
 -- Trigger to automatically update updated_at
-CREATE TRIGGER update_users_updated_at BEFORE
+CREATE TRIGGER update_ezauth_users_updated_at BEFORE
 UPDATE
-    ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    ON ezauth_users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Comments for documentation
-COMMENT ON TABLE users IS 'User accounts with support for multiple authentication providers';
+COMMENT ON TABLE ezauth_users IS 'User accounts with support for multiple authentication providers';
 
-COMMENT ON COLUMN users.app_metadata IS 'Application-controlled metadata (admin-only updates)';
+COMMENT ON COLUMN ezauth_users.app_metadata IS 'Application-controlled metadata (admin-only updates)';
 
-COMMENT ON COLUMN users.user_metadata IS 'User-controlled metadata (user can update)';
+COMMENT ON COLUMN ezauth_users.user_metadata IS 'User-controlled metadata (user can update)';
 
-COMMENT ON TABLE tokens IS 'Authentication tokens including access, refresh, and passwordless tokens';
+COMMENT ON TABLE ezauth_tokens IS 'Authentication tokens including access, refresh, and passwordless tokens';
 
-COMMENT ON COLUMN tokens.token_type IS 'Type of token: access, refresh, or passwordless';
+COMMENT ON COLUMN ezauth_tokens.token_type IS 'Type of token: access, refresh, or passwordless';
 
 -- +goose StatementEnd
 -- +goose Down
 -- +goose StatementBegin
-DROP TRIGGER IF EXISTS update_users_updated_at ON users;
+DROP TRIGGER IF EXISTS update_ezauth_users_updated_at ON ezauth_users;
 
 DROP FUNCTION IF EXISTS update_updated_at_column();
 
-DROP TABLE IF EXISTS tokens;
+DROP TABLE IF EXISTS ezauth_tokens;
 
-DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS ezauth_users;
 
-DROP EXTENSION IF EXISTS "uuid-ossp";
+DROP EXTENSION IF EXISTS "pgcrypto";
 
 -- +goose StatementEnd

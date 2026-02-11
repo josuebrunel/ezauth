@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 -- Users table
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS ezauth_users (
     id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT,
@@ -19,16 +19,16 @@ CREATE TABLE users (
     roles TEXT DEFAULT '',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT unique_provider_user UNIQUE (provider, provider_id)
+    CONSTRAINT unique_ezauth_provider_user UNIQUE (provider, provider_id)
 );
 
 -- Indexes for users
-CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_ezauth_users_email ON ezauth_users(email);
 
-CREATE INDEX idx_users_provider ON users(provider, provider_id);
+CREATE INDEX IF NOT EXISTS idx_ezauth_users_provider ON ezauth_users(provider, provider_id);
 
 -- Tokens table
-CREATE TABLE tokens (
+CREATE TABLE IF NOT EXISTS ezauth_tokens (
     id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
     user_id TEXT NOT NULL,
     token TEXT NOT NULL UNIQUE,
@@ -38,25 +38,25 @@ CREATE TABLE tokens (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     revoked INTEGER DEFAULT 0,
     metadata TEXT DEFAULT '{}',
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES ezauth_users(id) ON DELETE CASCADE
 );
 
 -- Indexes for tokens
-CREATE INDEX idx_tokens_user_id ON tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_ezauth_tokens_user_id ON ezauth_tokens(user_id);
 
-CREATE INDEX idx_tokens_token ON tokens(token);
+CREATE INDEX IF NOT EXISTS idx_ezauth_tokens_token ON ezauth_tokens(token);
 
-CREATE INDEX idx_tokens_type ON tokens(token_type);
+CREATE INDEX IF NOT EXISTS idx_ezauth_tokens_type ON ezauth_tokens(token_type);
 
-CREATE INDEX idx_tokens_expires_at ON tokens(expires_at);
+CREATE INDEX IF NOT EXISTS idx_ezauth_tokens_expires_at ON ezauth_tokens(expires_at);
 
 -- Trigger to update updated_at (SQLite version)
-CREATE TRIGGER update_users_updated_at
+CREATE TRIGGER IF NOT EXISTS update_ezauth_users_updated_at
 AFTER
 UPDATE
-    ON users BEGIN
+    ON ezauth_users BEGIN
 UPDATE
-    users
+    ezauth_users
 SET
     updated_at = CURRENT_TIMESTAMP
 WHERE
@@ -67,10 +67,10 @@ END;
 -- +goose StatementEnd
 -- +goose Down
 -- +goose StatementBegin
-DROP TRIGGER IF EXISTS update_users_updated_at;
+DROP TRIGGER IF EXISTS update_ezauth_users_updated_at;
 
-DROP TABLE IF EXISTS tokens;
+DROP TABLE IF EXISTS ezauth_tokens;
 
-DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS ezauth_users;
 
 -- +goose StatementEnd

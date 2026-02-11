@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 -- Users table
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS ezauth_users (
     id CHAR(32) PRIMARY KEY DEFAULT (REPLACE(UUID(), '-', '')),
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255),
@@ -19,16 +19,13 @@ CREATE TABLE users (
     roles VARCHAR(255) DEFAULT '',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT unique_provider_user UNIQUE (provider, provider_id)
+    CONSTRAINT unique_ezauth_provider_user UNIQUE (provider, provider_id),
+    INDEX idx_ezauth_users_email (email),
+    INDEX idx_ezauth_users_provider (provider, provider_id)
 );
 
--- Indexes for users
-CREATE INDEX idx_users_email ON users(email);
-
-CREATE INDEX idx_users_provider ON users(provider, provider_id);
-
 -- Tokens table
-CREATE TABLE tokens (
+CREATE TABLE IF NOT EXISTS ezauth_tokens (
     id CHAR(32) PRIMARY KEY DEFAULT (REPLACE(UUID(), '-', '')),
     user_id CHAR(32) NOT NULL,
     token VARCHAR(255) NOT NULL UNIQUE,
@@ -38,23 +35,18 @@ CREATE TABLE tokens (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     revoked TINYINT(1) DEFAULT 0,
     metadata JSON DEFAULT (JSON_OBJECT()),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES ezauth_users(id) ON DELETE CASCADE,
+    INDEX idx_ezauth_tokens_user_id (user_id),
+    INDEX idx_ezauth_tokens_token (token),
+    INDEX idx_ezauth_tokens_type (token_type),
+    INDEX idx_ezauth_tokens_expires_at (expires_at)
 );
-
--- Indexes for tokens
-CREATE INDEX idx_tokens_user_id ON tokens(user_id);
-
-CREATE INDEX idx_tokens_token ON tokens(token);
-
-CREATE INDEX idx_tokens_type ON tokens(token_type);
-
-CREATE INDEX idx_tokens_expires_at ON tokens(expires_at);
 
 -- +goose StatementEnd
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS tokens;
+DROP TABLE IF EXISTS ezauth_tokens;
 
-DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS ezauth_users;
 
 -- +goose StatementEnd

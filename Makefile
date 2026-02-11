@@ -95,17 +95,17 @@ db-logs:
 test-sqlite:
 	@echo "=== Testing SQLite ==="
 	EZAUTH_DB_DIALECT=sqlite EZAUTH_DB_DSN="file:test.db?mode=memory&cache=shared" \
-		go test ./... -v -count=1
+		go test -failfast ./... -v -p=1 -count=1
 
 test-postgres: db-up
 	@echo "=== Testing PostgreSQL ==="
 	EZAUTH_DB_DIALECT=postgres EZAUTH_DB_DSN="postgres://postgres:postgrespwd@127.0.0.1:5436/ezauthdb?sslmode=disable" \
-		go test ./... -v -count=1
+		go test -failfast ./... -v -p=1 -count=1
 
 test-mysql: db-up
 	@echo "=== Testing MySQL ==="
 	EZAUTH_DB_DIALECT=mysql EZAUTH_DB_DSN="root:mysqlpwd@tcp(127.0.0.1:3306)/ezauthdb?parseTime=true&multiStatements=true" \
-		go test ./... -v -count=1
+		go test -failfast ./... -v -p=1 -count=1
 
 test-all-dbs: db-up test-sqlite test-postgres test-mysql
 	@echo "=== All database tests completed ==="

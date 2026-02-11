@@ -94,6 +94,7 @@ func execGooseMigration(db *sql.DB, dialect string, command migrationFunc, actio
 		return fmt.Errorf("failed to set dialect: %w", err)
 	}
 
+	goose.SetTableName("ezauth_goose_db_version")
 	goose.SetBaseFS(rootFS)
 
 	xlog.Info(fmt.Sprintf("running migrations %s", action), "dialect", dialect, "folder", migrationSubDir)
