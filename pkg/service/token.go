@@ -9,6 +9,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/gopkg/xlog"
 )
 
 // TokenResponse defines the structure of the token response.
@@ -21,13 +22,16 @@ type TokenResponse struct {
 
 // TokenCreate creates a new pair of access and refresh tokens for the given user.
 func (a *Auth) TokenCreate(ctx context.Context, user *models.User) (*TokenResponse, error) {
+	xlog.Debug("creating tokens", "user_id", user.ID)
 	accessToken, exp, err := a.generateAccessToken(user)
 	if err != nil {
+		xlog.Error("failed to generate access token", "user_id", user.ID, "err", err)
 		return nil, err
 	}
 
 	refreshToken, err := a.generateRefreshToken()
 	if err != nil {
+		xlog.Error("failed to generate refresh token", "user_id", user.ID, "err", err)
 		return nil, err
 	}
 
@@ -43,9 +47,11 @@ func (a *Auth) TokenCreate(ctx context.Context, user *models.User) (*TokenRespon
 	}
 
 	if _, err := a.Repo.TokenCreate(ctx, token); err != nil {
+		xlog.Error("failed to save refresh token", "user_id", user.ID, "err", err)
 		return nil, err
 	}
 
+	xlog.Debug("tokens created", "user_id", user.ID)
 	return &TokenResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
@@ -56,26 +62,32 @@ func (a *Auth) TokenCreate(ctx context.Context, user *models.User) (*TokenRespon
 
 // TokenRefresh refreshes the access and refresh tokens using a valid refresh token.
 func (a *Auth) TokenRefresh(ctx context.Context, refreshToken string) (*TokenResponse, error) {
+	xlog.Debug("refreshing token")
 	token, err := a.Repo.TokenGetByToken(ctx, refreshToken)
 	if err != nil {
+		xlog.Debug("refresh token not found", "err", err)
 		return nil, errors.New("invalid refresh token")
 	}
 
 	if token.Revoked {
+		xlog.Warn("attempt to use revoked token", "token_id", token.ID, "user_id", token.UserID)
 		return nil, errors.New("token revoked")
 	}
 
 	if time.Now().After(token.ExpiresAt) {
+		xlog.Debug("refresh token expired", "token_id", token.ID, "user_id", token.UserID)
 		return nil, errors.New("token expired")
 	}
 
 	user, err := a.Repo.UserGetByID(ctx, token.UserID)
 	if err != nil {
+		xlog.Error("failed to get user for refresh token", "user_id", token.UserID, "err", err)
 		return nil, err
 	}
 
 	// Revoke old token
 	if err := a.Repo.TokenRevoke(ctx, token.ID); err != nil {
+		xlog.Error("failed to revoke old refresh token", "token_id", token.ID, "err", err)
 		return nil, err
 	}
 
@@ -85,11 +97,19 @@ func (a *Auth) TokenRefresh(ctx context.Context, refreshToken string) (*TokenRes
 
 // TokenRevoke revokes the given refresh token.
 func (a *Auth) TokenRevoke(ctx context.Context, refreshToken string) error {
+	xlog.Info("revoking token")
 	token, err := a.Repo.TokenGetByToken(ctx, refreshToken)
 	if err != nil {
+		xlog.Debug("token to revoke not found", "err", err)
 		return err
 	}
-	return a.Repo.TokenRevoke(ctx, token.ID)
+	err = a.Repo.TokenRevoke(ctx, token.ID)
+	if err != nil {
+		xlog.Error("failed to revoke token", "token_id", token.ID, "err", err)
+	} else {
+		xlog.Info("token revoked", "token_id", token.ID)
+	}
+	return err
 }
 
 func (a *Auth) generateAccessToken(user *models.User) (string, time.Time, error) {

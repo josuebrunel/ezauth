@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/gopkg/xlog"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/facebook"
 	"golang.org/x/oauth2/github"
@@ -70,16 +71,19 @@ func (a *Auth) OAuth2GetUserInfo(ctx context.Context, provider string, token *oa
 	client := oauth2.NewClient(ctx, oauth2.StaticTokenSource(token))
 	resp, err := client.Get(userInfoURL)
 	if err != nil {
+		xlog.Error("failed to get user info from provider", "provider", provider, "err", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		xlog.Error("provider returned non-200 status", "provider", provider, "status", resp.Status)
 		return nil, fmt.Errorf("failed to get user info: %s", resp.Status)
 	}
 
 	var data map[string]any
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		xlog.Error("failed to decode provider response", "provider", provider, "err", err)
 		return nil, err
 	}
 
@@ -111,6 +115,7 @@ func (a *Auth) OAuth2GetUserInfo(ctx context.Context, provider string, token *oa
 	}
 
 	if userInfo.ID == "" {
+		xlog.Error("could not retrieve user id from provider", "provider", provider)
 		return nil, errors.New("could not retrieve user id from provider")
 	}
 
@@ -120,14 +125,23 @@ func (a *Auth) OAuth2GetUserInfo(ctx context.Context, provider string, token *oa
 // OAuth2Authenticate authenticates a user using OAuth2 information.
 // It links the OAuth2 account to an existing user or creates a new one.
 func (a *Auth) OAuth2Authenticate(ctx context.Context, provider string, userInfo *OAuth2UserInfo) (*models.User, error) {
+	xlog.Debug("authenticating via oauth2", "provider", provider, "email", userInfo.Email, "provider_id", userInfo.ID)
+
 	// 1. Try to find user by provider and provider ID
 	user, err := a.Repo.UserGetByProvider(ctx, provider, userInfo.ID)
 	if err == nil && user != nil {
 		// User found, update email if it changed
 		if userInfo.Email != "" && user.Email != userInfo.Email {
 			user.Email = userInfo.Email
-			return a.Repo.UserUpdate(ctx, user)
+			u, err := a.Repo.UserUpdate(ctx, user)
+			if err != nil {
+				xlog.Error("failed to update user email from provider", "user_id", user.ID, "err", err)
+				return nil, err
+			}
+			xlog.Info("user authenticated via oauth2", "user_id", user.ID, "provider", provider)
+			return u, nil
 		}
+		xlog.Info("user authenticated via oauth2", "user_id", user.ID, "provider", provider)
 		return user, nil
 	}
 
@@ -138,7 +152,13 @@ func (a *Auth) OAuth2Authenticate(ctx context.Context, provider string, userInfo
 			// Found by email, link provider
 			user.Provider = provider
 			user.ProviderID = &userInfo.ID
-			return a.Repo.UserUpdate(ctx, user)
+			u, err := a.Repo.UserUpdate(ctx, user)
+			if err != nil {
+				xlog.Error("failed to link provider to existing user", "user_id", user.ID, "provider", provider, "err", err)
+				return nil, err
+			}
+			xlog.Info("linked provider to existing user", "user_id", user.ID, "provider", provider)
+			return u, nil
 		}
 	}
 
@@ -150,5 +170,11 @@ func (a *Auth) OAuth2Authenticate(ctx context.Context, provider string, userInfo
 		EmailVerified: true,
 	}
 
-	return a.Repo.UserCreate(ctx, user)
+	u, err := a.Repo.UserCreate(ctx, user)
+	if err != nil {
+		xlog.Error("failed to create user from oauth2", "provider", provider, "err", err)
+		return nil, err
+	}
+	xlog.Info("created new user via oauth2", "user_id", u.ID, "provider", provider)
+	return u, nil
 }

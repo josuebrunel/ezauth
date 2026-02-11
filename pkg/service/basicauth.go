@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/gopkg/xlog"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -36,11 +37,14 @@ type RequestPasswordResetConfirm struct {
 
 // UserCreate creates a new user with email and password.
 func (a *Auth) UserCreate(ctx context.Context, req *RequestBasicAuth) (*models.User, error) {
+	xlog.Debug("creating user", "email", req.Email)
 	if err := a.validatePassword(req.Password); err != nil {
+		xlog.Debug("password validation failed", "email", req.Email, "err", err)
 		return nil, err
 	}
 	hash, err := a.UserHashPassword(req.Password)
 	if err != nil {
+		xlog.Error("failed to hash password", "email", req.Email, "err", err)
 		return nil, err
 	}
 	user := &models.User{
@@ -54,7 +58,13 @@ func (a *Auth) UserCreate(ctx context.Context, req *RequestBasicAuth) (*models.U
 		Roles:        req.Roles,
 		Provider:     "local",
 	}
-	return a.Repo.UserCreate(ctx, user)
+	u, err := a.Repo.UserCreate(ctx, user)
+	if err != nil {
+		xlog.Error("failed to create user", "email", req.Email, "err", err)
+		return nil, err
+	}
+	xlog.Info("user created", "id", u.ID, "email", u.Email)
+	return u, nil
 }
 
 // UserHashPassword generates a bcrypt hash of the given password.
@@ -72,14 +82,18 @@ func (a Auth) validatePassword(password string) error {
 
 // UserAuthenticate authenticates a user with email and password.
 func (a Auth) UserAuthenticate(ctx context.Context, req RequestBasicAuth) (*models.User, error) {
+	xlog.Debug("authenticating user", "email", req.Email)
 	user, err := a.Repo.UserGetByEmail(ctx, req.Email)
 	if err != nil {
+		xlog.Debug("authentication failed: user not found", "email", req.Email, "err", err)
 		return nil, err
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		xlog.Debug("authentication failed: invalid credentials", "email", req.Email)
 		return nil, errors.New("invalid credentials")
 	}
+	xlog.Info("user authenticated", "id", user.ID, "email", user.Email)
 	return user, nil
 }
 

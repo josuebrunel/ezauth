@@ -14,6 +14,7 @@ import (
 	"github.com/josuebrunel/ezauth/pkg/db/repository"
 	"github.com/josuebrunel/ezauth/pkg/handler"
 	"github.com/josuebrunel/ezauth/pkg/service"
+	"github.com/josuebrunel/gopkg/xlog"
 )
 
 // EzAuth represents the main entry point for the ezauth library.
@@ -39,6 +40,12 @@ func New(cfg *config.Config, path string) (*EzAuth, error) {
 
 	svc := service.New(cfg, repo, path)
 	h := handler.New(svc, path)
+
+	if cfg.Debug {
+		xlog.Setup(xlog.Config{Level: "DEBUG"})
+	} else {
+		xlog.Setup(xlog.Config{Level: "INFO"})
+	}
 
 	return &EzAuth{
 		Config:  cfg,
