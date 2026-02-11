@@ -138,3 +138,60 @@ func TestLoadUserMiddleware(t *testing.T) {
 
 	chain.ServeHTTP(httptest.NewRecorder(), req)
 }
+
+func TestGetSessionTokens_WithoutSessionMiddleware(t *testing.T) {
+	h := setupTestHandler(t)
+	ctx := context.Background()
+
+	// This should not panic even without session middleware loaded
+	tokens, ok := h.GetSessionTokens(ctx)
+	if ok {
+		t.Error("Expected ok to be false when session middleware is not loaded")
+	}
+	if tokens != nil {
+		t.Error("Expected tokens to be nil when session middleware is not loaded")
+	}
+}
+
+func TestLoadUserMiddleware_WithoutSessionMiddleware(t *testing.T) {
+	h := setupTestHandler(t)
+	ctx := context.Background()
+
+	// Create user in DB
+	user, err := h.svc.Repo.UserCreate(ctx, &models.User{
+		Email: util.UniqueEmail("middleware-no-session"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Handler that expects the user to be in context
+	finalHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got, err := GetSessionUser(r.Context())
+		if err != nil {
+			t.Errorf("Standalone GetSessionUser failed inside middleware: %v", err)
+			return
+		}
+		if got.ID != user.ID {
+			t.Errorf("Expected user ID %s, got %s", user.ID, got.ID)
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+
+	// Request
+	req := httptest.NewRequest("GET", "/", nil)
+
+	// Create a chain: MockAuthMiddleware -> LoadUserMiddleware -> FinalHandler
+	// WITHOUT session middleware, this should not panic
+	mockAuthMiddleware := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := context.WithValue(r.Context(), userContextKey, user.ID)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+
+	chain := mockAuthMiddleware(h.LoadUserMiddleware(finalHandler))
+
+	// This should not panic even without session middleware
+	chain.ServeHTTP(httptest.NewRecorder(), req)
+}
