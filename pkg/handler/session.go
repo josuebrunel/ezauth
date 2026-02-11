@@ -13,6 +13,11 @@ const sessionTokensKey = "tokens"
 
 // setAuthCookies sets the access and refresh tokens in the session.
 func (h *Handler) setAuthCookies(ctx context.Context, tokenResp *service.TokenResponse) {
+	defer func() {
+		if r := recover(); r != nil {
+			xlog.Debug("failed to set auth cookies: session not loaded", "error", r)
+		}
+	}()
 	tokens := map[string]string{
 		"access_token":  tokenResp.AccessToken,
 		"refresh_token": tokenResp.RefreshToken,
@@ -22,6 +27,11 @@ func (h *Handler) setAuthCookies(ctx context.Context, tokenResp *service.TokenRe
 
 // clearAuthCookies clears the authentication session.
 func (h *Handler) clearAuthCookies(ctx context.Context) {
+	defer func() {
+		if r := recover(); r != nil {
+			xlog.Debug("failed to clear auth cookies: session not loaded", "error", r)
+		}
+	}()
 	h.Session.Remove(ctx, sessionTokensKey)
 	h.Session.Destroy(ctx)
 }
@@ -39,7 +49,7 @@ func (h *Handler) GetSessionTokens(ctx context.Context) (tokens map[string]strin
 			ok = false
 		}
 	}()
-	
+
 	tokens, ok = h.Session.Get(ctx, sessionTokensKey).(map[string]string)
 	return tokens, ok
 }
