@@ -153,9 +153,7 @@ func (a *Auth) PasswordResetRequest(ctx context.Context, req RequestPasswordRese
 		if !strings.HasPrefix(prefix, "/") {
 			prefix = "/" + prefix
 		}
-		if strings.HasSuffix(prefix, "/") {
-			prefix = strings.TrimSuffix(prefix, "/")
-		}
+		prefix = strings.TrimSuffix(prefix, "/")
 	}
 
 	link := fmt.Sprintf("%s%s/password-reset/confirm?token=%s", a.Cfg.BaseURL, prefix, tokenValue)

@@ -63,7 +63,7 @@ jobs:
               env:
                   EZAUTH_DB_DIALECT: ${{ matrix.db.dialect }}
                   EZAUTH_DB_DSN: ${{ matrix.db.dsn }}
-              run: go test ./... -v -count=1
+              run: go test ./... -v -p 1 -count=1
 
     build:
         runs-on: ubuntu-latest

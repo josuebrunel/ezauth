@@ -69,7 +69,10 @@ func TestPasswordReset(t *testing.T) {
 	}
 
 	// 5. Verify token is revoked
-	storedToken, _ := auth.Repo.TokenGetByToken(ctx, tokenValue)
+	storedToken, err := auth.Repo.TokenGetByToken(ctx, tokenValue)
+	if err != nil {
+		t.Fatalf("failed to get token: %v", err)
+	}
 	if !storedToken.Revoked {
 		t.Error("expected token to be revoked after use")
 	}
