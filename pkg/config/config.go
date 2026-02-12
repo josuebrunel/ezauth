@@ -21,7 +21,7 @@ type OAuth2Google struct {
 	ClientID     string `json:"client_id" env:"OAUTH2_GOOGLE_CLIENT_ID"`
 	ClientSecret string `json:"client_secret" env:"OAUTH2_GOOGLE_CLIENT_SECRET"`
 	RedirectURL  string `json:"redirect_url" env:"OAUTH2_GOOGLE_REDIRECT_URL"`
-	Scopes       string `json:"scopes" env:"OAUTH2_GOOGLE_SCOPES"`
+	Scopes       string `json:"scopes" env:"OAUTH2_GOOGLE_SCOPES" default:"openid,profile,email"`
 }
 
 // OAuth2Github defines the settings for GitHub OAuth2.
@@ -30,7 +30,7 @@ type OAuth2Github struct {
 	ClientID     string `json:"client_id" env:"OAUTH2_GITHUB_CLIENT_ID"`
 	ClientSecret string `json:"client_secret" env:"OAUTH2_GITHUB_CLIENT_SECRET"`
 	RedirectURL  string `json:"redirect_url" env:"OAUTH2_GITHUB_REDIRECT_URL"`
-	Scopes       string `json:"scopes" env:"OAUTH2_GITHUB_SCOPES"`
+	Scopes       string `json:"scopes" env:"OAUTH2_GITHUB_SCOPES" default:"user:email"`
 }
 
 // OAuth2Facebook defines the settings for Facebook OAuth2.
@@ -39,7 +39,7 @@ type OAuth2Facebook struct {
 	ClientID     string `json:"client_id" env:"OAUTH2_FACEBOOK_CLIENT_ID"`
 	ClientSecret string `json:"client_secret" env:"OAUTH2_FACEBOOK_CLIENT_SECRET"`
 	RedirectURL  string `json:"redirect_url" env:"OAUTH2_FACEBOOK_REDIRECT_URL"`
-	Scopes       string `json:"scopes" env:"OAUTH2_FACEBOOK_SCOPES"`
+	Scopes       string `json:"scopes" env:"OAUTH2_FACEBOOK_SCOPES" default:"email,public_profile"`
 }
 
 // OAuth2 defines the general OAuth2 settings and provider-specific configurations.
