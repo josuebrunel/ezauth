@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	ezmiddleware "github.com/josuebrunel/ezauth/pkg/handler/middleware"
 	"github.com/josuebrunel/ezauth/pkg/service"
 	"github.com/josuebrunel/gopkg/xlog"
 )
@@ -57,7 +58,7 @@ func (h *Handler) GetSessionTokens(ctx context.Context) (tokens map[string]strin
 // GetSessionUser returns the user object from the context.
 // This requires the user to be previously set in the context via LoadUserMiddleware.
 func GetSessionUser(ctx context.Context) (*models.User, error) {
-	user, ok := ctx.Value(userObjectContextKey).(*models.User)
+	user, ok := ctx.Value(ezmiddleware.UserObjectContextKey).(*models.User)
 	if !ok {
 		return nil, errors.New("user not found in context")
 	}

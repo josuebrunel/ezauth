@@ -56,7 +56,7 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	// IMPORTANT: Add session middleware so that GetSessionUser works
-	r.Use(auth.Handler.Session.LoadAndSave)
+	r.Use(auth.SessionMiddleware)
 
 	// Initialize templates
 	if err := initTemplates(); err != nil {
@@ -83,7 +83,7 @@ func main() {
 
 	// Protected Routes
 	r.Group(func(r chi.Router) {
-		r.Use(auth.Handler.LoginRequired)
+		r.Use(auth.LoginRequiredMiddleware)
 
 		r.Get("/dashboard", func(w http.ResponseWriter, r *http.Request) {
 			// Get user details

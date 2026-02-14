@@ -131,8 +131,8 @@ func main() {
     r.Use(middleware.Logger)
     r.Use(middleware.Recoverer)
 
-    // 4. IMPORTANT: Add session middleware so that GetSessionUser works in handlers
-    r.Use(auth.Handler.Session.LoadAndSave)
+    // 4. Add session middleware (handles sessions and user loading)
+    r.Use(auth.SessionMiddleware)
 
     // 5. Mount Auth Routes
     r.Mount("/auth", auth.Handler)
@@ -180,7 +180,7 @@ You can retrieve the full user object from the session using `auth.GetSessionUse
 
 ```go
 // 1. Mount session middleware
-r.Use(auth.Handler.Session.LoadAndSave)
+r.Use(auth.SessionMiddleware)
 
 // 2. In your handler
 r.Get("/", func(w http.ResponseWriter, r *http.Request) {
@@ -262,7 +262,41 @@ These endpoints accept `application/json` and return JSON responses.
 | POST   | `/auth/api/logout`                 | Revoke refresh token (Protected)  |
 | DELETE | `/auth/api/user`                   | Delete account (Protected)        |
 
-## Swagger Documentation
+## Middlewares
+ 
+ `ezauth` provides several "plug and play" middlewares to protect your routes and manage user sessions. These are available directly on the `EzAuth` instance.
+ 
+ ### `auth.SessionMiddleware`
+ 
+ **Usage**: `r.Use(auth.SessionMiddleware)`
+ 
+ This is the recommended middleware for most applications. It combines session management and user loading.
+ - Loads and saves session data (cookies).
+ - Populates `GetSessionUser(ctx)` for downstream handlers.
+ 
+ ### `auth.LoginRequiredMiddleware`
+ 
+ **Usage**: `r.Use(auth.LoginRequiredMiddleware)`
+ 
+ Protects routes by requiring authentication.
+ - **Browser requests**: Redirects to the configured `EZAUTH_LOGIN_PAGE_URL`.
+ - **API requests**: Returns `401 Unauthorized`.
+ 
+ ### `auth.LoadUserMiddleware`
+ 
+ **Usage**: `r.Use(auth.LoadUserMiddleware)`
+ 
+ Loads the user into the context *without* managing the session itself. Use this if you are using `auth.Handler.Session.LoadAndSave` manually or have a custom session setup.
+ 
+ ### `auth.AuthMiddleware`
+ 
+ **Usage**: `r.Use(auth.AuthMiddleware)`
+ 
+ Protects API routes using JWT Bearer tokens in the `Authorization` header.
+ - Validates the token signature.
+ - Sets the user ID in the context.
+ 
+ ## Swagger Documentation
 
 To generate the Swagger documentation, run:
 

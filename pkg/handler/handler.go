@@ -13,29 +13,22 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	_ "github.com/josuebrunel/ezauth/pkg/handler/docs"
+	ezmiddleware "github.com/josuebrunel/ezauth/pkg/handler/middleware"
 	"github.com/josuebrunel/ezauth/pkg/service"
 	"github.com/josuebrunel/gopkg/xlog"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
-type contextKey string
-
-const (
-	userContextKey       = contextKey("userID")
-	userObjectContextKey = contextKey("user")
-)
-
 // LoadUserMiddleware is a middleware that loads the authenticated user into the context.
 // This allows downstream handlers to use GetSessionUser(ctx) without the Handler instance.
 func (h *Handler) LoadUserMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		if user, err := h.GetSessionUser(ctx); err == nil {
-			ctx = context.WithValue(ctx, userContextKey, user.ID)
-			ctx = context.WithValue(ctx, userObjectContextKey, user)
-		}
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+	return ezmiddleware.LoadUserMiddleware(h.GetSessionUser)(next)
+}
+
+// SessionMiddleware combines LoadAndSave and LoadUserMiddleware.
+// It ensures session data is loaded/saved and the user is populated in the context.
+func (h *Handler) SessionMiddleware(next http.Handler) http.Handler {
+	return ezmiddleware.SessionMiddleware(h.Session, h.GetSessionUser)(next)
 }
 
 type LogoutRequest struct {
@@ -190,7 +183,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // GetUserID retrieves the user ID from the request context.
 // It returns ErrUserIDNotFoundInContext if the user ID is not present.
 func GetUserID(ctx context.Context) (string, error) {
-	userID, ok := ctx.Value(userContextKey).(string)
+	userID, ok := ctx.Value(ezmiddleware.UserContextKey).(string)
 	if !ok {
 		return "", ErrUserIDNotFoundInContext
 	}
@@ -320,7 +313,7 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} ApiResponse[string]
 // @Router /auth/userinfo [get]
 func (h *Handler) UserInfo(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value(userContextKey).(string)
+	userID, ok := r.Context().Value(ezmiddleware.UserContextKey).(string)
 	if !ok {
 		WriteJSONResponseError(w, http.StatusInternalServerError, ErrUserNotFoundInContext)
 		return
@@ -380,7 +373,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} ApiResponse[string]
 // @Router /auth/user [delete]
 func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value(userContextKey).(string)
+	userID, ok := r.Context().Value(ezmiddleware.UserContextKey).(string)
 	if !ok {
 		WriteJSONResponseError(w, http.StatusInternalServerError, ErrUserNotFoundInContext)
 		return

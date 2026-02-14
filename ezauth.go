@@ -104,6 +104,11 @@ func (e *EzAuth) LoadUserMiddleware(next http.Handler) http.Handler {
 	return e.Handler.LoadUserMiddleware(next)
 }
 
+// SessionMiddleware returns the middleware that handles session management and user loading.
+func (e *EzAuth) SessionMiddleware(next http.Handler) http.Handler {
+	return e.Handler.SessionMiddleware(next)
+}
+
 // LoginRequiredMiddleware returns the middleware that requires the request to be authenticated.
 func (e *EzAuth) LoginRequiredMiddleware(next http.Handler) http.Handler {
 	return e.Handler.LoginRequiredMiddleware(next)

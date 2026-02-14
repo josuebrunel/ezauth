@@ -47,8 +47,8 @@ func main() {
     r.Use(middleware.Logger)
     r.Use(middleware.Recoverer)
 
-    // 4. IMPORTANT: Add session middleware so that GetSessionUser works in handlers
-    r.Use(auth.Handler.Session.LoadAndSave)
+    // 4. Add session middleware (handles sessions and user loading)
+    r.Use(auth.SessionMiddleware)
 
     // 5. Mount Auth Routes
     r.Mount("/auth", auth.Handler)
@@ -81,8 +81,8 @@ func main() {
 To retrieve the authenticated user from the session cookies, you **must** mount the session middleware.
 
 ```go
-// 1. Mount session middleware (Required for GetSessionUser)
-r.Use(auth.Handler.Session.LoadAndSave)
+// 1. Mount session middleware
+r.Use(auth.SessionMiddleware)
 
 // 2. Access the user in your handler
 r.Get("/", func(w http.ResponseWriter, r *http.Request) {
@@ -97,18 +97,21 @@ r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 ```
 
 ### Optimizing with Middleware
-
-If you use `GetSessionUser` frequently, you can use the `LoadUserMiddleware` to pre-load the user into the context. This avoids repeated DB lookups if multiple handlers/middlewares need the user info in the same request.
-
-```go
-r.Use(auth.LoadUserMiddleware)
-
-r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-    // This will be fast as it retrieves from context
-    user, err := auth.GetSessionUser(r.Context())
-    // ...
-})
-```
+ 
+ The `auth.SessionMiddleware` already includes user loading, so `GetSessionUser` will be fast (context retrieval).
+ 
+ If you are **not** using `SessionMiddleware` but still want to pre-load the user (e.g. if you handle sessions manually), you can use `LoadUserMiddleware`:
+ 
+ ```go
+ r.Use(auth.Handler.Session.LoadAndSave) // Session only
+ r.Use(auth.LoadUserMiddleware)          // Pre-load user
+ 
+ r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+     // This will be fast as it retrieves from context
+     user, err := auth.GetSessionUser(r.Context())
+     // ...
+ })
+ ```
 
 ## Handling Flash Messages
 
@@ -132,8 +135,37 @@ r.Get("/login", func(w http.ResponseWriter, r *http.Request) {
 
 > [!NOTE]
 > Flash messages are set automatically by the form handlers (e.g., `FormLogin`, `FormRegister`) when errors occur or actions succeed. You just need to retrieve and display them in your page handlers.
-
-## Core Components
+ 
+ ## Middlewares
+ 
+ `ezauth` comes with "plug and play" middlewares to help you secure your application. These are exposed via the `EzAuth` struct (e.g., `auth.SessionMiddleware`).
+ 
+ | Middleware                | Description                                                                                                                               | Usage                                 |
+ | :------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------ |
+ | `SessionMiddleware`       | **Recommended**. Manages sessions (cookies) AND loads the authenticated user into context. Use this if you want `GetSessionUser` to work. | `r.Use(auth.SessionMiddleware)`       |
+ | `LoginRequiredMiddleware` | Restricts access to authenticated users only. Redirects to login page (browser) or returns 401 (API).                                     | `r.Use(auth.LoginRequiredMiddleware)` |
+ | `LoadUserMiddleware`      | Loads the user into context. Use this if you are handling sessions manually or want to optimize repeated user lookups.                    | `r.Use(auth.LoadUserMiddleware)`      |
+ | `AuthMiddleware`          | Protects API endpoints using JWT Bearer tokens (`Authorization: Bearer <token>`).                                                         | `r.Use(auth.AuthMiddleware)`          |
+ 
+ ### Example: Protecting a Dashboard
+ 
+ ```go
+ // 1. Setup Session (at the router root level)
+ r.Use(auth.SessionMiddleware)
+ 
+ // 2. Protect specific routes
+ r.Group(func(r chi.Router) {
+     r.Use(auth.LoginRequiredMiddleware)
+     
+     r.Get("/dashboard", func(w http.ResponseWriter, r *http.Request) {
+         // User is guaranteed to be authenticated here
+         user, _ := auth.GetSessionUser(r.Context())
+         w.Write([]byte("Hello " + user.Email))
+     })
+ })
+ ```
+ 
+ ## Core Components
 
 When you initialize `ezauth`, you get access to several key components through the `EzAuth` struct:
 

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	ezmiddleware "github.com/josuebrunel/ezauth/pkg/handler/middleware"
 	"github.com/josuebrunel/ezauth/pkg/util"
 )
 
@@ -20,7 +21,7 @@ func TestGetSessionUser_Standalone(t *testing.T) {
 
 	// 2. Context with user
 	user := &models.User{Email: util.UniqueEmail("test")}
-	ctx = context.WithValue(ctx, userObjectContextKey, user)
+	ctx = context.WithValue(ctx, ezmiddleware.UserObjectContextKey, user)
 	got, err := GetSessionUser(ctx)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -44,7 +45,7 @@ func TestHandler_GetSessionUser(t *testing.T) {
 
 	// Scenario 1: Standalone User Object in Context
 	t.Run("Context_UserObject", func(t *testing.T) {
-		ctxVal := context.WithValue(ctx, userObjectContextKey, user)
+		ctxVal := context.WithValue(ctx, ezmiddleware.UserObjectContextKey, user)
 		got, err := h.GetSessionUser(ctxVal)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
@@ -56,7 +57,7 @@ func TestHandler_GetSessionUser(t *testing.T) {
 
 	// Scenario 2: UserID in Context (AuthMiddleware simulation)
 	t.Run("Context_UserID", func(t *testing.T) {
-		ctxVal := context.WithValue(ctx, userContextKey, user.ID)
+		ctxVal := context.WithValue(ctx, ezmiddleware.UserContextKey, user.ID)
 		got, err := h.GetSessionUser(ctxVal)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
@@ -129,7 +130,7 @@ func TestLoadUserMiddleware(t *testing.T) {
 	// Create a chain: MockAuthMiddleware -> LoadUserMiddleware -> FinalHandler
 	mockAuthMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := context.WithValue(r.Context(), userContextKey, user.ID)
+			ctx := context.WithValue(r.Context(), ezmiddleware.UserContextKey, user.ID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -185,7 +186,7 @@ func TestLoadUserMiddleware_WithoutSessionMiddleware(t *testing.T) {
 	// WITHOUT session middleware, this should not panic
 	mockAuthMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := context.WithValue(r.Context(), userContextKey, user.ID)
+			ctx := context.WithValue(r.Context(), ezmiddleware.UserContextKey, user.ID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
