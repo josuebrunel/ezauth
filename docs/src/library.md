@@ -104,9 +104,29 @@ func MyHandler(w http.ResponseWriter, r *http.Request) {
         // Handle error
     } else {
         fmt.Println("User email:", user.Email)
+
+        // Check Role
+        if user.HasRole("admin") {
+            // ...
+        }
+
+        // Get Metadata (generic)
+        if theme, ok := models.GetMeta[string](user, "theme"); ok {
+            // ...
+        }
     }
 }
 ```
+
+### User Model Helpers
+
+When you have a `models.User` object, you can use these helper methods:
+
+- `HasRole(role string) bool`: Checks if the user has a specific role.
+- `GetMeta[T any](user, key) (T, bool)`: Retrieves a value from `UserMetadata`.
+- `SetMeta(key, value)`: Sets a value in `UserMetadata`.
+- `GetAppMeta[T any](user, key) (T, bool)`: Retrieves a value from `AppMetadata`.
+- `SetAppMeta(key, value)`: Sets a value in `AppMetadata`.
 
 ## Retrieving Authenticated User
 

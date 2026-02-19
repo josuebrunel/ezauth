@@ -234,8 +234,29 @@ func MyHandler(w http.ResponseWriter, r *http.Request) {
 
     // Get User Object (requires LoadUserMiddleware or SessionMiddleware)
     user, err := ezauth.GetUser(r.Context())
+    if err == nil {
+        // Check for role
+        if user.HasRole("admin") {
+            // ...
+        }
+
+        // Get Metadata with type safety
+        if theme, ok := models.GetMeta[string](user, "theme"); ok {
+            // use theme
+        }
+    }
 }
 ```
+
+### User Model Helpers
+
+The `User` struct includes helper methods for common operations:
+
+- `HasRole(role string) bool`: Checks if the user has a specific role.
+- `GetMeta[T any](user, key) (T, bool)`: Retrieves a value from `UserMetadata` with type casting.
+- `SetMeta(key, value)`: Sets a value in `UserMetadata`.
+- `GetAppMeta[T any](user, key) (T, bool)`: Retrieves a value from `AppMetadata`.
+- `SetAppMeta(key, value)`: Sets a value in `AppMetadata`.
 
 ## API Endpoints
 
