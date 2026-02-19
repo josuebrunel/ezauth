@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
     
     
       
@@ -521,6 +521,34 @@
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#helper-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Helper Functions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Helper Functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#user-model-helpers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User Model Helpers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1134,6 +1162,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#helper-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Helper Functions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Helper Functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#user-model-helpers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User Model Helpers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#retrieving-authenticated-user" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1397,6 +1453,54 @@ func main() {
     http.ListenAndServe(&quot;:3000&quot;, r)
 }
 </code></pre>
+<h2 id="helper-functions">Helper Functions</h2>
+<p><code>ezauth</code> provides package-level helper functions for convenient access to authentication context. These can be used in your handlers or templates.</p>
+<blockquote>
+<p>[!IMPORTANT]
+These functions require the appropriate middleware (<code>SessionMiddleware</code>, <code>LoadUserMiddleware</code>, or <code>AuthMiddleware</code>) to be mounted on the router path.</p>
+</blockquote>
+<pre><code class="language-go">import &quot;github.com/josuebrunel/ezauth&quot;
+
+func MyHandler(w http.ResponseWriter, r *http.Request) {
+    // Check if authenticated (checks both User object and UserID in context)
+    if ezauth.IsAuthenticated(r.Context()) {
+        // ...
+    }
+
+    // Get User ID (works with both Session and JWT auth)
+    userID, err := ezauth.GetUserID(r.Context())
+    if err != nil {
+        // Handle error (e.g. user not found in context)
+    }
+
+    // Get User Object (requires LoadUserMiddleware or SessionMiddleware)
+    user, err := ezauth.GetUser(r.Context())
+    if err != nil {
+        // Handle error
+    } else {
+        fmt.Println(&quot;User email:&quot;, user.Email)
+
+        // Check Role
+        if user.HasRole(&quot;admin&quot;) {
+            // ...
+        }
+
+        // Get Metadata (generic)
+        if theme, ok := models.GetMeta[string](user, &quot;theme&quot;); ok {
+            // ...
+        }
+    }
+}
+</code></pre>
+<h3 id="user-model-helpers">User Model Helpers</h3>
+<p>When you have a <code>models.User</code> object, you can use these helper methods:</p>
+<ul>
+<li><code>HasRole(role string) bool</code>: Checks if the user has a specific role.</li>
+<li><code>GetMeta[T any](user, key) (T, bool)</code>: Retrieves a value from <code>UserMetadata</code>.</li>
+<li><code>SetMeta(key, value)</code>: Sets a value in <code>UserMetadata</code>.</li>
+<li><code>GetAppMeta[T any](user, key) (T, bool)</code>: Retrieves a value from <code>AppMetadata</code>.</li>
+<li><code>SetAppMeta(key, value)</code>: Sets a value in <code>AppMetadata</code>.</li>
+</ul>
 <h2 id="retrieving-authenticated-user">Retrieving Authenticated User</h2>
 <p>To retrieve the authenticated user from the session cookies, you <strong>must</strong> mount the session middleware.</p>
 <pre><code class="language-go">// 1. Mount session middleware
