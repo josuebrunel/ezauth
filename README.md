@@ -213,6 +213,30 @@ r.Get("/login", func(w http.ResponseWriter, r *http.Request) {
 })
 ```
 
+## Helper Functions
+
+`ezauth` provides package-level helper functions for convenient access to authentication context, useful in handlers or templates.
+
+> [!IMPORTANT]
+> These functions require the appropriate middleware (`SessionMiddleware`, `LoadUserMiddleware`, or `AuthMiddleware`) to be mounted on the router path.
+
+```go
+import "github.com/josuebrunel/ezauth"
+
+func MyHandler(w http.ResponseWriter, r *http.Request) {
+    // Check if authenticated
+    if ezauth.IsAuthenticated(r.Context()) {
+        // ...
+    }
+
+    // Get User ID (works with both Session and JWT auth)
+    userID, err := ezauth.GetUserID(r.Context())
+
+    // Get User Object (requires LoadUserMiddleware or SessionMiddleware)
+    user, err := ezauth.GetUser(r.Context())
+}
+```
+
 ## API Endpoints
 
 ### Form-based Handlers (Cookies & Redirects)

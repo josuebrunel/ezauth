@@ -130,3 +130,29 @@ func (e *EzAuth) GetErrorMessage(ctx context.Context) string {
 func (e *EzAuth) GetSuccessMessage(ctx context.Context) string {
 	return e.Handler.GetSuccessMessage(ctx)
 }
+
+// GetUserID retrieves the user ID from the request context.
+// It requires AuthMiddleware, LoadUserMiddleware, or SessionMiddleware to be used.
+// It returns an error if the user ID is not found in the context.
+func GetUserID(ctx context.Context) (string, error) {
+	return handler.GetUserID(ctx)
+}
+
+// GetUser retrieves the authenticated user from the context.
+// It requires LoadUserMiddleware or SessionMiddleware to be used.
+func GetUser(ctx context.Context) (*models.User, error) {
+	return handler.GetSessionUser(ctx)
+}
+
+// IsAuthenticated checks if the request is authenticated.
+// It returns true if a user object or user ID is found in the context.
+// It requires AuthMiddleware, LoadUserMiddleware, or SessionMiddleware to be used.
+func IsAuthenticated(ctx context.Context) bool {
+	if _, err := GetUser(ctx); err == nil {
+		return true
+	}
+	if _, err := GetUserID(ctx); err == nil {
+		return true
+	}
+	return false
+}

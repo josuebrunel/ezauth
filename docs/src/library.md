@@ -76,6 +76,38 @@ func main() {
 }
 ```
 
+## Helper Functions
+
+`ezauth` provides package-level helper functions for convenient access to authentication context. These can be used in your handlers or templates.
+
+> [!IMPORTANT]
+> These functions require the appropriate middleware (`SessionMiddleware`, `LoadUserMiddleware`, or `AuthMiddleware`) to be mounted on the router path.
+
+```go
+import "github.com/josuebrunel/ezauth"
+
+func MyHandler(w http.ResponseWriter, r *http.Request) {
+    // Check if authenticated (checks both User object and UserID in context)
+    if ezauth.IsAuthenticated(r.Context()) {
+        // ...
+    }
+
+    // Get User ID (works with both Session and JWT auth)
+    userID, err := ezauth.GetUserID(r.Context())
+    if err != nil {
+        // Handle error (e.g. user not found in context)
+    }
+
+    // Get User Object (requires LoadUserMiddleware or SessionMiddleware)
+    user, err := ezauth.GetUser(r.Context())
+    if err != nil {
+        // Handle error
+    } else {
+        fmt.Println("User email:", user.Email)
+    }
+}
+```
+
 ## Retrieving Authenticated User
 
 To retrieve the authenticated user from the session cookies, you **must** mount the session middleware.
