@@ -243,17 +243,17 @@ func MyHandler(w http.ResponseWriter, r *http.Request) {
 
 These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, and redirect.
 
-| Method | Endpoint                           | Description                 |
-| ------ | ---------------------------------- | --------------------------- |
-| POST   | `/auth/register`                   | Register a new user         |
-| POST   | `/auth/login`                      | Login and set cookies       |
-| POST   | `/auth/logout`                     | Clear cookies and logout    |
-| POST   | `/auth/password-reset/request`     | Request password reset link |
-| POST   | `/auth/password-reset/confirm`     | Confirm password reset      |
-| POST   | `/auth/passwordless/request`       | Request magic link          |
-| GET    | `/auth/passwordless/login`         | Login via magic link        |
-| GET    | `/auth/oauth2/{provider}/login`    | Login via OAuth2 provider   |
-| GET    | `/auth/oauth2/{provider}/callback` | OAuth2 provider callback    |
+| Method | Endpoint                           | Description                                                                 |
+| ------ | ---------------------------------- | --------------------------------------------------------------------------- |
+| POST   | `/auth/register`                   | Register a new user                                                         |
+| POST   | `/auth/login`                      | Login and set cookies                                                       |
+| POST   | `/auth/logout`                     | Clear cookies and logout                                                    |
+| POST   | `/auth/password-reset/request`     | Request password reset link                                                 |
+| POST   | `/auth/password-reset/confirm`     | Confirm password reset                                                      |
+| POST   | `/auth/passwordless/request`       | Request magic link                                                          |
+| GET    | `/auth/passwordless/login`         | Login via magic link                                                        |
+| GET    | `/auth/oauth2/{provider}/login`    | Login via OAuth2 provider                                                   |
+| GET    | `/auth/oauth2/{provider}/callback` | OAuth2 provider callback. URL: `{base_url}/auth/oauth2/{provider}/callback` |
 
 #### Form Field Reference
 

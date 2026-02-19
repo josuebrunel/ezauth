@@ -63,7 +63,7 @@ Returns a JSON object containing the CSRF token.
 
 ### OAuth2
 `GET /auth/oauth2/{provider}/login` (Initiates login)
-`GET /auth/oauth2/{provider}/callback` (Callback handler)
+`GET /auth/oauth2/{provider}/callback` (Callback handler. URL: `{base_url}/auth/oauth2/{provider}/callback`)
 
 ---
 

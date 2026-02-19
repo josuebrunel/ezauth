@@ -65,25 +65,25 @@ Used for the Form-based handlers (browser flows).
 | `EZAUTH_OAUTH2_CALLBACK_URL` | The URL users are redirected to after successful OAuth2 login. |
 
 ### Google
-| Variable                             | Description                                | Default                |
-| ------------------------------------ | ------------------------------------------ | ---------------------- |
-| `EZAUTH_OAUTH2_GOOGLE_CLIENT_ID`     | Google OAuth2 Client ID.                   |
-| `EZAUTH_OAUTH2_GOOGLE_CLIENT_SECRET` | Google OAuth2 Client Secret.               |
-| `EZAUTH_OAUTH2_GOOGLE_REDIRECT_URL`  | Redirect URL registered in Google Console. |
-| `EZAUTH_OAUTH2_GOOGLE_SCOPES`        | Scopes to request.                         | `openid,profile,email` |
+| Variable                             | Description                                                                                  | Default                |
+| ------------------------------------ | -------------------------------------------------------------------------------------------- | ---------------------- |
+| `EZAUTH_OAUTH2_GOOGLE_CLIENT_ID`     | Google OAuth2 Client ID.                                                                     |
+| `EZAUTH_OAUTH2_GOOGLE_CLIENT_SECRET` | Google OAuth2 Client Secret.                                                                 |
+| `EZAUTH_OAUTH2_GOOGLE_REDIRECT_URL`  | Redirect URL registered in Google Console. Must be: `{base_url}/auth/oauth2/google/callback` |
+| `EZAUTH_OAUTH2_GOOGLE_SCOPES`        | Scopes to request.                                                                           | `openid,profile,email` |
 
 ### GitHub
-| Variable                             | Description                                 | Default      |
-| ------------------------------------ | ------------------------------------------- | ------------ |
-| `EZAUTH_OAUTH2_GITHUB_CLIENT_ID`     | GitHub OAuth2 Client ID.                    |              |
-| `EZAUTH_OAUTH2_GITHUB_CLIENT_SECRET` | GitHub OAuth2 Client Secret.                |              |
-| `EZAUTH_OAUTH2_GITHUB_REDIRECT_URL`  | Redirect URL registered in GitHub settings. |              |
-| `EZAUTH_OAUTH2_GITHUB_SCOPES`        | Scopes to request.                          | `user:email` |
+| Variable                             | Description                                                                                   | Default      |
+| ------------------------------------ | --------------------------------------------------------------------------------------------- | ------------ |
+| `EZAUTH_OAUTH2_GITHUB_CLIENT_ID`     | GitHub OAuth2 Client ID.                                                                      |              |
+| `EZAUTH_OAUTH2_GITHUB_CLIENT_SECRET` | GitHub OAuth2 Client Secret.                                                                  |              |
+| `EZAUTH_OAUTH2_GITHUB_REDIRECT_URL`  | Redirect URL registered in GitHub settings. Must be: `{base_url}/auth/oauth2/github/callback` |              |
+| `EZAUTH_OAUTH2_GITHUB_SCOPES`        | Scopes to request.                                                                            | `user:email` |
 
 ### Facebook
-| Variable                               | Description                                   | Default                |
-| -------------------------------------- | --------------------------------------------- | ---------------------- |
-| `EZAUTH_OAUTH2_FACEBOOK_CLIENT_ID`     | Facebook OAuth2 Client ID.                    |                        |
-| `EZAUTH_OAUTH2_FACEBOOK_CLIENT_SECRET` | Facebook OAuth2 Client Secret.                |                        |
-| `EZAUTH_OAUTH2_FACEBOOK_REDIRECT_URL`  | Redirect URL registered in Facebook settings. |                        |
-| `EZAUTH_OAUTH2_FACEBOOK_SCOPES`        | Scopes to request.                            | `email,public_profile` |
+| Variable                               | Description                                                                                       | Default                |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------------- |
+| `EZAUTH_OAUTH2_FACEBOOK_CLIENT_ID`     | Facebook OAuth2 Client ID.                                                                        |                        |
+| `EZAUTH_OAUTH2_FACEBOOK_CLIENT_SECRET` | Facebook OAuth2 Client Secret.                                                                    |                        |
+| `EZAUTH_OAUTH2_FACEBOOK_REDIRECT_URL`  | Redirect URL registered in Facebook settings. Must be: `{base_url}/auth/oauth2/facebook/callback` |                        |
+| `EZAUTH_OAUTH2_FACEBOOK_SCOPES`        | Scopes to request.                                                                                | `email,public_profile` |
