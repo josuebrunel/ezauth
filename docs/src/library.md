@@ -188,6 +188,34 @@ r.Get("/login", func(w http.ResponseWriter, r *http.Request) {
 > [!NOTE]
 > Flash messages are set automatically by the form handlers (e.g., `FormLogin`, `FormRegister`) when errors occur or actions succeed. You just need to retrieve and display them in your page handlers.
  
+### CSRF Protection
+
+When using the form-based handlers (e.g., `POST /auth/login`), `ezauth` automatically enforces Cross-Site Request Forgery (CSRF) protection using `filippo.io/csrf/gorilla`. The protection uses your configured `EZAUTH_JWT_SECRET` as the key.
+
+**Note on Tokens vs Headers:** 
+This library relies entirely on modern browser **Fetch Metadata headers** (e.g. `Sec-Fetch-Site`, `Origin`) to enforce same-origin requests dynamically, mirroring the upcoming Go 1.25 standard library CSRF protections.
+
+Because of this, **hidden CSRF tokens in your HTML forms are completely optional and ignored during validation.** However, if you are integrating with frontend frameworks or legacy systems that *expect* a token to be present, `ezauth` provides helpers to seamlessly generate dummy tokens to satisfy those requirements:
+
+```go
+import "github.com/josuebrunel/ezauth"
+
+// In your custom handler (ensure it's wrapped with the same CSRF middleware as ezauth)
+r.Get("/my-custom-login", func(w http.ResponseWriter, r *http.Request) {
+    data := map[string]interface{}{
+        // Generate a pre-built <input type="hidden"> field
+        "csrfField": ezauth.CSRFTemplateField(r),
+        
+        // Or get the raw string if you need it for AJAX headers (X-CSRF-Token)
+        "csrfToken": ezauth.CSRFToken(r), 
+    }
+    tmpl.Execute(w, data)
+})
+```
+
+> [!NOTE]
+> JSON API endpoints (`/auth/api/*`) do not require CSRF tokens since they utilize JWT Bearer authentication instead of cookie-based sessions.
+
  ## Middlewares
  
  `ezauth` comes with "plug and play" middlewares to help you secure your application. These are exposed via the `EzAuth` struct (e.g., `auth.SessionMiddleware`).

@@ -6,8 +6,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"html/template"
 	"net/http"
 
+	csrf "filippo.io/csrf/gorilla"
 	"github.com/josuebrunel/ezauth/pkg/config"
 	"github.com/josuebrunel/ezauth/pkg/db/migrations"
 	"github.com/josuebrunel/ezauth/pkg/db/models"
@@ -155,4 +157,16 @@ func IsAuthenticated(ctx context.Context) bool {
 		return true
 	}
 	return false
+}
+
+// CSRFToken returns the current CSRF token string from the request context.
+// This requires the csrf.Protect middleware to have run before this request.
+func CSRFToken(r *http.Request) string {
+	return csrf.Token(r)
+}
+
+// CSRFTemplateField is a template helper that returns an HTML hidden input field
+// containing the CSRF token. This requires the csrf.Protect middleware to have run.
+func CSRFTemplateField(r *http.Request) template.HTML {
+	return csrf.TemplateField(r)
 }

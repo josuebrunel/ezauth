@@ -18,12 +18,12 @@ All `ezauth` JSON API responses follow a consistent format:
 
 These endpoints accept `application/x-www-form-urlencoded` and redirect upon success or failure. Authentication tokens are stored in an HTTP-only cookie named `ezauthsess`.
 
-POST requests to these endpoints must include a valid CSRF token in the `X-CSRF-Token` header.
+POST requests to these endpoints are automatically protected by `filippo.io/csrf/gorilla` using modern browser **Fetch Metadata headers** (e.g., `Sec-Fetch-Site: same-origin`). You do not need to manually include a CSRF token in your requests.
 
 ### Get CSRF Token
 `GET /auth/csrf`
 
-Returns a JSON object containing the CSRF token.
+*Available for legacy compatibility only. Tokens are ignored by the server during validation.* Returns a dummy JSON object containing a CSRF token.
 
 **Response:**
 ```json

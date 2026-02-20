@@ -213,6 +213,34 @@ r.Get("/login", func(w http.ResponseWriter, r *http.Request) {
 })
 ```
 
+### CSRF Protection
+
+When using the form-based handlers (e.g., `POST /auth/login`), `ezauth` automatically enforces CSRF protection using `filippo.io/csrf/gorilla` and your `EZAUTH_JWT_SECRET`. 
+
+**Note on Tokens vs Headers:** 
+This library relies entirely on modern browser **Fetch Metadata headers** (e.g. `Sec-Fetch-Site`, `Origin`) to enforce same-origin requests dynamically, mirroring the upcoming Go 1.25 standard library CSRF protections.
+
+Because of this, **hidden CSRF tokens in your HTML forms are completely optional and ignored during validation.** However, if you are integrating with frontend frameworks or legacy systems that *expect* a token to be present, `ezauth` provides helpers to seamlessly generate dummy tokens to satisfy those requirements:
+
+```go
+import "github.com/josuebrunel/ezauth"
+
+// In your custom handler (ensure it's wrapped with the same CSRF middleware as ezauth)
+r.Get("/my-custom-login", func(w http.ResponseWriter, r *http.Request) {
+    data := map[string]interface{}{
+        // Generate a pre-built <input type="hidden"> field
+        "csrfField": ezauth.CSRFTemplateField(r),
+        
+        // Or get the raw string if you need it for AJAX headers (X-CSRF-Token)
+        "csrfToken": ezauth.CSRFToken(r), 
+    }
+    tmpl.Execute(w, data)
+})
+```
+
+> [!NOTE]
+> If you are using the JSON API endpoints (`/auth/api/*`) instead of the web forms, CSRF is disabled automatically since they use standard JWT Bearer Auth without cookies.
+
 ## Helper Functions
 
 `ezauth` provides package-level helper functions for convenient access to authentication context, useful in handlers or templates.
