@@ -1449,10 +1449,10 @@
 </code></pre>
 <h2 id="form-handlers-browser">Form Handlers (Browser)</h2>
 <p>These endpoints accept <code>application/x-www-form-urlencoded</code> and redirect upon success or failure. Authentication tokens are stored in an HTTP-only cookie named <code>ezauthsess</code>.</p>
-<p>POST requests to these endpoints must include a valid CSRF token in the <code>X-CSRF-Token</code> header.</p>
+<p>POST requests to these endpoints are automatically protected by <code>filippo.io/csrf/gorilla</code> using modern browser <strong>Fetch Metadata headers</strong> (e.g., <code>Sec-Fetch-Site: same-origin</code>). You do not need to manually include a CSRF token in your requests.</p>
 <h3 id="get-csrf-token">Get CSRF Token</h3>
 <p><code>GET /auth/csrf</code></p>
-<p>Returns a JSON object containing the CSRF token.</p>
+<p><em>Available for legacy compatibility only. Tokens are ignored by the server during validation.</em> Returns a dummy JSON object containing a CSRF token.</p>
 <p><strong>Response:</strong></p>
 <pre><code class="language-json">{ &quot;csrf_token&quot;: &quot;...&quot; }
 </code></pre>
