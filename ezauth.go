@@ -85,10 +85,10 @@ func (e *EzAuth) GetUserID(ctx context.Context) (string, error) {
 	return handler.GetUserID(ctx)
 }
 
-// GetSessionToken retrieves the session token from the request context.
+// GetSessionTokens retrieves the session token from the request context.
 func (e *EzAuth) GetSessionTokens(ctx context.Context) (map[string]string, error) {
-	tokens, bool := e.Handler.GetSessionTokens(ctx)
-	if !bool {
+	tokens, ok := e.Handler.GetSessionTokens(ctx)
+	if !ok {
 		return nil, errors.New("session tokens not found")
 	}
 	return tokens, nil

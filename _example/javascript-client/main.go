@@ -42,8 +42,8 @@ func main() {
 	// ezauth internal router expects paths starting with "/auth" (because we passed "auth" to New)
 	// so we use Handle to pass the full path.
 	r.Handle("/auth/*", authApp.Handler)
-    // Also handle swagger if we want it, but for now let's focus on auth.
-    // r.Handle("/swagger/*", authApp.Handler)
+	// Also handle swagger if we want it, but for now let's focus on auth.
+	// r.Handle("/swagger/*", authApp.Handler)
 
 	// Serve static files
 	staticFS, err := fs.Sub(staticFiles, "static")

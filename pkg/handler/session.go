@@ -41,9 +41,7 @@ func (h *Handler) clearAuthCookies(ctx context.Context) {
 // This helper is useful for middleware or other components that need access to the session tokens.
 // Returns (nil, false) if session data is not available in the context.
 func (h *Handler) GetSessionTokens(ctx context.Context) (tokens map[string]string, ok bool) {
-	// The scs library panics when accessing session data without LoadAndSave middleware.
-	// We recover from this panic to gracefully handle scenarios where the middleware
-	// isn't loaded, which can happen when using LoadUserMiddleware without session support.
+
 	defer func() {
 		if recover() != nil {
 			tokens = nil
@@ -68,12 +66,11 @@ func GetSessionUser(ctx context.Context) (*models.User, error) {
 // GetSessionUser returns the authenticated user.
 // It checks the context first (user object), then the context (userID), then the session cookies.
 func (h *Handler) GetSessionUser(ctx context.Context) (*models.User, error) {
-	// 1. Check if user object is already in context (fastest)
+
 	if user, err := GetSessionUser(ctx); err == nil {
 		return user, nil
 	}
 
-	// 2. Check if UserID is in context (e.g. from AuthMiddleware)
 	if userID, err := GetUserID(ctx); err == nil {
 		user, err := h.svc.Repo.UserGetByID(ctx, userID)
 		if err == nil {
@@ -81,7 +78,6 @@ func (h *Handler) GetSessionUser(ctx context.Context) (*models.User, error) {
 		}
 	}
 
-	// 3. Check Session Tokens (Cookies)
 	tks, ok := h.GetSessionTokens(ctx)
 	if !ok {
 		return nil, errors.New("not authenticated")
@@ -89,7 +85,7 @@ func (h *Handler) GetSessionUser(ctx context.Context) (*models.User, error) {
 
 	token, err := h.svc.Repo.TokenGetByToken(ctx, tks["refresh_token"])
 	if err != nil {
-		// Only log if it's an unexpected error, consistent with original logic
+
 		xlog.Debug("failed to get refresh token from session", "error", err)
 		return nil, errors.New("not authenticated")
 	}
@@ -106,4 +102,51 @@ func (h *Handler) GetSessionUser(ctx context.Context) (*models.User, error) {
 func (h *Handler) IsAuthenticated(ctx context.Context) bool {
 	_, err := h.GetSessionUser(ctx)
 	return err == nil
+}
+
+const (
+	flashKeyError   = "_flash.error"
+	flashKeySuccess = "_flash.success"
+)
+
+// SetFlash stores a flash message in the session.
+// Flash messages are one-time messages that are cleared after being read.
+func (h *Handler) SetFlash(ctx context.Context, key, value string) {
+	defer func() {
+		_ = recover()
+	}()
+	h.Session.Put(ctx, "_flash."+key, value)
+}
+
+// GetFlash retrieves and removes a flash message from the session.
+// Returns an empty string if no flash message exists for the given key.
+func (h *Handler) GetFlash(ctx context.Context, key string) (msg string) {
+	defer func() {
+		if r := recover(); r != nil {
+			msg = ""
+		}
+	}()
+	return h.Session.PopString(ctx, "_flash."+key)
+}
+
+// GetErrorMessage retrieves and clears any error flash message from the session.
+// This is a convenience method for GetFlash(ctx, "error").
+func (h *Handler) GetErrorMessage(ctx context.Context) (msg string) {
+	defer func() {
+		if r := recover(); r != nil {
+			msg = ""
+		}
+	}()
+	return h.Session.PopString(ctx, flashKeyError)
+}
+
+// GetSuccessMessage retrieves and clears any success flash message from the session.
+// This is a convenience method for GetFlash(ctx, "success").
+func (h *Handler) GetSuccessMessage(ctx context.Context) (msg string) {
+	defer func() {
+		if r := recover(); r != nil {
+			msg = ""
+		}
+	}()
+	return h.Session.PopString(ctx, flashKeySuccess)
 }
