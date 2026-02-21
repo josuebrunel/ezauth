@@ -2,6 +2,7 @@
 
 [![Tests](https://github.com/josuebrunel/ezauth/actions/workflows/ci.yml/badge.svg)](https://github.com/josuebrunel/ezauth/actions/workflows/ci.yml)
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://josuebrunel.github.io/ezauth/)
+[![Go Reference](https://pkg.go.dev/badge/github.com/josuebrunel/ezauth.svg)](https://pkg.go.dev/github.com/josuebrunel/ezauth)
 
 Simple and easy to use authentication library for Golang.
 
