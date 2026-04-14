@@ -535,6 +535,12 @@ func (a *Auth) TokenCreate(ctx context.Context, user *models.User) (*TokenRespon
 		return nil, err
 	}
 
+	nowActive := time.Now()
+	user.LastActiveAt = &nowActive
+	if _, err := a.Repo.UserUpdate(ctx, user); err != nil {
+		xlog.Error("failed to update user last_active_at", "user_id", user.ID, "err", err)
+	}
+
 	xlog.Debug("tokens created", "user_id", user.ID)
 	return &TokenResponse{
 		AccessToken:  accessToken,
