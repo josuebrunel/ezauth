@@ -89,6 +89,8 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	_ = service.CallHook(h.svc.Hooks.OnUserSignedIn, r.Context(), user)
+
 	tokenResp, err := h.svc.TokenCreate(r.Context(), user)
 	if err != nil {
 		WriteJSONResponseError(w, http.StatusInternalServerError, ErrCouldNotCreateToken)
@@ -181,6 +183,12 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	if req.RefreshToken == "" {
 		WriteJSONResponseError(w, http.StatusBadRequest, ErrRefreshTokenRequired)
 		return
+	}
+
+	if userID, err := GetUserID(r.Context()); err == nil {
+		if user, err := h.svc.Repo.UserGetByID(r.Context(), userID); err == nil {
+			_ = service.CallHook(h.svc.Hooks.OnUserSignedOut, r.Context(), user)
+		}
 	}
 
 	if err := h.svc.TokenRevoke(r.Context(), req.RefreshToken); err != nil {

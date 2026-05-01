@@ -77,6 +77,8 @@ func (h *Handler) FormLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	_ = service.CallHook(h.svc.Hooks.OnUserSignedIn, r.Context(), user)
+
 	tokenResp, err := h.svc.TokenCreate(r.Context(), user)
 	if err != nil {
 		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrCouldNotCreateToken.Error())
@@ -91,6 +93,12 @@ func (h *Handler) FormLogin(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) FormLogout(w http.ResponseWriter, r *http.Request) {
 
 	if tokens, ok := h.GetSessionTokens(r.Context()); ok {
+		if userID, err := GetUserID(r.Context()); err == nil {
+			if user, err := h.svc.Repo.UserGetByID(r.Context(), userID); err == nil {
+				_ = service.CallHook(h.svc.Hooks.OnUserSignedOut, r.Context(), user)
+			}
+		}
+
 		if refreshToken, ok := tokens["refresh_token"]; ok && refreshToken != "" {
 			_ = h.svc.TokenRevoke(r.Context(), refreshToken)
 		}
@@ -279,7 +287,7 @@ func (h *Handler) OAuth2Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.svc.OAuth2Authenticate(r.Context(), provider, userInfo)
+	user, _, err := h.svc.OAuth2Authenticate(r.Context(), provider, userInfo)
 	if err != nil {
 		WriteJSONResponseError(w, http.StatusInternalServerError, fmt.Errorf("failed to authenticate user: %w", err))
 		return

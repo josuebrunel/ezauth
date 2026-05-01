@@ -320,9 +320,12 @@ func TestOAuth2Authenticate(t *testing.T) {
 			ID:    providerID,
 			Email: util.UniqueEmail("google"),
 		}
-		user, err := auth.OAuth2Authenticate(ctx, "google", userInfo)
+		user, isNew, err := auth.OAuth2Authenticate(ctx, "google", userInfo)
 		if err != nil {
 			t.Fatalf("OAuth2Authenticate failed: %v", err)
+		}
+		if !isNew {
+			t.Error("expected isNew to be true")
 		}
 		if user.Email != userInfo.Email {
 			t.Errorf("expected email %s, got %s", userInfo.Email, user.Email)
@@ -344,9 +347,12 @@ func TestOAuth2Authenticate(t *testing.T) {
 			ID:    providerID,
 			Email: updatedEmail,
 		}
-		user, err := auth.OAuth2Authenticate(ctx, "google", userInfo)
+		user, isNew, err := auth.OAuth2Authenticate(ctx, "google", userInfo)
 		if err != nil {
 			t.Fatalf("OAuth2Authenticate failed: %v", err)
+		}
+		if isNew {
+			t.Error("expected isNew to be false")
 		}
 		if user.Email != userInfo.Email {
 			t.Errorf("expected updated email %s, got %s", userInfo.Email, user.Email)
@@ -374,9 +380,12 @@ func TestOAuth2Authenticate(t *testing.T) {
 			ID:    githubProviderID,
 			Email: localEmail,
 		}
-		user, err := auth.OAuth2Authenticate(ctx, "github", userInfo)
+		user, isNew, err := auth.OAuth2Authenticate(ctx, "github", userInfo)
 		if err != nil {
 			t.Fatalf("OAuth2Authenticate failed: %v", err)
+		}
+		if isNew {
+			t.Error("expected isNew to be false")
 		}
 
 		if user.Email != localEmail {

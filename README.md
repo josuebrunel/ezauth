@@ -135,7 +135,13 @@ func main() {
     // 4. Add session middleware (handles sessions and user loading)
     r.Use(auth.SessionMiddleware)
 
-    // 5. Mount Auth Routes
+    // 5. Hooks (Optional - react to auth events)
+    auth.Hooks.OnUserCreated = func(ctx context.Context, user *ezauth.User) error {
+        fmt.Printf("Welcome email sent to %s\n", user.Email)
+        return nil
+    }
+
+    // 6. Mount Auth Routes
     r.Mount("/auth", auth.Handler)
 
     // Protected Route Example
@@ -335,6 +341,41 @@ These endpoints accept `application/json` and return JSON responses.
 | GET    | `/auth/api/userinfo`               | Get current user info (Protected) |
 | POST   | `/auth/api/logout`                 | Revoke refresh token (Protected)  |
 | DELETE | `/auth/api/user`                   | Delete account (Protected)        |
+
+## Hooks
+
+`ezauth` includes a lightweight hook system that allows you to plug in custom logic at key points in the authentication lifecycle (e.g., sending a welcome email, auditing sign-ins, or syncing users to external services).
+
+Hooks are available on the `EzAuth.Hooks` struct as function fields. All hooks are `nil` by default and are called synchronously.
+
+```go
+auth.Hooks.OnUserCreated = func(ctx context.Context, user *ezauth.User) error {
+    // Send welcome email, setup profile, etc.
+    return nil
+}
+
+auth.Hooks.OnOAuth2SignedIn = func(ctx context.Context, user *ezauth.User, provider string) error {
+    log.Printf("User %s signed in via %s", user.Email, provider)
+    return nil
+}
+```
+
+### Supported Hooks
+
+| Hook                       | Description                                         |
+| -------------------------- | --------------------------------------------------- |
+| `OnUserCreated`            | Called when a new user is registered (Email or API) |
+| `OnUserUpdated`            | Called when user info or password is changed        |
+| `OnUserDeleted`            | Called when a user account is deleted               |
+| `OnUserSignedIn`           | Called after a successful login (Email/Password)    |
+| `OnUserSignedOut`          | Called after a successful logout                    |
+| `OnUserTokenRefreshed`     | Called after a successful token refresh             |
+| `OnPasswordResetRequested` | Called when a password reset link is sent           |
+| `OnPasswordResetConfirmed` | Called after a successful password reset            |
+| `OnPasswordlessRequested`  | Called when a magic link is sent                    |
+| `OnPasswordlessSignedIn`   | Called after a successful magic link login          |
+| `OnOAuth2SignedIn`         | Called after any successful OAuth2 login            |
+| `OnOAuth2Created`          | Called when a new user is created via OAuth2        |
 
 ## Middlewares
  

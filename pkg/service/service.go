@@ -12,6 +12,7 @@ type Auth struct {
 	Repo       *repository.Repository
 	Mailer     Mailer
 	PathPrefix string
+	Hooks      *Hooks
 }
 
 // New creates a new Auth service with the given config and repository.
@@ -28,6 +29,7 @@ func New(cfg *config.Config, repo *repository.Repository, pathPrefix string) *Au
 		Repo:       repo,
 		Mailer:     mailer,
 		PathPrefix: pathPrefix,
+		Hooks:      &Hooks{},
 	}
 }
 

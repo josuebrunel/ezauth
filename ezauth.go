@@ -19,6 +19,9 @@ import (
 	"github.com/josuebrunel/gopkg/xlog"
 )
 
+// User represents a user in the system.
+type User = models.User
+
 // EzAuth represents the main entry point for the ezauth library.
 // It encapsulates configuration, repository, service, and handler components.
 type EzAuth struct {
@@ -26,6 +29,7 @@ type EzAuth struct {
 	Repo    *repository.Repository
 	Service *service.Auth
 	Handler *handler.Handler
+	Hooks   *service.Hooks
 }
 
 // New creates a new EzAuth instance from a config.
@@ -54,6 +58,7 @@ func New(cfg *config.Config, path string) (*EzAuth, error) {
 		Repo:    repo,
 		Service: svc,
 		Handler: h,
+		Hooks:   svc.Hooks,
 	}, nil
 }
 
@@ -69,6 +74,7 @@ func NewWithDB(cfg *config.Config, db *sql.DB, path string) (*EzAuth, error) {
 		Repo:    repo,
 		Service: svc,
 		Handler: h,
+		Hooks:   svc.Hooks,
 	}, nil
 }
 

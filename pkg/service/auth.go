@@ -78,6 +78,7 @@ func (a *Auth) UserCreate(ctx context.Context, req *RequestBasicAuth) (*models.U
 		return nil, err
 	}
 	xlog.Info("user created", "id", u.ID, "email", u.Email)
+	_ = CallHook(a.Hooks.OnUserCreated, ctx, u)
 	return u, nil
 }
 
@@ -121,16 +122,28 @@ func (a Auth) UserUpdatePassword(ctx context.Context, user *models.User, passwor
 		return nil, err
 	}
 	user.PasswordHash = hash
-	return a.Repo.UserUpdate(ctx, user)
+	u, err := a.Repo.UserUpdate(ctx, user)
+	if err == nil {
+		_ = CallHook(a.Hooks.OnUserUpdated, ctx, u)
+	}
+	return u, err
 }
 
 // UserUpdate updates the user information.
 func (a Auth) UserUpdate(ctx context.Context, user *models.User) (*models.User, error) {
-	return a.Repo.UserUpdate(ctx, user)
+	u, err := a.Repo.UserUpdate(ctx, user)
+	if err == nil {
+		_ = CallHook(a.Hooks.OnUserUpdated, ctx, u)
+	}
+	return u, err
 }
 
 // UserDelete deletes a user by ID.
 func (a Auth) UserDelete(ctx context.Context, id string) error {
+	user, err := a.Repo.UserGetByID(ctx, id)
+	if err == nil {
+		_ = CallHook(a.Hooks.OnUserDeleted, ctx, user)
+	}
 	return a.Repo.UserDelete(ctx, id)
 }
 
@@ -179,7 +192,12 @@ func (a *Auth) PasswordResetRequest(ctx context.Context, req RequestPasswordRese
 	subject := RenderTemplate(a.Cfg.EmailTemplates.PasswordResetSubject, data)
 	body := RenderTemplate(a.Cfg.EmailTemplates.PasswordResetBody, data)
 
-	return a.Mailer.Send(user.Email, subject, body)
+	if err := a.Mailer.Send(user.Email, subject, body); err != nil {
+		return err
+	}
+
+	_ = CallHook(a.Hooks.OnPasswordResetRequested, ctx, user)
+	return nil
 }
 
 // PasswordResetConfirm completes the password reset flow.
@@ -210,7 +228,12 @@ func (a *Auth) PasswordResetConfirm(ctx context.Context, req RequestPasswordRese
 		return err
 	}
 
-	return a.Repo.TokenRevoke(ctx, token.ID)
+	if err := a.Repo.TokenRevoke(ctx, token.ID); err != nil {
+		return err
+	}
+
+	_ = CallHook(a.Hooks.OnPasswordResetConfirmed, ctx, user)
+	return nil
 }
 
 // RequestPasswordless defines the parameters for requesting a magic link.
@@ -285,6 +308,8 @@ func (a *Auth) PasswordlessRequest(ctx context.Context, req RequestPasswordless)
 		return err
 	}
 	xlog.Info("passwordless login email sent", "email", req.Email)
+
+	_ = CallHook(a.Hooks.OnPasswordlessRequested, ctx, user)
 	return nil
 }
 
@@ -334,6 +359,8 @@ func (a *Auth) PasswordlessLogin(ctx context.Context, tokenValue string) (*Token
 		return nil, err
 	}
 	xlog.Info("passwordless login successful", "user_id", user.ID)
+
+	_ = CallHook(a.Hooks.OnPasswordlessSignedIn, ctx, user)
 	return resp, nil
 }
 
@@ -444,7 +471,8 @@ func (a *Auth) OAuth2GetUserInfo(ctx context.Context, provider string, token *oa
 
 // OAuth2Authenticate authenticates a user using OAuth2 information.
 // It links the OAuth2 account to an existing user or creates a new one.
-func (a *Auth) OAuth2Authenticate(ctx context.Context, provider string, userInfo *OAuth2UserInfo) (*models.User, error) {
+// It returns the user and a boolean indicating if the user was newly created.
+func (a *Auth) OAuth2Authenticate(ctx context.Context, provider string, userInfo *OAuth2UserInfo) (*models.User, bool, error) {
 	xlog.Debug("authenticating via oauth2", "provider", provider, "email", userInfo.Email, "provider_id", userInfo.ID)
 
 	user, err := a.Repo.UserGetByProvider(ctx, provider, userInfo.ID)
@@ -455,13 +483,15 @@ func (a *Auth) OAuth2Authenticate(ctx context.Context, provider string, userInfo
 			u, err := a.Repo.UserUpdate(ctx, user)
 			if err != nil {
 				xlog.Error("failed to update user email from provider", "user_id", user.ID, "err", err)
-				return nil, err
+				return nil, false, err
 			}
 			xlog.Info("user authenticated via oauth2", "user_id", user.ID, "provider", provider)
-			return u, nil
+			_ = CallHookWithProvider(a.Hooks.OnOAuth2SignedIn, ctx, u, provider)
+			return u, false, nil
 		}
 		xlog.Info("user authenticated via oauth2", "user_id", user.ID, "provider", provider)
-		return user, nil
+		_ = CallHookWithProvider(a.Hooks.OnOAuth2SignedIn, ctx, user, provider)
+		return user, false, nil
 	}
 
 	if userInfo.Email != "" {
@@ -473,10 +503,11 @@ func (a *Auth) OAuth2Authenticate(ctx context.Context, provider string, userInfo
 			u, err := a.Repo.UserUpdate(ctx, user)
 			if err != nil {
 				xlog.Error("failed to link provider to existing user", "user_id", user.ID, "provider", provider, "err", err)
-				return nil, err
+				return nil, false, err
 			}
 			xlog.Info("linked provider to existing user", "user_id", user.ID, "provider", provider)
-			return u, nil
+			_ = CallHookWithProvider(a.Hooks.OnOAuth2SignedIn, ctx, u, provider)
+			return u, false, nil
 		}
 	}
 
@@ -490,10 +521,14 @@ func (a *Auth) OAuth2Authenticate(ctx context.Context, provider string, userInfo
 	u, err := a.Repo.UserCreate(ctx, user)
 	if err != nil {
 		xlog.Error("failed to create user from oauth2", "provider", provider, "err", err)
-		return nil, err
+		return nil, false, err
 	}
 	xlog.Info("created new user via oauth2", "user_id", u.ID, "provider", provider)
-	return u, nil
+
+	_ = CallHookWithProvider(a.Hooks.OnOAuth2Created, ctx, u, provider)
+	_ = CallHookWithProvider(a.Hooks.OnOAuth2SignedIn, ctx, u, provider)
+
+	return u, true, nil
 }
 
 // TokenResponse defines the structure of the token response.
@@ -580,7 +615,11 @@ func (a *Auth) TokenRefresh(ctx context.Context, refreshToken string) (*TokenRes
 		return nil, err
 	}
 
-	return a.TokenCreate(ctx, user)
+	resp, err := a.TokenCreate(ctx, user)
+	if err == nil {
+		_ = CallHook(a.Hooks.OnUserTokenRefreshed, ctx, user)
+	}
+	return resp, err
 }
 
 // TokenRevoke revokes the given refresh token.
