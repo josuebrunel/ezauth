@@ -317,6 +317,94 @@ When using the form-based endpoints (e.g., `/auth/register`, `/auth/login`), `ez
 ### Magic Link Login (`/auth/passwordless/login`)
 -   `token` (Required, passed as a query parameter: `?token=...`)
 
+## Hooks
+
+ezauth provides a hook system that lets you intercept auth lifecycle events. This is useful for:
+
+- Validating input before user creation (e.g., checking a banned domains table)
+- Sending welcome emails or audit logs after registration
+- Notifying admins of new user registrations
+- Audit logging of sign-ins, sign-outs, and account deletion
+
+### Defining a Hook
+
+Embed `service.DefaultHook` and override only the methods you need:
+
+```go
+type MyHook struct {
+    service.DefaultHook
+    db  *sql.DB
+    log *slog.Logger
+}
+
+// BeforeUserCreated runs before a new user is persisted.
+// Return an error to abort the operation.
+func (h MyHook) BeforeUserCreated(ctx context.Context, u *models.User) error {
+    var banned bool
+    err := h.db.QueryRowContext(ctx,
+        "SELECT EXISTS(SELECT 1 FROM banned_domains WHERE domain = ?)",
+        emailDomain(u.Email),
+    ).Scan(&banned)
+    if err != nil {
+        return err
+    }
+    if banned {
+        return errors.New("email domain is not allowed")
+    }
+    return nil
+}
+
+// AfterUserCreated runs after a user has been successfully persisted.
+func (h MyHook) AfterUserCreated(ctx context.Context, u *models.User) error {
+    // Audit log
+    _, err := h.db.ExecContext(ctx,
+        "INSERT INTO audit_log (event, user_id, ts) VALUES (?, ?, ?)",
+        "user.created", u.ID, time.Now(),
+    )
+    if err != nil {
+        return err
+    }
+    // Send welcome email (async — no extra framework needed)
+    go h.sendWelcomeEmail(u.Email)
+    h.log.InfoContext(ctx, "new user registered", "id", u.ID, "email", u.Email)
+    return nil
+}
+
+// AfterUserSignedIn can be used for login notifications or audit trails.
+func (h MyHook) AfterUserSignedIn(ctx context.Context, u *models.User) error {
+    h.log.InfoContext(ctx, "user signed in", "id", u.ID, "email", u.Email)
+    return nil
+}
+```
+
+### Available Hooks
+
+| Hook                          | Timing                                     | Abortable              |
+| ----------------------------- | ------------------------------------------ | ---------------------- |
+| `BeforeUserCreated`           | Before creating a new user                 | Yes (return error)     |
+| `AfterUserCreated`            | After a new user is persisted              | No (errors are logged) |
+| `BeforeUserUpdated`           | Before updating a user                     | Yes (return error)     |
+| `AfterUserUpdated`            | After a user is updated                    | No (errors are logged) |
+| `BeforeUserDeleted`           | Before deleting a user                     | Yes (return error)     |
+| `AfterUserDeleted`            | After a user is deleted                    | No (errors are logged) |
+| `AfterUserSignedIn`           | After a successful sign-in                 | No (errors are logged) |
+| `AfterUserSignedOut`          | After a successful sign-out                | No (errors are logged) |
+| `AfterPasswordResetRequested` | After a password reset is requested        | No (errors are logged) |
+| `AfterPasswordResetConfirmed` | After a password reset is confirmed        | No (errors are logged) |
+| `AfterOAuth2SignedIn`         | After an existing user signs in via OAuth2 | No (errors are logged) |
+| `AfterOAuth2Created`          | After a new user is created via OAuth2     | No (errors are logged) |
+
+### Registering the Hook
+
+```go
+auth.SetHook(MyHook{
+    db:  sqlDB,
+    log: slog.Default(),
+})
+```
+
+It's safe to call `SetHook` at any point — including after the server is running.
+
 ## Using an Existing Database Connection
 
 

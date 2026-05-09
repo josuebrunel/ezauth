@@ -72,6 +72,17 @@ func NewWithDB(cfg *config.Config, db *sql.DB, path string) (*EzAuth, error) {
 	}, nil
 }
 
+// SetHook registers a Hook implementation to intercept auth lifecycle events.
+// See service.Hook and service.DefaultHook for details.
+func (e *EzAuth) SetHook(hook service.Hook) {
+	e.Service.Hook = hook
+}
+
+// Hook returns the currently registered Hook implementation.
+func (e *EzAuth) Hook() service.Hook {
+	return e.Service.Hook
+}
+
 // Migrate runs the database migrations.
 func (e *EzAuth) Migrate() error {
 	return migrations.MigrateUpWithDBConn(e.Repo.DB(), e.Repo.Opts.Dialect)
