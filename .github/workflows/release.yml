@@ -4,6 +4,21 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Explicit version (e.g., v0.6.1). Leave empty for bump."
+        required: false
+        type: string
+      bump:
+        description: "Version bump type (ignored if version is set)"
+        required: false
+        type: choice
+        default: "patch"
+        options:
+          - patch
+          - minor
+          - major
 
 jobs:
   release:
@@ -19,12 +34,36 @@ jobs:
       - name: Fetch tags
         run: git fetch --tags --force
 
+      - name: Determine version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "tag=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          elif [ -n "${{ github.event.inputs.bump }}" ]; then
+            latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+            IFS='.' read -r major minor patch <<< "${latest_tag#v}"
+            case "${{ github.event.inputs.bump }}" in
+              major) echo "tag=v$((major + 1)).0.0" >> "$GITHUB_OUTPUT" ;;
+              minor) echo "tag=v$major.$((minor + 1)).0" >> "$GITHUB_OUTPUT" ;;
+              patch) echo "tag=v$major.$minor.$((patch + 1))" >> "$GITHUB_OUTPUT" ;;
+            esac
+          fi
+
+      - name: Create and push tag (workflow_dispatch only)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag -a "${{ steps.version.outputs.tag }}" -m "Release ${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version-file: "go.mod"
 
       - name: Run GoReleaser
+        if: github.event_name != 'workflow_dispatch'
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
