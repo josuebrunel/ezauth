@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -353,6 +355,226 @@ func TestHandler_Passwordless(t *testing.T) {
 	if resp.Data.AccessToken == "" {
 		t.Error("expected access token")
 	}
+}
+
+// testHook records which hooks were called for test verification.
+type testHook struct {
+	service.DefaultHook
+	calls []string
+	mu    sync.Mutex
+
+	// If set, BeforeUserCreated returns this error.
+	beforeCreateErr error
+	// If set, BeforeUserDeleted returns this error.
+	beforeDeleteErr error
+}
+
+func (h *testHook) record(name string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.calls = append(h.calls, name)
+}
+
+func (h *testHook) BeforeUserCreated(ctx context.Context, user *models.User) error {
+	h.record("BeforeUserCreated")
+	return h.beforeCreateErr
+}
+
+func (h *testHook) AfterUserCreated(ctx context.Context, user *models.User) error {
+	h.record("AfterUserCreated")
+	return nil
+}
+
+func (h *testHook) BeforeUserDeleted(ctx context.Context, user *models.User) error {
+	h.record("BeforeUserDeleted")
+	return h.beforeDeleteErr
+}
+
+func (h *testHook) AfterUserDeleted(ctx context.Context, user *models.User) error {
+	h.record("AfterUserDeleted")
+	return nil
+}
+
+func (h *testHook) AfterUserSignedIn(ctx context.Context, user *models.User) error {
+	h.record("AfterUserSignedIn")
+	return nil
+}
+
+func (h *testHook) AfterUserSignedOut(ctx context.Context, user *models.User) error {
+	h.record("AfterUserSignedOut")
+	return nil
+}
+
+func (h *testHook) AfterPasswordResetRequested(ctx context.Context, user *models.User) error {
+	h.record("AfterPasswordResetRequested")
+	return nil
+}
+
+func (h *testHook) AfterPasswordResetConfirmed(ctx context.Context, user *models.User) error {
+	h.record("AfterPasswordResetConfirmed")
+	return nil
+}
+
+func TestHandler_Hooks_DefaultNeverPanics(t *testing.T) {
+	// The default hook is used by the handler setup, so the existing
+	// TestHandler_RegisterAndLoginFlow already exercises DefaultHook.
+	// This test verifies it explicitly.
+	h := setupTestHandler(t)
+	email := util.UniqueEmail("default-hook")
+	password := "password123"
+
+	// Register
+	reqBody := map[string]any{"email": email, "password": password}
+	body, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest(http.MethodPost, "/auth/api/register", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-api-key")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d", w.Code)
+	}
+}
+
+func TestHandler_Hooks_BeforeUserCreated_AbortsRegistration(t *testing.T) {
+	h := setupTestHandler(t)
+
+	hook := &testHook{beforeCreateErr: errors.New("banned domain")}
+	h.svc.Hook = hook
+
+	email := util.UniqueEmail("banned")
+	reqBody := map[string]any{"email": email, "password": "password123"}
+	body, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest(http.MethodPost, "/auth/api/register", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-api-key")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp testResponse[any]
+	json.NewDecoder(w.Body).Decode(&resp)
+	if resp.Error == nil {
+		t.Fatal("expected error message")
+	}
+
+	// Verify the user was NOT created
+	_, err := h.svc.Repo.UserGetByEmail(context.Background(), email)
+	if err == nil {
+		t.Error("expected user NOT to exist after hook aborted registration")
+	}
+}
+
+func TestHandler_Hooks_AfterUserSignedInCalled(t *testing.T) {
+	h := setupTestHandler(t)
+
+	hook := &testHook{}
+	h.svc.Hook = hook
+
+	// Register first
+	email := util.UniqueEmail("hook-signin")
+	password := "password123"
+	reqBody := map[string]any{"email": email, "password": password}
+	body, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest(http.MethodPost, "/auth/api/register", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-api-key")
+	h.ServeHTTP(httptest.NewRecorder(), req)
+
+	// Login
+	reqBody2 := map[string]any{"email": email, "password": password}
+	body2, _ := json.Marshal(reqBody2)
+	req2 := httptest.NewRequest(http.MethodPost, "/auth/api/login", bytes.NewBuffer(body2))
+	req2.Header.Set("Content-Type", "application/json")
+	req2.Header.Set("X-API-Key", "test-api-key")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req2)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	if !containsHookCall(hook.calls, "AfterUserSignedIn") {
+		t.Errorf("expected AfterUserSignedIn to be called, got %v", hook.calls)
+	}
+}
+
+func TestHandler_Hooks_BeforeUserDeleted_AbortsDeletion(t *testing.T) {
+	h := setupTestHandler(t)
+
+	hook := &testHook{beforeDeleteErr: errors.New("cannot delete")}
+	h.svc.Hook = hook
+
+	// Register first
+	email := util.UniqueEmail("hook-delete")
+	password := "password123"
+	reqBody := map[string]any{"email": email, "password": password}
+	body, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest(http.MethodPost, "/auth/api/register", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-api-key")
+	var registerResp testResponse[service.TokenResponse]
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	json.NewDecoder(w.Body).Decode(&registerResp)
+	accessToken := registerResp.Data.AccessToken
+
+	// Try to delete (should fail)
+	delReq := httptest.NewRequest(http.MethodDelete, "/auth/api/user", nil)
+	delReq.Header.Set("Authorization", "Bearer "+accessToken)
+	delReq.Header.Set("X-API-Key", "test-api-key")
+	delW := httptest.NewRecorder()
+	h.ServeHTTP(delW, delReq)
+
+	if delW.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", delW.Code, delW.Body.String())
+	}
+
+	// Verify the user still exists
+	_, err := h.svc.Repo.UserGetByEmail(context.Background(), email)
+	if err != nil {
+		t.Error("expected user to still exist after hook aborted deletion")
+	}
+}
+
+func TestHandler_Hooks_PasswordResetHooksCalled(t *testing.T) {
+	h := setupTestHandler(t)
+
+	hook := &testHook{}
+	h.svc.Hook = hook
+
+	// Register user
+	email := util.UniqueEmail("hook-reset")
+	reqBody := map[string]any{"email": email, "password": "password123"}
+	body, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest(http.MethodPost, "/auth/api/register", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-api-key")
+	h.ServeHTTP(httptest.NewRecorder(), req)
+
+	// Request password reset
+	reqBody2 := map[string]any{"email": email}
+	body2, _ := json.Marshal(reqBody2)
+	req2 := httptest.NewRequest(http.MethodPost, "/auth/api/password-reset/request", bytes.NewBuffer(body2))
+	req2.Header.Set("Content-Type", "application/json")
+	req2.Header.Set("X-API-Key", "test-api-key")
+	h.ServeHTTP(httptest.NewRecorder(), req2)
+
+	if !containsHookCall(hook.calls, "AfterPasswordResetRequested") {
+		t.Errorf("expected AfterPasswordResetRequested to be called, got %v", hook.calls)
+	}
+}
+
+func containsHookCall(calls []string, target string) bool {
+	for _, c := range calls {
+		if c == target {
+			return true
+		}
+	}
+	return false
 }
 
 func TestHandler_Unauthorized(t *testing.T) {

@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/josuebrunel/ezauth/pkg/db/models"
 	ezmiddleware "github.com/josuebrunel/ezauth/pkg/handler/middleware"
 	"github.com/josuebrunel/ezauth/pkg/service"
+	"github.com/josuebrunel/gopkg/xlog"
 )
 
 // GetUserID retrieves the user ID from the request context.
@@ -48,10 +50,29 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Build a partial user from the request for pre-creation hooks
+	user := &models.User{
+		Email:     req.Email,
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+		Locale:    req.Locale,
+		Timezone:  req.Timezone,
+		Roles:     req.Roles,
+	}
+
+	if err := h.svc.Hook.BeforeUserCreated(r.Context(), user); err != nil {
+		WriteJSONResponseError(w, http.StatusBadRequest, err)
+		return
+	}
+
 	user, err := h.svc.UserCreate(r.Context(), &req)
 	if err != nil {
 		WriteJSONResponseError(w, http.StatusInternalServerError, ErrCouldNotCreateUser)
 		return
+	}
+
+	if err := h.svc.Hook.AfterUserCreated(r.Context(), user); err != nil {
+		xlog.Error("hook AfterUserCreated failed", "user_id", user.ID, "err", err)
 	}
 
 	tokenResp, err := h.svc.TokenCreate(r.Context(), user)
@@ -93,6 +114,10 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		WriteJSONResponseError(w, http.StatusInternalServerError, ErrCouldNotCreateToken)
 		return
+	}
+
+	if err := h.svc.Hook.AfterUserSignedIn(r.Context(), user); err != nil {
+		xlog.Error("hook AfterUserSignedIn failed", "user_id", user.ID, "err", err)
 	}
 
 	WriteJSONResponse(w, http.StatusOK, tokenResp, nil)
@@ -188,6 +213,16 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch the user for the hook if possible
+	userID, ok := r.Context().Value(ezmiddleware.UserContextKey).(string)
+	if ok {
+		if user, err := h.svc.Repo.UserGetByID(r.Context(), userID); err == nil {
+			if err := h.svc.Hook.AfterUserSignedOut(r.Context(), user); err != nil {
+				xlog.Error("hook AfterUserSignedOut failed", "user_id", user.ID, "err", err)
+			}
+		}
+	}
+
 	WriteJSONResponse(w, http.StatusOK, map[string]string{"message": "logged out successfully"}, nil)
 }
 
@@ -208,9 +243,24 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	user, err := h.svc.Repo.UserGetByID(r.Context(), userID)
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusInternalServerError, ErrCouldNotRetrieveUser)
+		return
+	}
+
+	if err := h.svc.Hook.BeforeUserDeleted(r.Context(), user); err != nil {
+		WriteJSONResponseError(w, http.StatusBadRequest, err)
+		return
+	}
+
 	if err := h.svc.Repo.UserDelete(r.Context(), userID); err != nil {
 		WriteJSONResponseError(w, http.StatusInternalServerError, ErrCouldNotDeleteUser)
 		return
+	}
+
+	if err := h.svc.Hook.AfterUserDeleted(r.Context(), user); err != nil {
+		xlog.Error("hook AfterUserDeleted failed", "user_id", user.ID, "err", err)
 	}
 
 	WriteJSONResponse(w, http.StatusOK, map[string]string{"message": "user deleted successfully"}, nil)
@@ -240,6 +290,13 @@ func (h *Handler) PasswordResetRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch user to fire the hook (silently ignore if user not found)
+	if user, err := h.svc.Repo.UserGetByEmail(r.Context(), req.Email); err == nil {
+		if err := h.svc.Hook.AfterPasswordResetRequested(r.Context(), user); err != nil {
+			xlog.Error("hook AfterPasswordResetRequested failed", "user_id", user.ID, "err", err)
+		}
+	}
+
 	WriteJSONResponse(w, http.StatusOK, map[string]string{"message": "password reset link sent"}, nil)
 }
 
@@ -264,6 +321,15 @@ func (h *Handler) PasswordResetConfirm(w http.ResponseWriter, r *http.Request) {
 	if err := h.svc.PasswordResetConfirm(r.Context(), req); err != nil {
 		WriteJSONResponseError(w, http.StatusBadRequest, err)
 		return
+	}
+
+	// Fetch the user for the hook (silently ignore if not found)
+	if token, err := h.svc.Repo.TokenGetByToken(r.Context(), req.Token); err == nil {
+		if user, err := h.svc.Repo.UserGetByID(r.Context(), token.UserID); err == nil {
+			if err := h.svc.Hook.AfterPasswordResetConfirmed(r.Context(), user); err != nil {
+				xlog.Error("hook AfterPasswordResetConfirmed failed", "user_id", user.ID, "err", err)
+			}
+		}
 	}
 
 	WriteJSONResponse(w, http.StatusOK, map[string]string{"message": "password has been reset successfully"}, nil)
@@ -318,6 +384,15 @@ func (h *Handler) PasswordlessLogin(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		WriteJSONResponseError(w, http.StatusUnauthorized, err)
 		return
+	}
+
+	// Fetch the user for the hook (silently ignore if not found)
+	if tokenRecord, err := h.svc.Repo.TokenGetByToken(r.Context(), token); err == nil {
+		if user, err := h.svc.Repo.UserGetByID(r.Context(), tokenRecord.UserID); err == nil {
+			if err := h.svc.Hook.AfterUserSignedIn(r.Context(), user); err != nil {
+				xlog.Error("hook AfterUserSignedIn failed for passwordless", "err", err)
+			}
+		}
 	}
 
 	WriteJSONResponse(w, http.StatusOK, tokenResp, nil)

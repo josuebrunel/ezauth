@@ -1,16 +1,16 @@
 package handler
 
 import (
-	"net/http"
-
 	"fmt"
-
-	"github.com/josuebrunel/ezauth/pkg/service"
-
+	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/ezauth/pkg/service"
 	"github.com/josuebrunel/ezauth/pkg/util"
+	"github.com/josuebrunel/gopkg/xlog"
 )
 
 // FormRegister handles user registration via form submission.
@@ -43,10 +43,28 @@ func (h *Handler) FormRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Pre-creation hook
+	hookUser := &models.User{
+		Email:     req.Email,
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+		Locale:    req.Locale,
+		Timezone:  req.Timezone,
+		Roles:     req.Roles,
+	}
+	if err := h.svc.Hook.BeforeUserCreated(r.Context(), hookUser); err != nil {
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.Register, err.Error())
+		return
+	}
+
 	user, err := h.svc.UserCreate(r.Context(), req)
 	if err != nil {
 		h.redirectWithError(w, r, h.svc.Cfg.Pages.Register, err.Error())
 		return
+	}
+
+	if err := h.svc.Hook.AfterUserCreated(r.Context(), user); err != nil {
+		xlog.Error("hook AfterUserCreated failed", "user_id", user.ID, "err", err)
 	}
 
 	tokenResp, err := h.svc.TokenCreate(r.Context(), user)
@@ -83,16 +101,26 @@ func (h *Handler) FormLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := h.svc.Hook.AfterUserSignedIn(r.Context(), user); err != nil {
+		xlog.Error("hook AfterUserSignedIn failed", "user_id", user.ID, "err", err)
+	}
+
 	h.setAuthCookies(r.Context(), tokenResp)
 	http.Redirect(w, r, h.svc.Cfg.Redirects.AfterLogin, http.StatusFound)
 }
 
 // FormLogout handles user logout via form submission or link.
 func (h *Handler) FormLogout(w http.ResponseWriter, r *http.Request) {
-
 	if tokens, ok := h.GetSessionTokens(r.Context()); ok {
 		if refreshToken, ok := tokens["refresh_token"]; ok && refreshToken != "" {
 			_ = h.svc.TokenRevoke(r.Context(), refreshToken)
+		}
+	}
+
+	// Fetch the user for the hook if possible
+	if user, err := h.GetSessionUser(r.Context()); err == nil {
+		if err := h.svc.Hook.AfterUserSignedOut(r.Context(), user); err != nil {
+			xlog.Error("hook AfterUserSignedOut failed", "user_id", user.ID, "err", err)
 		}
 	}
 
@@ -153,6 +181,13 @@ func (h *Handler) FormPasswordResetRequest(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Fetch user to fire the hook (silently ignore if user not found)
+	if user, err := h.svc.Repo.UserGetByEmail(r.Context(), req.Email); err == nil {
+		if err := h.svc.Hook.AfterPasswordResetRequested(r.Context(), user); err != nil {
+			xlog.Error("hook AfterPasswordResetRequested failed", "user_id", user.ID, "err", err)
+		}
+	}
+
 	h.redirectWithSuccess(w, r, h.svc.Cfg.Pages.Login, "password reset link sent")
 }
 
@@ -171,6 +206,15 @@ func (h *Handler) FormPasswordResetConfirm(w http.ResponseWriter, r *http.Reques
 	if err := h.svc.PasswordResetConfirm(r.Context(), req); err != nil {
 		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, err.Error())
 		return
+	}
+
+	// Fetch the user for the hook (silently ignore if not found)
+	if token, err := h.svc.Repo.TokenGetByToken(r.Context(), req.Token); err == nil {
+		if user, err := h.svc.Repo.UserGetByID(r.Context(), token.UserID); err == nil {
+			if err := h.svc.Hook.AfterPasswordResetConfirmed(r.Context(), user); err != nil {
+				xlog.Error("hook AfterPasswordResetConfirmed failed", "user_id", user.ID, "err", err)
+			}
+		}
 	}
 
 	h.redirectWithSuccess(w, r, h.svc.Cfg.Pages.Login, "password has been reset successfully")
@@ -283,6 +327,19 @@ func (h *Handler) OAuth2Callback(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		WriteJSONResponseError(w, http.StatusInternalServerError, fmt.Errorf("failed to authenticate user: %w", err))
 		return
+	}
+
+	// Fire OAuth2 hooks.
+	// Best-effort: if CreatedAt and UpdatedAt are equal (within a second), assume this is a new user.
+	// For reliable detection, override these hooks in your implementation with your own logic.
+	if user.CreatedAt.Sub(user.UpdatedAt) < time.Second && user.CreatedAt.Sub(user.UpdatedAt) > -time.Second {
+		if err := h.svc.Hook.AfterOAuth2Created(r.Context(), user, provider); err != nil {
+			xlog.Error("hook AfterOAuth2Created failed", "user_id", user.ID, "provider", provider, "err", err)
+		}
+	} else {
+		if err := h.svc.Hook.AfterOAuth2SignedIn(r.Context(), user, provider); err != nil {
+			xlog.Error("hook AfterOAuth2SignedIn failed", "user_id", user.ID, "provider", provider, "err", err)
+		}
 	}
 
 	tokenResp, err := h.svc.TokenCreate(r.Context(), user)
