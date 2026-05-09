@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -725,6 +725,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hooks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Hooks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#defining-a-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Defining a Hook
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#available-hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Hooks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#registering-the-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Registering the Hook
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#using-an-existing-database-connection" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1373,6 +1423,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hooks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Hooks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#defining-a-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Defining a Hook
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#available-hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Hooks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#registering-the-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Registering the Hook
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#using-an-existing-database-connection" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1706,6 +1806,140 @@ tokens, err := auth.Service.TokenCreate(ctx, user)
 <ul>
 <li><code>token</code> (Required, passed as a query parameter: <code>?token=...</code>)</li>
 </ul>
+<h2 id="hooks">Hooks</h2>
+<p>ezauth provides a hook system that lets you intercept auth lifecycle events. This is useful for:</p>
+<ul>
+<li>Validating input before user creation (e.g., checking a banned domains table)</li>
+<li>Sending welcome emails or audit logs after registration</li>
+<li>Notifying admins of new user registrations</li>
+<li>Audit logging of sign-ins, sign-outs, and account deletion</li>
+</ul>
+<h3 id="defining-a-hook">Defining a Hook</h3>
+<p>Embed <code>service.DefaultHook</code> and override only the methods you need:</p>
+<pre><code class="language-go">type MyHook struct {
+    service.DefaultHook
+    db  *sql.DB
+    log *slog.Logger
+}
+
+// BeforeUserCreated runs before a new user is persisted.
+// Return an error to abort the operation.
+func (h MyHook) BeforeUserCreated(ctx context.Context, u *models.User) error {
+    var banned bool
+    err := h.db.QueryRowContext(ctx,
+        &quot;SELECT EXISTS(SELECT 1 FROM banned_domains WHERE domain = ?)&quot;,
+        emailDomain(u.Email),
+    ).Scan(&amp;banned)
+    if err != nil {
+        return err
+    }
+    if banned {
+        return errors.New(&quot;email domain is not allowed&quot;)
+    }
+    return nil
+}
+
+// AfterUserCreated runs after a user has been successfully persisted.
+func (h MyHook) AfterUserCreated(ctx context.Context, u *models.User) error {
+    // Audit log
+    _, err := h.db.ExecContext(ctx,
+        &quot;INSERT INTO audit_log (event, user_id, ts) VALUES (?, ?, ?)&quot;,
+        &quot;user.created&quot;, u.ID, time.Now(),
+    )
+    if err != nil {
+        return err
+    }
+    // Send welcome email (async — no extra framework needed)
+    go h.sendWelcomeEmail(u.Email)
+    h.log.InfoContext(ctx, &quot;new user registered&quot;, &quot;id&quot;, u.ID, &quot;email&quot;, u.Email)
+    return nil
+}
+
+// AfterUserSignedIn can be used for login notifications or audit trails.
+func (h MyHook) AfterUserSignedIn(ctx context.Context, u *models.User) error {
+    h.log.InfoContext(ctx, &quot;user signed in&quot;, &quot;id&quot;, u.ID, &quot;email&quot;, u.Email)
+    return nil
+}
+</code></pre>
+<h3 id="available-hooks">Available Hooks</h3>
+<table>
+<thead>
+<tr>
+<th>Hook</th>
+<th>Timing</th>
+<th>Abortable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>BeforeUserCreated</code></td>
+<td>Before creating a new user</td>
+<td>Yes (return error)</td>
+</tr>
+<tr>
+<td><code>AfterUserCreated</code></td>
+<td>After a new user is persisted</td>
+<td>No (errors are logged)</td>
+</tr>
+<tr>
+<td><code>BeforeUserUpdated</code></td>
+<td>Before updating a user</td>
+<td>Yes (return error)</td>
+</tr>
+<tr>
+<td><code>AfterUserUpdated</code></td>
+<td>After a user is updated</td>
+<td>No (errors are logged)</td>
+</tr>
+<tr>
+<td><code>BeforeUserDeleted</code></td>
+<td>Before deleting a user</td>
+<td>Yes (return error)</td>
+</tr>
+<tr>
+<td><code>AfterUserDeleted</code></td>
+<td>After a user is deleted</td>
+<td>No (errors are logged)</td>
+</tr>
+<tr>
+<td><code>AfterUserSignedIn</code></td>
+<td>After a successful sign-in</td>
+<td>No (errors are logged)</td>
+</tr>
+<tr>
+<td><code>AfterUserSignedOut</code></td>
+<td>After a successful sign-out</td>
+<td>No (errors are logged)</td>
+</tr>
+<tr>
+<td><code>AfterPasswordResetRequested</code></td>
+<td>After a password reset is requested</td>
+<td>No (errors are logged)</td>
+</tr>
+<tr>
+<td><code>AfterPasswordResetConfirmed</code></td>
+<td>After a password reset is confirmed</td>
+<td>No (errors are logged)</td>
+</tr>
+<tr>
+<td><code>AfterOAuth2SignedIn</code></td>
+<td>After an existing user signs in via OAuth2</td>
+<td>No (errors are logged)</td>
+</tr>
+<tr>
+<td><code>AfterOAuth2Created</code></td>
+<td>After a new user is created via OAuth2</td>
+<td>No (errors are logged)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="registering-the-hook">Registering the Hook</h3>
+<pre><code class="language-go">auth.SetHook(MyHook{
+    db:  sqlDB,
+    log: slog.Default(),
+})
+</code></pre>
+<p>It's safe to call <code>SetHook</code> at any point — including after the server is running.</p>
 <h2 id="using-an-existing-database-connection">Using an Existing Database Connection</h2>
 <p>If your application already has a <code>*sql.DB</code> connection, you can use <code>NewWithDB</code>:</p>
 <pre><code class="language-go">auth, err := ezauth.NewWithDB(&amp;cfg, myDBConnection, &quot;auth&quot;)
