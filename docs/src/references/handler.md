@@ -102,7 +102,7 @@ The following methods are attached to routes internally by `New`, but are public
 These handlers process `application/x-www-form-urlencoded` requests and return HTML redirects.
 
 -   `FormLogin(w, r)`
--   `FormRegister(w, r)` (Supports `password_confirm` and `meta_` fields)
+-   `FormRegister(w, r)` (Supports `username`, `password_confirm`, and `meta_` fields)
 -   `FormLogout(w, r)`
 -   `FormPasswordResetRequest(w, r)`
 -   `FormPasswordResetConfirm(w, r)`

@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -29,7 +29,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -531,6 +531,8 @@
       
         
       
+        
+      
     
     
     
@@ -927,6 +929,34 @@
     
   
     Handler
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../references/middleware/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Middleware
   
 
     
@@ -1419,10 +1449,10 @@
 </code></pre>
 <h2 id="form-handlers-browser">Form Handlers (Browser)</h2>
 <p>These endpoints accept <code>application/x-www-form-urlencoded</code> and redirect upon success or failure. Authentication tokens are stored in an HTTP-only cookie named <code>ezauthsess</code>.</p>
-<p>POST requests to these endpoints must include a valid CSRF token in the <code>X-CSRF-Token</code> header.</p>
+<p>POST requests to these endpoints are automatically protected by <code>filippo.io/csrf/gorilla</code> using modern browser <strong>Fetch Metadata headers</strong> (e.g., <code>Sec-Fetch-Site: same-origin</code>). You do not need to manually include a CSRF token in your requests.</p>
 <h3 id="get-csrf-token">Get CSRF Token</h3>
 <p><code>GET /auth/csrf</code></p>
-<p>Returns a JSON object containing the CSRF token.</p>
+<p><em>Available for legacy compatibility only. Tokens are ignored by the server during validation.</em> Returns a dummy JSON object containing a CSRF token.</p>
 <p><strong>Response:</strong></p>
 <pre><code class="language-json">{ &quot;csrf_token&quot;: &quot;...&quot; }
 </code></pre>
@@ -1433,9 +1463,10 @@
 *   <code>email</code> (required)
 *   <code>password</code> (required)
 *   <code>password_confirm</code> (required, must match password)
-*   <code>first_name</code>
-*   <code>last_name</code>
-*   <code>meta_*</code> (Any field prefixed with <code>meta_</code> will be stored in <code>UserMetadata</code>)</p>
+*   <code>username</code> (optional)
+*   <code>first_name</code> (optional)
+*   <code>last_name</code> (optional)
+*   <code>meta_*</code> (Optional, any field prefixed with <code>meta_</code> will be stored in <code>UserMetadata</code>)</p>
 <h3 id="login-form">Login (Form)</h3>
 <p><code>POST /auth/login</code>
 <code>GET /auth/login</code> (Redirects to configured Login Page)</p>
@@ -1452,7 +1483,7 @@
 <code>GET /auth/passwordless/login?token=...</code></p>
 <h3 id="oauth2">OAuth2</h3>
 <p><code>GET /auth/oauth2/{provider}/login</code> (Initiates login)
-<code>GET /auth/oauth2/{provider}/callback</code> (Callback handler)</p>
+<code>GET /auth/oauth2/{provider}/callback</code> (Callback handler. URL: <code>{base_url}/auth/oauth2/{provider}/callback</code>)</p>
 <hr />
 <h2 id="json-api-endpoints-api">JSON API Endpoints (<code>/api</code>)</h2>
 <p>All these endpoints require a valid API Key passed via the <code>X-API-Key</code> header.</p>
@@ -1463,6 +1494,7 @@
 <pre><code class="language-json">{
   &quot;email&quot;: &quot;user@example.com&quot;,
   &quot;password&quot;: &quot;yourpassword&quot;,
+  &quot;username&quot;: &quot;johndoe&quot;,
   &quot;first_name&quot;: &quot;John&quot;,
   &quot;last_name&quot;: &quot;Doe&quot;,
   &quot;locale&quot;: &quot;en-US&quot;,
@@ -1538,6 +1570,7 @@
 <pre><code class="language-json">{
   &quot;id&quot;: &quot;...&quot;,
   &quot;email&quot;: &quot;user@example.com&quot;,
+  &quot;username&quot;: &quot;johndoe&quot;,
   &quot;provider&quot;: &quot;local&quot;,
   &quot;email_verified&quot;: true,
   &quot;first_name&quot;: &quot;John&quot;,
@@ -1610,7 +1643,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.expand", "navigation.indexes", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

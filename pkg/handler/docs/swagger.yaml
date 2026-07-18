@@ -4,25 +4,29 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/map_string_string'
-      error: {}
+      error:
+        type: string
     type: object
   handler.ApiResponse-models_User:
     properties:
       data:
         $ref: '#/definitions/models.User'
-      error: {}
+      error:
+        type: string
     type: object
   handler.ApiResponse-service_TokenResponse:
     properties:
       data:
         $ref: '#/definitions/service.TokenResponse'
-      error: {}
+      error:
+        type: string
     type: object
   handler.ApiResponse-string:
     properties:
       data:
         type: string
-      error: {}
+      error:
+        type: string
     type: object
   handler.LogoutRequest:
     properties:
@@ -75,6 +79,8 @@ definitions:
         type: string
       user_metadata:
         $ref: '#/definitions/models.JSONMap'
+      username:
+        type: string
     type: object
   service.RequestBasicAuth:
     properties:
@@ -94,6 +100,8 @@ definitions:
       roles:
         type: string
       timezone:
+        type: string
+      username:
         type: string
     type: object
   service.RequestPasswordReset:
@@ -161,6 +169,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
       summary: Login user
       tags:
       - auth
@@ -193,6 +203,7 @@ paths:
             $ref: '#/definitions/handler.ApiResponse-string'
       security:
       - BearerAuth: []
+      - ApiKeyAuth: []
       summary: Logout user
       tags:
       - auth
@@ -249,6 +260,8 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
       summary: OAuth2 Login
       tags:
       - oauth2
@@ -275,6 +288,8 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
       summary: Confirm password reset
       tags:
       - auth
@@ -305,6 +320,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
       summary: Request password reset
       tags:
       - auth
@@ -332,6 +349,8 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
       summary: Magic link login
       tags:
       - auth
@@ -362,6 +381,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
       summary: Request magic link
       tags:
       - auth
@@ -392,6 +413,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
       summary: Register a new user
       tags:
       - auth
@@ -422,6 +445,8 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
       summary: Refresh access token
       tags:
       - auth
@@ -441,6 +466,7 @@ paths:
             $ref: '#/definitions/handler.ApiResponse-string'
       security:
       - BearerAuth: []
+      - ApiKeyAuth: []
       summary: Delete user
       tags:
       - user
@@ -460,6 +486,7 @@ paths:
             $ref: '#/definitions/handler.ApiResponse-string'
       security:
       - BearerAuth: []
+      - ApiKeyAuth: []
       summary: Get user info
       tags:
       - user
@@ -475,6 +502,10 @@ paths:
       tags:
       - system
 securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: X-API-Key
+    type: apiKey
   BearerAuth:
     in: header
     name: Authorization

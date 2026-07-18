@@ -14,7 +14,7 @@ Simple and easy to use authentication library for Golang.
 - JWT based sessions (Access & Refresh Tokens, Refresh Token Rotation)
 - OAuth2 Support (Google, GitHub, Facebook)
 - Password Reset and Passwordless (Magic Link) authentication
-- Extended User Profiles (First Name, Last Name, Locale, Timezone, Roles, etc.)
+- Extended User Profiles (Username, First Name, Last Name, Locale, Timezone, Roles, etc.)
 - SQLite, PostgreSQL, and MySQL support
 - API Key Protection for endpoints
 - Built-in Middleware for route protection
@@ -309,7 +309,7 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 
 | Endpoint                       | Required Fields                         | Optional Fields                                                    |
 | :----------------------------- | :-------------------------------------- | :----------------------------------------------------------------- |
-| `/auth/register`               | `email`, `password`, `password_confirm` | `first_name`, `last_name`, `locale`, `timezone`, `roles`, `meta_*` |
+| `/auth/register`               | `email`, `password`, `password_confirm` | `username`, `first_name`, `last_name`, `locale`, `timezone`, `roles`, `meta_*` |
 | `/auth/login`                  | `email`, `password`                     |                                                                    |
 | `/auth/password-reset/request` | `email`                                 |                                                                    |
 | `/auth/password-reset/confirm` | `token`, `password`                     |                                                                    |

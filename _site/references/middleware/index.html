@@ -11,21 +11,25 @@
       
       
       
+        <link rel="prev" href="../handler/">
+      
+      
+        <link rel="next" href="../service/">
       
       
         
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>Middleware Reference - EzAuth</title>
+        <title>Middleware - EzAuth</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -108,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Middleware Reference
+              Middleware
             
           </span>
         </div>
@@ -510,8 +514,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -525,17 +531,17 @@
       
         
       
+        
+      
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
           <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
@@ -556,7 +562,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -646,6 +652,159 @@
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Middleware
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Middleware
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#core-middleware" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Middleware
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Core Middleware">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#loginrequired" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LoginRequired
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#loadusermiddleware" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LoadUserMiddleware
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#json-api-middleware" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JSON API Middleware
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="JSON API Middleware">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#authmiddleware-bearer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AuthMiddleware (Bearer)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apikeymiddleware" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        APIKeyMiddleware
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -960,9 +1119,11 @@
 <p><code>ezauth</code> provides several middlewares to handle authentication and authorization.</p>
 <h2 id="core-middleware">Core Middleware</h2>
 <h3 id="loginrequired"><code>LoginRequired</code></h3>
-<p>Checks if a user is authenticated. This middleware is "content-aware":
--   <strong>Browser Request</strong>: Redirects to the configured Login Page.
--   <strong>API Request</strong> (<code>/api/*</code> or <code>Accept: application/json</code>): Returns <code>401 Unauthorized</code>.</p>
+<p>Checks if a user is authenticated. This middleware is "content-aware":</p>
+<ul>
+<li><strong>Browser Request</strong>: Redirects to the configured Login Page.</li>
+<li><strong>API Request</strong> (<code>/api/*</code> or <code>Accept: application/json</code>): Returns <code>401 Unauthorized</code>.</li>
+</ul>
 <pre><code class="language-go">func (h *Handler) LoginRequired(next http.Handler) http.Handler
 </code></pre>
 <p><strong>Usage:</strong></p>
@@ -1036,7 +1197,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.expand", "navigation.indexes", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

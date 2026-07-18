@@ -38,9 +38,10 @@ POST requests to these endpoints are automatically protected by `filippo.io/csrf
 *   `email` (required)
 *   `password` (required)
 *   `password_confirm` (required, must match password)
-*   `first_name`
-*   `last_name`
-*   `meta_*` (Any field prefixed with `meta_` will be stored in `UserMetadata`)
+*   `username` (optional)
+*   `first_name` (optional)
+*   `last_name` (optional)
+*   `meta_*` (Optional, any field prefixed with `meta_` will be stored in `UserMetadata`)
 
 ### Login (Form)
 `POST /auth/login`
@@ -81,6 +82,7 @@ Creates a new user and returns authentication tokens.
 {
   "email": "user@example.com",
   "password": "yourpassword",
+  "username": "johndoe",
   "first_name": "John",
   "last_name": "Doe",
   "locale": "en-US",
@@ -189,6 +191,7 @@ Returns the profile information for the currently authenticated user.
 {
   "id": "...",
   "email": "user@example.com",
+  "username": "johndoe",
   "provider": "local",
   "email_verified": true,
   "first_name": "John",

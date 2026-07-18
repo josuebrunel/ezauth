@@ -292,6 +292,7 @@ When using the form-based endpoints (e.g., `/auth/register`, `/auth/login`), `ez
 -   `email` (Required)
 -   `password` (Required, min 8 chars)
 -   `password_confirm` (Required)
+-   `username` (Optional)
 -   `first_name` (Optional)
 -   `last_name` (Optional)
 -   `locale` (Optional)

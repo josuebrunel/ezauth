@@ -8,7 +8,7 @@
 - **JWT-based Sessions**: Access and Refresh tokens with rotation for enhanced security.
 - **OAuth2 Support**: Built-in support for Google, GitHub, and Facebook.
 - **Password Reset & Passwordless**: Magic link and password reset flows.
-- **Extended User Profiles**: Store additional user information like name, locale, timezone, and roles.
+- **Extended User Profiles**: Store additional user information like username, name, locale, timezone, and roles.
 - **Multi-Database Support**: Support for SQLite and PostgreSQL.
 - **Flexible Integration**: Use it as a standalone service or embed it as a library.
 
