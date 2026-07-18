@@ -30,14 +30,17 @@ func TestEzAuth(t *testing.T) {
 		case "postgres":
 			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_tokens CASCADE")
 			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_users CASCADE")
+			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_goose_db_version")
 		case "mysql":
 			_, _ = db.Exec("SET FOREIGN_KEY_CHECKS=0")
 			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_tokens")
 			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_users")
+			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_goose_db_version")
 			_, _ = db.Exec("SET FOREIGN_KEY_CHECKS=1")
 		case "sqlite", "sqlite3":
 			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_tokens")
 			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_users")
+			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_goose_db_version")
 		}
 	})
 
