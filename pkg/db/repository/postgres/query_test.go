@@ -21,6 +21,7 @@ func TestPSQLQuerier_UserOperations(t *testing.T) {
 	user := &models.User{
 		ID:            "user-123",
 		Email:         util.UniqueEmail("test"),
+		Username:      "testuser",
 		PasswordHash:  "hash",
 		Provider:      "local",
 		ProviderID:    nil,
@@ -59,6 +60,24 @@ func TestPSQLQuerier_UserOperations(t *testing.T) {
 			t.Errorf("expected email condition, got %s", sql)
 		}
 		if len(args) != 1 || args[0] != user.Email {
+			t.Errorf("unexpected args: %v", args)
+		}
+	})
+
+	t.Run("GetByUsername", func(t *testing.T) {
+		q := querier.QueryUserGetByUsername(ctx, user.Username)
+		sql, args, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("failed to build query: %v", err)
+		}
+
+		if !strings.Contains(sql, "SELECT") || !strings.Contains(sql, "FROM \"ezauth_users\"") {
+			t.Errorf("unexpected SQL: %s", sql)
+		}
+		if !strings.Contains(sql, "\"username\" = $1") {
+			t.Errorf("expected username condition, got %s", sql)
+		}
+		if len(args) != 1 || args[0] != user.Username {
 			t.Errorf("unexpected args: %v", args)
 		}
 	})

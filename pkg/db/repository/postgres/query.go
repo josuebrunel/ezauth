@@ -32,6 +32,7 @@ func (q *PSQLQuerier) QueryUserInsert(ctx context.Context, user *models.User) bo
 		im.Into(psql.Quote(models.TableUser),
 			"id",
 			models.ColumnEmail,
+			models.ColumnUsername,
 			models.ColumnPasswordHash,
 			models.ColumnProvider,
 			models.ColumnProviderID,
@@ -51,6 +52,7 @@ func (q *PSQLQuerier) QueryUserInsert(ctx context.Context, user *models.User) bo
 		im.Values(
 			psql.Arg(user.ID),
 			psql.Arg(user.Email),
+			psql.Arg(user.Username),
 			psql.Arg(user.PasswordHash),
 			psql.Arg(user.Provider),
 			psql.Arg(user.ProviderID),
@@ -73,6 +75,10 @@ func (q *PSQLQuerier) QueryUserInsert(ctx context.Context, user *models.User) bo
 
 func (q *PSQLQuerier) QueryUserGetByEmail(ctx context.Context, email string) bob.Query {
 	return psql.Select(sm.From(psql.Quote(models.TableUser)), sm.Where(psql.Quote(models.ColumnEmail).EQ(psql.Arg(email))))
+}
+
+func (q *PSQLQuerier) QueryUserGetByUsername(ctx context.Context, username string) bob.Query {
+	return psql.Select(sm.From(psql.Quote(models.TableUser)), sm.Where(psql.Quote(models.ColumnUsername).EQ(psql.Arg(username))))
 }
 
 func (q *PSQLQuerier) QueryUserGetByID(ctx context.Context, id string) bob.Query {
@@ -98,6 +104,10 @@ func (q *PSQLQuerier) QueryUserUpdate(ctx context.Context, user *models.User) bo
 
 	if user.Email != "" {
 		qm = append(qm, um.SetCol(models.ColumnEmail).ToArg(user.Email))
+	}
+
+	if user.Username != "" {
+		qm = append(qm, um.SetCol(models.ColumnUsername).ToArg(user.Username))
 	}
 
 	if user.PasswordHash != "" {

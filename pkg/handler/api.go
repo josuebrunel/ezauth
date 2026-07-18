@@ -53,6 +53,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	// Build a partial user from the request for pre-creation hooks
 	user := &models.User{
 		Email:     req.Email,
+		Username:  req.Username,
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 		Locale:    req.Locale,

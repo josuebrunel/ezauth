@@ -58,6 +58,7 @@ func TestBasicAuthOperations(t *testing.T) {
 	t.Run("UserCreate", func(t *testing.T) {
 		req := &RequestBasicAuth{
 			Email:     email,
+			Username:  "johndoe",
 			Password:  password,
 			FirstName: "John",
 			LastName:  "Doe",
@@ -73,6 +74,9 @@ func TestBasicAuthOperations(t *testing.T) {
 		}
 		if user.Email != email {
 			t.Errorf("expected email %s, got %s", email, user.Email)
+		}
+		if user.Username != "johndoe" {
+			t.Errorf("expected username johndoe, got %s", user.Username)
 		}
 		if user.ID == "" {
 			t.Error("expected user ID to be set")
@@ -92,6 +96,16 @@ func TestBasicAuthOperations(t *testing.T) {
 		if user.Roles != "admin,user" {
 			t.Errorf("expected Roles admin,user, got %s", user.Roles)
 		}
+
+		// Verify retrieval by Username
+		fetchedByUsername, err := auth.Repo.UserGetByUsername(ctx, "johndoe")
+		if err != nil {
+			t.Fatalf("failed to fetch user by username: %v", err)
+		}
+		if fetchedByUsername.ID != user.ID {
+			t.Errorf("expected retrieved user ID %s, got %s", user.ID, fetchedByUsername.ID)
+		}
+
 		createdUser = user
 	})
 

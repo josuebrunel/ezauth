@@ -29,6 +29,7 @@ import (
 // RequestBasicAuth defines the parameters for basic authentication (email/password).
 type RequestBasicAuth struct {
 	Email     string         `json:"email"`
+	Username  string         `json:"username"`
 	Password  string         `json:"password"`
 	FirstName string         `json:"first_name"`
 	LastName  string         `json:"last_name"`
@@ -63,6 +64,7 @@ func (a *Auth) UserCreate(ctx context.Context, req *RequestBasicAuth) (*models.U
 	}
 	user := &models.User{
 		Email:        req.Email,
+		Username:     req.Username,
 		PasswordHash: hash,
 		UserMetadata: req.Data,
 		FirstName:    req.FirstName,

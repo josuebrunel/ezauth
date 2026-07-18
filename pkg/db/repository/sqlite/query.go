@@ -32,6 +32,7 @@ func (q *SqliteQuerier) QueryUserInsert(ctx context.Context, user *models.User) 
 		im.Into(models.TableUser,
 			"id",
 			models.ColumnEmail,
+			models.ColumnUsername,
 			models.ColumnPasswordHash,
 			models.ColumnProvider,
 			models.ColumnProviderID,
@@ -51,6 +52,7 @@ func (q *SqliteQuerier) QueryUserInsert(ctx context.Context, user *models.User) 
 		im.Values(
 			sqlite.Arg(user.ID),
 			sqlite.Arg(user.Email),
+			sqlite.Arg(user.Username),
 			sqlite.Arg(user.PasswordHash),
 			sqlite.Arg(user.Provider),
 			sqlite.Arg(user.ProviderID),
@@ -73,6 +75,10 @@ func (q *SqliteQuerier) QueryUserInsert(ctx context.Context, user *models.User) 
 
 func (q *SqliteQuerier) QueryUserGetByEmail(ctx context.Context, email string) bob.Query {
 	return sqlite.Select(sm.From(models.TableUser), sm.Where(sqlite.Quote(models.ColumnEmail).EQ(sqlite.Arg(email))))
+}
+
+func (q *SqliteQuerier) QueryUserGetByUsername(ctx context.Context, username string) bob.Query {
+	return sqlite.Select(sm.From(models.TableUser), sm.Where(sqlite.Quote(models.ColumnUsername).EQ(sqlite.Arg(username))))
 }
 
 func (q *SqliteQuerier) QueryUserGetByID(ctx context.Context, id string) bob.Query {
@@ -99,6 +105,10 @@ func (q *SqliteQuerier) QueryUserUpdate(ctx context.Context, user *models.User) 
 
 	if user.Email != "" {
 		qm = append(qm, um.SetCol(models.ColumnEmail).ToArg(user.Email))
+	}
+
+	if user.Username != "" {
+		qm = append(qm, um.SetCol(models.ColumnUsername).ToArg(user.Username))
 	}
 
 	if user.Provider != "" {

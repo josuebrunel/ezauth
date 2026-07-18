@@ -77,6 +77,7 @@ func TestHandler_RegisterAndLoginFlow(t *testing.T) {
 	t.Run("Register", func(t *testing.T) {
 		reqBody := map[string]any{
 			"email":    email,
+			"username": "handler_user",
 			"password": password,
 		}
 		body, _ := json.Marshal(reqBody)
@@ -101,6 +102,15 @@ func TestHandler_RegisterAndLoginFlow(t *testing.T) {
 		}
 		accessToken = resp.Data.AccessToken
 		refreshToken = resp.Data.RefreshToken
+
+		// Verify username was saved
+		fetchedUser, err := h.svc.Repo.UserGetByUsername(context.Background(), "handler_user")
+		if err != nil {
+			t.Fatalf("failed to fetch user by username: %v", err)
+		}
+		if fetchedUser.Email != email {
+			t.Errorf("expected email %s, got %s", email, fetchedUser.Email)
+		}
 	})
 
 	// 2. Login

@@ -4,6 +4,7 @@ const (
 	TableUser             = "ezauth_users"
 	TableToken            = "ezauth_tokens"
 	ColumnEmail           = "email"
+	ColumnUsername        = "username"
 	ColumnPasswordHash    = "password_hash"
 	ColumnProvider        = "provider"
 	ColumnProviderID      = "provider_id"

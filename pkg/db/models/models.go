@@ -44,6 +44,7 @@ func (j *JSONMap) Scan(value any) error {
 type User struct {
 	ID              string     `db:"id" json:"id"`
 	Email           string     `db:"email" json:"email"`
+	Username        string     `db:"username" json:"username"`
 	PasswordHash    string     `db:"password_hash" json:"-"`
 	Provider        string     `db:"provider" json:"provider"`
 	ProviderID      *string    `db:"provider_id" json:"provider_id,omitempty"`

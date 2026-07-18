@@ -32,6 +32,7 @@ func (q *MysqlQuerier) QueryUserInsert(ctx context.Context, user *models.User) b
 		im.Into(models.TableUser,
 			"id",
 			models.ColumnEmail,
+			models.ColumnUsername,
 			models.ColumnPasswordHash,
 			models.ColumnProvider,
 			models.ColumnProviderID,
@@ -51,6 +52,7 @@ func (q *MysqlQuerier) QueryUserInsert(ctx context.Context, user *models.User) b
 		im.Values(
 			mysql.Arg(user.ID),
 			mysql.Arg(user.Email),
+			mysql.Arg(user.Username),
 			mysql.Arg(user.PasswordHash),
 			mysql.Arg(user.Provider),
 			mysql.Arg(user.ProviderID),
@@ -72,6 +74,10 @@ func (q *MysqlQuerier) QueryUserInsert(ctx context.Context, user *models.User) b
 
 func (q *MysqlQuerier) QueryUserGetByEmail(ctx context.Context, email string) bob.Query {
 	return mysql.Select(sm.From(models.TableUser), sm.Where(mysql.Quote(models.ColumnEmail).EQ(mysql.Arg(email))))
+}
+
+func (q *MysqlQuerier) QueryUserGetByUsername(ctx context.Context, username string) bob.Query {
+	return mysql.Select(sm.From(models.TableUser), sm.Where(mysql.Quote(models.ColumnUsername).EQ(mysql.Arg(username))))
 }
 
 func (q *MysqlQuerier) QueryUserGetByID(ctx context.Context, id string) bob.Query {
@@ -97,6 +103,10 @@ func (q *MysqlQuerier) QueryUserUpdate(ctx context.Context, user *models.User) b
 
 	if user.Email != "" {
 		qm = append(qm, um.SetCol(models.ColumnEmail).ToArg(user.Email))
+	}
+
+	if user.Username != "" {
+		qm = append(qm, um.SetCol(models.ColumnUsername).ToArg(user.Username))
 	}
 
 	if user.Provider != "" {

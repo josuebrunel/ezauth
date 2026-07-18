@@ -29,6 +29,7 @@ func (h *Handler) FormRegister(w http.ResponseWriter, r *http.Request) {
 
 	req := &service.RequestBasicAuth{
 		Email:     r.FormValue("email"),
+		Username:  r.FormValue("username"),
 		Password:  r.FormValue("password"),
 		FirstName: r.FormValue("first_name"),
 		LastName:  r.FormValue("last_name"),
@@ -46,6 +47,7 @@ func (h *Handler) FormRegister(w http.ResponseWriter, r *http.Request) {
 	// Pre-creation hook
 	hookUser := &models.User{
 		Email:     req.Email,
+		Username:  req.Username,
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 		Locale:    req.Locale,
