@@ -126,11 +126,7 @@ func execGooseMigration(db *sql.DB, dialect string, action string) error {
 	if action == "up" {
 		results, err = provider.Up(context.Background())
 	} else if action == "down" {
-		var res *goose.MigrationResult
-		res, err = provider.Down(context.Background())
-		if res != nil {
-			results = append(results, res)
-		}
+		results, err = provider.DownTo(context.Background(), 0)
 	} else {
 		return fmt.Errorf("unknown action: %s", action)
 	}
