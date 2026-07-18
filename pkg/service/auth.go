@@ -35,6 +35,9 @@ type RequestBasicAuth struct {
 	LastName  string         `json:"last_name"`
 	Locale    string         `json:"locale"`
 	Timezone  string         `json:"timezone"`
+	Phone     string         `json:"phone"`
+	AvatarURL string         `json:"avatar_url"`
+	Nickname  string         `json:"nickname"`
 	Roles     string         `json:"roles"`
 	Data      map[string]any `json:"data"`
 }
@@ -71,6 +74,9 @@ func (a *Auth) UserCreate(ctx context.Context, req *RequestBasicAuth) (*models.U
 		LastName:     req.LastName,
 		Locale:       req.Locale,
 		Timezone:     req.Timezone,
+		Phone:        req.Phone,
+		AvatarURL:    req.AvatarURL,
+		Nickname:     req.Nickname,
 		Roles:        req.Roles,
 		Provider:     "local",
 	}

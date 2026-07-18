@@ -35,6 +35,9 @@ func (h *Handler) FormRegister(w http.ResponseWriter, r *http.Request) {
 		LastName:  r.FormValue("last_name"),
 		Locale:    r.FormValue("locale"),
 		Timezone:  r.FormValue("timezone"),
+		Phone:     r.FormValue("phone"),
+		AvatarURL: r.FormValue("avatar_url"),
+		Nickname:  r.FormValue("nickname"),
 		Roles:     r.FormValue("roles"),
 		Data:      data,
 	}
@@ -52,6 +55,9 @@ func (h *Handler) FormRegister(w http.ResponseWriter, r *http.Request) {
 		LastName:  req.LastName,
 		Locale:    req.Locale,
 		Timezone:  req.Timezone,
+		Phone:     req.Phone,
+		AvatarURL: req.AvatarURL,
+		Nickname:  req.Nickname,
 		Roles:     req.Roles,
 	}
 	if err := h.svc.Hook.BeforeUserCreated(r.Context(), hookUser); err != nil {

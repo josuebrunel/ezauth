@@ -42,9 +42,15 @@ func (q *MysqlQuerier) QueryUserInsert(ctx context.Context, user *models.User) b
 			models.ColumnFirstName,
 			models.ColumnLastName,
 			models.ColumnLastActiveAt,
+			models.ColumnLastLoginAt,
 			models.ColumnLocale,
 			models.ColumnTimezone,
 			models.ColumnEmailVerifiedAt,
+			models.ColumnPhone,
+			models.ColumnPhoneVerified,
+			models.ColumnIsActive,
+			models.ColumnAvatarURL,
+			models.ColumnNickname,
 			models.ColumnRoles,
 			models.ColumnCreatedAt,
 			models.ColumnUpdatedAt,
@@ -62,9 +68,15 @@ func (q *MysqlQuerier) QueryUserInsert(ctx context.Context, user *models.User) b
 			mysql.Arg(user.FirstName),
 			mysql.Arg(user.LastName),
 			mysql.Arg(user.LastActiveAt),
+			mysql.Arg(user.LastLoginAt),
 			mysql.Arg(user.Locale),
 			mysql.Arg(user.Timezone),
 			mysql.Arg(user.EmailVerifiedAt),
+			mysql.Arg(user.Phone),
+			mysql.Arg(user.PhoneVerified),
+			mysql.Arg(user.IsActive),
+			mysql.Arg(user.AvatarURL),
+			mysql.Arg(user.Nickname),
 			mysql.Arg(user.Roles),
 			mysql.Arg(user.CreatedAt),
 			mysql.Arg(user.UpdatedAt),
@@ -153,6 +165,26 @@ func (q *MysqlQuerier) QueryUserUpdate(ctx context.Context, user *models.User) b
 
 	if user.EmailVerifiedAt != nil {
 		qm = append(qm, um.SetCol(models.ColumnEmailVerifiedAt).ToArg(user.EmailVerifiedAt))
+	}
+
+	if user.LastLoginAt != nil {
+		qm = append(qm, um.SetCol(models.ColumnLastLoginAt).ToArg(user.LastLoginAt))
+	}
+
+	if user.Phone != "" {
+		qm = append(qm, um.SetCol(models.ColumnPhone).ToArg(user.Phone))
+	}
+
+	qm = append(qm, um.SetCol(models.ColumnPhoneVerified).ToArg(user.PhoneVerified))
+
+	qm = append(qm, um.SetCol(models.ColumnIsActive).ToArg(user.IsActive))
+
+	if user.AvatarURL != "" {
+		qm = append(qm, um.SetCol(models.ColumnAvatarURL).ToArg(user.AvatarURL))
+	}
+
+	if user.Nickname != "" {
+		qm = append(qm, um.SetCol(models.ColumnNickname).ToArg(user.Nickname))
 	}
 
 	if user.Roles != "" {

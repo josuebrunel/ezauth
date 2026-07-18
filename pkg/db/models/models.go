@@ -54,9 +54,15 @@ type User struct {
 	FirstName       string     `db:"first_name" json:"first_name"`
 	LastName        string     `db:"last_name" json:"last_name"`
 	LastActiveAt    *time.Time `db:"last_active_at" json:"last_active_at,omitempty"`
+	LastLoginAt     *time.Time `db:"last_login_at" json:"last_login_at,omitempty"`
 	Locale          string     `db:"locale" json:"locale"`
 	Timezone        string     `db:"timezone" json:"timezone"`
 	EmailVerifiedAt *time.Time `db:"email_verified_at" json:"email_verified_at,omitempty"`
+	Phone           string     `db:"phone" json:"phone"`
+	PhoneVerified   bool       `db:"phone_verified" json:"phone_verified"`
+	IsActive        bool       `db:"is_active" json:"is_active"`
+	AvatarURL       string     `db:"avatar_url" json:"avatar_url"`
+	Nickname        string     `db:"nickname" json:"nickname"`
 	Roles           string     `db:"roles" json:"roles"`
 	CreatedAt       time.Time  `db:"created_at" json:"created_at"`
 	UpdatedAt       time.Time  `db:"updated_at" json:"updated_at"`

@@ -316,6 +316,9 @@ When using the form-based endpoints (e.g., `/auth/register`, `/auth/login`), `ez
 -   `last_name` (Optional)
 -   `locale` (Optional)
 -   `timezone` (Optional)
+-   `phone` (Optional)
+-   `avatar_url` (Optional)
+-   `nickname` (Optional)
 -   `roles` (Optional, comma-separated)
 -   `meta_` (Optional)
     -   Any field starting with `meta_` will be added to the user's metadata (e.g., `meta_theme=dark` -> user_metadata: `{ "theme": "dark" }`).

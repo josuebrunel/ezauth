@@ -42,9 +42,15 @@ func (q *PSQLQuerier) QueryUserInsert(ctx context.Context, user *models.User) bo
 			models.ColumnFirstName,
 			models.ColumnLastName,
 			models.ColumnLastActiveAt,
+			models.ColumnLastLoginAt,
 			models.ColumnLocale,
 			models.ColumnTimezone,
 			models.ColumnEmailVerifiedAt,
+			models.ColumnPhone,
+			models.ColumnPhoneVerified,
+			models.ColumnIsActive,
+			models.ColumnAvatarURL,
+			models.ColumnNickname,
 			models.ColumnRoles,
 			models.ColumnCreatedAt,
 			models.ColumnUpdatedAt,
@@ -62,9 +68,15 @@ func (q *PSQLQuerier) QueryUserInsert(ctx context.Context, user *models.User) bo
 			psql.Arg(user.FirstName),
 			psql.Arg(user.LastName),
 			psql.Arg(user.LastActiveAt),
+			psql.Arg(user.LastLoginAt),
 			psql.Arg(user.Locale),
 			psql.Arg(user.Timezone),
 			psql.Arg(user.EmailVerifiedAt),
+			psql.Arg(user.Phone),
+			psql.Arg(user.PhoneVerified),
+			psql.Arg(user.IsActive),
+			psql.Arg(user.AvatarURL),
+			psql.Arg(user.Nickname),
 			psql.Arg(user.Roles),
 			psql.Arg(user.CreatedAt),
 			psql.Arg(user.UpdatedAt),
@@ -154,6 +166,26 @@ func (q *PSQLQuerier) QueryUserUpdate(ctx context.Context, user *models.User) bo
 
 	if user.EmailVerifiedAt != nil {
 		qm = append(qm, um.SetCol(models.ColumnEmailVerifiedAt).ToArg(user.EmailVerifiedAt))
+	}
+
+	if user.LastLoginAt != nil {
+		qm = append(qm, um.SetCol(models.ColumnLastLoginAt).ToArg(user.LastLoginAt))
+	}
+
+	if user.Phone != "" {
+		qm = append(qm, um.SetCol(models.ColumnPhone).ToArg(user.Phone))
+	}
+
+	qm = append(qm, um.SetCol(models.ColumnPhoneVerified).ToArg(user.PhoneVerified))
+
+	qm = append(qm, um.SetCol(models.ColumnIsActive).ToArg(user.IsActive))
+
+	if user.AvatarURL != "" {
+		qm = append(qm, um.SetCol(models.ColumnAvatarURL).ToArg(user.AvatarURL))
+	}
+
+	if user.Nickname != "" {
+		qm = append(qm, um.SetCol(models.ColumnNickname).ToArg(user.Nickname))
 	}
 
 	if user.Roles != "" {

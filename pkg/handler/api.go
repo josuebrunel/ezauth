@@ -58,6 +58,9 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		LastName:  req.LastName,
 		Locale:    req.Locale,
 		Timezone:  req.Timezone,
+		Phone:     req.Phone,
+		AvatarURL: req.AvatarURL,
+		Nickname:  req.Nickname,
 		Roles:     req.Roles,
 	}
 
