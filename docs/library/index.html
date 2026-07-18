@@ -545,6 +545,67 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="User Model Helpers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#role-helpers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Role Helpers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#display-helpers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Display Helpers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#provider-helpers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Provider Helpers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security-helpers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security Helpers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#metadata-helpers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metadata Helpers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -1243,6 +1304,67 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="User Model Helpers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#role-helpers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Role Helpers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#display-helpers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Display Helpers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#provider-helpers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Provider Helpers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security-helpers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security Helpers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#metadata-helpers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metadata Helpers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -1616,8 +1738,31 @@ func MyHandler(w http.ResponseWriter, r *http.Request) {
 </code></pre>
 <h3 id="user-model-helpers">User Model Helpers</h3>
 <p>When you have a <code>models.User</code> object, you can use these helper methods:</p>
+<h4 id="role-helpers">Role Helpers</h4>
 <ul>
 <li><code>HasRole(role string) bool</code>: Checks if the user has a specific role.</li>
+<li><code>HasAnyRole(roles ...string) bool</code>: Checks if the user has any of the given roles.</li>
+<li><code>HasAllRoles(roles ...string) bool</code>: Checks if the user has all of the given roles.</li>
+<li><code>GetRoles() []string</code>: Returns the user's roles as a slice.</li>
+<li><code>AddRole(role string)</code>: Appends a role (avoids duplicates).</li>
+<li><code>RemoveRole(role string)</code>: Removes a role from the list.</li>
+</ul>
+<h4 id="display-helpers">Display Helpers</h4>
+<ul>
+<li><code>FullName() string</code>: Returns the user's first and last name combined.</li>
+<li><code>DisplayName() string</code>: Returns the best available name (FullName &gt; Username &gt; email local-part).</li>
+</ul>
+<h4 id="provider-helpers">Provider Helpers</h4>
+<ul>
+<li><code>IsOAuth() bool</code>: Returns true if the user signed up via an OAuth2 provider.</li>
+<li><code>IsLocal() bool</code>: Returns true if the user signed up with email/password.</li>
+</ul>
+<h4 id="security-helpers">Security Helpers</h4>
+<ul>
+<li><code>Sanitize()</code>: Clears sensitive fields (e.g., <code>PasswordHash</code>) before serialization.</li>
+</ul>
+<h4 id="metadata-helpers">Metadata Helpers</h4>
+<ul>
 <li><code>GetMeta[T any](user, key) (T, bool)</code>: Retrieves a value from <code>UserMetadata</code>.</li>
 <li><code>SetMeta(key, value)</code>: Sets a value in <code>UserMetadata</code>.</li>
 <li><code>GetAppMeta[T any](user, key) (T, bool)</code>: Retrieves a value from <code>AppMetadata</code>.</li>
