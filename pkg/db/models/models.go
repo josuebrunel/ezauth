@@ -65,16 +65,116 @@ type User struct {
 // HasRole checks if the user has the specified role.
 // Roles are stored as a comma-separated string.
 func (u *User) HasRole(role string) bool {
-	if u.Roles == "" {
-		return false
-	}
-	roles := strings.Split(u.Roles, ",")
-	for _, r := range roles {
-		if strings.TrimSpace(r) == role {
+	for _, r := range u.GetRoles() {
+		if r == role {
 			return true
 		}
 	}
 	return false
+}
+
+// HasAnyRole checks if the user has any of the given roles.
+func (u *User) HasAnyRole(roles ...string) bool {
+	for _, role := range roles {
+		if u.HasRole(role) {
+			return true
+		}
+	}
+	return false
+}
+
+// HasAllRoles checks if the user has all of the given roles.
+func (u *User) HasAllRoles(roles ...string) bool {
+	for _, role := range roles {
+		if !u.HasRole(role) {
+			return false
+		}
+	}
+	return true
+}
+
+// GetRoles returns the user's roles as a slice.
+func (u *User) GetRoles() []string {
+	if u.Roles == "" {
+		return nil
+	}
+	parts := strings.Split(u.Roles, ",")
+	roles := make([]string, 0, len(parts))
+	for _, r := range parts {
+		trimmed := strings.TrimSpace(r)
+		if trimmed != "" {
+			roles = append(roles, trimmed)
+		}
+	}
+	return roles
+}
+
+// AddRole appends a role to the user's role list, avoiding duplicates.
+func (u *User) AddRole(role string) {
+	if u.HasRole(role) {
+		return
+	}
+	if u.Roles == "" {
+		u.Roles = role
+	} else {
+		u.Roles = u.Roles + "," + role
+	}
+}
+
+// RemoveRole removes a role from the user's role list if present.
+func (u *User) RemoveRole(role string) {
+	roles := u.GetRoles()
+	filtered := make([]string, 0, len(roles))
+	for _, r := range roles {
+		if r != role {
+			filtered = append(filtered, r)
+		}
+	}
+	u.Roles = strings.Join(filtered, ",")
+}
+
+// FullName returns the user's first and last name combined.
+func (u *User) FullName() string {
+	switch {
+	case u.FirstName != "" && u.LastName != "":
+		return u.FirstName + " " + u.LastName
+	case u.FirstName != "":
+		return u.FirstName
+	case u.LastName != "":
+		return u.LastName
+	default:
+		return ""
+	}
+}
+
+// DisplayName returns the best available display name for the user.
+// It prefers FullName over Username over the local part of the email.
+func (u *User) DisplayName() string {
+	if fn := u.FullName(); fn != "" {
+		return fn
+	}
+	if u.Username != "" {
+		return u.Username
+	}
+	if idx := strings.Index(u.Email, "@"); idx > 0 {
+		return u.Email[:idx]
+	}
+	return u.Email
+}
+
+// IsOAuth returns true if the user signed up via an OAuth2 provider.
+func (u *User) IsOAuth() bool {
+	return u.Provider != "" && u.Provider != "local"
+}
+
+// IsLocal returns true if the user signed up with email/password.
+func (u *User) IsLocal() bool {
+	return u.Provider == "" || u.Provider == "local"
+}
+
+// Sanitize clears sensitive fields (e.g., PasswordHash) before serialization.
+func (u *User) Sanitize() {
+	u.PasswordHash = ""
 }
 
 // GetMeta retrieves a value from UserMetadata with type casting.

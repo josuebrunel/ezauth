@@ -122,7 +122,26 @@ func MyHandler(w http.ResponseWriter, r *http.Request) {
 
 When you have a `models.User` object, you can use these helper methods:
 
+#### Role Helpers
 - `HasRole(role string) bool`: Checks if the user has a specific role.
+- `HasAnyRole(roles ...string) bool`: Checks if the user has any of the given roles.
+- `HasAllRoles(roles ...string) bool`: Checks if the user has all of the given roles.
+- `GetRoles() []string`: Returns the user's roles as a slice.
+- `AddRole(role string)`: Appends a role (avoids duplicates).
+- `RemoveRole(role string)`: Removes a role from the list.
+
+#### Display Helpers
+- `FullName() string`: Returns the user's first and last name combined.
+- `DisplayName() string`: Returns the best available name (FullName > Username > email local-part).
+
+#### Provider Helpers
+- `IsOAuth() bool`: Returns true if the user signed up via an OAuth2 provider.
+- `IsLocal() bool`: Returns true if the user signed up with email/password.
+
+#### Security Helpers
+- `Sanitize()`: Clears sensitive fields (e.g., `PasswordHash`) before serialization.
+
+#### Metadata Helpers
 - `GetMeta[T any](user, key) (T, bool)`: Retrieves a value from `UserMetadata`.
 - `SetMeta(key, value)`: Sets a value in `UserMetadata`.
 - `GetAppMeta[T any](user, key) (T, bool)`: Retrieves a value from `AppMetadata`.

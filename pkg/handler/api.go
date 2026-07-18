@@ -180,7 +180,7 @@ func (h *Handler) UserInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user.PasswordHash = ""
+	user.Sanitize()
 	WriteJSONResponse(w, http.StatusOK, user, nil)
 }
 
