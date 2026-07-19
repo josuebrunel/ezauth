@@ -13,9 +13,9 @@ import (
 	"golang.org/x/oauth2/endpoints"
 )
 
-// JsonUserInfo builds a UserInfoFn that makes a GET request to the specified url,
+// JSONUserInfo builds a UserInfoFn that makes a GET request to the specified url,
 // decodes the response as a flat JSON object, and extracts the idField and emailField.
-func JsonUserInfo(url string, idField, emailField string) func(ctx context.Context, token *oauth2.Token) (*service.OAuth2UserInfo, error) {
+func JSONUserInfo(url string, idField, emailField string) func(ctx context.Context, token *oauth2.Token) (*service.OAuth2UserInfo, error) {
 	return func(ctx context.Context, token *oauth2.Token) (*service.OAuth2UserInfo, error) {
 		client := oauth2.NewClient(ctx, oauth2.StaticTokenSource(token))
 		resp, err := client.Get(url)
@@ -65,7 +65,7 @@ func Discord(clientID, clientSecret, redirectURL string) service.OAuth2Provider 
 			Scopes:       []string{"identify", "email"},
 			Endpoint:     endpoints.Discord,
 		},
-		UserInfoFn: JsonUserInfo("https://discord.com/api/users/@me", "id", "email"),
+		UserInfoFn: JSONUserInfo("https://discord.com/api/users/@me", "id", "email"),
 	}
 }
 
@@ -79,7 +79,7 @@ func GitLab(clientID, clientSecret, redirectURL string) service.OAuth2Provider {
 			Scopes:       []string{"read_user"},
 			Endpoint:     endpoints.GitLab,
 		},
-		UserInfoFn: JsonUserInfo("https://gitlab.com/api/v4/user", "id", "email"),
+		UserInfoFn: JSONUserInfo("https://gitlab.com/api/v4/user", "id", "email"),
 	}
 }
 
@@ -93,7 +93,7 @@ func Slack(clientID, clientSecret, redirectURL string) service.OAuth2Provider {
 			Scopes:       []string{"openid", "email"},
 			Endpoint:     endpoints.Slack,
 		},
-		UserInfoFn: JsonUserInfo("https://slack.com/api/openid.connect.userInfo", "sub", "email"),
+		UserInfoFn: JSONUserInfo("https://slack.com/api/openid.connect.userInfo", "sub", "email"),
 	}
 }
 
@@ -107,7 +107,7 @@ func LinkedIn(clientID, clientSecret, redirectURL string) service.OAuth2Provider
 			Scopes:       []string{"openid", "profile", "email"},
 			Endpoint:     endpoints.LinkedIn,
 		},
-		UserInfoFn: JsonUserInfo("https://api.linkedin.com/v2/userinfo", "sub", "email"),
+		UserInfoFn: JSONUserInfo("https://api.linkedin.com/v2/userinfo", "sub", "email"),
 	}
 }
 
@@ -121,7 +121,7 @@ func Spotify(clientID, clientSecret, redirectURL string) service.OAuth2Provider 
 			Scopes:       []string{"user-read-email", "user-read-private"},
 			Endpoint:     endpoints.Spotify,
 		},
-		UserInfoFn: JsonUserInfo("https://api.spotify.com/v1/me", "id", "email"),
+		UserInfoFn: JSONUserInfo("https://api.spotify.com/v1/me", "id", "email"),
 	}
 }
 
@@ -177,6 +177,6 @@ func OIDC(ctx context.Context, issuerURL, clientID, clientSecret, redirectURL st
 				TokenURL: doc.TokenEndpoint,
 			},
 		},
-		UserInfoFn: JsonUserInfo(doc.UserinfoEndpoint, "sub", "email"),
+		UserInfoFn: JSONUserInfo(doc.UserinfoEndpoint, "sub", "email"),
 	}, nil
 }

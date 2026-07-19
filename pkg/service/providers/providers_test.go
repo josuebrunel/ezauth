@@ -11,7 +11,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func TestJsonUserInfo_StringID(t *testing.T) {
+func TestJSONUserInfo_StringID(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -19,7 +19,7 @@ func TestJsonUserInfo_StringID(t *testing.T) {
 	}))
 	defer server.Close()
 
-	fn := JsonUserInfo(server.URL, "id", "email")
+	fn := JSONUserInfo(server.URL, "id", "email")
 	token := &oauth2.Token{AccessToken: "mock-token"}
 	info, err := fn(context.Background(), token)
 	if err != nil {
@@ -34,7 +34,7 @@ func TestJsonUserInfo_StringID(t *testing.T) {
 	}
 }
 
-func TestJsonUserInfo_NumericID(t *testing.T) {
+func TestJSONUserInfo_NumericID(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -42,7 +42,7 @@ func TestJsonUserInfo_NumericID(t *testing.T) {
 	}))
 	defer server.Close()
 
-	fn := JsonUserInfo(server.URL, "id_num", "email_addr")
+	fn := JSONUserInfo(server.URL, "id_num", "email_addr")
 	token := &oauth2.Token{AccessToken: "mock-token"}
 	info, err := fn(context.Background(), token)
 	if err != nil {
@@ -57,7 +57,7 @@ func TestJsonUserInfo_NumericID(t *testing.T) {
 	}
 }
 
-func TestJsonUserInfo_MissingID(t *testing.T) {
+func TestJSONUserInfo_MissingID(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -65,7 +65,7 @@ func TestJsonUserInfo_MissingID(t *testing.T) {
 	}))
 	defer server.Close()
 
-	fn := JsonUserInfo(server.URL, "id", "email")
+	fn := JSONUserInfo(server.URL, "id", "email")
 	token := &oauth2.Token{AccessToken: "mock-token"}
 	_, err := fn(context.Background(), token)
 	if err == nil {

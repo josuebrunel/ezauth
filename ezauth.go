@@ -6,8 +6,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"html/template"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -129,7 +129,7 @@ func (e *EzAuth) registerBuiltinProviders(ctx context.Context) error {
 					Scopes:       strings.Split(cfg.Scopes, ","),
 					Endpoint:     google.Endpoint,
 				},
-				UserInfoFn: providers.JsonUserInfo("https://www.googleapis.com/oauth2/v3/userinfo", "sub", "email"),
+				UserInfoFn: providers.JSONUserInfo("https://www.googleapis.com/oauth2/v3/userinfo", "sub", "email"),
 			}, true
 		}},
 		{"github", func() (service.OAuth2Provider, bool) {
@@ -145,7 +145,7 @@ func (e *EzAuth) registerBuiltinProviders(ctx context.Context) error {
 					Scopes:       strings.Split(cfg.Scopes, ","),
 					Endpoint:     github.Endpoint,
 				},
-				UserInfoFn: providers.JsonUserInfo("https://api.github.com/user", "id", "email"),
+				UserInfoFn: providers.JSONUserInfo("https://api.github.com/user", "id", "email"),
 			}, true
 		}},
 		{"facebook", func() (service.OAuth2Provider, bool) {
@@ -161,7 +161,7 @@ func (e *EzAuth) registerBuiltinProviders(ctx context.Context) error {
 					Scopes:       strings.Split(cfg.Scopes, ","),
 					Endpoint:     facebook.Endpoint,
 				},
-				UserInfoFn: providers.JsonUserInfo("https://graph.facebook.com/me?fields=id,email", "id", "email"),
+				UserInfoFn: providers.JSONUserInfo("https://graph.facebook.com/me?fields=id,email", "id", "email"),
 			}, true
 		}},
 		{"discord", func() (service.OAuth2Provider, bool) {
@@ -214,12 +214,17 @@ func (e *EzAuth) registerCustomProviders(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	oidcCtx, cancel := context.WithTimeout(ctx, e.Config.TimeOut)
+	defer cancel()
+
 	for _, cp := range customProvs {
 		var p service.OAuth2Provider
 		if cp.IssuerURL != "" {
-			p, err = providers.OIDC(ctx, cp.IssuerURL, cp.ClientID, cp.ClientSecret, cp.RedirectURL, cp.Scopes)
+			p, err = providers.OIDC(oidcCtx, cp.IssuerURL, cp.ClientID, cp.ClientSecret, cp.RedirectURL, cp.Scopes)
 			if err != nil {
-				return fmt.Errorf("failed to register custom provider %q via OIDC discovery: %w", cp.Name, err)
+				slog.Warn("skipping custom OIDC provider: discovery failed", "name", cp.Name, "err", err)
+				continue
 			}
 		} else {
 			p = service.OAuth2Provider{
@@ -233,7 +238,7 @@ func (e *EzAuth) registerCustomProviders(ctx context.Context) error {
 						TokenURL: cp.TokenURL,
 					},
 				},
-				UserInfoFn: providers.JsonUserInfo(cp.UserinfoURL, cp.IDField, cp.EmailField),
+				UserInfoFn: providers.JSONUserInfo(cp.UserinfoURL, cp.IDField, cp.EmailField),
 			}
 		}
 		e.RegisterOAuth2Provider(cp.Name, p)
