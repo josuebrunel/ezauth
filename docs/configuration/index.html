@@ -534,6 +534,72 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#discord" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Discord
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gitlab" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GitLab
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slack" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slack
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#linkedin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LinkedIn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#spotify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spotify
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-oauth2-providers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom OAuth2 Providers
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1166,6 +1232,72 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#discord" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Discord
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gitlab" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GitLab
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slack" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slack
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#linkedin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LinkedIn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#spotify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spotify
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-oauth2-providers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom OAuth2 Providers
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1476,6 +1608,222 @@
 <td><code>EZAUTH_OAUTH2_FACEBOOK_SCOPES</code></td>
 <td>Scopes to request.</td>
 <td><code>email,public_profile</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="discord">Discord</h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EZAUTH_OAUTH2_DISCORD_CLIENT_ID</code></td>
+<td>Discord OAuth2 Client ID.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_DISCORD_CLIENT_SECRET</code></td>
+<td>Discord OAuth2 Client Secret.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_DISCORD_REDIRECT_URL</code></td>
+<td>Redirect URL registered in Discord settings. Must be: <code>{base_url}/auth/oauth2/discord/callback</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_DISCORD_SCOPES</code></td>
+<td>Scopes to request.</td>
+<td><code>identify,email</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="gitlab">GitLab</h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EZAUTH_OAUTH2_GITLAB_CLIENT_ID</code></td>
+<td>GitLab OAuth2 Client ID.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_GITLAB_CLIENT_SECRET</code></td>
+<td>GitLab OAuth2 Client Secret.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_GITLAB_REDIRECT_URL</code></td>
+<td>Redirect URL registered in GitLab settings. Must be: <code>{base_url}/auth/oauth2/gitlab/callback</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_GITLAB_SCOPES</code></td>
+<td>Scopes to request.</td>
+<td><code>read_user</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="slack">Slack</h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EZAUTH_OAUTH2_SLACK_CLIENT_ID</code></td>
+<td>Slack OAuth2 Client ID.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_SLACK_CLIENT_SECRET</code></td>
+<td>Slack OAuth2 Client Secret.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_SLACK_REDIRECT_URL</code></td>
+<td>Redirect URL registered in Slack settings. Must be: <code>{base_url}/auth/oauth2/slack/callback</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_SLACK_SCOPES</code></td>
+<td>Scopes to request.</td>
+<td><code>openid,email</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="linkedin">LinkedIn</h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EZAUTH_OAUTH2_LINKEDIN_CLIENT_ID</code></td>
+<td>LinkedIn OAuth2 Client ID.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_LINKEDIN_CLIENT_SECRET</code></td>
+<td>LinkedIn OAuth2 Client Secret.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_LINKEDIN_REDIRECT_URL</code></td>
+<td>Redirect URL registered in LinkedIn settings. Must be: <code>{base_url}/auth/oauth2/linkedin/callback</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_LINKEDIN_SCOPES</code></td>
+<td>Scopes to request.</td>
+<td><code>openid,profile,email</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="spotify">Spotify</h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EZAUTH_OAUTH2_SPOTIFY_CLIENT_ID</code></td>
+<td>Spotify OAuth2 Client ID.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_SPOTIFY_CLIENT_SECRET</code></td>
+<td>Spotify OAuth2 Client Secret.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_SPOTIFY_REDIRECT_URL</code></td>
+<td>Redirect URL registered in Spotify settings. Must be: <code>{base_url}/auth/oauth2/spotify/callback</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_SPOTIFY_SCOPES</code></td>
+<td>Scopes to request.</td>
+<td><code>user-read-email,user-read-private</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="custom-oauth2-providers">Custom OAuth2 Providers</h3>
+<p>For providers not in the built-in list, use the dynamic provider configuration:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EZAUTH_OAUTH2_PROVIDERS</code></td>
+<td>Comma-separated list of custom provider names to register.</td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_&lt;NAME&gt;_CLIENT_ID</code></td>
+<td>OAuth2 Client ID for the custom provider.</td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_&lt;NAME&gt;_CLIENT_SECRET</code></td>
+<td>OAuth2 Client Secret for the custom provider.</td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_&lt;NAME&gt;_REDIRECT_URL</code></td>
+<td>Redirect URL for the custom provider.</td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_&lt;NAME&gt;_SCOPES</code></td>
+<td>Comma-separated scopes to request.</td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_&lt;NAME&gt;_ISSUER_URL</code></td>
+<td>OIDC Issuer URL (enables automatic OIDC discovery).</td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_&lt;NAME&gt;_AUTH_URL</code></td>
+<td>Authorization endpoint (manual config, requires TOKEN_URL).</td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_&lt;NAME&gt;_TOKEN_URL</code></td>
+<td>Token endpoint (manual config, requires AUTH_URL).</td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_&lt;NAME&gt;_USERINFO_URL</code></td>
+<td>Userinfo endpoint (manual config, requires AUTH_URL + TOKEN_URL).</td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_&lt;NAME&gt;_ID_FIELD</code></td>
+<td>JSON field name for the user ID in the userinfo response.</td>
+</tr>
+<tr>
+<td><code>EZAUTH_OAUTH2_&lt;NAME&gt;_EMAIL_FIELD</code></td>
+<td>JSON field name for the email in the userinfo response.</td>
 </tr>
 </tbody>
 </table>
