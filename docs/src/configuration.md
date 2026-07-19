@@ -87,3 +87,61 @@ Used for the Form-based handlers (browser flows).
 | `EZAUTH_OAUTH2_FACEBOOK_CLIENT_SECRET` | Facebook OAuth2 Client Secret.                                                                    |                        |
 | `EZAUTH_OAUTH2_FACEBOOK_REDIRECT_URL`  | Redirect URL registered in Facebook settings. Must be: `{base_url}/auth/oauth2/facebook/callback` |                        |
 | `EZAUTH_OAUTH2_FACEBOOK_SCOPES`        | Scopes to request.                                                                                | `email,public_profile` |
+
+### Discord
+| Variable                              | Description                                                                                     | Default          |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------- | ---------------- |
+| `EZAUTH_OAUTH2_DISCORD_CLIENT_ID`     | Discord OAuth2 Client ID.                                                                       |                  |
+| `EZAUTH_OAUTH2_DISCORD_CLIENT_SECRET` | Discord OAuth2 Client Secret.                                                                   |                  |
+| `EZAUTH_OAUTH2_DISCORD_REDIRECT_URL`  | Redirect URL registered in Discord settings. Must be: `{base_url}/auth/oauth2/discord/callback` |                  |
+| `EZAUTH_OAUTH2_DISCORD_SCOPES`        | Scopes to request.                                                                              | `identify,email` |
+
+### GitLab
+| Variable                             | Description                                                                                   | Default     |
+| ------------------------------------ | --------------------------------------------------------------------------------------------- | ----------- |
+| `EZAUTH_OAUTH2_GITLAB_CLIENT_ID`     | GitLab OAuth2 Client ID.                                                                      |             |
+| `EZAUTH_OAUTH2_GITLAB_CLIENT_SECRET` | GitLab OAuth2 Client Secret.                                                                  |             |
+| `EZAUTH_OAUTH2_GITLAB_REDIRECT_URL`  | Redirect URL registered in GitLab settings. Must be: `{base_url}/auth/oauth2/gitlab/callback` |             |
+| `EZAUTH_OAUTH2_GITLAB_SCOPES`        | Scopes to request.                                                                            | `read_user` |
+
+### Slack
+| Variable                            | Description                                                                                 | Default        |
+| ----------------------------------- | ------------------------------------------------------------------------------------------- | -------------- |
+| `EZAUTH_OAUTH2_SLACK_CLIENT_ID`     | Slack OAuth2 Client ID.                                                                     |                |
+| `EZAUTH_OAUTH2_SLACK_CLIENT_SECRET` | Slack OAuth2 Client Secret.                                                                 |                |
+| `EZAUTH_OAUTH2_SLACK_REDIRECT_URL`  | Redirect URL registered in Slack settings. Must be: `{base_url}/auth/oauth2/slack/callback` |                |
+| `EZAUTH_OAUTH2_SLACK_SCOPES`        | Scopes to request.                                                                          | `openid,email` |
+
+### LinkedIn
+| Variable                               | Description                                                                                       | Default                |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------------- |
+| `EZAUTH_OAUTH2_LINKEDIN_CLIENT_ID`     | LinkedIn OAuth2 Client ID.                                                                        |                        |
+| `EZAUTH_OAUTH2_LINKEDIN_CLIENT_SECRET` | LinkedIn OAuth2 Client Secret.                                                                    |                        |
+| `EZAUTH_OAUTH2_LINKEDIN_REDIRECT_URL`  | Redirect URL registered in LinkedIn settings. Must be: `{base_url}/auth/oauth2/linkedin/callback` |                        |
+| `EZAUTH_OAUTH2_LINKEDIN_SCOPES`        | Scopes to request.                                                                                | `openid,profile,email` |
+
+### Spotify
+| Variable                              | Description                                                                                     | Default                             |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `EZAUTH_OAUTH2_SPOTIFY_CLIENT_ID`     | Spotify OAuth2 Client ID.                                                                       |                                     |
+| `EZAUTH_OAUTH2_SPOTIFY_CLIENT_SECRET` | Spotify OAuth2 Client Secret.                                                                   |                                     |
+| `EZAUTH_OAUTH2_SPOTIFY_REDIRECT_URL`  | Redirect URL registered in Spotify settings. Must be: `{base_url}/auth/oauth2/spotify/callback` |                                     |
+| `EZAUTH_OAUTH2_SPOTIFY_SCOPES`        | Scopes to request.                                                                              | `user-read-email,user-read-private` |
+
+### Custom OAuth2 Providers
+
+For providers not in the built-in list, use the dynamic provider configuration:
+
+| Variable                             | Description                                                       |
+| ------------------------------------ | ----------------------------------------------------------------- |
+| `EZAUTH_OAUTH2_PROVIDERS`            | Comma-separated list of custom provider names to register.        |
+| `EZAUTH_OAUTH2_<NAME>_CLIENT_ID`     | OAuth2 Client ID for the custom provider.                         |
+| `EZAUTH_OAUTH2_<NAME>_CLIENT_SECRET` | OAuth2 Client Secret for the custom provider.                     |
+| `EZAUTH_OAUTH2_<NAME>_REDIRECT_URL`  | Redirect URL for the custom provider.                             |
+| `EZAUTH_OAUTH2_<NAME>_SCOPES`        | Comma-separated scopes to request.                                |
+| `EZAUTH_OAUTH2_<NAME>_ISSUER_URL`    | OIDC Issuer URL (enables automatic OIDC discovery).               |
+| `EZAUTH_OAUTH2_<NAME>_AUTH_URL`      | Authorization endpoint (manual config, requires TOKEN_URL).       |
+| `EZAUTH_OAUTH2_<NAME>_TOKEN_URL`     | Token endpoint (manual config, requires AUTH_URL).                |
+| `EZAUTH_OAUTH2_<NAME>_USERINFO_URL`  | Userinfo endpoint (manual config, requires AUTH_URL + TOKEN_URL). |
+| `EZAUTH_OAUTH2_<NAME>_ID_FIELD`      | JSON field name for the user ID in the userinfo response.         | `id`    |
+| `EZAUTH_OAUTH2_<NAME>_EMAIL_FIELD`   | JSON field name for the email in the userinfo response.           | `email` |

@@ -8,6 +8,8 @@ import (
 	"github.com/josuebrunel/ezauth/pkg/db/migrations"
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/josuebrunel/ezauth/pkg/util"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 
 	"strings"
 
@@ -281,7 +283,24 @@ func TestOAuth2GetConfig(t *testing.T) {
 			},
 		},
 	}
-	auth := &Auth{Cfg: cfg}
+	auth := &Auth{
+		Cfg:             cfg,
+		customProviders: make(map[string]OAuth2Provider),
+	}
+
+	// Register a test provider (simulating what registerBuiltinProviders does)
+	auth.RegisterOAuth2Provider("google", OAuth2Provider{
+		Config: oauth2.Config{
+			ClientID:     cfg.OAuth2.Google.ClientID,
+			ClientSecret: cfg.OAuth2.Google.ClientSecret,
+			RedirectURL:  cfg.OAuth2.Google.RedirectURL,
+			Scopes:       strings.Split(cfg.OAuth2.Google.Scopes, ","),
+			Endpoint:     google.Endpoint,
+		},
+		UserInfoFn: func(ctx context.Context, token *oauth2.Token) (*OAuth2UserInfo, error) {
+			return &OAuth2UserInfo{ID: "test-id", Email: "test@example.com"}, nil
+		},
+	})
 
 	t.Run("Google", func(t *testing.T) {
 		conf, err := auth.OAuth2GetConfig("google")

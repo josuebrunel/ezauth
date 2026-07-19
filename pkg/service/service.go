@@ -2,17 +2,21 @@
 package service
 
 import (
+	"sync"
+
 	"github.com/josuebrunel/ezauth/pkg/config"
 	"github.com/josuebrunel/ezauth/pkg/db/repository"
 )
 
 // Auth handles the core authentication logic.
 type Auth struct {
-	Cfg        *config.Config
-	Repo       *repository.Repository
-	Mailer     Mailer
-	PathPrefix string
-	Hook       Hook
+	Cfg               *config.Config
+	Repo              *repository.Repository
+	Mailer            Mailer
+	PathPrefix        string
+	Hook              Hook
+	customProvidersMu sync.RWMutex
+	customProviders   map[string]OAuth2Provider
 }
 
 // New creates a new Auth service with the given config and repository.
@@ -25,11 +29,12 @@ func New(cfg *config.Config, repo *repository.Repository, pathPrefix string) *Au
 	}
 
 	return &Auth{
-		Cfg:        cfg,
-		Repo:       repo,
-		Mailer:     mailer,
-		PathPrefix: pathPrefix,
-		Hook:       DefaultHook{},
+		Cfg:             cfg,
+		Repo:            repo,
+		Mailer:          mailer,
+		PathPrefix:      pathPrefix,
+		Hook:            DefaultHook{},
+		customProviders: make(map[string]OAuth2Provider),
 	}
 }
 

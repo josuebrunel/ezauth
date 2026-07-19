@@ -242,7 +242,7 @@ func (h *Handler) redirectWithSuccess(w http.ResponseWriter, r *http.Request, ta
 // @Summary OAuth2 Login
 // @Description Redirect to the OAuth2 provider login page
 // @Tags oauth2
-// @Param provider path string true "OAuth2 Provider (google, github, facebook)"
+// @Param provider path string true "OAuth2 Provider (google, github, facebook, discord, gitlab, slack, linkedin, spotify, or any registered custom provider)"
 // @Security ApiKeyAuth
 // @Success 307
 // @Failure 400 {object} ApiResponse[string]
@@ -277,7 +277,7 @@ func (h *Handler) OAuth2Login(w http.ResponseWriter, r *http.Request) {
 // @Summary OAuth2 Callback
 // @Description Handle the callback from the OAuth2 provider
 // @Tags oauth2
-// @Param provider path string true "OAuth2 Provider (google, github, facebook)"
+// @Param provider path string true "OAuth2 Provider (google, github, facebook, discord, gitlab, slack, linkedin, spotify, or any registered custom provider)"
 // @Param code query string true "Authorization Code"
 // @Param state query string true "CSRF State"
 // @Success 200 {object} ApiResponse[service.TokenResponse]

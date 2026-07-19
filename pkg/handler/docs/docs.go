@@ -136,7 +136,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "OAuth2 Provider (google, github, facebook)",
+                        "description": "OAuth2 Provider (google, github, facebook, discord, gitlab, slack, linkedin, spotify, or any registered custom provider)",
                         "name": "provider",
                         "in": "path",
                         "required": true
@@ -196,7 +196,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "OAuth2 Provider (google, github, facebook)",
+                        "description": "OAuth2 Provider (google, github, facebook, discord, gitlab, slack, linkedin, spotify, or any registered custom provider)",
                         "name": "provider",
                         "in": "path",
                         "required": true
@@ -673,6 +673,9 @@ const docTemplate = `{
                 "app_metadata": {
                     "$ref": "#/definitions/models.JSONMap"
                 },
+                "avatar_url": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -691,7 +694,13 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "is_active": {
+                    "type": "boolean"
+                },
                 "last_active_at": {
+                    "type": "string"
+                },
+                "last_login_at": {
                     "type": "string"
                 },
                 "last_name": {
@@ -699,6 +708,15 @@ const docTemplate = `{
                 },
                 "locale": {
                     "type": "string"
+                },
+                "nickname": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "phone_verified": {
+                    "type": "boolean"
                 },
                 "provider": {
                     "type": "string"
@@ -726,6 +744,9 @@ const docTemplate = `{
         "service.RequestBasicAuth": {
             "type": "object",
             "properties": {
+                "avatar_url": {
+                    "type": "string"
+                },
                 "data": {
                     "type": "object",
                     "additionalProperties": {}
@@ -742,7 +763,13 @@ const docTemplate = `{
                 "locale": {
                     "type": "string"
                 },
+                "nickname": {
+                    "type": "string"
+                },
                 "password": {
+                    "type": "string"
+                },
+                "phone": {
                     "type": "string"
                 },
                 "roles": {

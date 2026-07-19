@@ -12,7 +12,7 @@ Simple and easy to use authentication library for Golang.
 
 - Email/Password Authentication (Register, Login)
 - JWT based sessions (Access & Refresh Tokens, Refresh Token Rotation)
-- OAuth2 Support (Google, GitHub, Facebook)
+- OAuth2 Support (Google, GitHub, Facebook) and custom/OIDC provider registration
 - Password Reset and Passwordless (Magic Link) authentication
 - Extended User Profiles (Username, First Name, Last Name, Phone, Avatar, Nickname, Locale, Timezone, Roles, etc.)
 - SQLite, PostgreSQL, and MySQL support
@@ -56,27 +56,87 @@ You can run `ezauth` as a separate service that handles authentication for your 
    export EZAUTH_LOGIN_PAGE_URL="/login"
    export EZAUTH_REGISTER_PAGE_URL="/register"
 
-   # OAuth2 (Optional)
-   export EZAUTH_OAUTH2_CALLBACK_URL="http://localhost:3000/callback"
+    # OAuth2 (Optional)
+    export EZAUTH_OAUTH2_CALLBACK_URL="http://localhost:3000/callback"
 
-   # Google
-   export EZAUTH_OAUTH2_GOOGLE_CLIENT_ID="your-google-client-id"
-   export EZAUTH_OAUTH2_GOOGLE_CLIENT_SECRET="your-google-client-secret"
-   export EZAUTH_OAUTH2_GOOGLE_REDIRECT_URL="http://localhost:8080/auth/oauth2/google/callback"
-   export EZAUTH_OAUTH2_GOOGLE_SCOPES="email,profile"
+    # Google
+    export EZAUTH_OAUTH2_GOOGLE_CLIENT_ID="your-google-client-id"
+    export EZAUTH_OAUTH2_GOOGLE_CLIENT_SECRET="your-google-client-secret"
+    export EZAUTH_OAUTH2_GOOGLE_REDIRECT_URL="http://localhost:8080/auth/oauth2/google/callback"
+    export EZAUTH_OAUTH2_GOOGLE_SCOPES="email,profile"
 
-   # GitHub
-   export EZAUTH_OAUTH2_GITHUB_CLIENT_ID="your-github-client-id"
-   export EZAUTH_OAUTH2_GITHUB_CLIENT_SECRET="your-github-client-secret"
-   export EZAUTH_OAUTH2_GITHUB_REDIRECT_URL="http://localhost:8080/auth/oauth2/github/callback"
-   export EZAUTH_OAUTH2_GITHUB_SCOPES="user:email"
+    # GitHub
+    export EZAUTH_OAUTH2_GITHUB_CLIENT_ID="your-github-client-id"
+    export EZAUTH_OAUTH2_GITHUB_CLIENT_SECRET="your-github-client-secret"
+    export EZAUTH_OAUTH2_GITHUB_REDIRECT_URL="http://localhost:8080/auth/oauth2/github/callback"
+    export EZAUTH_OAUTH2_GITHUB_SCOPES="user:email"
 
-   # Facebook
-   export EZAUTH_OAUTH2_FACEBOOK_CLIENT_ID="your-facebook-client-id"
-   export EZAUTH_OAUTH2_FACEBOOK_CLIENT_SECRET="your-facebook-client-secret"
-   export EZAUTH_OAUTH2_FACEBOOK_REDIRECT_URL="http://localhost:8080/auth/oauth2/facebook/callback"
-   export EZAUTH_OAUTH2_FACEBOOK_SCOPES="email"
+    # Facebook
+    export EZAUTH_OAUTH2_FACEBOOK_CLIENT_ID="your-facebook-client-id"
+    export EZAUTH_OAUTH2_FACEBOOK_CLIENT_SECRET="your-facebook-client-secret"
+    export EZAUTH_OAUTH2_FACEBOOK_REDIRECT_URL="http://localhost:8080/auth/oauth2/facebook/callback"
+    export EZAUTH_OAUTH2_FACEBOOK_SCOPES="email"
+
+    # Discord
+    export EZAUTH_OAUTH2_DISCORD_CLIENT_ID="your-discord-client-id"
+    export EZAUTH_OAUTH2_DISCORD_CLIENT_SECRET="your-discord-client-secret"
+    export EZAUTH_OAUTH2_DISCORD_REDIRECT_URL="http://localhost:8080/auth/oauth2/discord/callback"
+    export EZAUTH_OAUTH2_DISCORD_SCOPES="identify,email"
+
+    # GitLab
+    export EZAUTH_OAUTH2_GITLAB_CLIENT_ID="your-gitlab-client-id"
+    export EZAUTH_OAUTH2_GITLAB_CLIENT_SECRET="your-gitlab-client-secret"
+    export EZAUTH_OAUTH2_GITLAB_REDIRECT_URL="http://localhost:8080/auth/oauth2/gitlab/callback"
+    export EZAUTH_OAUTH2_GITLAB_SCOPES="read_user"
+
+    # Slack
+    export EZAUTH_OAUTH2_SLACK_CLIENT_ID="your-slack-client-id"
+    export EZAUTH_OAUTH2_SLACK_CLIENT_SECRET="your-slack-client-secret"
+    export EZAUTH_OAUTH2_SLACK_REDIRECT_URL="http://localhost:8080/auth/oauth2/slack/callback"
+    export EZAUTH_OAUTH2_SLACK_SCOPES="openid,email"
+
+    # LinkedIn
+    export EZAUTH_OAUTH2_LINKEDIN_CLIENT_ID="your-linkedin-client-id"
+    export EZAUTH_OAUTH2_LINKEDIN_CLIENT_SECRET="your-linkedin-client-secret"
+    export EZAUTH_OAUTH2_LINKEDIN_REDIRECT_URL="http://localhost:8080/auth/oauth2/linkedin/callback"
+    export EZAUTH_OAUTH2_LINKEDIN_SCOPES="openid,profile,email"
+
+    # Spotify
+    export EZAUTH_OAUTH2_SPOTIFY_CLIENT_ID="your-spotify-client-id"
+    export EZAUTH_OAUTH2_SPOTIFY_CLIENT_SECRET="your-spotify-client-secret"
+    export EZAUTH_OAUTH2_SPOTIFY_REDIRECT_URL="http://localhost:8080/auth/oauth2/spotify/callback"
+    export EZAUTH_OAUTH2_SPOTIFY_SCOPES="user-read-email,user-read-private"
    ```
+
+### Custom OAuth2 / OIDC Providers
+
+You can register arbitrary custom providers dynamically via environment variables (Standalone-service mode) or in Go code (Library mode) as shown below.
+
+#### Standalone-service mode (via Env Vars)
+1. Add your provider's name to `EZAUTH_OAUTH2_PROVIDERS` (comma-separated).
+2. Configure prefix variables for each provider (`EZAUTH_OAUTH2_<NAME>_`):
+   - `CLIENT_ID`, `CLIENT_SECRET`, `REDIRECT_URL` (required)
+   - `SCOPES` (optional, comma-separated)
+   - Either `ISSUER_URL` (for automatic OIDC discovery) or manual endpoint parameters (`AUTH_URL`, `TOKEN_URL`, `USERINFO_URL`, `ID_FIELD` (default `id`), `EMAIL_FIELD` (default `email`)).
+
+#### Library Mode (Go Code)
+You can register custom providers programmatically using the `RegisterOAuth2Provider` API. We ship pre-made presets (Discord, Slack, GitLab) and a generic OIDC discovery helper in the optional `github.com/josuebrunel/ezauth/pkg/service/providers` package:
+
+```go
+import (
+    "github.com/josuebrunel/ezauth/pkg/service/providers"
+)
+
+// 1. OIDC Discovery
+oktaProvider, err := providers.OIDC(ctx, "https://your-domain.okta.com", "client-id", "client-secret", "http://localhost:8080/auth/oauth2/okta/callback", []string{"openid", "profile", "email"})
+if err == nil {
+    auth.RegisterOAuth2Provider("okta", oktaProvider)
+}
+
+// 2. Out-of-the-box Preset
+discordProvider := providers.Discord("client-id", "client-secret", "http://localhost:8080/auth/oauth2/discord/callback")
+auth.RegisterOAuth2Provider("discord", discordProvider)
+```
 
 2. **Build and Run**:
    Build the binary from `cmd/ezauthapi/main.go`.
@@ -326,14 +386,14 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 
 #### Form Field Reference
 
-| Endpoint                       | Required Fields                         | Optional Fields                                                    |
-| :----------------------------- | :-------------------------------------- | :----------------------------------------------------------------- |
+| Endpoint                       | Required Fields                         | Optional Fields                                                                                                   |
+| :----------------------------- | :-------------------------------------- | :---------------------------------------------------------------------------------------------------------------- |
 | `/auth/register`               | `email`, `password`, `password_confirm` | `username`, `first_name`, `last_name`, `locale`, `timezone`, `phone`, `avatar_url`, `nickname`, `roles`, `meta_*` |
-| `/auth/login`                  | `email`, `password`                     |                                                                    |
-| `/auth/password-reset/request` | `email`                                 |                                                                    |
-| `/auth/password-reset/confirm` | `token`, `password`                     |                                                                    |
-| `/auth/passwordless/request`   | `email`                                 |                                                                    |
-| `/auth/passwordless/login`     | `token` (query param)                   |                                                                    |
+| `/auth/login`                  | `email`, `password`                     |                                                                                                                   |
+| `/auth/password-reset/request` | `email`                                 |                                                                                                                   |
+| `/auth/password-reset/confirm` | `token`, `password`                     |                                                                                                                   |
+| `/auth/passwordless/request`   | `email`                                 |                                                                                                                   |
+| `/auth/passwordless/login`     | `token` (query param)                   |                                                                                                                   |
 
 > [!NOTE]
 > Passwords must be at least 8 characters long.

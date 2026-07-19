@@ -2,6 +2,9 @@
 package config
 
 import (
+	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/josuebrunel/gopkg/xenv"
@@ -42,12 +45,62 @@ type OAuth2Facebook struct {
 	Scopes       string `json:"scopes" env:"OAUTH2_FACEBOOK_SCOPES" default:"email,public_profile"`
 }
 
+// OAuth2Discord defines the settings for Discord OAuth2.
+type OAuth2Discord struct {
+	Name         string `json:"name" env:"OAUTH2_DISCORD_NAME" default:"discord"`
+	ClientID     string `json:"client_id" env:"OAUTH2_DISCORD_CLIENT_ID"`
+	ClientSecret string `json:"client_secret" env:"OAUTH2_DISCORD_CLIENT_SECRET"`
+	RedirectURL  string `json:"redirect_url" env:"OAUTH2_DISCORD_REDIRECT_URL"`
+	Scopes       string `json:"scopes" env:"OAUTH2_DISCORD_SCOPES" default:"identify,email"`
+}
+
+// OAuth2GitLab defines the settings for GitLab OAuth2.
+type OAuth2GitLab struct {
+	Name         string `json:"name" env:"OAUTH2_GITLAB_NAME" default:"gitlab"`
+	ClientID     string `json:"client_id" env:"OAUTH2_GITLAB_CLIENT_ID"`
+	ClientSecret string `json:"client_secret" env:"OAUTH2_GITLAB_CLIENT_SECRET"`
+	RedirectURL  string `json:"redirect_url" env:"OAUTH2_GITLAB_REDIRECT_URL"`
+	Scopes       string `json:"scopes" env:"OAUTH2_GITLAB_SCOPES" default:"read_user"`
+}
+
+// OAuth2Slack defines the settings for Slack OAuth2.
+type OAuth2Slack struct {
+	Name         string `json:"name" env:"OAUTH2_SLACK_NAME" default:"slack"`
+	ClientID     string `json:"client_id" env:"OAUTH2_SLACK_CLIENT_ID"`
+	ClientSecret string `json:"client_secret" env:"OAUTH2_SLACK_CLIENT_SECRET"`
+	RedirectURL  string `json:"redirect_url" env:"OAUTH2_SLACK_REDIRECT_URL"`
+	Scopes       string `json:"scopes" env:"OAUTH2_SLACK_SCOPES" default:"openid,email"`
+}
+
+// OAuth2LinkedIn defines the settings for LinkedIn OAuth2.
+type OAuth2LinkedIn struct {
+	Name         string `json:"name" env:"OAUTH2_LINKEDIN_NAME" default:"linkedin"`
+	ClientID     string `json:"client_id" env:"OAUTH2_LINKEDIN_CLIENT_ID"`
+	ClientSecret string `json:"client_secret" env:"OAUTH2_LINKEDIN_CLIENT_SECRET"`
+	RedirectURL  string `json:"redirect_url" env:"OAUTH2_LINKEDIN_REDIRECT_URL"`
+	Scopes       string `json:"scopes" env:"OAUTH2_LINKEDIN_SCOPES" default:"openid,profile,email"`
+}
+
+// OAuth2Spotify defines the settings for Spotify OAuth2.
+type OAuth2Spotify struct {
+	Name         string `json:"name" env:"OAUTH2_SPOTIFY_NAME" default:"spotify"`
+	ClientID     string `json:"client_id" env:"OAUTH2_SPOTIFY_CLIENT_ID"`
+	ClientSecret string `json:"client_secret" env:"OAUTH2_SPOTIFY_CLIENT_SECRET"`
+	RedirectURL  string `json:"redirect_url" env:"OAUTH2_SPOTIFY_REDIRECT_URL"`
+	Scopes       string `json:"scopes" env:"OAUTH2_SPOTIFY_SCOPES" default:"user-read-email,user-read-private"`
+}
+
 // OAuth2 defines the general OAuth2 settings and provider-specific configurations.
 type OAuth2 struct {
 	CallbackURL string `json:"callback_url" env:"OAUTH2_CALLBACK_URL"`
 	Google      OAuth2Google
 	Github      OAuth2Github
 	Facebook    OAuth2Facebook
+	Discord     OAuth2Discord
+	GitLab      OAuth2GitLab
+	Slack       OAuth2Slack
+	LinkedIn    OAuth2LinkedIn
+	Spotify     OAuth2Spotify
 }
 
 // SMTP defines the settings for the SMTP mailer.
@@ -108,4 +161,105 @@ func LoadConfig() (Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// CustomOAuth2Provider represents a dynamically configured custom OAuth2 provider.
+type CustomOAuth2Provider struct {
+	Name         string
+	ClientID     string
+	ClientSecret string
+	RedirectURL  string
+	Scopes       []string
+	IssuerURL    string
+	AuthURL      string
+	TokenURL     string
+	UserinfoURL  string
+	IDField      string
+	EmailField   string
+}
+
+// LoadCustomOAuth2Providers reads dynamically declared custom OAuth2 providers from the environment.
+// Reads EZAUTH_OAUTH2_PROVIDERS (comma-separated names) and prefix EZAUTH_OAUTH2_<NAME>_ values.
+func LoadCustomOAuth2Providers() ([]CustomOAuth2Provider, error) {
+	providersStr := os.Getenv("EZAUTH_OAUTH2_PROVIDERS")
+	if providersStr == "" {
+		return nil, nil
+	}
+
+	var customProviders []CustomOAuth2Provider
+	names := strings.Split(providersStr, ",")
+	for _, name := range names {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+
+		upperName := strings.ToUpper(name)
+		prefix := fmt.Sprintf("EZAUTH_OAUTH2_%s_", upperName)
+
+		clientID := os.Getenv(prefix + "CLIENT_ID")
+		clientSecret := os.Getenv(prefix + "CLIENT_SECRET")
+		redirectURL := os.Getenv(prefix + "REDIRECT_URL")
+		scopesStr := os.Getenv(prefix + "SCOPES")
+
+		if clientID == "" {
+			return nil, fmt.Errorf("missing required environment variable: %sCLIENT_ID", prefix)
+		}
+		if clientSecret == "" {
+			return nil, fmt.Errorf("missing required environment variable: %sCLIENT_SECRET", prefix)
+		}
+		if redirectURL == "" {
+			return nil, fmt.Errorf("missing required environment variable: %sREDIRECT_URL", prefix)
+		}
+
+		var scopes []string
+		if scopesStr != "" {
+			parts := strings.Split(scopesStr, ",")
+			for _, p := range parts {
+				scopes = append(scopes, strings.TrimSpace(p))
+			}
+		}
+
+		issuerURL := os.Getenv(prefix + "ISSUER_URL")
+		authURL := os.Getenv(prefix + "AUTH_URL")
+		tokenURL := os.Getenv(prefix + "TOKEN_URL")
+		userinfoURL := os.Getenv(prefix + "USERINFO_URL")
+
+		idField := os.Getenv(prefix + "ID_FIELD")
+		if idField == "" {
+			idField = "id"
+		}
+		emailField := os.Getenv(prefix + "EMAIL_FIELD")
+		if emailField == "" {
+			emailField = "email"
+		}
+
+		if issuerURL == "" {
+			if authURL == "" {
+				return nil, fmt.Errorf("missing required environment variable for manual config: %sAUTH_URL", prefix)
+			}
+			if tokenURL == "" {
+				return nil, fmt.Errorf("missing required environment variable for manual config: %sTOKEN_URL", prefix)
+			}
+			if userinfoURL == "" {
+				return nil, fmt.Errorf("missing required environment variable for manual config: %sUSERINFO_URL", prefix)
+			}
+		}
+
+		customProviders = append(customProviders, CustomOAuth2Provider{
+			Name:         name,
+			ClientID:     clientID,
+			ClientSecret: clientSecret,
+			RedirectURL:  redirectURL,
+			Scopes:       scopes,
+			IssuerURL:    issuerURL,
+			AuthURL:      authURL,
+			TokenURL:     tokenURL,
+			UserinfoURL:  userinfoURL,
+			IDField:      idField,
+			EmailField:   emailField,
+		})
+	}
+
+	return customProviders, nil
 }

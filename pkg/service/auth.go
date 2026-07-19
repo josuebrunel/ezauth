@@ -7,21 +7,14 @@ import (
 	"strings"
 	"time"
 
-	"encoding/json"
-
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/josuebrunel/gopkg/xlog"
 	"golang.org/x/crypto/bcrypt"
-
-	"net/http"
 
 	"crypto/rand"
 	"encoding/hex"
 
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/facebook"
-	"golang.org/x/oauth2/github"
-	"golang.org/x/oauth2/google"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -351,103 +344,43 @@ type OAuth2UserInfo struct {
 	Email string `json:"email"`
 }
 
+// OAuth2Provider represents a custom OAuth2/OIDC provider registration.
+type OAuth2Provider struct {
+	Config     oauth2.Config
+	UserInfoFn func(ctx context.Context, token *oauth2.Token) (*OAuth2UserInfo, error)
+}
+
+// RegisterOAuth2Provider registers a custom OAuth2/OIDC provider.
+func (a *Auth) RegisterOAuth2Provider(name string, p OAuth2Provider) {
+	a.customProvidersMu.Lock()
+	defer a.customProvidersMu.Unlock()
+	a.customProviders[name] = p
+}
+
 // OAuth2GetConfig returns the OAuth2 configuration for the given provider.
 func (a *Auth) OAuth2GetConfig(provider string) (*oauth2.Config, error) {
-	switch provider {
-	case "google":
-		return &oauth2.Config{
-			ClientID:     a.Cfg.OAuth2.Google.ClientID,
-			ClientSecret: a.Cfg.OAuth2.Google.ClientSecret,
-			RedirectURL:  a.Cfg.OAuth2.Google.RedirectURL,
-			Scopes:       strings.Split(a.Cfg.OAuth2.Google.Scopes, ","),
-			Endpoint:     google.Endpoint,
-		}, nil
-	case "github":
-		return &oauth2.Config{
-			ClientID:     a.Cfg.OAuth2.Github.ClientID,
-			ClientSecret: a.Cfg.OAuth2.Github.ClientSecret,
-			RedirectURL:  a.Cfg.OAuth2.Github.RedirectURL,
-			Scopes:       strings.Split(a.Cfg.OAuth2.Github.Scopes, ","),
-			Endpoint:     github.Endpoint,
-		}, nil
-	case "facebook":
-		return &oauth2.Config{
-			ClientID:     a.Cfg.OAuth2.Facebook.ClientID,
-			ClientSecret: a.Cfg.OAuth2.Facebook.ClientSecret,
-			RedirectURL:  a.Cfg.OAuth2.Facebook.RedirectURL,
-			Scopes:       strings.Split(a.Cfg.OAuth2.Facebook.Scopes, ","),
-			Endpoint:     facebook.Endpoint,
-		}, nil
-	default:
-		return nil, fmt.Errorf("unsupported provider: %s", provider)
+	a.customProvidersMu.RLock()
+	p, ok := a.customProviders[provider]
+	a.customProvidersMu.RUnlock()
+	if ok {
+		cfgCopy := p.Config
+		return &cfgCopy, nil
 	}
+	return nil, fmt.Errorf("unsupported provider: %s", provider)
 }
 
 // OAuth2GetUserInfo retrieves user information from the OAuth2 provider using the given token.
 func (a *Auth) OAuth2GetUserInfo(ctx context.Context, provider string, token *oauth2.Token) (*OAuth2UserInfo, error) {
-	var userInfoURL string
-	switch provider {
-	case "google":
-		userInfoURL = "https://www.googleapis.com/oauth2/v3/userinfo"
-	case "github":
-		userInfoURL = "https://api.github.com/user"
-	case "facebook":
-		userInfoURL = "https://graph.facebook.com/me?fields=id,email"
-	default:
-		return nil, fmt.Errorf("unsupported provider: %s", provider)
-	}
-
-	client := oauth2.NewClient(ctx, oauth2.StaticTokenSource(token))
-	resp, err := client.Get(userInfoURL)
-	if err != nil {
-		xlog.Error("failed to get user info from provider", "provider", provider, "err", err)
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		xlog.Error("provider returned non-200 status", "provider", provider, "status", resp.Status)
-		return nil, fmt.Errorf("failed to get user info: %s", resp.Status)
-	}
-
-	var data map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		xlog.Error("failed to decode provider response", "provider", provider, "err", err)
-		return nil, err
-	}
-
-	userInfo := &OAuth2UserInfo{}
-
-	switch provider {
-	case "google":
-		if sub, ok := data["sub"].(string); ok {
-			userInfo.ID = sub
+	a.customProvidersMu.RLock()
+	p, ok := a.customProviders[provider]
+	a.customProvidersMu.RUnlock()
+	if ok {
+		if p.UserInfoFn == nil {
+			return nil, fmt.Errorf("provider %s does not have UserInfoFn configured", provider)
 		}
-		if email, ok := data["email"].(string); ok {
-			userInfo.Email = email
-		}
-	case "github":
-		if id, ok := data["id"].(float64); ok {
-			userInfo.ID = fmt.Sprintf("%.0f", id)
-		}
-		if email, ok := data["email"].(string); ok {
-			userInfo.Email = email
-		}
-	case "facebook":
-		if id, ok := data["id"].(string); ok {
-			userInfo.ID = id
-		}
-		if email, ok := data["email"].(string); ok {
-			userInfo.Email = email
-		}
+		return p.UserInfoFn(ctx, token)
 	}
-
-	if userInfo.ID == "" {
-		xlog.Error("could not retrieve user id from provider", "provider", provider)
-		return nil, errors.New("could not retrieve user id from provider")
-	}
-
-	return userInfo, nil
+	return nil, fmt.Errorf("unsupported provider: %s", provider)
 }
 
 // OAuth2Authenticate authenticates a user using OAuth2 information.

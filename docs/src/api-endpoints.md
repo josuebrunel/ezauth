@@ -66,6 +66,8 @@ POST requests to these endpoints are automatically protected by `filippo.io/csrf
 `GET /auth/oauth2/{provider}/login` (Initiates login)
 `GET /auth/oauth2/{provider}/callback` (Callback handler. URL: `{base_url}/auth/oauth2/{provider}/callback`)
 
+The `{provider}` parameter accepts any built-in provider (google, github, facebook, discord, gitlab, slack, linkedin, spotify) or any registered custom provider.
+
 ---
 
 ## JSON API Endpoints (`/api`)

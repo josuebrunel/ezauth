@@ -6,8 +6,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"html/template"
 	"net/http"
+	"strings"
 
 	csrf "filippo.io/csrf/gorilla"
 	"github.com/josuebrunel/ezauth/pkg/config"
@@ -16,7 +18,12 @@ import (
 	"github.com/josuebrunel/ezauth/pkg/db/repository"
 	"github.com/josuebrunel/ezauth/pkg/handler"
 	"github.com/josuebrunel/ezauth/pkg/service"
+	"github.com/josuebrunel/ezauth/pkg/service/providers"
 	"github.com/josuebrunel/gopkg/xlog"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/facebook"
+	"golang.org/x/oauth2/github"
+	"golang.org/x/oauth2/google"
 )
 
 // EzAuth represents the main entry point for the ezauth library.
@@ -49,12 +56,22 @@ func New(cfg *config.Config, path string) (*EzAuth, error) {
 		xlog.Setup(xlog.Config{Level: "INFO"})
 	}
 
-	return &EzAuth{
+	auth := &EzAuth{
 		Config:  cfg,
 		Repo:    repo,
 		Service: svc,
 		Handler: h,
-	}, nil
+	}
+
+	if err := auth.registerBuiltinProviders(context.Background()); err != nil {
+		return nil, err
+	}
+
+	if err := auth.registerCustomProviders(context.Background()); err != nil {
+		return nil, err
+	}
+
+	return auth, nil
 }
 
 // NewWithDB creates a new EzAuth instance using an existing database connection.
@@ -64,18 +81,164 @@ func NewWithDB(cfg *config.Config, db *sql.DB, path string) (*EzAuth, error) {
 	svc := service.New(cfg, repo, path)
 	h := handler.New(svc, path)
 
-	return &EzAuth{
+	auth := &EzAuth{
 		Config:  cfg,
 		Repo:    repo,
 		Service: svc,
 		Handler: h,
-	}, nil
+	}
+
+	if err := auth.registerBuiltinProviders(context.Background()); err != nil {
+		return nil, err
+	}
+
+	if err := auth.registerCustomProviders(context.Background()); err != nil {
+		return nil, err
+	}
+
+	return auth, nil
 }
 
 // SetHook registers a Hook implementation to intercept auth lifecycle events.
 // See service.Hook and service.DefaultHook for details.
 func (e *EzAuth) SetHook(hook service.Hook) {
 	e.Service.Hook = hook
+}
+
+// RegisterOAuth2Provider registers a custom OAuth2/OIDC provider on the service.
+func (e *EzAuth) RegisterOAuth2Provider(name string, p service.OAuth2Provider) {
+	e.Service.RegisterOAuth2Provider(name, p)
+}
+
+func (e *EzAuth) registerBuiltinProviders(ctx context.Context) error {
+	// Pre-register all built-in OAuth2 providers from config.
+	builtins := []struct {
+		name   string
+		config func() (service.OAuth2Provider, bool)
+	}{
+		{"google", func() (service.OAuth2Provider, bool) {
+			cfg := e.Config.OAuth2.Google
+			if cfg.ClientID == "" {
+				return service.OAuth2Provider{}, false
+			}
+			return service.OAuth2Provider{
+				Config: oauth2.Config{
+					ClientID:     cfg.ClientID,
+					ClientSecret: cfg.ClientSecret,
+					RedirectURL:  cfg.RedirectURL,
+					Scopes:       strings.Split(cfg.Scopes, ","),
+					Endpoint:     google.Endpoint,
+				},
+				UserInfoFn: providers.JsonUserInfo("https://www.googleapis.com/oauth2/v3/userinfo", "sub", "email"),
+			}, true
+		}},
+		{"github", func() (service.OAuth2Provider, bool) {
+			cfg := e.Config.OAuth2.Github
+			if cfg.ClientID == "" {
+				return service.OAuth2Provider{}, false
+			}
+			return service.OAuth2Provider{
+				Config: oauth2.Config{
+					ClientID:     cfg.ClientID,
+					ClientSecret: cfg.ClientSecret,
+					RedirectURL:  cfg.RedirectURL,
+					Scopes:       strings.Split(cfg.Scopes, ","),
+					Endpoint:     github.Endpoint,
+				},
+				UserInfoFn: providers.JsonUserInfo("https://api.github.com/user", "id", "email"),
+			}, true
+		}},
+		{"facebook", func() (service.OAuth2Provider, bool) {
+			cfg := e.Config.OAuth2.Facebook
+			if cfg.ClientID == "" {
+				return service.OAuth2Provider{}, false
+			}
+			return service.OAuth2Provider{
+				Config: oauth2.Config{
+					ClientID:     cfg.ClientID,
+					ClientSecret: cfg.ClientSecret,
+					RedirectURL:  cfg.RedirectURL,
+					Scopes:       strings.Split(cfg.Scopes, ","),
+					Endpoint:     facebook.Endpoint,
+				},
+				UserInfoFn: providers.JsonUserInfo("https://graph.facebook.com/me?fields=id,email", "id", "email"),
+			}, true
+		}},
+		{"discord", func() (service.OAuth2Provider, bool) {
+			cfg := e.Config.OAuth2.Discord
+			if cfg.ClientID == "" {
+				return service.OAuth2Provider{}, false
+			}
+			return providers.Discord(cfg.ClientID, cfg.ClientSecret, cfg.RedirectURL), true
+		}},
+		{"gitlab", func() (service.OAuth2Provider, bool) {
+			cfg := e.Config.OAuth2.GitLab
+			if cfg.ClientID == "" {
+				return service.OAuth2Provider{}, false
+			}
+			return providers.GitLab(cfg.ClientID, cfg.ClientSecret, cfg.RedirectURL), true
+		}},
+		{"slack", func() (service.OAuth2Provider, bool) {
+			cfg := e.Config.OAuth2.Slack
+			if cfg.ClientID == "" {
+				return service.OAuth2Provider{}, false
+			}
+			return providers.Slack(cfg.ClientID, cfg.ClientSecret, cfg.RedirectURL), true
+		}},
+		{"linkedin", func() (service.OAuth2Provider, bool) {
+			cfg := e.Config.OAuth2.LinkedIn
+			if cfg.ClientID == "" {
+				return service.OAuth2Provider{}, false
+			}
+			return providers.LinkedIn(cfg.ClientID, cfg.ClientSecret, cfg.RedirectURL), true
+		}},
+		{"spotify", func() (service.OAuth2Provider, bool) {
+			cfg := e.Config.OAuth2.Spotify
+			if cfg.ClientID == "" {
+				return service.OAuth2Provider{}, false
+			}
+			return providers.Spotify(cfg.ClientID, cfg.ClientSecret, cfg.RedirectURL), true
+		}},
+	}
+
+	for _, b := range builtins {
+		if p, ok := b.config(); ok {
+			e.RegisterOAuth2Provider(b.name, p)
+		}
+	}
+	return nil
+}
+
+func (e *EzAuth) registerCustomProviders(ctx context.Context) error {
+	customProvs, err := config.LoadCustomOAuth2Providers()
+	if err != nil {
+		return err
+	}
+	for _, cp := range customProvs {
+		var p service.OAuth2Provider
+		if cp.IssuerURL != "" {
+			p, err = providers.OIDC(ctx, cp.IssuerURL, cp.ClientID, cp.ClientSecret, cp.RedirectURL, cp.Scopes)
+			if err != nil {
+				return fmt.Errorf("failed to register custom provider %q via OIDC discovery: %w", cp.Name, err)
+			}
+		} else {
+			p = service.OAuth2Provider{
+				Config: oauth2.Config{
+					ClientID:     cp.ClientID,
+					ClientSecret: cp.ClientSecret,
+					RedirectURL:  cp.RedirectURL,
+					Scopes:       cp.Scopes,
+					Endpoint: oauth2.Endpoint{
+						AuthURL:  cp.AuthURL,
+						TokenURL: cp.TokenURL,
+					},
+				},
+				UserInfoFn: providers.JsonUserInfo(cp.UserinfoURL, cp.IDField, cp.EmailField),
+			}
+		}
+		e.RegisterOAuth2Provider(cp.Name, p)
+	}
+	return nil
 }
 
 // Hook returns the currently registered Hook implementation.

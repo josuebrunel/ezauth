@@ -6,7 +6,7 @@
 
 - **Email/Password Authentication**: Secure user registration and login.
 - **JWT-based Sessions**: Access and Refresh tokens with rotation for enhanced security.
-- **OAuth2 Support**: Built-in support for Google, GitHub, and Facebook.
+- **OAuth2 Support**: Built-in support for Google, GitHub, Facebook, Discord, GitLab, Slack, LinkedIn, and Spotify, plus custom/OIDC provider registration.
 - **Password Reset & Passwordless**: Magic link and password reset flows.
 - **Extended User Profiles**: Store additional user information like username, name, locale, timezone, and roles.
 - **Multi-Database Support**: Support for SQLite and PostgreSQL.
