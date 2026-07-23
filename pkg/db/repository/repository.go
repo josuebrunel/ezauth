@@ -4,6 +4,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/josuebrunel/ezauth/pkg/db/repository/mysql"
@@ -287,7 +288,11 @@ func getDBConnection(opts Opts) (*sql.DB, error) {
 		db, err = postgres.GetDBConnection(opts.DSN)
 		opts.Dialect = DialectPSQL
 		if err == nil && opts.Schema != "" {
-			// Set the search path to the specified schema
+			for _, c := range opts.Schema {
+				if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_') {
+					return nil, fmt.Errorf("invalid schema name %q: only alphanumeric and underscore characters are allowed", opts.Schema)
+				}
+			}
 			if _, err := db.Exec("CREATE SCHEMA IF NOT EXISTS " + opts.Schema); err != nil {
 				xlog.Error("failed to create schema", "error", err, "schema", opts.Schema)
 				return nil, err

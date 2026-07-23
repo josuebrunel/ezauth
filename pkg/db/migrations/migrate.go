@@ -64,6 +64,18 @@ func getRootFS(subDir string) (fs.FS, error) {
 	return rootFS, nil
 }
 
+func validateSchemaName(schema string) error {
+	if schema == "" {
+		return fmt.Errorf("schema name must not be empty")
+	}
+	for _, c := range schema {
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_') {
+			return fmt.Errorf("invalid schema name %q: only alphanumeric and underscore characters are allowed", schema)
+		}
+	}
+	return nil
+}
+
 func runMigration(dsn, dialect, schema string, action string) error {
 	if dsn == "" {
 		return fmt.Errorf("dsn is required")
@@ -76,6 +88,9 @@ func runMigration(dsn, dialect, schema string, action string) error {
 	defer db.Close()
 
 	if dialect == DialectPostgres && schema != "" {
+		if err := validateSchemaName(schema); err != nil {
+			return err
+		}
 		// Set the search path to the specified schema
 		if _, err := db.Exec("CREATE SCHEMA IF NOT EXISTS " + schema); err != nil {
 			xlog.Error("failed to create schema", "error", err, "schema", schema)
