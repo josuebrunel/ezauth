@@ -404,8 +404,9 @@ func TestOAuth2Authenticate(t *testing.T) {
 
 		githubProviderID := util.RandomString(16)
 		userInfo := &OAuth2UserInfo{
-			ID:    githubProviderID,
-			Email: localEmail,
+			ID:            githubProviderID,
+			Email:         localEmail,
+			EmailVerified: true,
 		}
 		user, err := auth.OAuth2Authenticate(ctx, "github", userInfo)
 		if err != nil {
@@ -420,6 +421,37 @@ func TestOAuth2Authenticate(t *testing.T) {
 		}
 		if *user.ProviderID != userInfo.ID {
 			t.Errorf("expected provider id %s, got %s", userInfo.ID, *user.ProviderID)
+		}
+	})
+
+	t.Run("RejectUnverifiedEmailAutoLink", func(t *testing.T) {
+		localEmail := util.UniqueEmail("unverified_local")
+		auth.UserCreate(ctx, &RequestBasicAuth{
+			Email:    localEmail,
+			Password: "password",
+		})
+
+		unverifiedProviderID := util.RandomString(16)
+		userInfo := &OAuth2UserInfo{
+			ID:            unverifiedProviderID,
+			Email:         localEmail,
+			EmailVerified: false,
+		}
+		_, err := auth.OAuth2Authenticate(ctx, "discord", userInfo)
+		if err == nil {
+			t.Fatal("OAuth2Authenticate should have failed: unverified email should not auto-link to existing user")
+		}
+
+		// The local user should NOT be linked — verify provider and provider_id are unchanged
+		linkedUser, err := auth.Repo.UserGetByEmail(ctx, localEmail)
+		if err != nil {
+			t.Fatalf("failed to fetch user: %v", err)
+		}
+		if linkedUser.Provider != "local" {
+			t.Errorf("expected provider to remain 'local', got %q — auto-link should have been rejected", linkedUser.Provider)
+		}
+		if linkedUser.ProviderID != nil {
+			t.Errorf("expected ProviderID to remain nil, got %q — auto-link should have been rejected", *linkedUser.ProviderID)
 		}
 	})
 }

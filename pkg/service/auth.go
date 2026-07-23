@@ -339,8 +339,9 @@ func (a *Auth) PasswordlessLogin(ctx context.Context, tokenValue string) (*Token
 
 // OAuth2UserInfo represents the user information retrieved from an OAuth2 provider.
 type OAuth2UserInfo struct {
-	ID    string `json:"id"`
-	Email string `json:"email"`
+	ID            string `json:"id"`
+	Email         string `json:"email"`
+	EmailVerified bool   `json:"email_verified"`
 }
 
 // OAuth2Provider represents a custom OAuth2/OIDC provider registration.
@@ -404,7 +405,7 @@ func (a *Auth) OAuth2Authenticate(ctx context.Context, provider string, userInfo
 		return user, nil
 	}
 
-	if userInfo.Email != "" {
+	if userInfo.Email != "" && userInfo.EmailVerified {
 		user, err = a.Repo.UserGetByEmail(ctx, userInfo.Email)
 		if err == nil && user != nil {
 

@@ -48,9 +48,22 @@ func JSONUserInfo(url string, idField, emailField string) func(ctx context.Conte
 			emailStr = fmt.Sprintf("%v", emailVal)
 		}
 
+		var emailVerified bool
+		if ev, ok := data["email_verified"]; ok && ev != nil {
+			switch v := ev.(type) {
+			case bool:
+				emailVerified = v
+			case string:
+				emailVerified = v == "true" || v == "1"
+			case float64:
+				emailVerified = v != 0
+			}
+		}
+
 		return &service.OAuth2UserInfo{
-			ID:    idStr,
-			Email: emailStr,
+			ID:            idStr,
+			Email:         emailStr,
+			EmailVerified: emailVerified,
 		}, nil
 	}
 }
