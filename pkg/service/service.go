@@ -6,6 +6,7 @@ import (
 
 	"github.com/josuebrunel/ezauth/pkg/config"
 	"github.com/josuebrunel/ezauth/pkg/db/repository"
+	"github.com/josuebrunel/gopkg/xlog"
 )
 
 // Auth handles the core authentication logic.
@@ -26,6 +27,7 @@ func New(cfg *config.Config, repo *repository.Repository, pathPrefix string) *Au
 		mailer = NewSMTPMailer(cfg.SMTP)
 	} else {
 		mailer = NewMockMailer()
+		xlog.Warn("SMTP not configured, using mock mailer — emails will not be sent")
 	}
 
 	return &Auth{
