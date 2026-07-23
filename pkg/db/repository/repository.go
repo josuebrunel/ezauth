@@ -227,7 +227,7 @@ func (r Repository) TokenGetByToken(ctx context.Context, tokenValue string) (*mo
 	query := r.QueryTokenGetByToken(ctx, tokenValue)
 	token, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.Token]())
 	if err != nil {
-		xlog.Error("Failed to get token by token", "error", err, "token", tokenValue)
+		xlog.Error("Failed to get token by token", "error", err)
 		return nil, err
 	}
 	return token, nil
