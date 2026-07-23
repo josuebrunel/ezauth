@@ -245,6 +245,14 @@ func (q *MysqlQuerier) QueryTokenRevoke(ctx context.Context, id string) bob.Quer
 	)
 }
 
+func (q *MysqlQuerier) QueryTokenRevokeAllByUserID(ctx context.Context, userID string) bob.Query {
+	return mysql.Update(
+		um.Table(models.TableToken),
+		um.SetCol(models.ColumnRevoked).ToArg(true),
+		um.Where(mysql.Quote(models.ColumnUserID).EQ(mysql.Arg(userID))),
+	)
+}
+
 func (q *MysqlQuerier) QueryTokenDelete(ctx context.Context, id string) bob.Query {
 	return mysql.Delete(dm.From(models.TableToken), dm.Where(mysql.Quote("id").EQ(mysql.Arg(id))))
 }

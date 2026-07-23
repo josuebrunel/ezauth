@@ -210,6 +210,11 @@ func (a *Auth) PasswordResetConfirm(ctx context.Context, req RequestPasswordRese
 		return err
 	}
 
+	if err := a.Repo.TokenRevokeAllByUserID(ctx, user.ID); err != nil {
+		xlog.Error("failed to revoke all tokens after password reset", "user_id", user.ID, "err", err)
+		return err
+	}
+
 	return a.Repo.TokenRevoke(ctx, token.ID)
 }
 

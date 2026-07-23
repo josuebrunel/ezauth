@@ -12,6 +12,7 @@ import (
 	"golang.org/x/oauth2/google"
 
 	"strings"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
@@ -648,6 +649,52 @@ func TestTokenOperations(t *testing.T) {
 		expectedErr := "token revoked"
 		if err.Error() != expectedErr {
 			t.Errorf("expected error '%s', got '%v'", expectedErr, err)
+		}
+	})
+
+	t.Run("TokenRevokeAllByUserID", func(t *testing.T) {
+		// Create multiple tokens for the user
+		token1 := &models.Token{
+			UserID:    createdUser.ID,
+			Token:     util.RandomString(32),
+			TokenType: models.TokenTypeRefresh,
+			ExpiresAt: time.Now().Add(24 * time.Hour),
+		}
+		token2 := &models.Token{
+			UserID:    createdUser.ID,
+			Token:     util.RandomString(32),
+			TokenType: models.TokenTypeRefresh,
+			ExpiresAt: time.Now().Add(24 * time.Hour),
+		}
+		token1, err := auth.Repo.TokenCreate(ctx, token1)
+		if err != nil {
+			t.Fatalf("failed to create token1: %v", err)
+		}
+		token2, err = auth.Repo.TokenCreate(ctx, token2)
+		if err != nil {
+			t.Fatalf("failed to create token2: %v", err)
+		}
+
+		// Verify both tokens exist and are not revoked
+		t1, _ := auth.Repo.TokenGetByID(ctx, token1.ID)
+		t2, _ := auth.Repo.TokenGetByID(ctx, token2.ID)
+		if t1.Revoked || t2.Revoked {
+			t.Fatal("tokens should not be revoked before the test")
+		}
+
+		// Revoke all tokens for the user
+		if err := auth.Repo.TokenRevokeAllByUserID(ctx, createdUser.ID); err != nil {
+			t.Fatalf("TokenRevokeAllByUserID() failed: %v", err)
+		}
+
+		// Verify both tokens are now revoked
+		t1, _ = auth.Repo.TokenGetByID(ctx, token1.ID)
+		t2, _ = auth.Repo.TokenGetByID(ctx, token2.ID)
+		if !t1.Revoked {
+			t.Errorf("expected token1 to be revoked, but it was not")
+		}
+		if !t2.Revoked {
+			t.Errorf("expected token2 to be revoked, but it was not")
 		}
 	})
 }

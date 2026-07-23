@@ -253,6 +253,14 @@ func (q *PSQLQuerier) QueryTokenRevoke(ctx context.Context, id string) bob.Query
 	)
 }
 
+func (q *PSQLQuerier) QueryTokenRevokeAllByUserID(ctx context.Context, userID string) bob.Query {
+	return psql.Update(
+		um.Table(psql.Quote(models.TableToken)),
+		um.SetCol(models.ColumnRevoked).To(true),
+		um.Where(psql.Quote(models.ColumnUserID).EQ(psql.Arg(userID))),
+	)
+}
+
 func (q *PSQLQuerier) QueryTokenDelete(ctx context.Context, id string) bob.Query {
 	return psql.Delete(dm.From(psql.Quote(models.TableToken)), dm.Where(psql.Quote("id").EQ(psql.Arg(id))))
 }

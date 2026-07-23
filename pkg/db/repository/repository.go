@@ -35,6 +35,7 @@ type TokenQuerier interface {
 	QueryTokenGetByID(ctx context.Context, id string) bob.Query
 	QueryTokenGetByToken(ctx context.Context, token string) bob.Query
 	QueryTokenRevoke(ctx context.Context, id string) bob.Query
+	QueryTokenRevokeAllByUserID(ctx context.Context, userID string) bob.Query
 	QueryTokenDelete(ctx context.Context, id string) bob.Query
 }
 
@@ -237,6 +238,16 @@ func (r Repository) TokenRevoke(ctx context.Context, id string) error {
 	query := r.QueryTokenRevoke(ctx, id)
 	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
 		xlog.Error("Failed to revoke token", "error", err, "id", id)
+		return err
+	}
+	return nil
+}
+
+// TokenRevokeAllByUserID revokes all non-revoked tokens for a given user.
+func (r Repository) TokenRevokeAllByUserID(ctx context.Context, userID string) error {
+	query := r.QueryTokenRevokeAllByUserID(ctx, userID)
+	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+		xlog.Error("Failed to revoke all tokens for user", "error", err, "user_id", userID)
 		return err
 	}
 	return nil

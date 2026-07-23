@@ -248,6 +248,14 @@ func (q *SqliteQuerier) QueryTokenRevoke(ctx context.Context, id string) bob.Que
 	)
 }
 
+func (q *SqliteQuerier) QueryTokenRevokeAllByUserID(ctx context.Context, userID string) bob.Query {
+	return sqlite.Update(
+		um.Table(models.TableToken),
+		um.SetCol(models.ColumnRevoked).ToArg(true),
+		um.Where(sqlite.Quote(models.ColumnUserID).EQ(sqlite.Arg(userID))),
+	)
+}
+
 func (q *SqliteQuerier) QueryTokenDelete(ctx context.Context, id string) bob.Query {
 	return sqlite.Delete(dm.From(models.TableToken), dm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
 }
