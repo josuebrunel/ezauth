@@ -30,3 +30,36 @@ func TestLoadConfig_Success(t *testing.T) {
 		t.Errorf("expected JWTSecret to be 'super-secret', got '%s'", cfg.JWTSecret)
 	}
 }
+
+func TestConfig_Sanitized(t *testing.T) {
+	cfg := Config{
+		JWTSecret: "real-jwt-secret",
+		ApiKey:    "real-api-key",
+	}
+	cfg.SMTP.Password = "real-smtp-password"
+	cfg.OAuth2.Google.ClientSecret = "real-google-secret"
+	cfg.OAuth2.Github.ClientSecret = "real-github-secret"
+
+	sanitized := cfg.Sanitized()
+
+	if sanitized.JWTSecret != "***" {
+		t.Errorf("expected JWTSecret to be redacted, got '%s'", sanitized.JWTSecret)
+	}
+	if sanitized.ApiKey != "***" {
+		t.Errorf("expected ApiKey to be redacted, got '%s'", sanitized.ApiKey)
+	}
+	if sanitized.SMTP.Password != "***" {
+		t.Errorf("expected SMTP.Password to be redacted, got '%s'", sanitized.SMTP.Password)
+	}
+	if sanitized.OAuth2.Google.ClientSecret != "***" {
+		t.Errorf("expected Google ClientSecret to be redacted, got '%s'", sanitized.OAuth2.Google.ClientSecret)
+	}
+	if sanitized.OAuth2.Github.ClientSecret != "***" {
+		t.Errorf("expected Github ClientSecret to be redacted, got '%s'", sanitized.OAuth2.Github.ClientSecret)
+	}
+
+	// Ensure original values are preserved
+	if cfg.JWTSecret != "real-jwt-secret" {
+		t.Errorf("original JWTSecret was modified, got '%s'", cfg.JWTSecret)
+	}
+}

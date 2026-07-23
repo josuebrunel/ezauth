@@ -152,6 +152,22 @@ type Config struct {
 
 // LoadConfig loads the configuration from environment variables.
 // It uses the "EZAUTH_" prefix for environment variables.
+// Sanitized returns a copy of the config with all secret fields redacted.
+func (c Config) Sanitized() Config {
+	c.JWTSecret = "***"
+	c.ApiKey = "***"
+	c.SMTP.Password = "***"
+	c.OAuth2.Google.ClientSecret = "***"
+	c.OAuth2.Github.ClientSecret = "***"
+	c.OAuth2.Facebook.ClientSecret = "***"
+	c.OAuth2.Discord.ClientSecret = "***"
+	c.OAuth2.GitLab.ClientSecret = "***"
+	c.OAuth2.Slack.ClientSecret = "***"
+	c.OAuth2.LinkedIn.ClientSecret = "***"
+	c.OAuth2.Spotify.ClientSecret = "***"
+	return c
+}
+
 func LoadConfig() (Config, error) {
 	var cfg Config
 

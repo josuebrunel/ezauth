@@ -14,7 +14,7 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
-	xlog.Info("config", "cfg", cfg)
+	xlog.Info("starting ezauth", "addr", cfg.Addr, "db_dialect", cfg.DB.Dialect, "config", cfg.Sanitized())
 	auth, err := ezauth.New(&cfg, "auth")
 	if err != nil {
 		log.Fatalf("failed to initialize ezauth: %v", err)
