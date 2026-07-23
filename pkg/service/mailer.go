@@ -28,7 +28,7 @@ func NewSMTPMailer(cfg config.SMTP) *SMTPMailer {
 }
 
 func (m *SMTPMailer) Send(to string, subject string, body string) error {
-	addr := fmt.Sprintf("%s:%d", m.cfg.Host, m.cfg.Port)
+	addr := net.JoinHostPort(m.cfg.Host, fmt.Sprintf("%d", m.cfg.Port))
 
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
