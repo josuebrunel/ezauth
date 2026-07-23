@@ -435,6 +435,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#hashing-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hashing Settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rate-limit-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rate Limit Settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#database-settings" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1133,6 +1155,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#hashing-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hashing Settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rate-limit-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rate Limit Settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#database-settings" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1369,6 +1413,70 @@
 <td><code>EZAUTH_TIMEOUT</code></td>
 <td>Request timeout duration.</td>
 <td><code>30s</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="hashing-settings">Hashing Settings</h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EZAUTH_HASHING_ALGORITHM</code></td>
+<td>Password hashing algorithm (<code>bcrypt</code> or <code>argon2id</code>).</td>
+<td><code>bcrypt</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_HASHING_ARGON2_MEMORY</code></td>
+<td>Argon2 memory cost in KB (used when algorithm is <code>argon2id</code>).</td>
+<td><code>65536</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_HASHING_ARGON2_ITERATIONS</code></td>
+<td>Argon2 time cost (iterations).</td>
+<td><code>3</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_HASHING_ARGON2_PARALLELISM</code></td>
+<td>Argon2 parallelism (thread count).</td>
+<td><code>4</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="rate-limit-settings">Rate Limit Settings</h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EZAUTH_RATE_LIMIT_ENABLED</code></td>
+<td>Enable rate limiting on authentication endpoints.</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_RATE_LIMIT_REQUESTS</code></td>
+<td>Maximum requests allowed per window.</td>
+<td><code>10</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_RATE_LIMIT_WINDOW</code></td>
+<td>Rate limit window duration (e.g., <code>1m</code>, <code>30s</code>).</td>
+<td><code>1m</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_RATE_LIMIT_BY_CLIENT_IP</code></td>
+<td>Apply rate limiting per client IP address.</td>
+<td><code>true</code></td>
 </tr>
 </tbody>
 </table>
