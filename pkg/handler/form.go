@@ -358,15 +358,18 @@ func (h *Handler) OAuth2Callback(w http.ResponseWriter, r *http.Request) {
 	if h.svc.Cfg.OAuth2.CallbackURL != "" {
 		u, err := url.Parse(h.svc.Cfg.OAuth2.CallbackURL)
 		if err != nil {
-			WriteJSONResponseError(w, http.StatusInternalServerError, fmt.Errorf("failed to parse callback url: %w", err))
+			xlog.Error("failed to parse callback url", "error", err)
+			WriteJSONResponseError(w, http.StatusInternalServerError, fmt.Errorf("authentication failed"))
 			return
 		}
-		q := u.Query()
-		q.Set("access_token", tokenResp.AccessToken)
-		q.Set("refresh_token", tokenResp.RefreshToken)
-		q.Set("expires_in", fmt.Sprintf("%d", tokenResp.ExpiresIn))
-		q.Set("token_type", tokenResp.TokenType)
-		u.RawQuery = q.Encode()
+		// Use fragment (#) instead of query (?) — fragments are not sent to
+		// the server in the HTTP request and are not logged by intermediaries.
+		u.Fragment = fmt.Sprintf("access_token=%s&refresh_token=%s&expires_in=%d&token_type=%s",
+			tokenResp.AccessToken,
+			tokenResp.RefreshToken,
+			tokenResp.ExpiresIn,
+			tokenResp.TokenType,
+		)
 		http.Redirect(w, r, u.String(), http.StatusFound)
 		return
 	}
