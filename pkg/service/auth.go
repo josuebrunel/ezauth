@@ -91,6 +91,9 @@ func (a Auth) validatePassword(password string) error {
 	if len(password) < 8 {
 		return errors.New("password must be at least 8 characters long")
 	}
+	if len(password) > 128 {
+		return errors.New("password must be at most 128 characters long")
+	}
 	return nil
 }
 
@@ -100,7 +103,8 @@ func (a Auth) UserAuthenticate(ctx context.Context, req RequestBasicAuth) (*mode
 	user, err := a.Repo.UserGetByEmail(ctx, req.Email)
 	if err != nil {
 		xlog.Debug("authentication failed: user not found", "email", req.Email, "err", err)
-		return nil, err
+		bcrypt.CompareHashAndPassword([]byte("$2a$14$ggvoBThQ9l3LSe3o0Y5aKO5opqgoaDgMYONZvGwuN.7Duu/xUO36C"), []byte(req.Password))
+		return nil, errors.New("invalid credentials")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
