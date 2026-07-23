@@ -14,11 +14,6 @@ const sessionTokensKey = "tokens"
 
 // setAuthCookies sets the access and refresh tokens in the session.
 func (h *Handler) setAuthCookies(ctx context.Context, tokenResp *service.TokenResponse) {
-	defer func() {
-		if r := recover(); r != nil {
-			xlog.Debug("failed to set auth cookies: session not loaded", "error", r)
-		}
-	}()
 	tokens := map[string]string{
 		"access_token":  tokenResp.AccessToken,
 		"refresh_token": tokenResp.RefreshToken,
@@ -28,11 +23,6 @@ func (h *Handler) setAuthCookies(ctx context.Context, tokenResp *service.TokenRe
 
 // clearAuthCookies clears the authentication session.
 func (h *Handler) clearAuthCookies(ctx context.Context) {
-	defer func() {
-		if r := recover(); r != nil {
-			xlog.Debug("failed to clear auth cookies: session not loaded", "error", r)
-		}
-	}()
 	h.Session.Remove(ctx, sessionTokensKey)
 	h.Session.Destroy(ctx)
 }
@@ -41,14 +31,6 @@ func (h *Handler) clearAuthCookies(ctx context.Context) {
 // This helper is useful for middleware or other components that need access to the session tokens.
 // Returns (nil, false) if session data is not available in the context.
 func (h *Handler) GetSessionTokens(ctx context.Context) (tokens map[string]string, ok bool) {
-
-	defer func() {
-		if recover() != nil {
-			tokens = nil
-			ok = false
-		}
-	}()
-
 	tokens, ok = h.Session.Get(ctx, sessionTokensKey).(map[string]string)
 	return tokens, ok
 }
@@ -112,41 +94,23 @@ const (
 // SetFlash stores a flash message in the session.
 // Flash messages are one-time messages that are cleared after being read.
 func (h *Handler) SetFlash(ctx context.Context, key, value string) {
-	defer func() {
-		_ = recover()
-	}()
 	h.Session.Put(ctx, "_flash."+key, value)
 }
 
 // GetFlash retrieves and removes a flash message from the session.
 // Returns an empty string if no flash message exists for the given key.
 func (h *Handler) GetFlash(ctx context.Context, key string) (msg string) {
-	defer func() {
-		if r := recover(); r != nil {
-			msg = ""
-		}
-	}()
 	return h.Session.PopString(ctx, "_flash."+key)
 }
 
 // GetErrorMessage retrieves and clears any error flash message from the session.
 // This is a convenience method for GetFlash(ctx, "error").
 func (h *Handler) GetErrorMessage(ctx context.Context) (msg string) {
-	defer func() {
-		if r := recover(); r != nil {
-			msg = ""
-		}
-	}()
 	return h.Session.PopString(ctx, flashKeyError)
 }
 
 // GetSuccessMessage retrieves and clears any success flash message from the session.
 // This is a convenience method for GetFlash(ctx, "success").
 func (h *Handler) GetSuccessMessage(ctx context.Context) (msg string) {
-	defer func() {
-		if r := recover(); r != nil {
-			msg = ""
-		}
-	}()
 	return h.Session.PopString(ctx, flashKeySuccess)
 }

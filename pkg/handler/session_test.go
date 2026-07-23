@@ -144,14 +144,14 @@ func TestGetSessionTokens_WithoutSessionMiddleware(t *testing.T) {
 	h := setupTestHandler(t)
 	ctx := context.Background()
 
-	// This should not panic even without session middleware loaded
-	tokens, ok := h.GetSessionTokens(ctx)
-	if ok {
-		t.Error("Expected ok to be false when session middleware is not loaded")
-	}
-	if tokens != nil {
-		t.Error("Expected tokens to be nil when session middleware is not loaded")
-	}
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("Expected panic when session middleware is not loaded")
+		}
+	}()
+
+	// This should panic without session middleware loaded (fails fast on programming error)
+	h.GetSessionTokens(ctx)
 }
 
 func TestLoadUserMiddleware_WithoutSessionMiddleware(t *testing.T) {
