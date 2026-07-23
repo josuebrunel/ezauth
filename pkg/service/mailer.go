@@ -1,10 +1,11 @@
 package service
 
 import (
-	"fmt"
-	"net/smtp"
-
 	"bytes"
+	"crypto/tls"
+	"fmt"
+	"net"
+	"net/smtp"
 	"text/template"
 
 	"github.com/josuebrunel/ezauth/pkg/config"
@@ -27,15 +28,61 @@ func NewSMTPMailer(cfg config.SMTP) *SMTPMailer {
 }
 
 func (m *SMTPMailer) Send(to string, subject string, body string) error {
-	auth := smtp.PlainAuth("", m.cfg.User, m.cfg.Password, m.cfg.Host)
-	msg := []byte(fmt.Sprintf("To: %s\r\nSubject: %s\r\n\r\n%s\r\n", to, subject, body))
 	addr := fmt.Sprintf("%s:%d", m.cfg.Host, m.cfg.Port)
 
-	if err := smtp.SendMail(addr, auth, m.cfg.From, []string{to}, msg); err != nil {
-		xlog.Error("failed to send email", "error", err, "to", to)
+	conn, err := net.Dial("tcp", addr)
+	if err != nil {
+		xlog.Error("failed to connect to SMTP server", "error", err)
 		return err
 	}
-	return nil
+	defer conn.Close()
+
+	client, err := smtp.NewClient(conn, m.cfg.Host)
+	if err != nil {
+		xlog.Error("failed to create SMTP client", "error", err)
+		return err
+	}
+	defer client.Close()
+
+	tlsConfig := &tls.Config{ServerName: m.cfg.Host}
+	if err := client.StartTLS(tlsConfig); err != nil {
+		xlog.Error("SMTP server does not support TLS", "error", err)
+		return err
+	}
+
+	if m.cfg.User != "" {
+		auth := smtp.PlainAuth("", m.cfg.User, m.cfg.Password, m.cfg.Host)
+		if err := client.Auth(auth); err != nil {
+			xlog.Error("failed to authenticate", "error", err)
+			return err
+		}
+	}
+
+	if err := client.Mail(m.cfg.From); err != nil {
+		xlog.Error("failed to set mail sender", "error", err)
+		return err
+	}
+	if err := client.Rcpt(to); err != nil {
+		xlog.Error("failed to set mail recipient", "error", err)
+		return err
+	}
+
+	w, err := client.Data()
+	if err != nil {
+		xlog.Error("failed to start mail data", "error", err)
+		return err
+	}
+	msg := fmt.Sprintf("To: %s\r\nSubject: %s\r\n\r\n%s\r\n", to, subject, body)
+	if _, err := w.Write([]byte(msg)); err != nil {
+		xlog.Error("failed to write mail body", "error", err)
+		return err
+	}
+	if err := w.Close(); err != nil {
+		xlog.Error("failed to close mail data", "error", err)
+		return err
+	}
+
+	return client.Quit()
 }
 
 // MockMailer implements the Mailer interface for testing purposes.
