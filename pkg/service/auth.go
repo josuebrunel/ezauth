@@ -2,21 +2,19 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/josuebrunel/gopkg/xlog"
 	"golang.org/x/crypto/bcrypt"
-
-	"crypto/rand"
-	"encoding/hex"
-
 	"golang.org/x/oauth2"
-
-	"github.com/golang-jwt/jwt/v5"
 )
 
 // RequestBasicAuth defines the parameters for basic authentication (email/password).
@@ -46,9 +44,28 @@ type RequestPasswordResetConfirm struct {
 	Password string `json:"password"`
 }
 
+var usernameRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]{3,30}$`)
+
+func normalizeUserInput(req *RequestBasicAuth) error {
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+	req.Username = strings.TrimSpace(req.Username)
+	req.FirstName = strings.TrimSpace(req.FirstName)
+	req.LastName = strings.TrimSpace(req.LastName)
+	req.Nickname = strings.TrimSpace(req.Nickname)
+	req.Phone = strings.TrimSpace(req.Phone)
+
+	if req.Username != "" && !usernameRegex.MatchString(req.Username) {
+		return errors.New("username must be 3-30 characters: letters, numbers, underscores, hyphens")
+	}
+	return nil
+}
+
 // UserCreate creates a new user with email and password.
 func (a *Auth) UserCreate(ctx context.Context, req *RequestBasicAuth) (*models.User, error) {
 	xlog.Debug("creating user", "email", req.Email)
+	if err := normalizeUserInput(req); err != nil {
+		return nil, err
+	}
 	if err := a.validatePassword(req.Password); err != nil {
 		xlog.Debug("password validation failed", "email", req.Email, "err", err)
 		return nil, err
@@ -396,6 +413,7 @@ func (a *Auth) OAuth2GetUserInfo(ctx context.Context, provider string, token *oa
 // It links the OAuth2 account to an existing user or creates a new one.
 func (a *Auth) OAuth2Authenticate(ctx context.Context, provider string, userInfo *OAuth2UserInfo) (*models.User, error) {
 	xlog.Debug("authenticating via oauth2", "provider", provider, "email", userInfo.Email, "provider_id", userInfo.ID)
+	userInfo.Email = strings.ToLower(strings.TrimSpace(userInfo.Email))
 
 	user, err := a.Repo.UserGetByProvider(ctx, provider, userInfo.ID)
 	if err == nil && user != nil {
