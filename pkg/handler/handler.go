@@ -18,6 +18,7 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
+
 // LoadUserMiddleware is a middleware that loads the authenticated user into the context.
 // This allows downstream handlers to use GetSessionUser(ctx) without the Handler instance.
 func (h *Handler) LoadUserMiddleware(next http.Handler) http.Handler {
@@ -96,6 +97,12 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 		h.r.Use(middleware.Logger)
 		h.r.Use(middleware.RequestID)
 		h.r.Use(middleware.RealIP)
+		h.r.Use(ezmiddleware.NewRateLimiter(ezmiddleware.RateLimitConfig{
+			Enabled:    h.svc.Cfg.RateLimit.Enabled,
+			Requests:   h.svc.Cfg.RateLimit.Requests,
+			Window:     h.svc.Cfg.RateLimit.Window,
+			ByClientIP: h.svc.Cfg.RateLimit.ByClientIP,
+		}).Middleware)
 		h.r.Use(middleware.Recoverer)
 		h.r.Use(h.Session.LoadAndSave)
 	}

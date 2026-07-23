@@ -144,6 +144,14 @@ type Hashing struct {
 	Argon2KeyLength    uint32 `json:"argon2_key_length" env:"HASHING_ARGON2_KEY_LENGTH" default:"32"`
 }
 
+// RateLimit defines the rate limiting configuration.
+type RateLimit struct {
+	Enabled    bool          `json:"enabled" env:"RATE_LIMIT_ENABLED" default:"false"`
+	Requests   int           `json:"requests" env:"RATE_LIMIT_REQUESTS" default:"10"`
+	Window     time.Duration `json:"window" env:"RATE_LIMIT_WINDOW" default:"1m"`
+	ByClientIP bool          `json:"by_client_ip" env:"RATE_LIMIT_BY_CLIENT_IP" default:"true"`
+}
+
 // Config defines the overall configuration for ezauth.
 type Config struct {
 	Addr           string         `json:"addr" env:"ADDR" default:":8080"`
@@ -154,6 +162,7 @@ type Config struct {
 	JWTSecret      string         `json:"jwt_secret" env:"JWT_SECRET" required:"true"`
 	CSRFSecret     string         `json:"csrf_secret" env:"CSRF_SECRET"`
 	Hashing        Hashing        `json:"hashing"`
+	RateLimit      RateLimit      `json:"rate_limit"`
 	OAuth2         OAuth2         `json:"oauth2"`
 	SMTP           SMTP           `json:"smtp"`
 	EmailTemplates EmailTemplates `json:"email_templates"`
