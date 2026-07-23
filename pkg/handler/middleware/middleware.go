@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"crypto/subtle"
 	"net/http"
 	"strings"
 	"time"
@@ -78,8 +79,8 @@ func APIKeyMiddleware(configApiKey string, tokenRepo TokenGetter) func(http.Hand
 				return
 			}
 
-			// Check against config first
-			if apiKey == configApiKey {
+			// Check against config first (constant-time comparison)
+			if subtle.ConstantTimeCompare([]byte(apiKey), []byte(configApiKey)) == 1 {
 				next.ServeHTTP(w, r)
 				return
 			}
