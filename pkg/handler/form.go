@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"crypto/subtle"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -265,6 +267,8 @@ func (h *Handler) OAuth2Login(w http.ResponseWriter, r *http.Request) {
 		Value:    state,
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   strings.HasPrefix(h.svc.Cfg.BaseURL, "https://"),
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   300,
 	})
 
@@ -293,7 +297,7 @@ func (h *Handler) OAuth2Callback(w http.ResponseWriter, r *http.Request) {
 
 	state := r.URL.Query().Get("state")
 	cookie, err := r.Cookie("oauth_state")
-	if err != nil || state != cookie.Value {
+	if err != nil || subtle.ConstantTimeCompare([]byte(state), []byte(cookie.Value)) == 0 {
 		WriteJSONResponseError(w, http.StatusBadRequest, fmt.Errorf("invalid state"))
 		return
 	}
@@ -320,19 +324,22 @@ func (h *Handler) OAuth2Callback(w http.ResponseWriter, r *http.Request) {
 
 	token, err := conf.Exchange(r.Context(), code)
 	if err != nil {
-		WriteJSONResponseError(w, http.StatusInternalServerError, fmt.Errorf("failed to exchange token: %w", err))
+		xlog.Error("oauth2 token exchange failed", "provider", provider, "error", err)
+		WriteJSONResponseError(w, http.StatusInternalServerError, ErrOAuth2Failed)
 		return
 	}
 
 	userInfo, err := h.svc.OAuth2GetUserInfo(r.Context(), provider, token)
 	if err != nil {
-		WriteJSONResponseError(w, http.StatusInternalServerError, fmt.Errorf("failed to get user info: %w", err))
+		xlog.Error("oauth2 get user info failed", "provider", provider, "error", err)
+		WriteJSONResponseError(w, http.StatusInternalServerError, ErrOAuth2Failed)
 		return
 	}
 
 	user, err := h.svc.OAuth2Authenticate(r.Context(), provider, userInfo)
 	if err != nil {
-		WriteJSONResponseError(w, http.StatusInternalServerError, fmt.Errorf("failed to authenticate user: %w", err))
+		xlog.Error("oauth2 authenticate failed", "provider", provider, "error", err)
+		WriteJSONResponseError(w, http.StatusInternalServerError, ErrOAuth2Failed)
 		return
 	}
 
@@ -351,7 +358,8 @@ func (h *Handler) OAuth2Callback(w http.ResponseWriter, r *http.Request) {
 
 	tokenResp, err := h.svc.TokenCreate(r.Context(), user)
 	if err != nil {
-		WriteJSONResponseError(w, http.StatusInternalServerError, fmt.Errorf("failed to create token: %w", err))
+		xlog.Error("oauth2 create token failed", "provider", provider, "error", err)
+		WriteJSONResponseError(w, http.StatusInternalServerError, ErrOAuth2Failed)
 		return
 	}
 

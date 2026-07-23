@@ -28,4 +28,5 @@ var (
 	ErrAPIKeyRequired               = middleware.ErrAPIKeyRequired
 	ErrInvalidAPIKey                = middleware.ErrInvalidAPIKey
 	ErrUnauthorized                 = middleware.ErrUnauthorized
+	ErrOAuth2Failed                 = errors.New("oauth2 authentication failed")
 )
