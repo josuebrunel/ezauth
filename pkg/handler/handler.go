@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"log"
 	"net/http"
+	"strings"
 
 	csrf "filippo.io/csrf/gorilla"
 	"github.com/alexedwards/scs/v2"
@@ -83,7 +84,7 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 	h.Session = scs.New()
 	h.Session.Cookie.Name = "ezauthsess"
 	h.Session.Cookie.HttpOnly = true
-	h.Session.Cookie.Secure = h.svc.Cfg.BaseURL != "http://localhost:8080"
+	h.Session.Cookie.Secure = strings.HasPrefix(h.svc.Cfg.BaseURL, "https://")
 	h.Session.Cookie.Persist = true
 
 	for _, opt := range options {
@@ -114,7 +115,12 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 		// Form handlers (HTML Forms)
 		r.Group(func(r chi.Router) {
 			// CSRF Middleware
-			r.Use(csrf.Protect([]byte(h.svc.Cfg.JWTSecret), csrf.Secure(h.svc.Cfg.BaseURL != "http://localhost:8080")))
+			csrfKey := h.svc.Cfg.CSRFSecret
+		if csrfKey == "" {
+			xlog.Warn("CSRF_SECRET not set, falling back to JWT_SECRET. Set a dedicated EZAUTH_CSRF_SECRET for proper key separation.")
+			csrfKey = h.svc.Cfg.JWTSecret
+		}
+		r.Use(csrf.Protect([]byte(csrfKey), csrf.Secure(strings.HasPrefix(h.svc.Cfg.BaseURL, "https://"))))
 
 			r.Get("/csrf", func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("X-CSRF-Token", csrf.Token(r))

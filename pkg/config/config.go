@@ -142,6 +142,7 @@ type Config struct {
 	Debug          bool           `json:"debug" env:"DEBUG" default:"false"`
 	DB             Database       `json:"db"`
 	JWTSecret      string         `json:"jwt_secret" env:"JWT_SECRET" required:"true"`
+	CSRFSecret     string         `json:"csrf_secret" env:"CSRF_SECRET"`
 	OAuth2         OAuth2         `json:"oauth2"`
 	SMTP           SMTP           `json:"smtp"`
 	EmailTemplates EmailTemplates `json:"email_templates"`
@@ -155,6 +156,7 @@ type Config struct {
 // Sanitized returns a copy of the config with all secret fields redacted.
 func (c Config) Sanitized() Config {
 	c.JWTSecret = "***"
+	c.CSRFSecret = "***"
 	c.ApiKey = "***"
 	c.SMTP.Password = "***"
 	c.OAuth2.Google.ClientSecret = "***"
