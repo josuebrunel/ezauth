@@ -12,6 +12,8 @@ Simple and easy to use authentication library for Golang.
 
 - Email/Password Authentication (Register, Login)
 - JWT based sessions (Access & Refresh Tokens, Refresh Token Rotation)
+- Configurable Password Hashing: bcrypt or Argon2id
+- Rate Limiting on authentication endpoints
 - OAuth2 Support (Google, GitHub, Facebook) and custom/OIDC provider registration
 - Password Reset and Passwordless (Magic Link) authentication
 - Extended User Profiles (Username, First Name, Last Name, Phone, Avatar, Nickname, Locale, Timezone, Roles, etc.)
@@ -36,6 +38,8 @@ You can run `ezauth` as a separate service that handles authentication for your 
    export EZAUTH_DB_SCHEMA="public"    # Optional: Database schema (PostgreSQL only)
    export EZAUTH_JWT_SECRET="super-secret-key"
    export EZAUTH_CSRF_SECRET="your-csrf-secret"  # Optional; defaults to JWT_SECRET if not set
+   export EZAUTH_HASHING_ALGORITHM="bcrypt"      # Optional; "bcrypt" or "argon2id"
+   export EZAUTH_RATE_LIMIT_ENABLED="false"       # Optional; enable rate limiting on auth endpoints
 
    # SMTP (Optional - for Email features)
    export EZAUTH_SMTP_HOST="smtp.example.com"

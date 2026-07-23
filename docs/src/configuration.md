@@ -14,6 +14,24 @@
 | `EZAUTH_CSRF_SECRET`   | Secret key for CSRF protection. Falls back to JWT_SECRET.     | (falls back to JWT_SECRET) |
 | `EZAUTH_TIMEOUT`       | Request timeout duration.                                      | `30s`                   |
 
+## Hashing Settings
+
+| Variable                               | Description                                                                      | Default |
+| -------------------------------------- | -------------------------------------------------------------------------------- | ------- |
+| `EZAUTH_HASHING_ALGORITHM`             | Password hashing algorithm (`bcrypt` or `argon2id`).                             | `bcrypt`|
+| `EZAUTH_HASHING_ARGON2_MEMORY`         | Argon2 memory cost in KB (used when algorithm is `argon2id`).                    | `65536` |
+| `EZAUTH_HASHING_ARGON2_ITERATIONS`     | Argon2 time cost (iterations).                                                   | `3`     |
+| `EZAUTH_HASHING_ARGON2_PARALLELISM`    | Argon2 parallelism (thread count).                                               | `4`     |
+
+## Rate Limit Settings
+
+| Variable                         | Description                                              | Default  |
+| -------------------------------- | -------------------------------------------------------- | -------- |
+| `EZAUTH_RATE_LIMIT_ENABLED`      | Enable rate limiting on authentication endpoints.        | `false`  |
+| `EZAUTH_RATE_LIMIT_REQUESTS`     | Maximum requests allowed per window.                     | `10`     |
+| `EZAUTH_RATE_LIMIT_WINDOW`       | Rate limit window duration (e.g., `1m`, `30s`).          | `1m`     |
+| `EZAUTH_RATE_LIMIT_BY_CLIENT_IP` | Apply rate limiting per client IP address.               | `true`   |
+
 ## Database Settings
 
 | Variable            | Description                                           | Default     |
