@@ -35,6 +35,7 @@ You can run `ezauth` as a separate service that handles authentication for your 
    export EZAUTH_DB_DSN="auth.db"      # for mysql: "user:pass@tcp(localhost:3306)/dbname?parseTime=true"
    export EZAUTH_DB_SCHEMA="public"    # Optional: Database schema (PostgreSQL only)
    export EZAUTH_JWT_SECRET="super-secret-key"
+   export EZAUTH_CSRF_SECRET="your-csrf-secret"  # Optional; defaults to JWT_SECRET if not set
 
    # SMTP (Optional - for Email features)
    export EZAUTH_SMTP_HOST="smtp.example.com"
@@ -215,6 +216,9 @@ func main() {
 }
 ```
 
+> [!IMPORTANT]
+> OAuth2 auto-linking requires the provider to return `email_verified: true` in the user info response. If a provider does not return this field (or returns `false`), the user will be prompted to log in with their existing password rather than being automatically linked. This prevents account takeover via unverified email addresses.
+
 ## Session Management (Cookies)
 
 When using the Form-based handlers, `ezauth` manages sessions using HTTP-only cookies via the `scs` session manager. The cookie name is `ezauthsess`.
@@ -276,7 +280,7 @@ r.Get("/login", func(w http.ResponseWriter, r *http.Request) {
 
 ### CSRF Protection
 
-When using the form-based handlers (e.g., `POST /auth/login`), `ezauth` automatically enforces CSRF protection using `filippo.io/csrf/gorilla` and your `EZAUTH_JWT_SECRET`. 
+When using the form-based handlers (e.g., `POST /auth/login`), `ezauth` automatically enforces CSRF protection using `filippo.io/csrf/gorilla` and the `EZAUTH_CSRF_SECRET` (falls back to `EZAUTH_JWT_SECRET` with a warning if not set). It is strongly recommended to set a dedicated `EZAUTH_CSRF_SECRET` to keep CSRF and JWT keys separate.
 
 **Note on Tokens vs Headers:** 
 This library relies entirely on modern browser **Fetch Metadata headers** (e.g. `Sec-Fetch-Site`, `Origin`) to enforce same-origin requests dynamically, mirroring the upcoming Go 1.25 standard library CSRF protections.
@@ -396,7 +400,7 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 | `/auth/passwordless/login`     | `token` (query param)                   |                                                                                                                   |
 
 > [!NOTE]
-> Passwords must be at least 8 characters long.
+> Passwords must be between 8 and 128 characters long.
 
 ### API Handlers (JSON)
 

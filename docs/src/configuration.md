@@ -10,8 +10,9 @@
 | `EZAUTH_API_KEY`    | Master API Key for protecting endpoints.            |                         |
 | `EZAUTH_BASE_URL`   | The base URL of the auth service (used for emails). | `http://localhost:8080` |
 | `EZAUTH_DEBUG`      | Enable debug logging.                               | `false`                 |
-| `EZAUTH_JWT_SECRET` | Secret key used to sign JWT tokens.                 |                         |
-| `EZAUTH_TIMEOUT`    | Request timeout duration.                           | `30s`                   |
+| `EZAUTH_JWT_SECRET`    | Secret key used to sign JWT tokens.                            |                         |
+| `EZAUTH_CSRF_SECRET`   | Secret key for CSRF protection. Falls back to JWT_SECRET.     | (falls back to JWT_SECRET) |
+| `EZAUTH_TIMEOUT`       | Request timeout duration.                                      | `30s`                   |
 
 ## Database Settings
 
