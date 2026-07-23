@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"crypto/rand"
+	"crypto/subtle"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -11,8 +13,10 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/josuebrunel/ezauth/pkg/config"
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/josuebrunel/gopkg/xlog"
+	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/oauth2"
 )
@@ -98,10 +102,64 @@ func (a *Auth) UserCreate(ctx context.Context, req *RequestBasicAuth) (*models.U
 	return u, nil
 }
 
-// UserHashPassword generates a bcrypt hash of the given password.
+// UserHashPassword generates a password hash using the configured algorithm.
 func (a Auth) UserHashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
-	return string(bytes), err
+	switch a.Cfg.Hashing.Algorithm {
+	case "argon2id":
+		return argon2idHash(password, a.Cfg.Hashing)
+	default:
+		bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+		return string(bytes), err
+	}
+}
+
+// verifyPassword verifies a password against its hash, auto-detecting the algorithm.
+func verifyPassword(password, encodedHash string) bool {
+	switch {
+	case strings.HasPrefix(encodedHash, "$2a$") || strings.HasPrefix(encodedHash, "$2b$"):
+		return bcrypt.CompareHashAndPassword([]byte(encodedHash), []byte(password)) == nil
+	case strings.HasPrefix(encodedHash, "$argon2id$"):
+		return verifyArgon2idHash(password, encodedHash)
+	default:
+		return false
+	}
+}
+
+func argon2idHash(password string, cfg config.Hashing) (string, error) {
+	salt := make([]byte, cfg.Argon2SaltLength)
+	if _, err := rand.Read(salt); err != nil {
+		return "", err
+	}
+	hash := argon2.IDKey([]byte(password), salt, cfg.Argon2Iterations, cfg.Argon2Memory, cfg.Argon2Parallelism, cfg.Argon2KeyLength)
+	b64Salt := base64.RawStdEncoding.EncodeToString(salt)
+	b64Hash := base64.RawStdEncoding.EncodeToString(hash)
+	return fmt.Sprintf("$argon2id$v=19$m=%d,t=%d,p=%d$%s$%s", cfg.Argon2Memory, cfg.Argon2Iterations, cfg.Argon2Parallelism, b64Salt, b64Hash), nil
+}
+
+func verifyArgon2idHash(password, encodedHash string) bool {
+	parts := strings.Split(encodedHash, "$")
+	if len(parts) != 6 {
+		return false
+	}
+	var version int
+	var memory, iterations uint32
+	var parallelism uint8
+	if _, err := fmt.Sscanf(parts[2], "v=%d", &version); err != nil || version != 19 {
+		return false
+	}
+	if _, err := fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &memory, &iterations, &parallelism); err != nil {
+		return false
+	}
+	salt, err := base64.RawStdEncoding.DecodeString(parts[4])
+	if err != nil {
+		return false
+	}
+	expectedHash, err := base64.RawStdEncoding.DecodeString(parts[5])
+	if err != nil {
+		return false
+	}
+	computed := argon2.IDKey([]byte(password), salt, iterations, memory, parallelism, uint32(len(expectedHash)))
+	return subtle.ConstantTimeCompare(computed, expectedHash) == 1
 }
 
 func (a Auth) validatePassword(password string) error {
@@ -120,16 +178,26 @@ func (a Auth) UserAuthenticate(ctx context.Context, req RequestBasicAuth) (*mode
 	user, err := a.Repo.UserGetByEmail(ctx, req.Email)
 	if err != nil {
 		xlog.Debug("authentication failed: user not found", "email", req.Email, "err", err)
-		bcrypt.CompareHashAndPassword([]byte("$2a$14$ggvoBThQ9l3LSe3o0Y5aKO5opqgoaDgMYONZvGwuN.7Duu/xUO36C"), []byte(req.Password))
+		verifyPassword(req.Password, dummyHash(a.Cfg.Hashing.Algorithm))
 		return nil, errors.New("invalid credentials")
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+	if !verifyPassword(req.Password, user.PasswordHash) {
 		xlog.Debug("authentication failed: invalid credentials", "email", req.Email)
 		return nil, errors.New("invalid credentials")
 	}
 	xlog.Info("user authenticated", "id", user.ID, "email", user.Email)
 	return user, nil
+}
+
+var dummyBcryptHash = "$2a$14$ggvoBThQ9l3LSe3o0Y5aKO5opqgoaDgMYONZvGwuN.7Duu/xUO36C"
+var dummyArgon2Hash = "$argon2id$v=19$m=65536,t=3,p=4$rShbPuU7iV9LeKMS/It7kw$6WhU5zYIEInUzD/VX77WT81MYJxvGXw227Hm9sxPCQ0"
+
+func dummyHash(algorithm string) string {
+	if algorithm == "argon2id" {
+		return dummyArgon2Hash
+	}
+	return dummyBcryptHash
 }
 
 // UserUpdatePassword updates the password for a user.
