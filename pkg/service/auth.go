@@ -70,7 +70,6 @@ func (a *Auth) UserCreate(ctx context.Context, req *RequestBasicAuth) (*models.U
 		Phone:        req.Phone,
 		AvatarURL:    req.AvatarURL,
 		Nickname:     req.Nickname,
-		Roles:        req.Roles,
 		Provider:     "local",
 	}
 	u, err := a.Repo.UserCreate(ctx, user)

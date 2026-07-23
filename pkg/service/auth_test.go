@@ -95,8 +95,8 @@ func TestBasicAuthOperations(t *testing.T) {
 		if user.Timezone != "UTC" {
 			t.Errorf("expected Timezone UTC, got %s", user.Timezone)
 		}
-		if user.Roles != "admin,user" {
-			t.Errorf("expected Roles admin,user, got %s", user.Roles)
+		if user.Roles != "" {
+			t.Errorf("expected Roles to be empty (client-supplied roles must be ignored), got %s", user.Roles)
 		}
 
 		// Verify retrieval by Username

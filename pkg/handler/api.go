@@ -61,7 +61,6 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		Phone:     req.Phone,
 		AvatarURL: req.AvatarURL,
 		Nickname:  req.Nickname,
-		Roles:     req.Roles,
 	}
 
 	if err := h.svc.Hook.BeforeUserCreated(r.Context(), user); err != nil {
