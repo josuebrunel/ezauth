@@ -3,9 +3,11 @@ package service
 import (
 	"bytes"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net"
 	"net/smtp"
+	"strings"
 	"text/template"
 
 	"github.com/josuebrunel/ezauth/pkg/config"
@@ -28,6 +30,16 @@ func NewSMTPMailer(cfg config.SMTP) *SMTPMailer {
 }
 
 func (m *SMTPMailer) Send(to string, subject string, body string) error {
+	// Defense in depth: to/subject ultimately land unescaped in the raw
+	// SMTP command stream (Rcpt) and message headers below, so reject any
+	// CR/LF that would let a malformed value inject extra SMTP commands or
+	// mail headers, even if upstream validation is ever bypassed.
+	if strings.ContainsAny(to, "\r\n") || strings.ContainsAny(subject, "\r\n") {
+		err := errors.New("email header injection attempt blocked")
+		xlog.Error("refusing to send email with CR/LF in header value", "error", err)
+		return err
+	}
+
 	addr := net.JoinHostPort(m.cfg.Host, fmt.Sprintf("%d", m.cfg.Port))
 
 	conn, err := net.Dial("tcp", addr)

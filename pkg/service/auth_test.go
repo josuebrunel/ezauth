@@ -126,6 +126,25 @@ func TestBasicAuthOperations(t *testing.T) {
 		}
 	})
 
+	t.Run("UserCreate_InvalidEmail", func(t *testing.T) {
+		invalidEmails := []string{
+			"not-an-email",
+			"missing-domain@",
+			"user@domain.com\r\nBcc: victim@evil.com",
+			"Attacker Name <user@domain.com>",
+			"",
+		}
+		for _, e := range invalidEmails {
+			req := &RequestBasicAuth{
+				Email:    e,
+				Password: "securepass123",
+			}
+			if _, err := auth.UserCreate(ctx, req); err == nil {
+				t.Errorf("expected error for invalid email %q, got nil", e)
+			}
+		}
+	})
+
 	t.Run("UserAuthenticate_Success", func(t *testing.T) {
 		req := RequestBasicAuth{
 			Email:    email,

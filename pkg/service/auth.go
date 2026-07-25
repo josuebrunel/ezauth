@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/mail"
 	"regexp"
 	"strings"
 	"time"
@@ -58,8 +59,27 @@ func normalizeUserInput(req *RequestBasicAuth) error {
 	req.Nickname = strings.TrimSpace(req.Nickname)
 	req.Phone = strings.TrimSpace(req.Phone)
 
+	if err := validateEmail(req.Email); err != nil {
+		return err
+	}
+
 	if req.Username != "" && !usernameRegex.MatchString(req.Username) {
 		return errors.New("username must be 3-30 characters: letters, numbers, underscores, hyphens")
+	}
+	return nil
+}
+
+// validateEmail rejects anything that isn't a single well-formed address.
+// This is the only gate before an email is persisted and later used
+// verbatim as an SMTP recipient/header value, so it must reject embedded
+// CR/LF and "Name <addr>" style values, not just malformed addresses.
+func validateEmail(email string) error {
+	if strings.ContainsAny(email, "\r\n") {
+		return errors.New("invalid email address")
+	}
+	addr, err := mail.ParseAddress(email)
+	if err != nil || addr.Address != email {
+		return errors.New("invalid email address")
 	}
 	return nil
 }
