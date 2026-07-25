@@ -123,7 +123,7 @@ func (a *Auth) UserCreate(ctx context.Context, req *RequestBasicAuth) (*models.U
 }
 
 // UserHashPassword generates a password hash using the configured algorithm.
-func (a Auth) UserHashPassword(password string) (string, error) {
+func (a *Auth) UserHashPassword(password string) (string, error) {
 	switch a.Cfg.Hashing.Algorithm {
 	case "argon2id":
 		return argon2idHash(password, a.Cfg.Hashing)
@@ -182,7 +182,7 @@ func verifyArgon2idHash(password, encodedHash string) bool {
 	return subtle.ConstantTimeCompare(computed, expectedHash) == 1
 }
 
-func (a Auth) validatePassword(password string) error {
+func (a *Auth) validatePassword(password string) error {
 	if len(password) < 8 {
 		return errors.New("password must be at least 8 characters long")
 	}
@@ -193,7 +193,7 @@ func (a Auth) validatePassword(password string) error {
 }
 
 // UserAuthenticate authenticates a user with email and password.
-func (a Auth) UserAuthenticate(ctx context.Context, req RequestBasicAuth) (*models.User, error) {
+func (a *Auth) UserAuthenticate(ctx context.Context, req RequestBasicAuth) (*models.User, error) {
 	xlog.Debug("authenticating user", "email", req.Email)
 	user, err := a.Repo.UserGetByEmail(ctx, req.Email)
 	if err != nil {
@@ -221,7 +221,7 @@ func dummyHash(algorithm string) string {
 }
 
 // UserUpdatePassword updates the password for a user.
-func (a Auth) UserUpdatePassword(ctx context.Context, user *models.User, password string) (*models.User, error) {
+func (a *Auth) UserUpdatePassword(ctx context.Context, user *models.User, password string) (*models.User, error) {
 	if err := a.validatePassword(password); err != nil {
 		return nil, err
 	}
@@ -234,12 +234,12 @@ func (a Auth) UserUpdatePassword(ctx context.Context, user *models.User, passwor
 }
 
 // UserUpdate updates the user information.
-func (a Auth) UserUpdate(ctx context.Context, user *models.User) (*models.User, error) {
+func (a *Auth) UserUpdate(ctx context.Context, user *models.User) (*models.User, error) {
 	return a.Repo.UserUpdate(ctx, user)
 }
 
 // UserDelete deletes a user by ID.
-func (a Auth) UserDelete(ctx context.Context, id string) error {
+func (a *Auth) UserDelete(ctx context.Context, id string) error {
 	return a.Repo.UserDelete(ctx, id)
 }
 
