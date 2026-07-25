@@ -136,12 +136,12 @@ type Pages struct {
 
 // Hashing defines the password hashing algorithm and its parameters.
 type Hashing struct {
-	Algorithm          string `json:"algorithm" env:"HASHING_ALGORITHM" default:"bcrypt"`
-	Argon2Memory       uint32 `json:"argon2_memory" env:"HASHING_ARGON2_MEMORY" default:"65536"`
-	Argon2Iterations   uint32 `json:"argon2_iterations" env:"HASHING_ARGON2_ITERATIONS" default:"3"`
-	Argon2Parallelism  uint8  `json:"argon2_parallelism" env:"HASHING_ARGON2_PARALLELISM" default:"4"`
-	Argon2SaltLength   uint32 `json:"argon2_salt_length" env:"HASHING_ARGON2_SALT_LENGTH" default:"16"`
-	Argon2KeyLength    uint32 `json:"argon2_key_length" env:"HASHING_ARGON2_KEY_LENGTH" default:"32"`
+	Algorithm         string `json:"algorithm" env:"HASHING_ALGORITHM" default:"bcrypt"`
+	Argon2Memory      uint32 `json:"argon2_memory" env:"HASHING_ARGON2_MEMORY" default:"65536"`
+	Argon2Iterations  uint32 `json:"argon2_iterations" env:"HASHING_ARGON2_ITERATIONS" default:"3"`
+	Argon2Parallelism uint8  `json:"argon2_parallelism" env:"HASHING_ARGON2_PARALLELISM" default:"4"`
+	Argon2SaltLength  uint32 `json:"argon2_salt_length" env:"HASHING_ARGON2_SALT_LENGTH" default:"16"`
+	Argon2KeyLength   uint32 `json:"argon2_key_length" env:"HASHING_ARGON2_KEY_LENGTH" default:"32"`
 }
 
 // RateLimit defines the rate limiting configuration.

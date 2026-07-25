@@ -18,7 +18,6 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
-
 // LoadUserMiddleware is a middleware that loads the authenticated user into the context.
 // This allows downstream handlers to use GetSessionUser(ctx) without the Handler instance.
 func (h *Handler) LoadUserMiddleware(next http.Handler) http.Handler {
@@ -123,11 +122,11 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 		r.Group(func(r chi.Router) {
 			// CSRF Middleware
 			csrfKey := h.svc.Cfg.CSRFSecret
-		if csrfKey == "" {
-			xlog.Warn("CSRF_SECRET not set, falling back to JWT_SECRET. Set a dedicated EZAUTH_CSRF_SECRET for proper key separation.")
-			csrfKey = h.svc.Cfg.JWTSecret
-		}
-		r.Use(csrf.Protect([]byte(csrfKey), csrf.Secure(strings.HasPrefix(h.svc.Cfg.BaseURL, "https://"))))
+			if csrfKey == "" {
+				xlog.Warn("CSRF_SECRET not set, falling back to JWT_SECRET. Set a dedicated EZAUTH_CSRF_SECRET for proper key separation.")
+				csrfKey = h.svc.Cfg.JWTSecret
+			}
+			r.Use(csrf.Protect([]byte(csrfKey), csrf.Secure(strings.HasPrefix(h.svc.Cfg.BaseURL, "https://"))))
 
 			r.Get("/csrf", func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("X-CSRF-Token", csrf.Token(r))
