@@ -51,12 +51,13 @@ func (rl *RateLimiter) cleanupLoop() {
 	}
 }
 
+// ipToKey returns the client IP to key the rate limiter on. It relies on
+// chi's RealIP middleware (registered upstream in the middleware chain) to
+// have already resolved r.RemoteAddr; it must not re-read X-Forwarded-For
+// itself, since an unauthenticated client can set that header to any value
+// and get a fresh rate-limit bucket on every request.
 func ipToKey(r *http.Request) string {
-	ip := r.RemoteAddr
-	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
-		ip = fwd
-	}
-	return ip
+	return r.RemoteAddr
 }
 
 func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {

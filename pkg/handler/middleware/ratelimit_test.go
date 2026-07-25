@@ -159,6 +159,39 @@ func TestRateLimiter_ConcurrentSafe(t *testing.T) {
 	}
 }
 
+func TestRateLimiter_IgnoresSpoofedXForwardedFor(t *testing.T) {
+	rl := NewRateLimiter(RateLimitConfig{
+		Enabled:    true,
+		Requests:   1,
+		Window:     time.Minute,
+		ByClientIP: true,
+	})
+	handler := rl.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// First request — real client IP, attacker-controlled X-Forwarded-For.
+	req1 := httptest.NewRequest("GET", "/", nil)
+	req1.RemoteAddr = "192.0.2.8:12345"
+	req1.Header.Set("X-Forwarded-For", "1.1.1.1")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req1)
+	if rec.Code != http.StatusOK {
+		t.Errorf("first request: expected 200, got %d", rec.Code)
+	}
+
+	// Second request — same real client IP, different spoofed X-Forwarded-For.
+	// Must share the same bucket as the first request and be blocked.
+	req2 := httptest.NewRequest("GET", "/", nil)
+	req2.RemoteAddr = "192.0.2.8:12345"
+	req2.Header.Set("X-Forwarded-For", "2.2.2.2")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req2)
+	if rec.Code != http.StatusTooManyRequests {
+		t.Errorf("second request (spoofed X-Forwarded-For): expected 429, got %d", rec.Code)
+	}
+}
+
 func TestRateLimiter_ByClientIPFalse(t *testing.T) {
 	rl := NewRateLimiter(RateLimitConfig{
 		Enabled:    true,
