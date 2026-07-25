@@ -86,7 +86,8 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 		}
 
 		entry.used++
-		remaining := rl.cfg.Requests - entry.used
+		used := entry.used
+		remaining := rl.cfg.Requests - used
 		if remaining < 0 {
 			remaining = 0
 		}
@@ -98,7 +99,7 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 		w.Header().Set("X-RateLimit-Remaining", fmt.Sprintf("%d", remaining))
 		w.Header().Set("X-RateLimit-Reset", fmt.Sprintf("%d", resetUnix))
 
-		if entry.used > rl.cfg.Requests {
+		if used > rl.cfg.Requests {
 			w.Header().Set("Retry-After", fmt.Sprintf("%d", int(rl.cfg.Window.Seconds())))
 			http.Error(w, "429 too many requests", http.StatusTooManyRequests)
 			return
