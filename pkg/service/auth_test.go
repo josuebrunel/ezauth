@@ -67,7 +67,6 @@ func TestBasicAuthOperations(t *testing.T) {
 			LastName:  "Doe",
 			Locale:    "en-US",
 			Timezone:  "UTC",
-			Roles:     "admin,user",
 			Data:      map[string]any{"role": "admin"},
 		}
 
@@ -97,7 +96,7 @@ func TestBasicAuthOperations(t *testing.T) {
 			t.Errorf("expected Timezone UTC, got %s", user.Timezone)
 		}
 		if user.Roles != "" {
-			t.Errorf("expected Roles to be empty (client-supplied roles must be ignored), got %s", user.Roles)
+			t.Errorf("expected Roles to be empty (no roles are set at signup), got %s", user.Roles)
 		}
 
 		// Verify retrieval by Username

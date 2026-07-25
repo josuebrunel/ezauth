@@ -40,7 +40,6 @@ func (h *Handler) FormRegister(w http.ResponseWriter, r *http.Request) {
 		Phone:     r.FormValue("phone"),
 		AvatarURL: r.FormValue("avatar_url"),
 		Nickname:  r.FormValue("nickname"),
-		Roles:     r.FormValue("roles"),
 		Data:      data,
 	}
 

@@ -34,7 +34,6 @@ type RequestBasicAuth struct {
 	Phone     string         `json:"phone"`
 	AvatarURL string         `json:"avatar_url"`
 	Nickname  string         `json:"nickname"`
-	Roles     string         `json:"roles"`
 	Data      map[string]any `json:"data"`
 }
 
