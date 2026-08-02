@@ -385,6 +385,8 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 | POST   | `/auth/register`                   | Register a new user                                                         |
 | POST   | `/auth/login`                      | Login and set cookies                                                       |
 | POST   | `/auth/logout`                     | Clear cookies and logout                                                    |
+| POST   | `/auth/impersonate`                | Start impersonating a user (see [Impersonation](#impersonation))            |
+| POST   | `/auth/impersonate/stop`           | Stop impersonating and restore the admin's session                          |
 | POST   | `/auth/password-reset/request`     | Request password reset link                                                 |
 | POST   | `/auth/password-reset/confirm`     | Confirm password reset                                                      |
 | POST   | `/auth/passwordless/request`       | Request magic link                                                          |
@@ -398,6 +400,7 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 | :----------------------------- | :-------------------------------------- | :---------------------------------------------------------------------------------------------------------------- |
 | `/auth/register`               | `email`, `password`, `password_confirm` | `username`, `first_name`, `last_name`, `locale`, `timezone`, `phone`, `avatar_url`, `nickname`, `roles`, `meta_*` |
 | `/auth/login`                  | `email`, `password`                     |                                                                                                                   |
+| `/auth/impersonate`            | `target_user_id`                        |                                                                                                                   |
 | `/auth/password-reset/request` | `email`                                 |                                                                                                                   |
 | `/auth/password-reset/confirm` | `token`, `password`                     |                                                                                                                   |
 | `/auth/passwordless/request`   | `email`                                 |                                                                                                                   |
@@ -421,6 +424,8 @@ These endpoints accept `application/json` and return JSON responses.
 | GET    | `/auth/api/passwordless/login`     | Login via magic link              |
 | GET    | `/auth/api/userinfo`               | Get current user info (Protected) |
 | POST   | `/auth/api/logout`                 | Revoke refresh token (Protected)  |
+| POST   | `/auth/api/impersonate`            | Start impersonating a user (Protected, see [Impersonation](#impersonation)) |
+| POST   | `/auth/api/impersonate/stop`       | Stop impersonating (Protected)    |
 | DELETE | `/auth/api/user`                   | Delete account (Protected)        |
 
 ## Middlewares
@@ -456,8 +461,62 @@ These endpoints accept `application/json` and return JSON responses.
  Protects API routes using JWT Bearer tokens in the `Authorization` header.
  - Validates the token signature.
  - Sets the user ID in the context.
- 
- ## Hooks
+
+## Impersonation
+
+`ezauth` supports admin impersonation: an authenticated user can act as another user (e.g. for customer support debugging), then swap back to their own session.
+
+> [!IMPORTANT]
+> `ezauth` enforces **no authorization** for who may impersonate. The `Impersonate` method/endpoint mints tokens for any target user on behalf of whoever calls it. Your application is responsible for checking that the caller is allowed to impersonate — e.g. `adminUser.HasRole("admin")` — before calling it in library mode, or by adding your own authorization middleware in front of the `/auth/impersonate` and `/auth/api/impersonate` routes in standalone-service mode.
+
+### Library Mode
+
+```go
+// adminUser must already be authenticated; check authorization yourself first.
+if !adminUser.HasRole("admin") {
+    // reject
+}
+
+tokenResp, err := auth.Impersonate(ctx, adminUser, targetUserID)
+// tokenResp.AccessToken / tokenResp.RefreshToken now authenticate as targetUser,
+// with the access token carrying an "act" claim identifying adminUser.
+
+// ... later, end the impersonation session:
+err = auth.StopImpersonating(ctx, tokenResp.RefreshToken)
+```
+
+### Standalone-service Mode
+
+Both a JSON API and form-based (cookie) flow are available, mirroring every other endpoint:
+
+```bash
+# Start impersonating (JSON API) — requires the admin's own Bearer token.
+# refresh_token is the admin's own current refresh token; it's echoed back so the
+# client can restore its own session later (the JSON API is stateless).
+curl -X POST https://your-host/auth/api/impersonate \
+  -H "Authorization: Bearer <admin-access-token>" \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{"target_user_id": "<target-id>", "refresh_token": "<admin-refresh-token>"}'
+
+# Stop impersonating — pass the impersonation access/refresh token pair.
+curl -X POST https://your-host/auth/api/impersonate/stop \
+  -H "Authorization: Bearer <impersonation-access-token>" \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token": "<impersonation-refresh-token>"}'
+```
+
+For form-based (cookie) clients, `POST /auth/impersonate` (with a `target_user_id` field) swaps the current session cookie over to the target user, stashing the admin's own tokens; `POST /auth/impersonate/stop` restores them — no re-login required.
+
+### Detecting an Impersonation Session
+
+- **Bearer/JWT mode**: `ezauth.GetImpersonatorID(ctx)` returns the acting admin's user ID from the access token's `act` claim (requires `AuthMiddleware`).
+- **Cookie/session mode**: `auth.IsImpersonating(ctx)` and `auth.GetImpersonator(ctx)` report whether the current session is an impersonation session and who the acting admin is.
+
+These two are backed by different mechanisms (JWT claims vs. session storage) and aren't interchangeable — use whichever matches how your route is authenticated.
+
+## Hooks
 
 ezauth provides a hook system that lets you intercept auth lifecycle events. This is useful for:
 
@@ -533,6 +592,8 @@ func (h MyHook) AfterUserSignedIn(ctx context.Context, u *models.User) error {
 | `AfterPasswordResetConfirmed` | After a password reset is confirmed        | No (errors are logged) |
 | `AfterOAuth2SignedIn`         | After an existing user signs in via OAuth2 | No (errors are logged) |
 | `AfterOAuth2Created`          | After a new user is created via OAuth2     | No (errors are logged) |
+| `AfterImpersonationStarted`   | After an admin begins impersonating a user | No (errors are logged) |
+| `AfterImpersonationEnded`     | After an impersonation session ends        | No (errors are logged) |
 
 ### Registering the Hook
 

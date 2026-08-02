@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/josuebrunel/ezauth/pkg/config"
 	"github.com/josuebrunel/ezauth/pkg/db/migrations"
 	"github.com/josuebrunel/ezauth/pkg/db/models"
@@ -713,6 +714,158 @@ func TestTokenOperations(t *testing.T) {
 		}
 		if !t2.Revoked {
 			t.Errorf("expected token2 to be revoked, but it was not")
+		}
+	})
+}
+
+func TestImpersonation(t *testing.T) {
+	auth := setupTestDB(t)
+	ctx := context.Background()
+
+	admin, err := auth.Repo.UserCreate(ctx, &models.User{
+		Email:        util.UniqueEmail("admin"),
+		PasswordHash: "some-hash",
+		Provider:     "local",
+		Roles:        "admin",
+	})
+	if err != nil {
+		t.Fatalf("failed to create admin user: %v", err)
+	}
+
+	target, err := auth.Repo.UserCreate(ctx, &models.User{
+		Email:        util.UniqueEmail("target"),
+		PasswordHash: "some-hash",
+		Provider:     "local",
+	})
+	if err != nil {
+		t.Fatalf("failed to create target user: %v", err)
+	}
+
+	parseClaims := func(t *testing.T, accessToken string) jwt.MapClaims {
+		t.Helper()
+		tok, err := jwt.Parse(accessToken, func(token *jwt.Token) (any, error) {
+			return []byte(auth.Cfg.JWTSecret), nil
+		})
+		if err != nil {
+			t.Fatalf("failed to parse access token: %v", err)
+		}
+		claims, ok := tok.Claims.(jwt.MapClaims)
+		if !ok {
+			t.Fatalf("unexpected claims type")
+		}
+		return claims
+	}
+
+	t.Run("rejects missing admin", func(t *testing.T) {
+		if _, err := auth.Impersonate(ctx, nil, target.ID); err == nil {
+			t.Error("expected error for nil admin user, got nil")
+		}
+	})
+
+	t.Run("rejects empty target", func(t *testing.T) {
+		if _, err := auth.Impersonate(ctx, admin, ""); err == nil {
+			t.Error("expected error for empty target user id, got nil")
+		}
+	})
+
+	t.Run("rejects self-impersonation", func(t *testing.T) {
+		if _, err := auth.Impersonate(ctx, admin, admin.ID); err == nil {
+			t.Error("expected error for self-impersonation, got nil")
+		}
+	})
+
+	t.Run("rejects unknown target", func(t *testing.T) {
+		if _, err := auth.Impersonate(ctx, admin, "does-not-exist"); err == nil {
+			t.Error("expected error for unknown target user, got nil")
+		}
+	})
+
+	var impersonationRefreshToken string
+
+	t.Run("mints tokens with act claim and tags metadata", func(t *testing.T) {
+		resp, err := auth.Impersonate(ctx, admin, target.ID)
+		if err != nil {
+			t.Fatalf("Impersonate() unexpected error: %v", err)
+		}
+		impersonationRefreshToken = resp.RefreshToken
+
+		claims := parseClaims(t, resp.AccessToken)
+		if claims["sub"] != target.ID {
+			t.Errorf("expected sub claim %s, got %v", target.ID, claims["sub"])
+		}
+		act, ok := claims["act"].(map[string]any)
+		if !ok {
+			t.Fatalf("expected act claim to be present, got %v", claims["act"])
+		}
+		if act["sub"] != admin.ID {
+			t.Errorf("expected act.sub claim %s, got %v", admin.ID, act["sub"])
+		}
+
+		storedToken, err := auth.Repo.TokenGetByToken(ctx, resp.RefreshToken)
+		if err != nil {
+			t.Fatalf("failed to get impersonation refresh token: %v", err)
+		}
+		if imp, _ := storedToken.Metadata["impersonation"].(bool); !imp {
+			t.Error("expected refresh token metadata to be tagged as impersonation")
+		}
+		if storedToken.Metadata["actor_id"] != admin.ID {
+			t.Errorf("expected refresh token metadata actor_id %s, got %v", admin.ID, storedToken.Metadata["actor_id"])
+		}
+	})
+
+	t.Run("refresh preserves act claim", func(t *testing.T) {
+		resp, err := auth.TokenRefresh(ctx, impersonationRefreshToken)
+		if err != nil {
+			t.Fatalf("TokenRefresh() unexpected error: %v", err)
+		}
+		impersonationRefreshToken = resp.RefreshToken
+
+		claims := parseClaims(t, resp.AccessToken)
+		act, ok := claims["act"].(map[string]any)
+		if !ok {
+			t.Fatalf("expected act claim to survive refresh, got %v", claims["act"])
+		}
+		if act["sub"] != admin.ID {
+			t.Errorf("expected act.sub claim %s after refresh, got %v", admin.ID, act["sub"])
+		}
+	})
+
+	t.Run("plain TokenCreate has no act claim", func(t *testing.T) {
+		resp, err := auth.TokenCreate(ctx, target)
+		if err != nil {
+			t.Fatalf("TokenCreate() unexpected error: %v", err)
+		}
+		claims := parseClaims(t, resp.AccessToken)
+		if _, ok := claims["act"]; ok {
+			t.Errorf("expected no act claim on a regular token, got %v", claims["act"])
+		}
+	})
+
+	t.Run("StopImpersonating rejects non-impersonation token", func(t *testing.T) {
+		resp, err := auth.TokenCreate(ctx, target)
+		if err != nil {
+			t.Fatalf("TokenCreate() unexpected error: %v", err)
+		}
+		if err := auth.StopImpersonating(ctx, resp.RefreshToken); err == nil {
+			t.Error("expected error when stopping a non-impersonation token, got nil")
+		}
+	})
+
+	t.Run("StopImpersonating revokes the impersonation token", func(t *testing.T) {
+		if err := auth.StopImpersonating(ctx, impersonationRefreshToken); err != nil {
+			t.Fatalf("StopImpersonating() unexpected error: %v", err)
+		}
+
+		storedToken, err := auth.Repo.TokenGetByToken(ctx, impersonationRefreshToken)
+		if err != nil {
+			t.Fatalf("failed to get token after stop: %v", err)
+		}
+		if !storedToken.Revoked {
+			t.Error("expected impersonation refresh token to be revoked")
+		}
+
+		if _, err := auth.TokenRefresh(ctx, impersonationRefreshToken); err == nil {
+			t.Error("expected error when refreshing a revoked impersonation token, got nil")
 		}
 	})
 }

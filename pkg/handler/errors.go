@@ -29,4 +29,6 @@ var (
 	ErrInvalidAPIKey                = middleware.ErrInvalidAPIKey
 	ErrUnauthorized                 = middleware.ErrUnauthorized
 	ErrOAuth2Failed                 = errors.New("oauth2 authentication failed")
+	ErrTargetUserIDRequired         = errors.New("target_user_id is required")
+	ErrAlreadyImpersonating         = errors.New("already impersonating; stop the current impersonation session first")
 )

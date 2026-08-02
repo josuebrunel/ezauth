@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/josuebrunel/ezauth/pkg/config"
 	"github.com/josuebrunel/ezauth/pkg/db/migrations"
+	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/josuebrunel/ezauth/pkg/service"
 	"github.com/josuebrunel/ezauth/pkg/util"
 
@@ -233,6 +235,165 @@ func TestFormHandler_RegisterMismatchPasswords(t *testing.T) {
 		// With flash messages, we expect a clean redirect URL (no error= query param)
 		if location != "/register" {
 			t.Errorf("expected redirect to /register, got %s", location)
+		}
+	})
+}
+
+func formRegister(t *testing.T, h *Handler, email, password string) {
+	t.Helper()
+	form := url.Values{}
+	form.Add("email", email)
+	form.Add("password", password)
+	form.Add("password_confirm", password)
+
+	req := httptest.NewRequest(http.MethodPost, "/auth/register", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusFound {
+		t.Fatalf("register failed for %s: expected 302, got %d", email, w.Code)
+	}
+}
+
+func formLogin(t *testing.T, h *Handler, email, password string) *http.Cookie {
+	t.Helper()
+	form := url.Values{}
+	form.Add("email", email)
+	form.Add("password", password)
+
+	req := httptest.NewRequest(http.MethodPost, "/auth/login", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusFound {
+		t.Fatalf("login failed for %s: expected 302, got %d", email, w.Code)
+	}
+	return w.Result().Cookies()[0]
+}
+
+// formSessionUser loads the session referenced by cookie and resolves the user it
+// currently authenticates as, without going through an HTTP round trip.
+func formSessionUser(t *testing.T, h *Handler, cookie *http.Cookie) *models.User {
+	t.Helper()
+	ctx, err := h.Session.Load(context.Background(), cookie.Value)
+	if err != nil {
+		t.Fatalf("failed to load session: %v", err)
+	}
+	user, err := h.GetSessionUser(ctx)
+	if err != nil {
+		t.Fatalf("failed to resolve session user: %v", err)
+	}
+	return user
+}
+
+func TestFormHandler_ImpersonationSwapBack(t *testing.T) {
+	h := setupFormTestHandler(t)
+	password := "password123"
+
+	adminEmail := util.UniqueEmail("form-impersonate-admin")
+	targetEmail := util.UniqueEmail("form-impersonate-target")
+	formRegister(t, h, adminEmail, password)
+	formRegister(t, h, targetEmail, password)
+
+	ctx := context.Background()
+	admin, err := h.svc.Repo.UserGetByEmail(ctx, adminEmail)
+	if err != nil {
+		t.Fatalf("failed to fetch admin: %v", err)
+	}
+	target, err := h.svc.Repo.UserGetByEmail(ctx, targetEmail)
+	if err != nil {
+		t.Fatalf("failed to fetch target: %v", err)
+	}
+
+	admin.Roles = "admin"
+	if _, err := h.svc.Repo.UserUpdate(ctx, admin); err != nil {
+		t.Fatalf("failed to promote admin: %v", err)
+	}
+
+	adminCookie := formLogin(t, h, adminEmail, password)
+	if got := formSessionUser(t, h, adminCookie); got.ID != admin.ID {
+		t.Fatalf("expected admin session before impersonation, got %s", got.Email)
+	}
+
+	var impersonatedCookie *http.Cookie
+
+	t.Run("FormImpersonate", func(t *testing.T) {
+		form := url.Values{}
+		form.Add("target_user_id", target.ID)
+		req := httptest.NewRequest(http.MethodPost, "/auth/impersonate", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.AddCookie(adminCookie)
+		w := httptest.NewRecorder()
+
+		h.ServeHTTP(w, req)
+
+		if w.Code != http.StatusFound {
+			t.Fatalf("expected status 302, got %d", w.Code)
+		}
+		if len(w.Result().Cookies()) == 0 {
+			t.Fatal("expected a session cookie to be set")
+		}
+		impersonatedCookie = w.Result().Cookies()[0]
+
+		if got := formSessionUser(t, h, impersonatedCookie); got.ID != target.ID {
+			t.Fatalf("expected session to resolve to target after impersonate, got %s", got.Email)
+		}
+	})
+
+	t.Run("reject double impersonation", func(t *testing.T) {
+		form := url.Values{}
+		form.Add("target_user_id", admin.ID)
+		req := httptest.NewRequest(http.MethodPost, "/auth/impersonate", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.AddCookie(impersonatedCookie)
+		w := httptest.NewRecorder()
+
+		h.ServeHTTP(w, req)
+
+		if w.Code != http.StatusFound {
+			t.Fatalf("expected status 302, got %d", w.Code)
+		}
+		// Session must still resolve to the target, not have started a nested impersonation.
+		if got := formSessionUser(t, h, impersonatedCookie); got.ID != target.ID {
+			t.Fatalf("expected session to still resolve to target after rejected double impersonation, got %s", got.Email)
+		}
+	})
+
+	t.Run("reject impersonation with no session", func(t *testing.T) {
+		form := url.Values{}
+		form.Add("target_user_id", target.ID)
+		req := httptest.NewRequest(http.MethodPost, "/auth/impersonate", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		h.ServeHTTP(w, req)
+
+		if w.Code != http.StatusFound {
+			t.Fatalf("expected status 302, got %d", w.Code)
+		}
+		location := w.Header().Get("Location")
+		if location != h.svc.Cfg.Pages.Login {
+			t.Errorf("expected redirect to login page, got %s", location)
+		}
+	})
+
+	t.Run("FormStopImpersonation", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/auth/impersonate/stop", nil)
+		req.AddCookie(impersonatedCookie)
+		w := httptest.NewRecorder()
+
+		h.ServeHTTP(w, req)
+
+		if w.Code != http.StatusFound {
+			t.Fatalf("expected status 302, got %d: %s", w.Code, w.Body.String())
+		}
+		if len(w.Result().Cookies()) == 0 {
+			t.Fatal("expected a session cookie to be set")
+		}
+		restoredCookie := w.Result().Cookies()[0]
+
+		if got := formSessionUser(t, h, restoredCookie); got.ID != admin.ID {
+			t.Fatalf("expected session to resolve back to admin after stop, got %s", got.Email)
 		}
 	})
 }

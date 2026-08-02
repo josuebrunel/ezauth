@@ -561,8 +561,16 @@ type TokenResponse struct {
 
 // TokenCreate creates a new pair of access and refresh tokens for the given user.
 func (a *Auth) TokenCreate(ctx context.Context, user *models.User) (*TokenResponse, error) {
-	xlog.Debug("creating tokens", "user_id", user.ID)
-	accessToken, exp, err := a.generateAccessToken(user)
+	return a.tokenCreateForActor(ctx, user, "")
+}
+
+// tokenCreateForActor creates a new pair of access and refresh tokens for the given user.
+// When actorID is non-empty, the access token carries an "act" claim identifying the
+// acting user (e.g. an admin impersonating user), and the persisted refresh token is
+// tagged in Metadata so it can be recognized and revoked as an impersonation token.
+func (a *Auth) tokenCreateForActor(ctx context.Context, user *models.User, actorID string) (*TokenResponse, error) {
+	xlog.Debug("creating tokens", "user_id", user.ID, "actor_id", actorID)
+	accessToken, exp, err := a.generateAccessToken(user, actorID)
 	if err != nil {
 		xlog.Error("failed to generate access token", "user_id", user.ID, "err", err)
 		return nil, err
@@ -574,6 +582,12 @@ func (a *Auth) TokenCreate(ctx context.Context, user *models.User) (*TokenRespon
 		return nil, err
 	}
 
+	metadata := models.JSONMap{}
+	if actorID != "" {
+		metadata["impersonation"] = true
+		metadata["actor_id"] = actorID
+	}
+
 	now := time.Now()
 	token := &models.Token{
 		UserID:    user.ID,
@@ -582,7 +596,7 @@ func (a *Auth) TokenCreate(ctx context.Context, user *models.User) (*TokenRespon
 		ExpiresAt: now.Add(30 * 24 * time.Hour),
 		CreatedAt: now,
 		Revoked:   false,
-		Metadata:  models.JSONMap{},
+		Metadata:  metadata,
 	}
 
 	if _, err := a.Repo.TokenCreate(ctx, token); err != nil {
@@ -603,6 +617,53 @@ func (a *Auth) TokenCreate(ctx context.Context, user *models.User) (*TokenRespon
 		ExpiresIn:    int(time.Until(exp).Seconds()),
 		TokenType:    "Bearer",
 	}, nil
+}
+
+// Impersonate mints a new token pair for targetUserID, acting on behalf of adminUser.
+// The resulting access token carries an "act" claim identifying adminUser, and the
+// persisted refresh token is tagged as an impersonation token.
+//
+// ezauth performs no authorization check here: the caller is responsible for verifying
+// that adminUser is allowed to impersonate (e.g. via adminUser.HasRole("admin")) before
+// calling this method.
+func (a *Auth) Impersonate(ctx context.Context, adminUser *models.User, targetUserID string) (*TokenResponse, error) {
+	if adminUser == nil {
+		return nil, errors.New("acting admin user is required")
+	}
+	if targetUserID == "" {
+		return nil, errors.New("target user id is required")
+	}
+	if targetUserID == adminUser.ID {
+		return nil, errors.New("cannot impersonate yourself")
+	}
+
+	target, err := a.Repo.UserGetByID(ctx, targetUserID)
+	if err != nil {
+		xlog.Debug("impersonation failed: target user not found", "target_user_id", targetUserID)
+		return nil, errors.New("target user not found")
+	}
+
+	xlog.Info("impersonation started", "admin_id", adminUser.ID, "target_user_id", target.ID)
+	return a.tokenCreateForActor(ctx, target, adminUser.ID)
+}
+
+// StopImpersonating revokes an impersonation refresh token, ending that impersonation
+// session server-side.
+func (a *Auth) StopImpersonating(ctx context.Context, impersonationRefreshToken string) error {
+	token, err := a.Repo.TokenGetByToken(ctx, impersonationRefreshToken)
+	if err != nil {
+		xlog.Debug("stop impersonation failed: token not found", "err", err)
+		return errors.New("invalid impersonation token")
+	}
+	if imp, _ := token.Metadata["impersonation"].(bool); !imp {
+		return errors.New("not an impersonation token")
+	}
+	if err := a.Repo.TokenRevoke(ctx, token.ID); err != nil {
+		xlog.Error("failed to revoke impersonation token", "token_id", token.ID, "err", err)
+		return err
+	}
+	xlog.Info("impersonation ended", "token_id", token.ID, "user_id", token.UserID)
+	return nil
 }
 
 // TokenRefresh refreshes the access and refresh tokens using a valid refresh token.
@@ -635,7 +696,8 @@ func (a *Auth) TokenRefresh(ctx context.Context, refreshToken string) (*TokenRes
 		return nil, err
 	}
 
-	return a.TokenCreate(ctx, user)
+	actorID, _ := token.Metadata["actor_id"].(string)
+	return a.tokenCreateForActor(ctx, user, actorID)
 }
 
 // TokenRevoke revokes the given refresh token.
@@ -655,13 +717,16 @@ func (a *Auth) TokenRevoke(ctx context.Context, refreshToken string) error {
 	return err
 }
 
-func (a *Auth) generateAccessToken(user *models.User) (string, time.Time, error) {
+func (a *Auth) generateAccessToken(user *models.User, actorID string) (string, time.Time, error) {
 	exp := time.Now().Add(1 * time.Hour)
 	claims := jwt.MapClaims{
 		"sub":   user.ID,
 		"email": user.Email,
 		"exp":   jwt.NewNumericDate(exp),
 		"iat":   jwt.NewNumericDate(time.Now()),
+	}
+	if actorID != "" {
+		claims["act"] = map[string]any{"sub": actorID}
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	t, err := token.SignedString([]byte(a.Cfg.JWTSecret))

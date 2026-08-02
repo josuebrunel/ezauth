@@ -17,8 +17,9 @@ import (
 type contextKey string
 
 const (
-	UserContextKey       = contextKey("userID")
-	UserObjectContextKey = contextKey("user")
+	UserContextKey         = contextKey("userID")
+	UserObjectContextKey   = contextKey("user")
+	ImpersonatorContextKey = contextKey("impersonatorID")
 )
 
 // UserLoader is a function that loads a user from context.
@@ -64,6 +65,11 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 				return
 			}
 			ctx := context.WithValue(r.Context(), UserContextKey, userID)
+			if act, ok := claims["act"].(map[string]any); ok {
+				if actorID, ok := act["sub"].(string); ok && actorID != "" {
+					ctx = context.WithValue(ctx, ImpersonatorContextKey, actorID)
+				}
+			}
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

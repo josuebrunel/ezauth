@@ -48,6 +48,12 @@ type Hook interface {
 
 	// AfterOAuth2Created is called after a new user is created via OAuth2.
 	AfterOAuth2Created(ctx context.Context, user *models.User, provider string) error
+
+	// AfterImpersonationStarted is called after an admin begins impersonating a target user.
+	AfterImpersonationStarted(ctx context.Context, admin *models.User, target *models.User) error
+
+	// AfterImpersonationEnded is called after an impersonation session ends.
+	AfterImpersonationEnded(ctx context.Context, admin *models.User, target *models.User) error
 }
 
 // DefaultHook is a no-op implementation of Hook.
@@ -72,5 +78,11 @@ func (DefaultHook) AfterOAuth2SignedIn(_ context.Context, _ *models.User, _ stri
 	return nil
 }
 func (DefaultHook) AfterOAuth2Created(_ context.Context, _ *models.User, _ string) error {
+	return nil
+}
+func (DefaultHook) AfterImpersonationStarted(_ context.Context, _ *models.User, _ *models.User) error {
+	return nil
+}
+func (DefaultHook) AfterImpersonationEnded(_ context.Context, _ *models.User, _ *models.User) error {
 	return nil
 }

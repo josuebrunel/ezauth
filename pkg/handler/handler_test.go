@@ -425,6 +425,16 @@ func (h *testHook) AfterPasswordResetConfirmed(ctx context.Context, user *models
 	return nil
 }
 
+func (h *testHook) AfterImpersonationStarted(ctx context.Context, admin, target *models.User) error {
+	h.record("AfterImpersonationStarted")
+	return nil
+}
+
+func (h *testHook) AfterImpersonationEnded(ctx context.Context, admin, target *models.User) error {
+	h.record("AfterImpersonationEnded")
+	return nil
+}
+
 func TestHandler_Hooks_DefaultNeverPanics(t *testing.T) {
 	// The default hook is used by the handler setup, so the existing
 	// TestHandler_RegisterAndLoginFlow already exercises DefaultHook.
@@ -628,6 +638,191 @@ func TestHandler_Unauthorized(t *testing.T) {
 	t.Run("UserInfo_InvalidToken", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/auth/api/userinfo", nil)
 		req.Header.Set("Authorization", "Bearer invalid-token")
+		req.Header.Set("X-API-Key", "test-api-key")
+		w := httptest.NewRecorder()
+
+		h.ServeHTTP(w, req)
+
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("expected status 401, got %d", w.Code)
+		}
+	})
+}
+
+// registerAndLogin registers a new user via the JSON API and returns the resulting
+// tokens, for use as a test fixture.
+func registerAndLogin(t *testing.T, h *Handler, emailPrefix string) (user *models.User, accessToken, refreshToken string) {
+	t.Helper()
+	email := util.UniqueEmail(emailPrefix)
+	password := "password123"
+
+	reqBody := map[string]any{"email": email, "password": password}
+	body, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest(http.MethodPost, "/auth/api/register", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-api-key")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("register failed: expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp testResponse[service.TokenResponse]
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode register response: %v", err)
+	}
+
+	u, err := h.svc.Repo.UserGetByEmail(context.Background(), email)
+	if err != nil {
+		t.Fatalf("failed to fetch registered user: %v", err)
+	}
+
+	return u, resp.Data.AccessToken, resp.Data.RefreshToken
+}
+
+func TestHandler_Impersonation_JSON(t *testing.T) {
+	h := setupTestHandler(t)
+	hook := &testHook{}
+	h.svc.Hook = hook
+
+	admin, adminAccessToken, adminRefreshToken := registerAndLogin(t, h, "impersonate-admin")
+	target, _, _ := registerAndLogin(t, h, "impersonate-target")
+
+	// Promote admin to have an "admin" role (BYO authorization: ezauth itself does
+	// not check this, but the fixture mirrors how a consuming app would gate access).
+	admin.Roles = "admin"
+	if _, err := h.svc.Repo.UserUpdate(context.Background(), admin); err != nil {
+		t.Fatalf("failed to promote admin: %v", err)
+	}
+
+	var impersonationAccessToken, impersonationRefreshToken string
+
+	t.Run("Impersonate", func(t *testing.T) {
+		reqBody := map[string]any{
+			"target_user_id": target.ID,
+			"refresh_token":  adminRefreshToken,
+		}
+		body, _ := json.Marshal(reqBody)
+		req := httptest.NewRequest(http.MethodPost, "/auth/api/impersonate", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+adminAccessToken)
+		req.Header.Set("X-API-Key", "test-api-key")
+		w := httptest.NewRecorder()
+
+		h.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
+		}
+
+		var resp testResponse[ImpersonateResponse]
+		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if resp.Data.AccessToken == "" || resp.Data.RefreshToken == "" {
+			t.Fatal("expected new access/refresh tokens for the target user")
+		}
+		if resp.Data.OriginalAccessToken != adminAccessToken {
+			t.Errorf("expected original_access_token to echo the admin's bearer token")
+		}
+		if resp.Data.OriginalRefreshToken != adminRefreshToken {
+			t.Errorf("expected original_refresh_token to echo the submitted refresh token")
+		}
+		if resp.Data.ImpersonatorID != admin.ID {
+			t.Errorf("expected impersonator_id %s, got %s", admin.ID, resp.Data.ImpersonatorID)
+		}
+		if resp.Data.TargetUserID != target.ID {
+			t.Errorf("expected target_user_id %s, got %s", target.ID, resp.Data.TargetUserID)
+		}
+
+		impersonationAccessToken = resp.Data.AccessToken
+		impersonationRefreshToken = resp.Data.RefreshToken
+
+		if !containsHookCall(hook.calls, "AfterImpersonationStarted") {
+			t.Errorf("expected AfterImpersonationStarted to be called, got %v", hook.calls)
+		}
+	})
+
+	t.Run("UserInfo resolves target, not admin", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/auth/api/userinfo", nil)
+		req.Header.Set("Authorization", "Bearer "+impersonationAccessToken)
+		req.Header.Set("X-API-Key", "test-api-key")
+		w := httptest.NewRecorder()
+
+		h.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
+		}
+
+		var resp testResponse[models.User]
+		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if resp.Data.Email != target.Email {
+			t.Errorf("expected userinfo to resolve target %s, got %s", target.Email, resp.Data.Email)
+		}
+	})
+
+	t.Run("cannot impersonate while already impersonating", func(t *testing.T) {
+		reqBody := map[string]any{
+			"target_user_id": admin.ID,
+			"refresh_token":  impersonationRefreshToken,
+		}
+		body, _ := json.Marshal(reqBody)
+		req := httptest.NewRequest(http.MethodPost, "/auth/api/impersonate", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+impersonationAccessToken)
+		req.Header.Set("X-API-Key", "test-api-key")
+		w := httptest.NewRecorder()
+
+		h.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("expected status 400, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("StopImpersonation", func(t *testing.T) {
+		reqBody := map[string]string{"refresh_token": impersonationRefreshToken}
+		body, _ := json.Marshal(reqBody)
+		req := httptest.NewRequest(http.MethodPost, "/auth/api/impersonate/stop", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+impersonationAccessToken)
+		req.Header.Set("X-API-Key", "test-api-key")
+		w := httptest.NewRecorder()
+
+		h.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
+		}
+
+		if !containsHookCall(hook.calls, "AfterImpersonationEnded") {
+			t.Errorf("expected AfterImpersonationEnded to be called, got %v", hook.calls)
+		}
+	})
+
+	t.Run("refresh fails after stop", func(t *testing.T) {
+		reqBody := map[string]string{"refresh_token": impersonationRefreshToken}
+		body, _ := json.Marshal(reqBody)
+		req := httptest.NewRequest(http.MethodPost, "/auth/api/token/refresh", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-API-Key", "test-api-key")
+		w := httptest.NewRecorder()
+
+		h.ServeHTTP(w, req)
+
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("expected status 401 for revoked impersonation token, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("no bearer token rejected", func(t *testing.T) {
+		reqBody := map[string]any{"target_user_id": target.ID, "refresh_token": adminRefreshToken}
+		body, _ := json.Marshal(reqBody)
+		req := httptest.NewRequest(http.MethodPost, "/auth/api/impersonate", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-API-Key", "test-api-key")
 		w := httptest.NewRecorder()
 

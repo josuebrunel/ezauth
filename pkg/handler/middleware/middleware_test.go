@@ -56,6 +56,65 @@ func TestAuthMiddleware(t *testing.T) {
 	}
 }
 
+func TestAuthMiddleware_ImpersonatorContextKey(t *testing.T) {
+	secret := "secret"
+	mw := AuthMiddleware(secret)
+
+	t.Run("sets impersonator id when act claim present", func(t *testing.T) {
+		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			userID, _ := r.Context().Value(UserContextKey).(string)
+			if userID != "target1" {
+				t.Errorf("expected sub userID target1, got %v", userID)
+			}
+			actorID, ok := r.Context().Value(ImpersonatorContextKey).(string)
+			if !ok || actorID != "admin1" {
+				t.Errorf("expected impersonator id admin1, got %v (ok=%v)", actorID, ok)
+			}
+			w.WriteHeader(http.StatusOK)
+		})
+
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"sub": "target1",
+			"act": map[string]any{"sub": "admin1"},
+		})
+		tokenString, _ := token.SignedString([]byte(secret))
+
+		req := httptest.NewRequest("GET", "/", nil)
+		req.Header.Set("Authorization", "Bearer "+tokenString)
+		w := httptest.NewRecorder()
+
+		mw(next).ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected 200, got %d", w.Code)
+		}
+	})
+
+	t.Run("no impersonator id when act claim absent", func(t *testing.T) {
+		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if _, ok := r.Context().Value(ImpersonatorContextKey).(string); ok {
+				t.Error("expected no impersonator id in context for a regular token")
+			}
+			w.WriteHeader(http.StatusOK)
+		})
+
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"sub": "user1",
+		})
+		tokenString, _ := token.SignedString([]byte(secret))
+
+		req := httptest.NewRequest("GET", "/", nil)
+		req.Header.Set("Authorization", "Bearer "+tokenString)
+		w := httptest.NewRecorder()
+
+		mw(next).ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected 200, got %d", w.Code)
+		}
+	})
+}
+
 func TestAPIKeyMiddleware(t *testing.T) {
 	apiKey := "config-key"
 	mw := APIKeyMiddleware(apiKey, &MockTokenGetter{})

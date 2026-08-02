@@ -312,6 +312,31 @@ func (e *EzAuth) GetSuccessMessage(ctx context.Context) string {
 	return e.Handler.GetSuccessMessage(ctx)
 }
 
+// Impersonate mints a new token pair for targetUserID, acting on behalf of adminUser.
+// ezauth performs no authorization check here: the caller is responsible for verifying
+// that adminUser is allowed to impersonate (e.g. via adminUser.HasRole("admin")) before
+// calling this method.
+func (e *EzAuth) Impersonate(ctx context.Context, adminUser *models.User, targetUserID string) (*service.TokenResponse, error) {
+	return e.Service.Impersonate(ctx, adminUser, targetUserID)
+}
+
+// StopImpersonating revokes an impersonation refresh token, ending that session.
+func (e *EzAuth) StopImpersonating(ctx context.Context, impersonationRefreshToken string) error {
+	return e.Service.StopImpersonating(ctx, impersonationRefreshToken)
+}
+
+// IsImpersonating reports whether the current cookie-based session is an impersonation
+// session, and if so, the acting admin's user ID.
+func (e *EzAuth) IsImpersonating(ctx context.Context) (string, bool) {
+	return e.Handler.IsImpersonating(ctx)
+}
+
+// GetImpersonator returns the acting admin's user for the current cookie-based
+// impersonation session.
+func (e *EzAuth) GetImpersonator(ctx context.Context) (*models.User, error) {
+	return e.Handler.GetImpersonator(ctx)
+}
+
 // GetUserID retrieves the user ID from the request context.
 // It requires AuthMiddleware, LoadUserMiddleware, or SessionMiddleware to be used.
 // It returns an error if the user ID is not found in the context.
@@ -336,6 +361,15 @@ func IsAuthenticated(ctx context.Context) bool {
 		return true
 	}
 	return false
+}
+
+// GetImpersonatorID returns the acting admin's user ID from a JWT-authenticated
+// (Bearer token) request context, as set by AuthMiddleware from the token's "act"
+// claim. This is the Bearer/JWT-mode counterpart to EzAuth.IsImpersonating and
+// EzAuth.GetImpersonator, which operate on cookie-based sessions instead — the two
+// are backed by different mechanisms and aren't interchangeable.
+func GetImpersonatorID(ctx context.Context) (string, error) {
+	return handler.GetImpersonatorID(ctx)
 }
 
 // CSRFToken returns the current CSRF token string from the request context.

@@ -10,7 +10,11 @@ import (
 	"github.com/josuebrunel/gopkg/xlog"
 )
 
-const sessionTokensKey = "tokens"
+const (
+	sessionTokensKey             = "tokens"
+	sessionImpersonatorTokensKey = "impersonator_tokens"
+	sessionImpersonatorIDKey     = "impersonator_id"
+)
 
 // setAuthCookies sets the access and refresh tokens in the session.
 func (h *Handler) setAuthCookies(ctx context.Context, tokenResp *service.TokenResponse) {
@@ -25,6 +29,63 @@ func (h *Handler) setAuthCookies(ctx context.Context, tokenResp *service.TokenRe
 func (h *Handler) clearAuthCookies(ctx context.Context) {
 	h.Session.Remove(ctx, sessionTokensKey)
 	h.Session.Destroy(ctx)
+}
+
+// setImpersonationCookies stashes the admin's current session tokens, then swaps the
+// session over to the target user's tokens. Used to start a "swap back"-capable
+// impersonation session for cookie-based (form) clients.
+func (h *Handler) setImpersonationCookies(ctx context.Context, adminID string, tokenResp *service.TokenResponse) {
+	if current, ok := h.GetSessionTokens(ctx); ok {
+		h.Session.Put(ctx, sessionImpersonatorTokensKey, current)
+	}
+	h.Session.Put(ctx, sessionImpersonatorIDKey, adminID)
+	h.setAuthCookies(ctx, tokenResp)
+}
+
+// clearImpersonationCookies restores the stashed admin tokens into the session, ending
+// the impersonation session and returning the caller to their own session. Returns false
+// if there was no stashed impersonator session to restore.
+func (h *Handler) clearImpersonationCookies(ctx context.Context) bool {
+	stashed, ok := h.Session.Get(ctx, sessionImpersonatorTokensKey).(map[string]string)
+	if !ok {
+		return false
+	}
+	h.Session.Put(ctx, sessionTokensKey, stashed)
+	h.Session.Remove(ctx, sessionImpersonatorTokensKey)
+	h.Session.Remove(ctx, sessionImpersonatorIDKey)
+	return true
+}
+
+// IsImpersonating reports whether the current cookie session is an impersonation
+// session, and if so, the acting admin's user ID.
+func (h *Handler) IsImpersonating(ctx context.Context) (string, bool) {
+	id, ok := h.Session.Get(ctx, sessionImpersonatorIDKey).(string)
+	return id, ok && id != ""
+}
+
+// GetImpersonator returns the acting admin's user for the current cookie-based
+// impersonation session. Returns an error if the current session isn't impersonating.
+func (h *Handler) GetImpersonator(ctx context.Context) (*models.User, error) {
+	id, ok := h.IsImpersonating(ctx)
+	if !ok {
+		return nil, errors.New("not impersonating")
+	}
+	return h.svc.Repo.UserGetByID(ctx, id)
+}
+
+// GetImpersonatorID returns the acting admin's user ID from a JWT-authenticated
+// (Bearer token) request context, as set by AuthMiddleware from the token's "act"
+// claim. Returns an error if the request isn't an impersonation session.
+//
+// This is the Bearer/JWT-mode counterpart to IsImpersonating/GetImpersonator, which
+// operate on cookie-based sessions instead — the two are backed by different
+// mechanisms and aren't interchangeable.
+func GetImpersonatorID(ctx context.Context) (string, error) {
+	id, ok := ctx.Value(ezmiddleware.ImpersonatorContextKey).(string)
+	if !ok || id == "" {
+		return "", errors.New("not an impersonation session")
+	}
+	return id, nil
 }
 
 // GetSessionTokens retrieves the tokens from the session.

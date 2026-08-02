@@ -89,6 +89,58 @@ func TestEzAuth(t *testing.T) {
 
 		}
 	})
+
+	t.Run("Impersonation", func(t *testing.T) {
+		auth, err := New(cfg, "auth")
+		if err != nil {
+			t.Fatalf("failed to create ezauth: %v", err)
+		}
+		if err := auth.Migrate(); err != nil {
+			t.Fatalf("failed to migrate: %v", err)
+		}
+
+		ctx := context.Background()
+		admin, err := auth.Repo.UserCreate(ctx, &models.User{
+			Email:        util.UniqueEmail("ezauth-admin"),
+			PasswordHash: "some-hash",
+			Provider:     "local",
+			Roles:        "admin",
+		})
+		if err != nil {
+			t.Fatalf("failed to create admin: %v", err)
+		}
+		target, err := auth.Repo.UserCreate(ctx, &models.User{
+			Email:        util.UniqueEmail("ezauth-target"),
+			PasswordHash: "some-hash",
+			Provider:     "local",
+		})
+		if err != nil {
+			t.Fatalf("failed to create target: %v", err)
+		}
+
+		tokenResp, err := auth.Impersonate(ctx, admin, target.ID)
+		if err != nil {
+			t.Fatalf("Impersonate() unexpected error: %v", err)
+		}
+		if tokenResp.AccessToken == "" || tokenResp.RefreshToken == "" {
+			t.Fatal("expected access/refresh tokens from Impersonate()")
+		}
+
+		sctx, err := auth.Handler.Session.Load(context.Background(), "")
+		if err != nil {
+			t.Fatalf("failed to load session: %v", err)
+		}
+		if _, ok := auth.IsImpersonating(sctx); ok {
+			t.Error("expected IsImpersonating to be false before setting an impersonation session")
+		}
+		if _, err := auth.GetImpersonator(sctx); err == nil {
+			t.Error("expected GetImpersonator to error before setting an impersonation session")
+		}
+
+		if err := auth.StopImpersonating(ctx, tokenResp.RefreshToken); err != nil {
+			t.Fatalf("StopImpersonating() unexpected error: %v", err)
+		}
+	})
 }
 func TestHelpers(t *testing.T) {
 	t.Run("GetUserID", func(t *testing.T) {
@@ -142,6 +194,21 @@ func TestHelpers(t *testing.T) {
 
 		if IsAuthenticated(context.Background()) {
 			t.Fatal("expected false when context is empty")
+		}
+	})
+
+	t.Run("GetImpersonatorID", func(t *testing.T) {
+		ctx := context.WithValue(context.Background(), ezmiddleware.ImpersonatorContextKey, "admin-id")
+		id, err := GetImpersonatorID(ctx)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if id != "admin-id" {
+			t.Fatalf("expected impersonator id admin-id, got %s", id)
+		}
+
+		if _, err := GetImpersonatorID(context.Background()); err == nil {
+			t.Fatal("expected error when impersonator id is missing from context")
 		}
 	})
 }
