@@ -15,6 +15,108 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/auth/impersonate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Mint tokens for a target user on behalf of the authenticated admin",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "impersonation"
+                ],
+                "summary": "Start impersonating a user",
+                "parameters": [
+                    {
+                        "description": "Impersonate Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.ImpersonateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-handler_ImpersonateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/impersonate/stop": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Revoke an impersonation refresh token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "impersonation"
+                ],
+                "summary": "Stop impersonating a user",
+                "parameters": [
+                    {
+                        "description": "Stop Impersonation Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.StopImpersonationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-map_string_string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "security": [
@@ -597,6 +699,17 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "handler.ApiResponse-handler_ImpersonateResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handler.ImpersonateResponse"
+                },
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
         "handler.ApiResponse-map_string_string": {
             "type": "object",
             "properties": {
@@ -641,6 +754,47 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.ImpersonateRequest": {
+            "type": "object",
+            "properties": {
+                "refresh_token": {
+                    "description": "RefreshToken is the caller's own current refresh token. It is echoed back\nunchanged as OriginalRefreshToken so the client can restore its own session\nlater via StopImpersonation, since the JSON API is stateless.",
+                    "type": "string"
+                },
+                "target_user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.ImpersonateResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "expires_in": {
+                    "type": "integer"
+                },
+                "impersonator_id": {
+                    "type": "string"
+                },
+                "original_access_token": {
+                    "type": "string"
+                },
+                "original_refresh_token": {
+                    "type": "string"
+                },
+                "refresh_token": {
+                    "type": "string"
+                },
+                "target_user_id": {
+                    "type": "string"
+                },
+                "token_type": {
+                    "type": "string"
+                }
+            }
+        },
         "handler.LogoutRequest": {
             "type": "object",
             "properties": {
@@ -650,6 +804,14 @@ const docTemplate = `{
             }
         },
         "handler.RefreshTokenRequest": {
+            "type": "object",
+            "properties": {
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.StopImpersonationRequest": {
             "type": "object",
             "properties": {
                 "refresh_token": {
@@ -770,9 +932,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "phone": {
-                    "type": "string"
-                },
-                "roles": {
                     "type": "string"
                 },
                 "timezone": {

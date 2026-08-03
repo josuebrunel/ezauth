@@ -1,5 +1,12 @@
 basePath: /
 definitions:
+  handler.ApiResponse-handler_ImpersonateResponse:
+    properties:
+      data:
+        $ref: '#/definitions/handler.ImpersonateResponse'
+      error:
+        type: string
+    type: object
   handler.ApiResponse-map_string_string:
     properties:
       data:
@@ -28,12 +35,47 @@ definitions:
       error:
         type: string
     type: object
+  handler.ImpersonateRequest:
+    properties:
+      refresh_token:
+        description: |-
+          RefreshToken is the caller's own current refresh token. It is echoed back
+          unchanged as OriginalRefreshToken so the client can restore its own session
+          later via StopImpersonation, since the JSON API is stateless.
+        type: string
+      target_user_id:
+        type: string
+    type: object
+  handler.ImpersonateResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      impersonator_id:
+        type: string
+      original_access_token:
+        type: string
+      original_refresh_token:
+        type: string
+      refresh_token:
+        type: string
+      target_user_id:
+        type: string
+      token_type:
+        type: string
+    type: object
   handler.LogoutRequest:
     properties:
       refresh_token:
         type: string
     type: object
   handler.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        type: string
+    type: object
+  handler.StopImpersonationRequest:
     properties:
       refresh_token:
         type: string
@@ -49,6 +91,8 @@ definitions:
     properties:
       app_metadata:
         $ref: '#/definitions/models.JSONMap'
+      avatar_url:
+        type: string
       created_at:
         type: string
       email:
@@ -61,12 +105,22 @@ definitions:
         type: string
       id:
         type: string
+      is_active:
+        type: boolean
       last_active_at:
+        type: string
+      last_login_at:
         type: string
       last_name:
         type: string
       locale:
         type: string
+      nickname:
+        type: string
+      phone:
+        type: string
+      phone_verified:
+        type: boolean
       provider:
         type: string
       provider_id:
@@ -84,6 +138,8 @@ definitions:
     type: object
   service.RequestBasicAuth:
     properties:
+      avatar_url:
+        type: string
       data:
         additionalProperties: {}
         type: object
@@ -95,9 +151,11 @@ definitions:
         type: string
       locale:
         type: string
+      nickname:
+        type: string
       password:
         type: string
-      roles:
+      phone:
         type: string
       timezone:
         type: string
@@ -138,6 +196,68 @@ info:
   title: EzAuth API
   version: "1.0"
 paths:
+  /auth/impersonate:
+    post:
+      consumes:
+      - application/json
+      description: Mint tokens for a target user on behalf of the authenticated admin
+      parameters:
+      - description: Impersonate Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ImpersonateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-handler_ImpersonateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Start impersonating a user
+      tags:
+      - impersonation
+  /auth/impersonate/stop:
+    post:
+      consumes:
+      - application/json
+      description: Revoke an impersonation refresh token
+      parameters:
+      - description: Stop Impersonation Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.StopImpersonationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Stop impersonating a user
+      tags:
+      - impersonation
   /auth/login:
     post:
       consumes:
@@ -211,7 +331,8 @@ paths:
     get:
       description: Handle the callback from the OAuth2 provider
       parameters:
-      - description: OAuth2 Provider (google, github, facebook)
+      - description: OAuth2 Provider (google, github, facebook, discord, gitlab, slack,
+          linkedin, spotify, or any registered custom provider)
         in: path
         name: provider
         required: true
@@ -248,7 +369,8 @@ paths:
     get:
       description: Redirect to the OAuth2 provider login page
       parameters:
-      - description: OAuth2 Provider (google, github, facebook)
+      - description: OAuth2 Provider (google, github, facebook, discord, gitlab, slack,
+          linkedin, spotify, or any registered custom provider)
         in: path
         name: provider
         required: true
