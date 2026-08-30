@@ -15,6 +15,205 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/auth/api/mfa/confirm": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Validates a TOTP code and enables MFA, returning one-time recovery codes",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mfa"
+                ],
+                "summary": "Confirm TOTP MFA enrollment",
+                "parameters": [
+                    {
+                        "description": "MFA Confirm Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.mfaConfirmRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-handler_mfaConfirmResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/api/mfa/disable": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Validates a TOTP or recovery code and disables MFA",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mfa"
+                ],
+                "summary": "Disable TOTP MFA",
+                "parameters": [
+                    {
+                        "description": "MFA Disable Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.mfaConfirmRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-map_string_string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/api/mfa/enroll": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Generates a new TOTP secret for the authenticated user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mfa"
+                ],
+                "summary": "Begin TOTP MFA enrollment",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-service_MFAEnrollResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/api/mfa/login/verify": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Exchanges an mfa_token and TOTP/recovery code for session tokens",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mfa"
+                ],
+                "summary": "Complete MFA step-up login",
+                "parameters": [
+                    {
+                        "description": "MFA Login Verify Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.mfaLoginVerifyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-service_TokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/impersonate": {
             "post": {
                 "security": [
@@ -150,7 +349,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.ApiResponse-service_TokenResponse"
+                            "$ref": "#/definitions/handler.ApiResponse-service_LoginResponse"
                         }
                     },
                     "400": {
@@ -710,6 +909,17 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.ApiResponse-handler_mfaConfirmResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handler.mfaConfirmResponse"
+                },
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
         "handler.ApiResponse-map_string_string": {
             "type": "object",
             "properties": {
@@ -726,6 +936,28 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "$ref": "#/definitions/models.User"
+                },
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.ApiResponse-service_LoginResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/service.LoginResponse"
+                },
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.ApiResponse-service_MFAEnrollResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/service.MFAEnrollResponse"
                 },
                 "error": {
                     "type": "string"
@@ -819,6 +1051,36 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.mfaConfirmRequest": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.mfaConfirmResponse": {
+            "type": "object",
+            "properties": {
+                "recovery_codes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "handler.mfaLoginVerifyRequest": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "mfa_token": {
+                    "type": "string"
+                }
+            }
+        },
         "map_string_string": {
             "type": "object",
             "additionalProperties": {
@@ -871,6 +1133,9 @@ const docTemplate = `{
                 "locale": {
                     "type": "string"
                 },
+                "mfa_enabled": {
+                    "type": "boolean"
+                },
                 "nickname": {
                     "type": "string"
                 },
@@ -899,6 +1164,40 @@ const docTemplate = `{
                     "$ref": "#/definitions/models.JSONMap"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "expires_in": {
+                    "type": "integer"
+                },
+                "mfa_required": {
+                    "type": "boolean"
+                },
+                "mfa_token": {
+                    "type": "string"
+                },
+                "refresh_token": {
+                    "type": "string"
+                },
+                "token_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.MFAEnrollResponse": {
+            "type": "object",
+            "properties": {
+                "otpauth_url": {
+                    "type": "string"
+                },
+                "secret": {
                     "type": "string"
                 }
             }

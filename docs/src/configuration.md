@@ -13,6 +13,7 @@
 | `EZAUTH_JWT_SECRET`    | Secret key used to sign JWT tokens.                            |                         |
 | `EZAUTH_CSRF_SECRET`   | Secret key for CSRF protection. Falls back to JWT_SECRET.     | (falls back to JWT_SECRET) |
 | `EZAUTH_TIMEOUT`       | Request timeout duration.                                      | `30s`                   |
+| `EZAUTH_MFA_ISSUER`    | Issuer name shown in authenticator apps for TOTP MFA.          | `EzAuth`                |
 
 ## Hashing Settings
 
@@ -75,6 +76,7 @@ Used for the Form-based handlers (browser flows).
 | `EZAUTH_REDIRECT_AFTER_REGISTER` | URL to redirect to after successful registration. | `/`         |
 | `EZAUTH_LOGIN_PAGE_URL`          | URL of your custom Login page (for redirects).    | `/login`    |
 | `EZAUTH_REGISTER_PAGE_URL`       | URL of your custom Register page (for redirects). | `/register` |
+| `EZAUTH_MFA_VERIFY_PAGE_URL`     | URL of your custom MFA code-entry page (for step-up login redirects). | `/mfa/verify` |
 
 ## OAuth2 Settings
 

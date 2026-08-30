@@ -62,6 +62,11 @@ POST requests to these endpoints are automatically protected by `filippo.io/csrf
 `POST /auth/passwordless/request`
 `GET /auth/passwordless/login?token=...`
 
+### MFA (Form)
+`GET /auth/mfa/verify` (Redirects to `Pages.MFAVerify`)
+`POST /auth/mfa/login/verify` (Completes a step-up login using the session-stashed `mfa_token`)
+`POST /auth/mfa/enroll`, `POST /auth/mfa/confirm`, `POST /auth/mfa/disable` (Require a logged-in session)
+
 ### OAuth2
 `GET /auth/oauth2/{provider}/login` (Initiates login)
 `GET /auth/oauth2/{provider}/callback` (Callback handler. URL: `{base_url}/auth/oauth2/{provider}/callback`)
@@ -119,7 +124,14 @@ Authenticates a user and returns tokens.
 }
 ```
 
-**Response Data:** Same as Register.
+**Response Data:** Same as Register, unless the account has TOTP MFA enabled, in which case:
+```json
+{
+  "mfa_required": true,
+  "mfa_token": "..."
+}
+```
+Exchange `mfa_token` via `POST /auth/api/mfa/login/verify` (see below) to receive real session tokens.
 
 ### Refresh Token
 `POST /auth/api/token/refresh`
@@ -179,6 +191,21 @@ Authenticates a user using a magic link token.
 
 **Response Data:** Same as Register.
 
+### MFA Login Verify
+`POST /auth/api/mfa/login/verify`
+
+Completes a step-up login started by Login when the account has MFA enabled.
+
+**Request Body:**
+```json
+{
+  "mfa_token": "...",
+  "code": "123456"
+}
+```
+
+**Response Data:** Same as Register.
+
 ## Protected Endpoints
 
 These endpoints require an `Authorization: Bearer <access_token>` header (in addition to `X-API-Key`).
@@ -220,3 +247,47 @@ Revokes the provided refresh token.
 `DELETE /auth/api/user`
 
 Deletes the currently authenticated user's account.
+
+### MFA Enroll
+`POST /auth/api/mfa/enroll`
+
+Begins TOTP enrollment, generating a new secret. MFA is not enabled until confirmed.
+
+**Response Data:**
+```json
+{
+  "secret": "...",
+  "otpauth_url": "otpauth://totp/EzAuth:user@example.com?secret=...&issuer=EzAuth"
+}
+```
+
+### MFA Confirm
+`POST /auth/api/mfa/confirm`
+
+Validates a TOTP code against the pending secret and enables MFA.
+
+**Request Body:**
+```json
+{
+  "code": "123456"
+}
+```
+
+**Response Data:**
+```json
+{
+  "recovery_codes": ["ab12-cd34", "..."]
+}
+```
+
+### MFA Disable
+`POST /auth/api/mfa/disable`
+
+Disables MFA after validating a TOTP or recovery code.
+
+**Request Body:**
+```json
+{
+  "code": "123456"
+}
+```

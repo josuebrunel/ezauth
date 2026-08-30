@@ -24,6 +24,8 @@ const (
 	ColumnAvatarURL       = "avatar_url"
 	ColumnNickname        = "nickname"
 	ColumnRoles           = "roles"
+	ColumnMfaSecret       = "mfa_secret"
+	ColumnMfaEnabled      = "mfa_enabled"
 	ColumnCreatedAt       = "created_at"
 	ColumnUpdatedAt       = "updated_at"
 	ColumnUserID          = "user_id"

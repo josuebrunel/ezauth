@@ -12,6 +12,7 @@ require (
 	github.com/josuebrunel/gopkg/xenv v0.0.1
 	github.com/josuebrunel/gopkg/xlog v0.1.0
 	github.com/lib/pq v1.10.9
+	github.com/pquerna/otp v1.5.0
 	github.com/pressly/goose/v3 v3.26.0
 	github.com/stephenafamo/bob v0.42.0
 	github.com/stephenafamo/scan v0.7.0
@@ -27,6 +28,7 @@ require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/aarondl/opt v0.0.0-20250607033636-982744e1bd65 // indirect
+	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.20.0 // indirect

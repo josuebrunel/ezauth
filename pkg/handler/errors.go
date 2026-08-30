@@ -31,4 +31,7 @@ var (
 	ErrOAuth2Failed                 = errors.New("oauth2 authentication failed")
 	ErrTargetUserIDRequired         = errors.New("target_user_id is required")
 	ErrAlreadyImpersonating         = errors.New("already impersonating; stop the current impersonation session first")
+	ErrMFACodeRequired              = errors.New("code is required")
+	ErrMFATokenRequired             = errors.New("mfa_token is required")
+	ErrNoPendingMFALogin            = errors.New("no pending mfa login")
 )

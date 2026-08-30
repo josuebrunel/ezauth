@@ -393,6 +393,11 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 | GET    | `/auth/passwordless/login`         | Login via magic link                                                        |
 | GET    | `/auth/oauth2/{provider}/login`    | Login via OAuth2 provider                                                   |
 | GET    | `/auth/oauth2/{provider}/callback` | OAuth2 provider callback. URL: `{base_url}/auth/oauth2/{provider}/callback` |
+| GET    | `/auth/mfa/verify`                 | Redirects to `Pages.MFAVerify` (see [Multi-Factor Authentication](#multi-factor-authentication-totp)) |
+| POST   | `/auth/mfa/login/verify`           | Complete a step-up login using the session-stashed pre-auth token           |
+| POST   | `/auth/mfa/enroll`                 | Begin TOTP enrollment for the logged-in session user                        |
+| POST   | `/auth/mfa/confirm`                | Confirm enrollment and enable MFA                                           |
+| POST   | `/auth/mfa/disable`                | Disable MFA                                                                 |
 
 #### Form Field Reference
 
@@ -405,6 +410,9 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 | `/auth/password-reset/confirm` | `token`, `password`                     |                                                                                                                   |
 | `/auth/passwordless/request`   | `email`                                 |                                                                                                                   |
 | `/auth/passwordless/login`     | `token` (query param)                   |                                                                                                                   |
+| `/auth/mfa/login/verify`       | `code`                                  |                                                                                                                   |
+| `/auth/mfa/confirm`            | `code`                                  |                                                                                                                   |
+| `/auth/mfa/disable`            | `code`                                  |                                                                                                                   |
 
 > [!NOTE]
 > Passwords must be between 8 and 128 characters long.
@@ -427,6 +435,10 @@ These endpoints accept `application/json` and return JSON responses.
 | POST   | `/auth/api/impersonate`            | Start impersonating a user (Protected, see [Impersonation](#impersonation)) |
 | POST   | `/auth/api/impersonate/stop`       | Stop impersonating (Protected)    |
 | DELETE | `/auth/api/user`                   | Delete account (Protected)        |
+| POST   | `/auth/api/mfa/login/verify`       | Complete a step-up login (see [Multi-Factor Authentication](#multi-factor-authentication-totp)) |
+| POST   | `/auth/api/mfa/enroll`             | Begin TOTP enrollment (Protected) |
+| POST   | `/auth/api/mfa/confirm`            | Confirm enrollment and enable MFA (Protected) |
+| POST   | `/auth/api/mfa/disable`            | Disable MFA (Protected)           |
 
 ## Middlewares
  
@@ -516,6 +528,66 @@ For form-based (cookie) clients, `POST /auth/impersonate` (with a `target_user_i
 
 These two are backed by different mechanisms (JWT claims vs. session storage) and aren't interchangeable — use whichever matches how your route is authenticated.
 
+## Multi-Factor Authentication (TOTP)
+
+`ezauth` supports TOTP-based MFA (RFC 6238) — the standard "authenticator app" second factor (Google Authenticator, Authy, 1Password, etc.).
+
+Once a user enables MFA, a successful password login no longer returns session tokens directly: it returns a short-lived `mfa_token` (5 minutes) that must be exchanged for real session tokens via a TOTP or recovery code. This "step-up" flow is enforced by `CompleteBasicLogin`, which `Login`/`FormLogin` call internally.
+
+### Enrollment
+
+```go
+// user must already be authenticated.
+enroll, err := auth.MFAEnroll(ctx, user)
+// enroll.Secret is the raw base32 secret; enroll.OTPAuthURL is an otpauth:// URI
+// you can render as a QR code for the user to scan. MFA is NOT enabled yet.
+
+// After the user scans the QR code and enters a code from their app:
+recoveryCodes, err := auth.MFAConfirm(ctx, user, code)
+// MFA is now enabled. recoveryCodes is a slice of one-time-use plaintext codes —
+// show them to the user once; ezauth only ever stores their hashes.
+```
+
+### Step-up Login
+
+```go
+loginResp, err := auth.CompleteBasicLogin(ctx, user) // user already password-checked
+if loginResp.MFARequired {
+    // Prompt for a TOTP/recovery code, then:
+    user, tokens, err := auth.MFALoginVerify(ctx, loginResp.MFAToken, code)
+    // tokens.AccessToken / tokens.RefreshToken authenticate the user.
+} else {
+    // loginResp.TokenResponse is already a full session — no MFA configured.
+}
+```
+
+### Disabling
+
+```go
+err := auth.MFADisable(ctx, user, code) // accepts a TOTP or recovery code
+```
+
+### Standalone-service Mode
+
+```bash
+# Login — returns either tokens directly, or {"mfa_required": true, "mfa_token": "..."}.
+curl -X POST https://your-host/auth/api/login -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" -d '{"email": "user@example.com", "password": "..."}'
+
+# Complete the step-up login:
+curl -X POST https://your-host/auth/api/mfa/login/verify -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" -d '{"mfa_token": "<mfa-token>", "code": "123456"}'
+
+# Enrollment (requires the user's own Bearer token):
+curl -X POST https://your-host/auth/api/mfa/enroll -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+curl -X POST https://your-host/auth/api/mfa/confirm -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" -d '{"code": "123456"}'
+```
+
+For form-based (cookie) clients, `POST /auth/mfa/enroll`, `/auth/mfa/confirm`, and `/auth/mfa/disable` work the same way against the logged-in session user; `FormLogin` redirects to `Pages.MFAVerify` when a step-up is required, stashing the pending `mfa_token` server-side in the session (never exposed to the client) until `POST /auth/mfa/login/verify` completes it. Use `auth.GetMFAEnrollment(ctx)` to read back the pending secret/QR URL for rendering the enrollment page.
+
+Set `EZAUTH_MFA_ISSUER` (default `EzAuth`) to control the issuer name shown in authenticator apps, and `EZAUTH_MFA_VERIFY_PAGE_URL` (default `/mfa/verify`) to point at your own MFA code-entry page.
+
 ## Hooks
 
 ezauth provides a hook system that lets you intercept auth lifecycle events. This is useful for:
@@ -594,6 +666,8 @@ func (h MyHook) AfterUserSignedIn(ctx context.Context, u *models.User) error {
 | `AfterOAuth2Created`          | After a new user is created via OAuth2     | No (errors are logged) |
 | `AfterImpersonationStarted`   | After an admin begins impersonating a user | No (errors are logged) |
 | `AfterImpersonationEnded`     | After an impersonation session ends        | No (errors are logged) |
+| `AfterMFAEnabled`             | After a user enables TOTP MFA              | No (errors are logged) |
+| `AfterMFADisabled`            | After a user disables TOTP MFA             | No (errors are logged) |
 
 ### Registering the Hook
 

@@ -149,6 +149,13 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 			r.Post("/passwordless/request", h.FormPasswordlessRequest)
 			r.Get("/passwordless/login", h.FormPasswordlessLogin)
 			r.Get("/oauth2/{provider}/login", h.OAuth2Login)
+			r.Get("/mfa/verify", func(w http.ResponseWriter, r *http.Request) {
+				http.Redirect(w, r, h.svc.Cfg.Pages.MFAVerify, http.StatusFound)
+			})
+			r.Post("/mfa/login/verify", h.FormMFALoginVerify)
+			r.Post("/mfa/enroll", h.FormMFAEnroll)
+			r.Post("/mfa/confirm", h.FormMFAConfirm)
+			r.Post("/mfa/disable", h.FormMFADisable)
 		})
 
 		// Routes protected by API Key
@@ -164,6 +171,7 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 				r.Post("/password-reset/confirm", h.PasswordResetConfirm)
 				r.Post("/passwordless/request", h.PasswordlessRequest)
 				r.Get("/passwordless/login", h.PasswordlessLogin)
+				r.Post("/mfa/login/verify", h.MFALoginVerify)
 
 				// Protected routes
 				r.Group(func(r chi.Router) {
@@ -173,6 +181,9 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 					r.Post("/impersonate", h.Impersonate)
 					r.Post("/impersonate/stop", h.StopImpersonation)
 					r.Delete("/user", h.DeleteUser)
+					r.Post("/mfa/enroll", h.MFAEnroll)
+					r.Post("/mfa/confirm", h.MFAConfirm)
+					r.Post("/mfa/disable", h.MFADisable)
 				})
 			})
 		})

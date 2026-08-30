@@ -64,6 +64,8 @@ type User struct {
 	AvatarURL       string     `db:"avatar_url" json:"avatar_url"`
 	Nickname        string     `db:"nickname" json:"nickname"`
 	Roles           string     `db:"roles" json:"roles"`
+	MfaSecret       *string    `db:"mfa_secret" json:"-"`
+	MfaEnabled      bool       `db:"mfa_enabled" json:"mfa_enabled"`
 	CreatedAt       time.Time  `db:"created_at" json:"created_at"`
 	UpdatedAt       time.Time  `db:"updated_at" json:"updated_at"`
 }
@@ -237,6 +239,8 @@ const (
 	TokenTypePasswordless  = "passwordless"
 	TokenTypePasswordReset = "password_reset"
 	TokenTypeApiKey        = "apikey"
+	TokenTypeMFAPreAuth    = "mfa_preauth"
+	TokenTypeMFARecovery   = "mfa_recovery"
 )
 
 // Token represents an authentication or action token (e.g., refresh token, password reset token).

@@ -7,6 +7,13 @@ definitions:
       error:
         type: string
     type: object
+  handler.ApiResponse-handler_mfaConfirmResponse:
+    properties:
+      data:
+        $ref: '#/definitions/handler.mfaConfirmResponse'
+      error:
+        type: string
+    type: object
   handler.ApiResponse-map_string_string:
     properties:
       data:
@@ -18,6 +25,20 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/models.User'
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-service_LoginResponse:
+    properties:
+      data:
+        $ref: '#/definitions/service.LoginResponse'
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-service_MFAEnrollResponse:
+    properties:
+      data:
+        $ref: '#/definitions/service.MFAEnrollResponse'
       error:
         type: string
     type: object
@@ -80,6 +101,25 @@ definitions:
       refresh_token:
         type: string
     type: object
+  handler.mfaConfirmRequest:
+    properties:
+      code:
+        type: string
+    type: object
+  handler.mfaConfirmResponse:
+    properties:
+      recovery_codes:
+        items:
+          type: string
+        type: array
+    type: object
+  handler.mfaLoginVerifyRequest:
+    properties:
+      code:
+        type: string
+      mfa_token:
+        type: string
+    type: object
   map_string_string:
     additionalProperties:
       type: string
@@ -115,6 +155,8 @@ definitions:
         type: string
       locale:
         type: string
+      mfa_enabled:
+        type: boolean
       nickname:
         type: string
       phone:
@@ -134,6 +176,28 @@ definitions:
       user_metadata:
         $ref: '#/definitions/models.JSONMap'
       username:
+        type: string
+    type: object
+  service.LoginResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      mfa_required:
+        type: boolean
+      mfa_token:
+        type: string
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+    type: object
+  service.MFAEnrollResponse:
+    properties:
+      otpauth_url:
+        type: string
+      secret:
         type: string
     type: object
   service.RequestBasicAuth:
@@ -196,6 +260,129 @@ info:
   title: EzAuth API
   version: "1.0"
 paths:
+  /auth/api/mfa/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Validates a TOTP code and enables MFA, returning one-time recovery
+        codes
+      parameters:
+      - description: MFA Confirm Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.mfaConfirmRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-handler_mfaConfirmResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Confirm TOTP MFA enrollment
+      tags:
+      - mfa
+  /auth/api/mfa/disable:
+    post:
+      consumes:
+      - application/json
+      description: Validates a TOTP or recovery code and disables MFA
+      parameters:
+      - description: MFA Disable Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.mfaConfirmRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Disable TOTP MFA
+      tags:
+      - mfa
+  /auth/api/mfa/enroll:
+    post:
+      description: Generates a new TOTP secret for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_MFAEnrollResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Begin TOTP MFA enrollment
+      tags:
+      - mfa
+  /auth/api/mfa/login/verify:
+    post:
+      consumes:
+      - application/json
+      description: Exchanges an mfa_token and TOTP/recovery code for session tokens
+      parameters:
+      - description: MFA Login Verify Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.mfaLoginVerifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Complete MFA step-up login
+      tags:
+      - mfa
   /auth/impersonate:
     post:
       consumes:
@@ -276,7 +463,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
+            $ref: '#/definitions/handler.ApiResponse-service_LoginResponse'
         "400":
           description: Bad Request
           schema:

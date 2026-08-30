@@ -337,6 +337,42 @@ func (e *EzAuth) GetImpersonator(ctx context.Context) (*models.User, error) {
 	return e.Handler.GetImpersonator(ctx)
 }
 
+// MFAEnroll begins TOTP MFA enrollment for user, generating and persisting a new
+// secret. MFA is not enabled until the enrollment is confirmed via MFAConfirm.
+func (e *EzAuth) MFAEnroll(ctx context.Context, user *models.User) (*service.MFAEnrollResponse, error) {
+	return e.Service.MFAEnroll(ctx, user)
+}
+
+// MFAConfirm validates code against the pending secret from MFAEnroll, enables
+// MFA, and returns a set of one-time recovery codes.
+func (e *EzAuth) MFAConfirm(ctx context.Context, user *models.User, code string) ([]string, error) {
+	return e.Service.MFAConfirm(ctx, user, code)
+}
+
+// MFADisable turns off MFA for user after validating a current TOTP or recovery code.
+func (e *EzAuth) MFADisable(ctx context.Context, user *models.User, code string) error {
+	return e.Service.MFADisable(ctx, user, code)
+}
+
+// CompleteBasicLogin finishes a password-authenticated login, issuing a step-up
+// MFA token instead of session tokens if the user has MFA enabled.
+func (e *EzAuth) CompleteBasicLogin(ctx context.Context, user *models.User) (*service.LoginResponse, error) {
+	return e.Service.CompleteBasicLogin(ctx, user)
+}
+
+// MFALoginVerify completes a step-up login: it validates the pre-auth token issued
+// by CompleteBasicLogin and a TOTP or recovery code, then mints real session tokens.
+func (e *EzAuth) MFALoginVerify(ctx context.Context, mfaToken, code string) (*models.User, *service.TokenResponse, error) {
+	return e.Service.MFALoginVerify(ctx, mfaToken, code)
+}
+
+// GetMFAEnrollment returns the TOTP secret and otpauth:// URL stashed for the
+// current cookie-based session by the form MFA enrollment flow, e.g. for
+// rendering a QR code on the enrollment page. Returns ok=false if none is pending.
+func (e *EzAuth) GetMFAEnrollment(ctx context.Context) (secret, otpauthURL string, ok bool) {
+	return e.Handler.GetMFAEnrollment(ctx)
+}
+
 // GetUserID retrieves the user ID from the request context.
 // It requires AuthMiddleware, LoadUserMiddleware, or SessionMiddleware to be used.
 // It returns an error if the user ID is not found in the context.

@@ -103,9 +103,15 @@ func (h *Handler) FormLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenResp, err := h.svc.TokenCreate(r.Context(), user)
+	loginResp, err := h.svc.CompleteBasicLogin(r.Context(), user)
 	if err != nil {
 		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrCouldNotCreateToken.Error())
+		return
+	}
+
+	if loginResp.MFARequired {
+		h.Session.Put(r.Context(), sessionMFATokenKey, loginResp.MFAToken)
+		http.Redirect(w, r, h.svc.Cfg.Pages.MFAVerify, http.StatusFound)
 		return
 	}
 
@@ -113,8 +119,128 @@ func (h *Handler) FormLogin(w http.ResponseWriter, r *http.Request) {
 		xlog.Error("hook AfterUserSignedIn failed", "user_id", user.ID, "err", err)
 	}
 
+	h.setAuthCookies(r.Context(), loginResp.TokenResponse)
+	http.Redirect(w, r, h.svc.Cfg.Redirects.AfterLogin, http.StatusFound)
+}
+
+// FormMFALoginVerify completes a step-up login started by FormLogin when MFA is
+// required, using the pending mfa token stashed server-side in the session.
+func (h *Handler) FormMFALoginVerify(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.MFAVerify, ErrInvalidRequestBody.Error())
+		return
+	}
+
+	mfaToken, ok := h.Session.Get(r.Context(), sessionMFATokenKey).(string)
+	if !ok || mfaToken == "" {
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrNoPendingMFALogin.Error())
+		return
+	}
+
+	code := r.FormValue("code")
+	if code == "" {
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.MFAVerify, ErrMFACodeRequired.Error())
+		return
+	}
+
+	user, tokenResp, err := h.svc.MFALoginVerify(r.Context(), mfaToken, code)
+	if err != nil {
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.MFAVerify, err.Error())
+		return
+	}
+
+	h.Session.Remove(r.Context(), sessionMFATokenKey)
+
+	if err := h.svc.Hook.AfterUserSignedIn(r.Context(), user); err != nil {
+		xlog.Error("hook AfterUserSignedIn failed", "user_id", user.ID, "err", err)
+	}
+
 	h.setAuthCookies(r.Context(), tokenResp)
 	http.Redirect(w, r, h.svc.Cfg.Redirects.AfterLogin, http.StatusFound)
+}
+
+// FormMFAEnroll begins TOTP MFA enrollment for the currently logged-in session user.
+func (h *Handler) FormMFAEnroll(w http.ResponseWriter, r *http.Request) {
+	user, err := h.GetSessionUser(r.Context())
+	if err != nil {
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrUnauthorized.Error())
+		return
+	}
+
+	resp, err := h.svc.MFAEnroll(r.Context(), user)
+	if err != nil {
+		h.redirectWithError(w, r, h.svc.Cfg.Redirects.AfterLogin, err.Error())
+		return
+	}
+
+	h.Session.Put(r.Context(), sessionMFAEnrollSecretKey, resp.Secret)
+	h.Session.Put(r.Context(), sessionMFAEnrollURLKey, resp.OTPAuthURL)
+	http.Redirect(w, r, h.svc.Cfg.Redirects.AfterLogin, http.StatusFound)
+}
+
+// FormMFAConfirm confirms TOTP MFA enrollment via form submission.
+func (h *Handler) FormMFAConfirm(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		h.redirectWithError(w, r, h.svc.Cfg.Redirects.AfterLogin, ErrInvalidRequestBody.Error())
+		return
+	}
+
+	user, err := h.GetSessionUser(r.Context())
+	if err != nil {
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrUnauthorized.Error())
+		return
+	}
+
+	code := r.FormValue("code")
+	if code == "" {
+		h.redirectWithError(w, r, h.svc.Cfg.Redirects.AfterLogin, ErrMFACodeRequired.Error())
+		return
+	}
+
+	codes, err := h.svc.MFAConfirm(r.Context(), user, code)
+	if err != nil {
+		h.redirectWithError(w, r, h.svc.Cfg.Redirects.AfterLogin, err.Error())
+		return
+	}
+
+	if err := h.svc.Hook.AfterMFAEnabled(r.Context(), user); err != nil {
+		xlog.Error("hook AfterMFAEnabled failed", "user_id", user.ID, "err", err)
+	}
+
+	h.Session.Remove(r.Context(), sessionMFAEnrollSecretKey)
+	h.Session.Remove(r.Context(), sessionMFAEnrollURLKey)
+	h.redirectWithSuccess(w, r, h.svc.Cfg.Redirects.AfterLogin, "mfa enabled; recovery codes: "+strings.Join(codes, ", "))
+}
+
+// FormMFADisable disables TOTP MFA via form submission.
+func (h *Handler) FormMFADisable(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		h.redirectWithError(w, r, h.svc.Cfg.Redirects.AfterLogin, ErrInvalidRequestBody.Error())
+		return
+	}
+
+	user, err := h.GetSessionUser(r.Context())
+	if err != nil {
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrUnauthorized.Error())
+		return
+	}
+
+	code := r.FormValue("code")
+	if code == "" {
+		h.redirectWithError(w, r, h.svc.Cfg.Redirects.AfterLogin, ErrMFACodeRequired.Error())
+		return
+	}
+
+	if err := h.svc.MFADisable(r.Context(), user, code); err != nil {
+		h.redirectWithError(w, r, h.svc.Cfg.Redirects.AfterLogin, err.Error())
+		return
+	}
+
+	if err := h.svc.Hook.AfterMFADisabled(r.Context(), user); err != nil {
+		xlog.Error("hook AfterMFADisabled failed", "user_id", user.ID, "err", err)
+	}
+
+	h.redirectWithSuccess(w, r, h.svc.Cfg.Redirects.AfterLogin, "mfa disabled")
 }
 
 // FormLogout handles user logout via form submission or link.

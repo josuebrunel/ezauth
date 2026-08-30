@@ -52,6 +52,8 @@ func (q *MysqlQuerier) QueryUserInsert(ctx context.Context, user *models.User) b
 			models.ColumnAvatarURL,
 			models.ColumnNickname,
 			models.ColumnRoles,
+			models.ColumnMfaSecret,
+			models.ColumnMfaEnabled,
 			models.ColumnCreatedAt,
 			models.ColumnUpdatedAt,
 		),
@@ -78,6 +80,8 @@ func (q *MysqlQuerier) QueryUserInsert(ctx context.Context, user *models.User) b
 			mysql.Arg(user.AvatarURL),
 			mysql.Arg(user.Nickname),
 			mysql.Arg(user.Roles),
+			mysql.Arg(user.MfaSecret),
+			mysql.Arg(user.MfaEnabled),
 			mysql.Arg(user.CreatedAt),
 			mysql.Arg(user.UpdatedAt),
 		),
@@ -190,6 +194,12 @@ func (q *MysqlQuerier) QueryUserUpdate(ctx context.Context, user *models.User) b
 	if user.Roles != "" {
 		qm = append(qm, um.SetCol(models.ColumnRoles).ToArg(user.Roles))
 	}
+
+	if user.MfaSecret != nil {
+		qm = append(qm, um.SetCol(models.ColumnMfaSecret).ToArg(user.MfaSecret))
+	}
+
+	qm = append(qm, um.SetCol(models.ColumnMfaEnabled).ToArg(user.MfaEnabled))
 
 	return mysql.Update(qm...)
 }

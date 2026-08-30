@@ -14,7 +14,19 @@ const (
 	sessionTokensKey             = "tokens"
 	sessionImpersonatorTokensKey = "impersonator_tokens"
 	sessionImpersonatorIDKey     = "impersonator_id"
+	sessionMFATokenKey           = "mfa_pending_token"
+	sessionMFAEnrollSecretKey    = "mfa_enroll_secret"
+	sessionMFAEnrollURLKey       = "mfa_enroll_otpauth_url"
 )
+
+// GetMFAEnrollment returns the TOTP secret and otpauth:// URL stashed by
+// FormMFAEnroll for the current session, e.g. for rendering a QR code on the
+// enrollment page. Returns ok=false if no enrollment is pending.
+func (h *Handler) GetMFAEnrollment(ctx context.Context) (secret, otpauthURL string, ok bool) {
+	secret, ok1 := h.Session.Get(ctx, sessionMFAEnrollSecretKey).(string)
+	otpauthURL, ok2 := h.Session.Get(ctx, sessionMFAEnrollURLKey).(string)
+	return secret, otpauthURL, ok1 && ok2 && secret != ""
+}
 
 // setAuthCookies sets the access and refresh tokens in the session.
 func (h *Handler) setAuthCookies(ctx context.Context, tokenResp *service.TokenResponse) {

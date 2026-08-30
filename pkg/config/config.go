@@ -130,8 +130,9 @@ type Redirects struct {
 
 // Pages defines the URLs for the authentication pages.
 type Pages struct {
-	Login    string `json:"login" env:"LOGIN_PAGE_URL" default:"/login"`
-	Register string `json:"register" env:"REGISTER_PAGE_URL" default:"/register"`
+	Login     string `json:"login" env:"LOGIN_PAGE_URL" default:"/login"`
+	Register  string `json:"register" env:"REGISTER_PAGE_URL" default:"/register"`
+	MFAVerify string `json:"mfa_verify" env:"MFA_VERIFY_PAGE_URL" default:"/mfa/verify"`
 }
 
 // Hashing defines the password hashing algorithm and its parameters.
@@ -169,6 +170,7 @@ type Config struct {
 	Redirects      Redirects      `json:"redirects"`
 	Pages          Pages          `json:"pages"`
 	TimeOut        time.Duration  `json:"timeout" env:"TIMEOUT" default:"30s"`
+	MFAIssuer      string         `json:"mfa_issuer" env:"MFA_ISSUER" default:"EzAuth"`
 }
 
 // LoadConfig loads the configuration from environment variables.

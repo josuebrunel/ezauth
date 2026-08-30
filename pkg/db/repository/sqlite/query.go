@@ -52,6 +52,8 @@ func (q *SqliteQuerier) QueryUserInsert(ctx context.Context, user *models.User) 
 			models.ColumnAvatarURL,
 			models.ColumnNickname,
 			models.ColumnRoles,
+			models.ColumnMfaSecret,
+			models.ColumnMfaEnabled,
 			models.ColumnCreatedAt,
 			models.ColumnUpdatedAt,
 		),
@@ -78,6 +80,8 @@ func (q *SqliteQuerier) QueryUserInsert(ctx context.Context, user *models.User) 
 			sqlite.Arg(user.AvatarURL),
 			sqlite.Arg(user.Nickname),
 			sqlite.Arg(user.Roles),
+			sqlite.Arg(user.MfaSecret),
+			sqlite.Arg(user.MfaEnabled),
 			sqlite.Arg(user.CreatedAt),
 			sqlite.Arg(user.UpdatedAt),
 		),
@@ -192,6 +196,12 @@ func (q *SqliteQuerier) QueryUserUpdate(ctx context.Context, user *models.User) 
 	if user.Roles != "" {
 		qm = append(qm, um.SetCol(models.ColumnRoles).ToArg(user.Roles))
 	}
+
+	if user.MfaSecret != nil {
+		qm = append(qm, um.SetCol(models.ColumnMfaSecret).ToArg(user.MfaSecret))
+	}
+
+	qm = append(qm, um.SetCol(models.ColumnMfaEnabled).ToArg(user.MfaEnabled))
 
 	return sqlite.Update(qm...)
 }

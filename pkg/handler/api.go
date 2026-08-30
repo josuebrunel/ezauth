@@ -87,7 +87,9 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	WriteJSONResponse(w, http.StatusCreated, tokenResp, nil)
 }
 
-// Login handles user login and returns access and refresh tokens.
+// Login handles user login and returns access and refresh tokens. If the account
+// has TOTP MFA enabled, it instead returns a short-lived mfa_token that must be
+// exchanged via /auth/api/mfa/login/verify for real session tokens.
 // @Summary Login user
 // @Description Login with email and password
 // @Tags auth
@@ -95,7 +97,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param request body service.RequestBasicAuth true "Login Request"
 // @Security ApiKeyAuth
-// @Success 200 {object} ApiResponse[service.TokenResponse]
+// @Success 200 {object} ApiResponse[service.LoginResponse]
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 401 {object} ApiResponse[string]
 // @Failure 500 {object} ApiResponse[string]
@@ -113,17 +115,19 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenResp, err := h.svc.TokenCreate(r.Context(), user)
+	loginResp, err := h.svc.CompleteBasicLogin(r.Context(), user)
 	if err != nil {
 		WriteJSONResponseError(w, http.StatusInternalServerError, ErrCouldNotCreateToken)
 		return
 	}
 
-	if err := h.svc.Hook.AfterUserSignedIn(r.Context(), user); err != nil {
-		xlog.Error("hook AfterUserSignedIn failed", "user_id", user.ID, "err", err)
+	if !loginResp.MFARequired {
+		if err := h.svc.Hook.AfterUserSignedIn(r.Context(), user); err != nil {
+			xlog.Error("hook AfterUserSignedIn failed", "user_id", user.ID, "err", err)
+		}
 	}
 
-	WriteJSONResponse(w, http.StatusOK, tokenResp, nil)
+	WriteJSONResponse(w, http.StatusOK, loginResp, nil)
 }
 
 // RefreshToken handles token refreshing using a valid refresh token.

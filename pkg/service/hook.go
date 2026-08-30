@@ -54,6 +54,12 @@ type Hook interface {
 
 	// AfterImpersonationEnded is called after an impersonation session ends.
 	AfterImpersonationEnded(ctx context.Context, admin *models.User, target *models.User) error
+
+	// AfterMFAEnabled is called after a user successfully enables TOTP MFA.
+	AfterMFAEnabled(ctx context.Context, user *models.User) error
+
+	// AfterMFADisabled is called after a user disables TOTP MFA.
+	AfterMFADisabled(ctx context.Context, user *models.User) error
 }
 
 // DefaultHook is a no-op implementation of Hook.
@@ -86,3 +92,5 @@ func (DefaultHook) AfterImpersonationStarted(_ context.Context, _ *models.User, 
 func (DefaultHook) AfterImpersonationEnded(_ context.Context, _ *models.User, _ *models.User) error {
 	return nil
 }
+func (DefaultHook) AfterMFAEnabled(_ context.Context, _ *models.User) error  { return nil }
+func (DefaultHook) AfterMFADisabled(_ context.Context, _ *models.User) error { return nil }

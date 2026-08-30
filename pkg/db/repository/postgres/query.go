@@ -52,6 +52,8 @@ func (q *PSQLQuerier) QueryUserInsert(ctx context.Context, user *models.User) bo
 			models.ColumnAvatarURL,
 			models.ColumnNickname,
 			models.ColumnRoles,
+			models.ColumnMfaSecret,
+			models.ColumnMfaEnabled,
 			models.ColumnCreatedAt,
 			models.ColumnUpdatedAt,
 		),
@@ -78,6 +80,8 @@ func (q *PSQLQuerier) QueryUserInsert(ctx context.Context, user *models.User) bo
 			psql.Arg(user.AvatarURL),
 			psql.Arg(user.Nickname),
 			psql.Arg(user.Roles),
+			psql.Arg(user.MfaSecret),
+			psql.Arg(user.MfaEnabled),
 			psql.Arg(user.CreatedAt),
 			psql.Arg(user.UpdatedAt),
 		),
@@ -191,6 +195,12 @@ func (q *PSQLQuerier) QueryUserUpdate(ctx context.Context, user *models.User) bo
 	if user.Roles != "" {
 		qm = append(qm, um.SetCol(models.ColumnRoles).ToArg(user.Roles))
 	}
+
+	if user.MfaSecret != nil {
+		qm = append(qm, um.SetCol(models.ColumnMfaSecret).ToArg(user.MfaSecret))
+	}
+
+	qm = append(qm, um.SetCol(models.ColumnMfaEnabled).ToArg(user.MfaEnabled))
 
 	qm = append(qm, um.Returning("*"))
 

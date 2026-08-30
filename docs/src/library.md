@@ -340,6 +340,38 @@ When using the form-based endpoints (e.g., `/auth/register`, `/auth/login`), `ez
 ### Magic Link Login (`/auth/passwordless/login`)
 -   `token` (Required, passed as a query parameter: `?token=...`)
 
+### MFA Login Verify (`/auth/mfa/login/verify`)
+-   `code` (Required, TOTP or recovery code; the pending `mfa_token` is read from the session, not the form)
+
+### MFA Confirm (`/auth/mfa/confirm`)
+-   `code` (Required, TOTP code from the authenticator app)
+
+### MFA Disable (`/auth/mfa/disable`)
+-   `code` (Required, TOTP or recovery code)
+
+## Multi-Factor Authentication (TOTP)
+
+`ezauth` supports TOTP-based MFA (RFC 6238). Once enabled for a user, `CompleteBasicLogin` (used internally by `Login`/`FormLogin`) returns a short-lived `mfa_token` instead of session tokens; the caller exchanges it for a real session via `MFALoginVerify` with a TOTP or recovery code.
+
+```go
+// Enrollment (user already authenticated):
+enroll, err := auth.MFAEnroll(ctx, user)
+// enroll.OTPAuthURL -> render as a QR code; enroll.Secret -> manual entry fallback.
+
+recoveryCodes, err := auth.MFAConfirm(ctx, user, code) // enables MFA
+
+// Step-up login:
+loginResp, err := auth.CompleteBasicLogin(ctx, user)
+if loginResp.MFARequired {
+    user, tokens, err := auth.MFALoginVerify(ctx, loginResp.MFAToken, code)
+}
+
+// Disabling:
+err = auth.MFADisable(ctx, user, code)
+```
+
+For cookie-based (form) clients, `auth.GetMFAEnrollment(ctx)` reads back the pending secret/QR URL stashed in the session by `POST /auth/mfa/enroll`, and `Pages.MFAVerify` (`EZAUTH_MFA_VERIFY_PAGE_URL`) is where `FormLogin` redirects when a step-up is required. `EZAUTH_MFA_ISSUER` sets the issuer name shown in authenticator apps.
+
 ## Hooks
 
 ezauth provides a hook system that lets you intercept auth lifecycle events. This is useful for:
@@ -416,6 +448,8 @@ func (h MyHook) AfterUserSignedIn(ctx context.Context, u *models.User) error {
 | `AfterPasswordResetConfirmed` | After a password reset is confirmed        | No (errors are logged) |
 | `AfterOAuth2SignedIn`         | After an existing user signs in via OAuth2 | No (errors are logged) |
 | `AfterOAuth2Created`          | After a new user is created via OAuth2     | No (errors are logged) |
+| `AfterMFAEnabled`             | After a user enables TOTP MFA              | No (errors are logged) |
+| `AfterMFADisabled`            | After a user disables TOTP MFA             | No (errors are logged) |
 
 ### Registering the Hook
 
