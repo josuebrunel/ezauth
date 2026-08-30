@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	csrf "filippo.io/csrf/gorilla"
+	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/josuebrunel/ezauth/pkg/config"
 	"github.com/josuebrunel/ezauth/pkg/db/migrations"
 	"github.com/josuebrunel/ezauth/pkg/db/models"
@@ -371,6 +372,41 @@ func (e *EzAuth) MFALoginVerify(ctx context.Context, mfaToken, code string) (*mo
 // rendering a QR code on the enrollment page. Returns ok=false if none is pending.
 func (e *EzAuth) GetMFAEnrollment(ctx context.Context) (secret, otpauthURL string, ok bool) {
 	return e.Handler.GetMFAEnrollment(ctx)
+}
+
+// WebauthnBeginRegistration begins a WebAuthn/passkey registration ceremony for an
+// already-authenticated user. The returned sessionKey must be passed to
+// WebauthnFinishRegistration along with the browser's raw response.
+func (e *EzAuth) WebauthnBeginRegistration(ctx context.Context, user *models.User) (*protocol.CredentialCreation, string, error) {
+	return e.Service.WebauthnBeginRegistration(ctx, user)
+}
+
+// WebauthnFinishRegistration completes a registration ceremony started by
+// WebauthnBeginRegistration, verifying r's body (the browser's raw
+// navigator.credentials.create() response) and persisting the new credential.
+func (e *EzAuth) WebauthnFinishRegistration(ctx context.Context, user *models.User, sessionKey string, r *http.Request, name string) (*models.WebauthnCredential, error) {
+	return e.Service.WebauthnFinishRegistration(ctx, user, sessionKey, r, name)
+}
+
+// WebauthnBeginLogin begins a discoverable (usernameless) WebAuthn login ceremony.
+func (e *EzAuth) WebauthnBeginLogin(ctx context.Context) (*protocol.CredentialAssertion, string, error) {
+	return e.Service.WebauthnBeginLogin(ctx)
+}
+
+// WebauthnFinishLogin completes a login ceremony started by WebauthnBeginLogin,
+// resolving the authenticating user from the assertion and minting session tokens.
+func (e *EzAuth) WebauthnFinishLogin(ctx context.Context, sessionKey string, r *http.Request) (*models.User, *service.TokenResponse, error) {
+	return e.Service.WebauthnFinishLogin(ctx, sessionKey, r)
+}
+
+// WebauthnCredentials lists the WebAuthn credentials registered for a user.
+func (e *EzAuth) WebauthnCredentials(ctx context.Context, userID string) ([]*models.WebauthnCredential, error) {
+	return e.Service.WebauthnCredentials(ctx, userID)
+}
+
+// WebauthnDeleteCredential removes one of user's registered WebAuthn credentials.
+func (e *EzAuth) WebauthnDeleteCredential(ctx context.Context, user *models.User, credentialRecordID string) error {
+	return e.Service.WebauthnDeleteCredential(ctx, user, credentialRecordID)
 }
 
 // GetUserID retrieves the user ID from the request context.

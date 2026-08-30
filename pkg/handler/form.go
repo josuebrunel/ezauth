@@ -243,6 +243,122 @@ func (h *Handler) FormMFADisable(w http.ResponseWriter, r *http.Request) {
 	h.redirectWithSuccess(w, r, h.svc.Cfg.Redirects.AfterLogin, "mfa disabled")
 }
 
+// FormWebauthnRegisterBegin begins a WebAuthn/passkey registration ceremony for the
+// current session user. Like the CSRF token endpoint, this returns JSON rather than
+// redirecting: driving a WebAuthn ceremony requires client-side JavaScript regardless
+// of whether the app otherwise uses cookies or Bearer tokens.
+func (h *Handler) FormWebauthnRegisterBegin(w http.ResponseWriter, r *http.Request) {
+	user, err := h.GetSessionUser(r.Context())
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
+		return
+	}
+
+	creation, sessionKey, err := h.svc.WebauthnBeginRegistration(r.Context(), user)
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusBadRequest, err)
+		return
+	}
+	WriteJSONResponse(w, http.StatusOK, webauthnRegisterBeginResponse{CredentialCreation: creation, SessionKey: sessionKey}, nil)
+}
+
+// FormWebauthnRegisterFinish completes a registration ceremony for the current
+// session user. The request body must be the browser's PublicKeyCredential
+// response verbatim (from navigator.credentials.create()).
+func (h *Handler) FormWebauthnRegisterFinish(w http.ResponseWriter, r *http.Request) {
+	user, err := h.GetSessionUser(r.Context())
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
+		return
+	}
+
+	sessionKey := r.URL.Query().Get("session_key")
+	if sessionKey == "" {
+		WriteJSONResponseError(w, http.StatusBadRequest, ErrWebauthnSessionKeyRequired)
+		return
+	}
+	name := r.URL.Query().Get("name")
+
+	cred, err := h.svc.WebauthnFinishRegistration(r.Context(), user, sessionKey, r, name)
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusBadRequest, err)
+		return
+	}
+	WriteJSONResponse(w, http.StatusOK, cred, nil)
+}
+
+// FormWebauthnCredentialsList lists the WebAuthn credentials registered for the
+// current session user.
+func (h *Handler) FormWebauthnCredentialsList(w http.ResponseWriter, r *http.Request) {
+	user, err := h.GetSessionUser(r.Context())
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
+		return
+	}
+
+	creds, err := h.svc.WebauthnCredentials(r.Context(), user.ID)
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusInternalServerError, err)
+		return
+	}
+	WriteJSONResponse(w, http.StatusOK, creds, nil)
+}
+
+// FormWebauthnCredentialDelete removes one of the current session user's WebAuthn credentials.
+func (h *Handler) FormWebauthnCredentialDelete(w http.ResponseWriter, r *http.Request) {
+	user, err := h.GetSessionUser(r.Context())
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
+		return
+	}
+
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		WriteJSONResponseError(w, http.StatusBadRequest, ErrWebauthnCredentialIDRequired)
+		return
+	}
+
+	if err := h.svc.WebauthnDeleteCredential(r.Context(), user, id); err != nil {
+		WriteJSONResponseError(w, http.StatusBadRequest, err)
+		return
+	}
+	WriteJSONResponse(w, http.StatusOK, map[string]string{"message": "credential deleted"}, nil)
+}
+
+// FormWebauthnLoginBegin begins a discoverable WebAuthn login ceremony for cookie-based clients.
+func (h *Handler) FormWebauthnLoginBegin(w http.ResponseWriter, r *http.Request) {
+	assertion, sessionKey, err := h.svc.WebauthnBeginLogin(r.Context())
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusBadRequest, err)
+		return
+	}
+	WriteJSONResponse(w, http.StatusOK, webauthnLoginBeginResponse{CredentialAssertion: assertion, SessionKey: sessionKey}, nil)
+}
+
+// FormWebauthnLoginFinish completes a WebAuthn login for cookie-based clients. On
+// success it sets the session auth cookies (never exposing the raw tokens to
+// client-side JavaScript) and returns a redirect URL for the page to navigate to.
+func (h *Handler) FormWebauthnLoginFinish(w http.ResponseWriter, r *http.Request) {
+	sessionKey := r.URL.Query().Get("session_key")
+	if sessionKey == "" {
+		WriteJSONResponseError(w, http.StatusBadRequest, ErrWebauthnSessionKeyRequired)
+		return
+	}
+
+	user, tokenResp, err := h.svc.WebauthnFinishLogin(r.Context(), sessionKey, r)
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusUnauthorized, err)
+		return
+	}
+
+	if err := h.svc.Hook.AfterUserSignedIn(r.Context(), user); err != nil {
+		xlog.Error("hook AfterUserSignedIn failed", "user_id", user.ID, "err", err)
+	}
+
+	h.setAuthCookies(r.Context(), tokenResp)
+	WriteJSONResponse(w, http.StatusOK, map[string]string{"redirect": h.svc.Cfg.Redirects.AfterLogin}, nil)
+}
+
 // FormLogout handles user logout via form submission or link.
 func (h *Handler) FormLogout(w http.ResponseWriter, r *http.Request) {
 	if tokens, ok := h.GetSessionTokens(r.Context()); ok {

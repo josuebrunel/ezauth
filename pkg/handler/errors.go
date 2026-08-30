@@ -34,4 +34,7 @@ var (
 	ErrMFACodeRequired              = errors.New("code is required")
 	ErrMFATokenRequired             = errors.New("mfa_token is required")
 	ErrNoPendingMFALogin            = errors.New("no pending mfa login")
+	ErrWebauthnSessionKeyRequired   = errors.New("session_key is required")
+	ErrNoPendingWebauthnLogin       = errors.New("no pending webauthn login")
+	ErrWebauthnCredentialIDRequired = errors.New("credential id is required")
 )

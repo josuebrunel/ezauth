@@ -274,3 +274,105 @@ func (q *PSQLQuerier) QueryTokenRevokeAllByUserID(ctx context.Context, userID st
 func (q *PSQLQuerier) QueryTokenDelete(ctx context.Context, id string) bob.Query {
 	return psql.Delete(dm.From(psql.Quote(models.TableToken)), dm.Where(psql.Quote("id").EQ(psql.Arg(id))))
 }
+
+func (q *PSQLQuerier) QueryWebauthnCredentialInsert(ctx context.Context, cred *models.WebauthnCredential) bob.Query {
+	if cred.ID == "" {
+		cred.ID = util.NewID()
+	}
+	if cred.CreatedAt.IsZero() {
+		cred.CreatedAt = time.Now().UTC()
+	}
+	return psql.Insert(
+		im.Into(psql.Quote(models.TableWebauthnCredential),
+			"id",
+			models.ColumnUserID,
+			models.ColumnCredentialID,
+			models.ColumnPublicKey,
+			models.ColumnSignCount,
+			models.ColumnTransports,
+			models.ColumnAttestationType,
+			models.ColumnName,
+			models.ColumnData,
+			models.ColumnCreatedAt,
+		),
+		im.Values(
+			psql.Arg(cred.ID),
+			psql.Arg(cred.UserID),
+			psql.Arg(cred.CredentialID),
+			psql.Arg(cred.PublicKey),
+			psql.Arg(cred.SignCount),
+			psql.Arg(cred.Transports),
+			psql.Arg(cred.AttestationType),
+			psql.Arg(cred.Name),
+			psql.Arg(cred.Data),
+			psql.Arg(cred.CreatedAt),
+		),
+		im.Returning("*"),
+	)
+}
+
+func (q *PSQLQuerier) QueryWebauthnCredentialGetByID(ctx context.Context, id string) bob.Query {
+	return psql.Select(sm.From(psql.Quote(models.TableWebauthnCredential)), sm.Where(psql.Quote("id").EQ(psql.Arg(id))))
+}
+
+func (q *PSQLQuerier) QueryWebauthnCredentialGetByCredentialID(ctx context.Context, credentialID string) bob.Query {
+	return psql.Select(sm.From(psql.Quote(models.TableWebauthnCredential)), sm.Where(psql.Quote(models.ColumnCredentialID).EQ(psql.Arg(credentialID))))
+}
+
+func (q *PSQLQuerier) QueryWebauthnCredentialListByUserID(ctx context.Context, userID string) bob.Query {
+	return psql.Select(sm.From(psql.Quote(models.TableWebauthnCredential)), sm.Where(psql.Quote(models.ColumnUserID).EQ(psql.Arg(userID))))
+}
+
+func (q *PSQLQuerier) QueryWebauthnCredentialUpdate(ctx context.Context, cred *models.WebauthnCredential) bob.Query {
+	return psql.Update(
+		um.Table(psql.Quote(models.TableWebauthnCredential)),
+		um.SetCol(models.ColumnSignCount).ToArg(cred.SignCount),
+		um.SetCol(models.ColumnData).ToArg(cred.Data),
+		um.SetCol(models.ColumnName).ToArg(cred.Name),
+		um.SetCol(models.ColumnLastUsedAt).ToArg(cred.LastUsedAt),
+		um.Where(psql.Quote("id").EQ(psql.Arg(cred.ID))),
+		um.Returning("*"),
+	)
+}
+
+func (q *PSQLQuerier) QueryWebauthnCredentialDelete(ctx context.Context, id string) bob.Query {
+	return psql.Delete(dm.From(psql.Quote(models.TableWebauthnCredential)), dm.Where(psql.Quote("id").EQ(psql.Arg(id))))
+}
+
+func (q *PSQLQuerier) QueryWebauthnChallengeInsert(ctx context.Context, ch *models.WebauthnChallenge) bob.Query {
+	if ch.ID == "" {
+		ch.ID = util.NewID()
+	}
+	if ch.CreatedAt.IsZero() {
+		ch.CreatedAt = time.Now().UTC()
+	}
+	return psql.Insert(
+		im.Into(psql.Quote(models.TableWebauthnChallenge),
+			"id",
+			models.ColumnSessionKey,
+			models.ColumnChallengeType,
+			models.ColumnUserID,
+			models.ColumnData,
+			models.ColumnExpiresAt,
+			models.ColumnCreatedAt,
+		),
+		im.Values(
+			psql.Arg(ch.ID),
+			psql.Arg(ch.SessionKey),
+			psql.Arg(ch.ChallengeType),
+			psql.Arg(ch.UserID),
+			psql.Arg(ch.Data),
+			psql.Arg(ch.ExpiresAt),
+			psql.Arg(ch.CreatedAt),
+		),
+		im.Returning("*"),
+	)
+}
+
+func (q *PSQLQuerier) QueryWebauthnChallengeGetBySessionKey(ctx context.Context, sessionKey string) bob.Query {
+	return psql.Select(sm.From(psql.Quote(models.TableWebauthnChallenge)), sm.Where(psql.Quote(models.ColumnSessionKey).EQ(psql.Arg(sessionKey))))
+}
+
+func (q *PSQLQuerier) QueryWebauthnChallengeDelete(ctx context.Context, id string) bob.Query {
+	return psql.Delete(dm.From(psql.Quote(models.TableWebauthnChallenge)), dm.Where(psql.Quote("id").EQ(psql.Arg(id))))
+}

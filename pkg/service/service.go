@@ -2,8 +2,10 @@
 package service
 
 import (
+	"strings"
 	"sync"
 
+	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/josuebrunel/ezauth/pkg/config"
 	"github.com/josuebrunel/ezauth/pkg/db/repository"
 	"github.com/josuebrunel/gopkg/xlog"
@@ -16,6 +18,7 @@ type Auth struct {
 	Mailer            Mailer
 	PathPrefix        string
 	Hook              Hook
+	WebAuthn          *webauthn.WebAuthn
 	customProvidersMu sync.RWMutex
 	customProviders   map[string]OAuth2Provider
 }
@@ -30,7 +33,7 @@ func New(cfg *config.Config, repo *repository.Repository, pathPrefix string) *Au
 		xlog.Warn("SMTP not configured, using mock mailer — emails will not be sent")
 	}
 
-	return &Auth{
+	a := &Auth{
 		Cfg:             cfg,
 		Repo:            repo,
 		Mailer:          mailer,
@@ -38,6 +41,23 @@ func New(cfg *config.Config, repo *repository.Repository, pathPrefix string) *Au
 		Hook:            DefaultHook{},
 		customProviders: make(map[string]OAuth2Provider),
 	}
+
+	if cfg.WebAuthn.RPID != "" && cfg.WebAuthn.RPOrigins != "" {
+		wa, err := webauthn.New(&webauthn.Config{
+			RPID:          cfg.WebAuthn.RPID,
+			RPDisplayName: cfg.WebAuthn.RPDisplayName,
+			RPOrigins:     strings.Split(cfg.WebAuthn.RPOrigins, ","),
+		})
+		if err != nil {
+			xlog.Error("failed to configure webauthn, passkey support disabled", "err", err)
+		} else {
+			a.WebAuthn = wa
+		}
+	} else {
+		xlog.Warn("WEBAUTHN_RP_ID/WEBAUTHN_RP_ORIGINS not set, passkey support disabled")
+	}
+
+	return a
 }
 
 // NewFromConfig creates a new Auth service from a config.

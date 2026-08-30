@@ -15,6 +15,16 @@
 | `EZAUTH_TIMEOUT`       | Request timeout duration.                                      | `30s`                   |
 | `EZAUTH_MFA_ISSUER`    | Issuer name shown in authenticator apps for TOTP MFA.          | `EzAuth`                |
 
+## WebAuthn/Passkey Settings
+
+WebAuthn support is disabled unless both `EZAUTH_WEBAUTHN_RP_ID` and `EZAUTH_WEBAUTHN_RP_ORIGINS` are set.
+
+| Variable                          | Description                                                        | Default  |
+| ---------------------------------- | ------------------------------------------------------------------ | -------- |
+| `EZAUTH_WEBAUTHN_RP_ID`            | Relying Party ID: the effective domain (e.g. `example.com`, no scheme/port). |          |
+| `EZAUTH_WEBAUTHN_RP_DISPLAY_NAME`  | Relying Party display name shown during registration.              | `EzAuth` |
+| `EZAUTH_WEBAUTHN_RP_ORIGINS`       | Comma-separated list of allowed origins (e.g. `https://example.com`). |          |
+
 ## Hashing Settings
 
 | Variable                               | Description                                                                      | Default |

@@ -1,5 +1,14 @@
 basePath: /
 definitions:
+  handler.ApiResponse-array_models_WebauthnCredential:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.WebauthnCredential'
+        type: array
+      error:
+        type: string
+    type: object
   handler.ApiResponse-handler_ImpersonateResponse:
     properties:
       data:
@@ -14,6 +23,20 @@ definitions:
       error:
         type: string
     type: object
+  handler.ApiResponse-handler_webauthnLoginBeginResponse:
+    properties:
+      data:
+        $ref: '#/definitions/handler.webauthnLoginBeginResponse'
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-handler_webauthnRegisterBeginResponse:
+    properties:
+      data:
+        $ref: '#/definitions/handler.webauthnRegisterBeginResponse'
+      error:
+        type: string
+    type: object
   handler.ApiResponse-map_string_string:
     properties:
       data:
@@ -25,6 +48,13 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/models.User'
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-models_WebauthnCredential:
+    properties:
+      data:
+        $ref: '#/definitions/models.WebauthnCredential'
       error:
         type: string
     type: object
@@ -120,6 +150,24 @@ definitions:
       mfa_token:
         type: string
     type: object
+  handler.webauthnLoginBeginResponse:
+    properties:
+      mediation:
+        $ref: '#/definitions/protocol.CredentialMediationRequirement'
+      publicKey:
+        $ref: '#/definitions/protocol.PublicKeyCredentialRequestOptions'
+      session_key:
+        type: string
+    type: object
+  handler.webauthnRegisterBeginResponse:
+    properties:
+      mediation:
+        $ref: '#/definitions/protocol.CredentialMediationRequirement'
+      publicKey:
+        $ref: '#/definitions/protocol.PublicKeyCredentialCreationOptions'
+      session_key:
+        type: string
+    type: object
   map_string_string:
     additionalProperties:
       type: string
@@ -178,6 +226,420 @@ definitions:
       username:
         type: string
     type: object
+  models.WebauthnCredential:
+    properties:
+      attestation_type:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      last_used_at:
+        type: string
+      name:
+        type: string
+      sign_count:
+        type: integer
+      transports:
+        type: string
+      user_id:
+        type: string
+    type: object
+  protocol.AttestationFormat:
+    enum:
+    - packed
+    - tpm
+    - android-key
+    - android-safetynet
+    - fido-u2f
+    - apple
+    - compound
+    - none
+    type: string
+    x-enum-varnames:
+    - AttestationFormatPacked
+    - AttestationFormatTPM
+    - AttestationFormatAndroidKey
+    - AttestationFormatAndroidSafetyNet
+    - AttestationFormatFIDOUniversalSecondFactor
+    - AttestationFormatApple
+    - AttestationFormatCompound
+    - AttestationFormatNone
+  protocol.AuthenticationExtensions:
+    properties:
+      appid:
+        description: AppID is the FIDO AppID Extension input. Authentication only.
+        type: string
+      appidExclude:
+        description: AppIDExclude is the FIDO AppID Exclusion Extension input. Registration
+          only.
+        type: string
+      credBlob:
+        description: CredBlob is the blob to store with the credential. Registration
+          only.
+        items:
+          type: integer
+        type: array
+      credProps:
+        description: CredProps requests the Credential Properties Extension. Registration
+          only.
+        type: boolean
+      credentialProtectionPolicy:
+        allOf:
+        - $ref: '#/definitions/protocol.CredentialProtectionPolicy'
+        description: CredentialProtectionPolicy is the CTAP credProtect policy. Registration
+          only.
+      enforceCredentialProtectionPolicy:
+        description: EnforceCredentialProtectionPolicy requires the credProtect policy
+          is honoured. Registration only.
+        type: boolean
+      getCredBlob:
+        description: GetCredBlob requests the blob stored with the credential. Authentication
+          only.
+        type: boolean
+      hmacCreateSecret:
+        description: HMACCreateSecret requests provisioning of the CTAP hmac-secret.
+          Registration only.
+        type: boolean
+      hmacGetSecret:
+        allOf:
+        - $ref: '#/definitions/protocol.HMACGetSecretInputs'
+        description: HMACGetSecret requests evaluation of the CTAP hmac-secret. Authentication
+          only.
+      largeBlob:
+        allOf:
+        - $ref: '#/definitions/protocol.LargeBlobInputs'
+        description: LargeBlob is the Large blob storage Extension input.
+      minPinLength:
+        description: MinPinLength requests the authenticator minimum PIN length. Registration
+          only.
+        type: boolean
+      prf:
+        allOf:
+        - $ref: '#/definitions/protocol.PRFInputs'
+        description: |-
+          PRF is the Pseudo-random function Extension input. It is a pointer because an empty dictionary is a
+          meaningful input for this extension and only this extension: a Relying Party sends "prf":{} at registration
+          to ask whether the pseudo-random function is available for the credential being created, and the client
+          answers with the 'enabled' output. A value type combined with omitzero cannot express the difference between
+          an absent member and a member present but empty, so a non-nil pointer to a zero value is what carries the
+          bare availability probe.
+      remoteClientDataJSON:
+        description: |-
+          RemoteClientDataJSON is the Remote Client Data JSON Extension input. This member is set by a remote desktop
+          web client and a Relying Party should not normally set it. See [ExtensionRemoteClientDataJSON], which records
+          that this extension is not yet ratified.
+        type: string
+      uvm:
+        description: UVM requests the user verification methods used for the operation.
+        type: boolean
+    type: object
+  protocol.AuthenticatorAttachment:
+    enum:
+    - platform
+    - cross-platform
+    type: string
+    x-enum-varnames:
+    - Platform
+    - CrossPlatform
+  protocol.AuthenticatorSelection:
+    properties:
+      authenticatorAttachment:
+        allOf:
+        - $ref: '#/definitions/protocol.AuthenticatorAttachment'
+        description: |-
+          AuthenticatorAttachment If this member is present, eligible authenticators are filtered to only
+          authenticators attached with the specified AuthenticatorAttachment enum.
+      requireResidentKey:
+        description: |-
+          RequireResidentKey this member describes the Relying Party's requirements regarding resident
+          credentials. If the parameter is set to true, the authenticator MUST create a client-side-resident
+          public key credential source when creating a public key credential.
+        type: boolean
+      residentKey:
+        allOf:
+        - $ref: '#/definitions/protocol.ResidentKeyRequirement'
+        description: |-
+          ResidentKey this member describes the Relying Party's requirements regarding resident
+          credentials per Webauthn Level 2.
+      userVerification:
+        allOf:
+        - $ref: '#/definitions/protocol.UserVerificationRequirement'
+        description: |-
+          UserVerification This member describes the Relying Party's requirements regarding user verification for
+          the create() operation. Eligible authenticators are filtered to only those capable of satisfying this
+          requirement.
+    type: object
+  protocol.AuthenticatorTransport:
+    enum:
+    - usb
+    - nfc
+    - ble
+    - smart-card
+    - hybrid
+    - internal
+    type: string
+    x-enum-varnames:
+    - USB
+    - NFC
+    - BLE
+    - SmartCard
+    - Hybrid
+    - Internal
+  protocol.ConveyancePreference:
+    enum:
+    - none
+    - indirect
+    - direct
+    - enterprise
+    type: string
+    x-enum-varnames:
+    - PreferNoAttestation
+    - PreferIndirectAttestation
+    - PreferDirectAttestation
+    - PreferEnterpriseAttestation
+  protocol.CredentialDescriptor:
+    properties:
+      id:
+        description: CredentialID The ID of a credential to allow/disallow.
+        items:
+          type: integer
+        type: array
+      transports:
+        description: The authenticator transports that can be used.
+        items:
+          $ref: '#/definitions/protocol.AuthenticatorTransport'
+        type: array
+      type:
+        allOf:
+        - $ref: '#/definitions/protocol.CredentialType'
+        description: The valid credential types.
+    type: object
+  protocol.CredentialMediationRequirement:
+    enum:
+    - ""
+    - silent
+    - optional
+    - conditional
+    - required
+    type: string
+    x-enum-varnames:
+    - MediationDefault
+    - MediationSilent
+    - MediationOptional
+    - MediationConditional
+    - MediationRequired
+  protocol.CredentialParameter:
+    properties:
+      alg:
+        $ref: '#/definitions/webauthncose.COSEAlgorithmIdentifier'
+      type:
+        $ref: '#/definitions/protocol.CredentialType'
+    type: object
+  protocol.CredentialProtectionPolicy:
+    enum:
+    - userVerificationOptional
+    - userVerificationOptionalWithCredentialIDList
+    - userVerificationRequired
+    type: string
+    x-enum-varnames:
+    - CredentialProtectionPolicyUserVerificationOptional
+    - CredentialProtectionPolicyUserVerificationOptionalWithCredentialIDList
+    - CredentialProtectionPolicyUserVerificationRequired
+  protocol.CredentialType:
+    enum:
+    - public-key
+    type: string
+    x-enum-varnames:
+    - PublicKeyCredentialType
+  protocol.HMACGetSecretInputs:
+    properties:
+      salt1:
+        items:
+          type: integer
+        type: array
+      salt2:
+        items:
+          type: integer
+        type: array
+    type: object
+  protocol.LargeBlobInputs:
+    properties:
+      read:
+        type: boolean
+      support:
+        $ref: '#/definitions/protocol.LargeBlobSupport'
+      write:
+        items:
+          type: integer
+        type: array
+    type: object
+  protocol.LargeBlobSupport:
+    enum:
+    - required
+    - preferred
+    type: string
+    x-enum-varnames:
+    - LargeBlobSupportRequired
+    - LargeBlobSupportPreferred
+  protocol.PRFInputs:
+    properties:
+      eval:
+        $ref: '#/definitions/protocol.PRFValues'
+      evalByCredential:
+        additionalProperties:
+          $ref: '#/definitions/protocol.PRFValues'
+        type: object
+    type: object
+  protocol.PRFValues:
+    properties:
+      first:
+        items:
+          type: integer
+        type: array
+      second:
+        items:
+          type: integer
+        type: array
+    type: object
+  protocol.PublicKeyCredentialCreationOptions:
+    properties:
+      attestation:
+        $ref: '#/definitions/protocol.ConveyancePreference'
+      attestationFormats:
+        items:
+          $ref: '#/definitions/protocol.AttestationFormat'
+        type: array
+      authenticatorSelection:
+        $ref: '#/definitions/protocol.AuthenticatorSelection'
+      challenge:
+        items:
+          type: integer
+        type: array
+      excludeCredentials:
+        items:
+          $ref: '#/definitions/protocol.CredentialDescriptor'
+        type: array
+      extensions:
+        $ref: '#/definitions/protocol.AuthenticationExtensions'
+      hints:
+        items:
+          $ref: '#/definitions/protocol.PublicKeyCredentialHints'
+        type: array
+      pubKeyCredParams:
+        items:
+          $ref: '#/definitions/protocol.CredentialParameter'
+        type: array
+      rp:
+        $ref: '#/definitions/protocol.RelyingPartyEntity'
+      timeout:
+        type: integer
+      user:
+        $ref: '#/definitions/protocol.UserEntity'
+    type: object
+  protocol.PublicKeyCredentialHints:
+    enum:
+    - security-key
+    - client-device
+    - hybrid
+    type: string
+    x-enum-varnames:
+    - PublicKeyCredentialHintSecurityKey
+    - PublicKeyCredentialHintClientDevice
+    - PublicKeyCredentialHintHybrid
+  protocol.PublicKeyCredentialRequestOptions:
+    properties:
+      allowCredentials:
+        items:
+          $ref: '#/definitions/protocol.CredentialDescriptor'
+        type: array
+      challenge:
+        items:
+          type: integer
+        type: array
+      extensions:
+        $ref: '#/definitions/protocol.AuthenticationExtensions'
+      hints:
+        items:
+          $ref: '#/definitions/protocol.PublicKeyCredentialHints'
+        type: array
+      rpId:
+        type: string
+      timeout:
+        type: integer
+      userVerification:
+        $ref: '#/definitions/protocol.UserVerificationRequirement'
+    type: object
+  protocol.RelyingPartyEntity:
+    properties:
+      id:
+        description: A unique identifier for the Relying Party entity, which sets
+          the RP ID.
+        type: string
+      name:
+        description: |-
+          A human-palatable name for the entity. Its function depends on what the PublicKeyCredentialEntity represents:
+
+          When inherited by PublicKeyCredentialRpEntity it is a human-palatable identifier for the Relying Party,
+          intended only for display. For example, "ACME Corporation", "Wonderful Widgets, Inc." or "ОАО Примертех".
+
+          When inherited by PublicKeyCredentialUserEntity, it is a human-palatable identifier for a user account. It is
+          intended only for display, i.e., aiding the user in determining the difference between user accounts with similar
+          displayNames. For example, "alexm", "alex.p.mueller@example.com" or "+14255551234".
+        type: string
+    type: object
+  protocol.ResidentKeyRequirement:
+    enum:
+    - discouraged
+    - preferred
+    - required
+    type: string
+    x-enum-varnames:
+    - ResidentKeyRequirementDiscouraged
+    - ResidentKeyRequirementPreferred
+    - ResidentKeyRequirementRequired
+  protocol.UserEntity:
+    properties:
+      displayName:
+        description: |-
+          A human-palatable name for the user account, intended only for display.
+          For example, "Alex P. Müller" or "田中 倫". The Relying Party SHOULD let
+          the user choose this, and SHOULD NOT restrict the choice more than necessary.
+        type: string
+      id:
+        description: |-
+          ID is the user handle of the user account entity. To ensure secure operation,
+          authentication and authorization decisions MUST be made on the basis of this id
+          member, not the displayName nor name members. See Section 6.1 of
+          [RFC8266](https://www.w3.org/TR/webauthn/#biblio-rfc8266).
+      name:
+        description: |-
+          A human-palatable name for the entity. Its function depends on what the PublicKeyCredentialEntity represents:
+
+          When inherited by PublicKeyCredentialRpEntity it is a human-palatable identifier for the Relying Party,
+          intended only for display. For example, "ACME Corporation", "Wonderful Widgets, Inc." or "ОАО Примертех".
+
+          When inherited by PublicKeyCredentialUserEntity, it is a human-palatable identifier for a user account. It is
+          intended only for display, i.e., aiding the user in determining the difference between user accounts with similar
+          displayNames. For example, "alexm", "alex.p.mueller@example.com" or "+14255551234".
+        type: string
+    type: object
+  protocol.UserVerificationRequirement:
+    enum:
+    - required
+    - preferred
+    - discouraged
+    type: string
+    x-enum-comments:
+      VerificationPreferred: This is the default.
+    x-enum-descriptions:
+    - ""
+    - This is the default.
+    - ""
+    x-enum-varnames:
+    - VerificationRequired
+    - VerificationPreferred
+    - VerificationDiscouraged
   service.LoginResponse:
     properties:
       access_token:
@@ -254,6 +716,48 @@ definitions:
       token_type:
         type: string
     type: object
+  webauthncose.COSEAlgorithmIdentifier:
+    enum:
+    - -7
+    - -8
+    - -9
+    - -19
+    - -35
+    - -36
+    - -37
+    - -38
+    - -39
+    - -47
+    - -51
+    - -52
+    - -257
+    - -258
+    - -259
+    - -65535
+    - -48
+    - -49
+    - -50
+    type: integer
+    x-enum-varnames:
+    - AlgES256
+    - AlgEdDSA
+    - AlgESP256
+    - AlgEd25519
+    - AlgES384
+    - AlgES512
+    - AlgPS256
+    - AlgPS384
+    - AlgPS512
+    - AlgES256K
+    - AlgESP384
+    - AlgESP512
+    - AlgRS256
+    - AlgRS384
+    - AlgRS512
+    - AlgRS1
+    - AlgMLDSA44
+    - AlgMLDSA65
+    - AlgMLDSA87
 info:
   contact: {}
   description: Authentication service/library for Go.
@@ -383,6 +887,155 @@ paths:
       summary: Complete MFA step-up login
       tags:
       - mfa
+  /auth/api/webauthn/credentials:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-array_models_WebauthnCredential'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: List WebAuthn credentials
+      tags:
+      - webauthn
+  /auth/api/webauthn/credentials/{id}:
+    delete:
+      parameters:
+      - description: Credential record ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Delete a WebAuthn credential
+      tags:
+      - webauthn
+  /auth/api/webauthn/login/begin:
+    post:
+      description: Generates WebAuthn credential request options for a discoverable
+        (passkey) login
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-handler_webauthnLoginBeginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Begin WebAuthn login
+      tags:
+      - webauthn
+  /auth/api/webauthn/login/finish:
+    post:
+      consumes:
+      - application/json
+      description: Verifies the browser's assertion response and returns session tokens
+      parameters:
+      - description: Session key returned by the begin step
+        in: query
+        name: session_key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Finish WebAuthn login
+      tags:
+      - webauthn
+  /auth/api/webauthn/register/begin:
+    post:
+      description: Generates WebAuthn credential creation options for the authenticated
+        user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-handler_webauthnRegisterBeginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Begin WebAuthn registration
+      tags:
+      - webauthn
+  /auth/api/webauthn/register/finish:
+    post:
+      consumes:
+      - application/json
+      description: Verifies the browser's attestation response and persists the new
+        credential
+      parameters:
+      - description: Session key returned by the begin step
+        in: query
+        name: session_key
+        required: true
+        type: string
+      - description: Optional label for the credential
+        in: query
+        name: name
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-models_WebauthnCredential'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Finish WebAuthn registration
+      tags:
+      - webauthn
   /auth/impersonate:
     post:
       consumes:

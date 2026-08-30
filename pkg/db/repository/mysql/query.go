@@ -266,3 +266,102 @@ func (q *MysqlQuerier) QueryTokenRevokeAllByUserID(ctx context.Context, userID s
 func (q *MysqlQuerier) QueryTokenDelete(ctx context.Context, id string) bob.Query {
 	return mysql.Delete(dm.From(models.TableToken), dm.Where(mysql.Quote("id").EQ(mysql.Arg(id))))
 }
+
+func (q *MysqlQuerier) QueryWebauthnCredentialInsert(ctx context.Context, cred *models.WebauthnCredential) bob.Query {
+	if cred.ID == "" {
+		cred.ID = util.NewIDStripped()
+	}
+	if cred.CreatedAt.IsZero() {
+		cred.CreatedAt = time.Now().UTC()
+	}
+	return mysql.Insert(
+		im.Into(models.TableWebauthnCredential,
+			"id",
+			models.ColumnUserID,
+			models.ColumnCredentialID,
+			models.ColumnPublicKey,
+			models.ColumnSignCount,
+			models.ColumnTransports,
+			models.ColumnAttestationType,
+			models.ColumnName,
+			models.ColumnData,
+			models.ColumnCreatedAt,
+		),
+		im.Values(
+			mysql.Arg(cred.ID),
+			mysql.Arg(cred.UserID),
+			mysql.Arg(cred.CredentialID),
+			mysql.Arg(cred.PublicKey),
+			mysql.Arg(cred.SignCount),
+			mysql.Arg(cred.Transports),
+			mysql.Arg(cred.AttestationType),
+			mysql.Arg(cred.Name),
+			mysql.Arg(cred.Data),
+			mysql.Arg(cred.CreatedAt),
+		),
+	)
+}
+
+func (q *MysqlQuerier) QueryWebauthnCredentialGetByID(ctx context.Context, id string) bob.Query {
+	return mysql.Select(sm.From(models.TableWebauthnCredential), sm.Where(mysql.Quote("id").EQ(mysql.Arg(id))))
+}
+
+func (q *MysqlQuerier) QueryWebauthnCredentialGetByCredentialID(ctx context.Context, credentialID string) bob.Query {
+	return mysql.Select(sm.From(models.TableWebauthnCredential), sm.Where(mysql.Quote(models.ColumnCredentialID).EQ(mysql.Arg(credentialID))))
+}
+
+func (q *MysqlQuerier) QueryWebauthnCredentialListByUserID(ctx context.Context, userID string) bob.Query {
+	return mysql.Select(sm.From(models.TableWebauthnCredential), sm.Where(mysql.Quote(models.ColumnUserID).EQ(mysql.Arg(userID))))
+}
+
+func (q *MysqlQuerier) QueryWebauthnCredentialUpdate(ctx context.Context, cred *models.WebauthnCredential) bob.Query {
+	return mysql.Update(
+		um.Table(models.TableWebauthnCredential),
+		um.SetCol(models.ColumnSignCount).ToArg(cred.SignCount),
+		um.SetCol(models.ColumnData).ToArg(cred.Data),
+		um.SetCol(models.ColumnName).ToArg(cred.Name),
+		um.SetCol(models.ColumnLastUsedAt).ToArg(cred.LastUsedAt),
+		um.Where(mysql.Quote("id").EQ(mysql.Arg(cred.ID))),
+	)
+}
+
+func (q *MysqlQuerier) QueryWebauthnCredentialDelete(ctx context.Context, id string) bob.Query {
+	return mysql.Delete(dm.From(models.TableWebauthnCredential), dm.Where(mysql.Quote("id").EQ(mysql.Arg(id))))
+}
+
+func (q *MysqlQuerier) QueryWebauthnChallengeInsert(ctx context.Context, ch *models.WebauthnChallenge) bob.Query {
+	if ch.ID == "" {
+		ch.ID = util.NewIDStripped()
+	}
+	if ch.CreatedAt.IsZero() {
+		ch.CreatedAt = time.Now().UTC()
+	}
+	return mysql.Insert(
+		im.Into(models.TableWebauthnChallenge,
+			"id",
+			models.ColumnSessionKey,
+			models.ColumnChallengeType,
+			models.ColumnUserID,
+			models.ColumnData,
+			models.ColumnExpiresAt,
+			models.ColumnCreatedAt,
+		),
+		im.Values(
+			mysql.Arg(ch.ID),
+			mysql.Arg(ch.SessionKey),
+			mysql.Arg(ch.ChallengeType),
+			mysql.Arg(ch.UserID),
+			mysql.Arg(ch.Data),
+			mysql.Arg(ch.ExpiresAt),
+			mysql.Arg(ch.CreatedAt),
+		),
+	)
+}
+
+func (q *MysqlQuerier) QueryWebauthnChallengeGetBySessionKey(ctx context.Context, sessionKey string) bob.Query {
+	return mysql.Select(sm.From(models.TableWebauthnChallenge), sm.Where(mysql.Quote(models.ColumnSessionKey).EQ(mysql.Arg(sessionKey))))
+}
+
+func (q *MysqlQuerier) QueryWebauthnChallengeDelete(ctx context.Context, id string) bob.Query {
+	return mysql.Delete(dm.From(models.TableWebauthnChallenge), dm.Where(mysql.Quote("id").EQ(mysql.Arg(id))))
+}

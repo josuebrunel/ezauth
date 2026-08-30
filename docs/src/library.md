@@ -349,6 +349,8 @@ When using the form-based endpoints (e.g., `/auth/register`, `/auth/login`), `ez
 ### MFA Disable (`/auth/mfa/disable`)
 -   `code` (Required, TOTP or recovery code)
 
+The `/auth/webauthn/*` endpoints are not listed here: they take the browser's raw `navigator.credentials` JSON response as the request body (plus `session_key`/`name` query params), not form-encoded fields — see [WebAuthn / Passkeys](#webauthn--passkeys).
+
 ## Multi-Factor Authentication (TOTP)
 
 `ezauth` supports TOTP-based MFA (RFC 6238). Once enabled for a user, `CompleteBasicLogin` (used internally by `Login`/`FormLogin`) returns a short-lived `mfa_token` instead of session tokens; the caller exchanges it for a real session via `MFALoginVerify` with a TOTP or recovery code.
@@ -371,6 +373,31 @@ err = auth.MFADisable(ctx, user, code)
 ```
 
 For cookie-based (form) clients, `auth.GetMFAEnrollment(ctx)` reads back the pending secret/QR URL stashed in the session by `POST /auth/mfa/enroll`, and `Pages.MFAVerify` (`EZAUTH_MFA_VERIFY_PAGE_URL`) is where `FormLogin` redirects when a step-up is required. `EZAUTH_MFA_ISSUER` sets the issuer name shown in authenticator apps.
+
+## WebAuthn / Passkeys
+
+`ezauth` supports WebAuthn/FIDO2 passkey registration and login. Login is **discoverable (usernameless)** — the browser's platform UI lets the user pick a passkey, so no prior email/username is required. WebAuthn is disabled unless `EZAUTH_WEBAUTHN_RP_ID` and `EZAUTH_WEBAUTHN_RP_ORIGINS` are both set, and ceremonies always require client-side JavaScript (`navigator.credentials.create()`/`.get()`) regardless of cookie vs. Bearer auth style.
+
+```go
+// Registration (user already authenticated):
+creation, sessionKey, err := auth.WebauthnBeginRegistration(ctx, user)
+// Send creation as JSON for the browser to call navigator.credentials.create(),
+// keep sessionKey for the finish step.
+
+// r's body must be the browser's raw navigator.credentials.create() response.
+cred, err := auth.WebauthnFinishRegistration(ctx, user, sessionKey, r, "YubiKey 5")
+
+// Login:
+assertion, sessionKey, err := auth.WebauthnBeginLogin(ctx)
+// Send assertion as JSON for the browser to call navigator.credentials.get().
+
+// r's body must be the browser's raw navigator.credentials.get() response.
+user, tokens, err := auth.WebauthnFinishLogin(ctx, sessionKey, r)
+
+// Managing credentials:
+creds, err := auth.WebauthnCredentials(ctx, user.ID)
+err = auth.WebauthnDeleteCredential(ctx, user, credentialRecordID)
+```
 
 ## Hooks
 

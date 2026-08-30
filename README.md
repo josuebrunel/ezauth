@@ -398,6 +398,12 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 | POST   | `/auth/mfa/enroll`                 | Begin TOTP enrollment for the logged-in session user                        |
 | POST   | `/auth/mfa/confirm`                | Confirm enrollment and enable MFA                                           |
 | POST   | `/auth/mfa/disable`                | Disable MFA                                                                 |
+| POST   | `/auth/webauthn/login/begin`       | Begin a discoverable WebAuthn login ceremony (see [WebAuthn / Passkeys](#webauthn--passkeys)) |
+| POST   | `/auth/webauthn/login/finish`      | Complete a WebAuthn login and set auth cookies                             |
+| POST   | `/auth/webauthn/register/begin`    | Begin passkey registration for the logged-in session user                  |
+| POST   | `/auth/webauthn/register/finish`   | Complete passkey registration                                              |
+| GET    | `/auth/webauthn/credentials`       | List the logged-in session user's passkeys                                 |
+| DELETE | `/auth/webauthn/credentials/{id}`  | Delete one of the logged-in session user's passkeys                        |
 
 #### Form Field Reference
 
@@ -415,7 +421,7 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 | `/auth/mfa/disable`            | `code`                                  |                                                                                                                   |
 
 > [!NOTE]
-> Passwords must be between 8 and 128 characters long.
+> Passwords must be between 8 and 128 characters long. The `/auth/webauthn/*` endpoints are not listed here: they take the browser's raw `navigator.credentials` JSON response as the request body (plus `session_key`/`name` query params), not form-encoded fields — see [WebAuthn / Passkeys](#webauthn--passkeys).
 
 ### API Handlers (JSON)
 
@@ -439,6 +445,12 @@ These endpoints accept `application/json` and return JSON responses.
 | POST   | `/auth/api/mfa/enroll`             | Begin TOTP enrollment (Protected) |
 | POST   | `/auth/api/mfa/confirm`            | Confirm enrollment and enable MFA (Protected) |
 | POST   | `/auth/api/mfa/disable`            | Disable MFA (Protected)           |
+| POST   | `/auth/api/webauthn/login/begin`   | Begin a discoverable WebAuthn login ceremony (see [WebAuthn / Passkeys](#webauthn--passkeys)) |
+| POST   | `/auth/api/webauthn/login/finish`  | Complete a WebAuthn login and receive tokens |
+| POST   | `/auth/api/webauthn/register/begin`  | Begin passkey registration (Protected) |
+| POST   | `/auth/api/webauthn/register/finish` | Complete passkey registration (Protected) |
+| GET    | `/auth/api/webauthn/credentials`     | List the authenticated user's passkeys (Protected) |
+| DELETE | `/auth/api/webauthn/credentials/{id}` | Delete one of the authenticated user's passkeys (Protected) |
 
 ## Middlewares
  
@@ -587,6 +599,70 @@ curl -X POST https://your-host/auth/api/mfa/confirm -H "Authorization: Bearer <a
 For form-based (cookie) clients, `POST /auth/mfa/enroll`, `/auth/mfa/confirm`, and `/auth/mfa/disable` work the same way against the logged-in session user; `FormLogin` redirects to `Pages.MFAVerify` when a step-up is required, stashing the pending `mfa_token` server-side in the session (never exposed to the client) until `POST /auth/mfa/login/verify` completes it. Use `auth.GetMFAEnrollment(ctx)` to read back the pending secret/QR URL for rendering the enrollment page.
 
 Set `EZAUTH_MFA_ISSUER` (default `EzAuth`) to control the issuer name shown in authenticator apps, and `EZAUTH_MFA_VERIFY_PAGE_URL` (default `/mfa/verify`) to point at your own MFA code-entry page.
+
+## WebAuthn / Passkeys
+
+`ezauth` supports WebAuthn/FIDO2 passkey registration and login, as an alternative or complement to password/MFA login. Login is **discoverable (usernameless)**: the browser's platform UI lets the user pick which passkey to use, so no prior email/username is required.
+
+> [!IMPORTANT]
+> WebAuthn is disabled unless `EZAUTH_WEBAUTHN_RP_ID` and `EZAUTH_WEBAUTHN_RP_ORIGINS` are both set. `RPID` is the effective domain (e.g. `example.com`, no scheme/port); `RPOrigins` is a comma-separated list of allowed origins (e.g. `https://example.com`). WebAuthn ceremonies always require client-side JavaScript (`navigator.credentials.create()`/`.get()`), regardless of whether the rest of your app uses cookies or Bearer tokens — there is no plain-HTML-form equivalent.
+
+### Registration (Library Mode)
+
+```go
+// user must already be authenticated.
+creation, sessionKey, err := auth.WebauthnBeginRegistration(ctx, user)
+// Send creation (as JSON) to the browser to call navigator.credentials.create(),
+// and keep sessionKey to pass to the finish step (e.g. as a query param, or
+// stashed in the user's session).
+
+// r is the incoming HTTP request whose body is the browser's raw
+// navigator.credentials.create() response, forwarded verbatim.
+cred, err := auth.WebauthnFinishRegistration(ctx, user, sessionKey, r, "YubiKey 5")
+```
+
+### Login (Library Mode)
+
+```go
+assertion, sessionKey, err := auth.WebauthnBeginLogin(ctx)
+// Send assertion (as JSON) to the browser to call navigator.credentials.get().
+
+// r is the incoming HTTP request whose body is the browser's raw
+// navigator.credentials.get() response, forwarded verbatim.
+user, tokens, err := auth.WebauthnFinishLogin(ctx, sessionKey, r)
+```
+
+### Managing Credentials
+
+```go
+creds, err := auth.WebauthnCredentials(ctx, user.ID)
+err = auth.WebauthnDeleteCredential(ctx, user, credentialRecordID)
+```
+
+### Standalone-service Mode
+
+Both JSON API (Bearer/API-key) and form (cookie session) variants are available, mirroring MFA. The JSON variants return raw tokens; the form variants set auth cookies directly and never expose tokens to client-side JavaScript.
+
+```bash
+# Registration (requires the user's own Bearer token):
+curl -X POST https://your-host/auth/api/webauthn/register/begin -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+# -> pass the "response" fields to navigator.credentials.create() in the browser, then:
+curl -X POST "https://your-host/auth/api/webauthn/register/finish?session_key=<key>&name=YubiKey" \
+  -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" -d '<navigator.credentials.create() result>'
+
+# Login (no prior auth required):
+curl -X POST https://your-host/auth/api/webauthn/login/begin -H "X-API-Key: your-api-key"
+# -> pass the "response" fields to navigator.credentials.get() in the browser, then:
+curl -X POST "https://your-host/auth/api/webauthn/login/finish?session_key=<key>" -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" -d '<navigator.credentials.get() result>'
+
+# Manage credentials (requires the user's own Bearer token):
+curl https://your-host/auth/api/webauthn/credentials -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+curl -X DELETE https://your-host/auth/api/webauthn/credentials/<id> -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+```
+
+The cookie-mode equivalents live at `/auth/webauthn/register/begin`, `/auth/webauthn/register/finish`, `/auth/webauthn/login/begin`, `/auth/webauthn/login/finish`, `/auth/webauthn/credentials`, and `/auth/webauthn/credentials/{id}` — same request/response shapes, but authenticated via the session cookie (and CSRF token) instead of a Bearer token, and `login/finish` sets auth cookies and returns `{"redirect": "..."}` instead of raw tokens.
 
 ## Hooks
 

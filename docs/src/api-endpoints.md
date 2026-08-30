@@ -67,6 +67,13 @@ POST requests to these endpoints are automatically protected by `filippo.io/csrf
 `POST /auth/mfa/login/verify` (Completes a step-up login using the session-stashed `mfa_token`)
 `POST /auth/mfa/enroll`, `POST /auth/mfa/confirm`, `POST /auth/mfa/disable` (Require a logged-in session)
 
+### WebAuthn / Passkeys (Form)
+`POST /auth/webauthn/login/begin`, `POST /auth/webauthn/login/finish?session_key=...` (No prior auth required; `login/finish` sets auth cookies and returns `{"redirect": "..."}`)
+`POST /auth/webauthn/register/begin`, `POST /auth/webauthn/register/finish?session_key=...&name=...` (Require a logged-in session)
+`GET /auth/webauthn/credentials`, `DELETE /auth/webauthn/credentials/{id}` (Require a logged-in session)
+
+Like `GET /auth/csrf`, these return JSON rather than redirecting — WebAuthn ceremonies always require client-side JavaScript (`navigator.credentials.create()`/`.get()`). The request body for `*/finish` endpoints must be the browser's raw response verbatim.
+
 ### OAuth2
 `GET /auth/oauth2/{provider}/login` (Initiates login)
 `GET /auth/oauth2/{provider}/callback` (Callback handler. URL: `{base_url}/auth/oauth2/{provider}/callback`)
@@ -206,6 +213,27 @@ Completes a step-up login started by Login when the account has MFA enabled.
 
 **Response Data:** Same as Register.
 
+### WebAuthn Login Begin
+`POST /auth/api/webauthn/login/begin`
+
+Begins a discoverable (usernameless) WebAuthn login ceremony. No request body needed.
+
+**Response Data:**
+```json
+{
+  "publicKey": { "challenge": "...", "rpId": "...", "...": "..." },
+  "session_key": "..."
+}
+```
+`publicKey` (renamed from the top-level object per the WebAuthn spec) is passed to `navigator.credentials.get()` in the browser.
+
+### WebAuthn Login Finish
+`POST /auth/api/webauthn/login/finish?session_key=...`
+
+**Request Body:** the raw JSON returned by `navigator.credentials.get()`, forwarded verbatim.
+
+**Response Data:** Same as Register.
+
 ## Protected Endpoints
 
 These endpoints require an `Authorization: Bearer <access_token>` header (in addition to `X-API-Key`).
@@ -291,3 +319,34 @@ Disables MFA after validating a TOTP or recovery code.
   "code": "123456"
 }
 ```
+
+### WebAuthn Register Begin
+`POST /auth/api/webauthn/register/begin`
+
+Begins a passkey registration ceremony for the authenticated user. No request body needed.
+
+**Response Data:**
+```json
+{
+  "publicKey": { "challenge": "...", "rp": "...", "user": "...", "...": "..." },
+  "session_key": "..."
+}
+```
+`publicKey` is passed to `navigator.credentials.create()` in the browser.
+
+### WebAuthn Register Finish
+`POST /auth/api/webauthn/register/finish?session_key=...&name=...`
+
+**Request Body:** the raw JSON returned by `navigator.credentials.create()`, forwarded verbatim. `name` is an optional label for the credential (e.g. "YubiKey 5").
+
+**Response Data:** the persisted credential record (`id`, `sign_count`, `transports`, `name`, `created_at`, ...).
+
+### WebAuthn Credentials List
+`GET /auth/api/webauthn/credentials`
+
+Lists the authenticated user's registered passkeys.
+
+### WebAuthn Credential Delete
+`DELETE /auth/api/webauthn/credentials/{id}`
+
+Deletes one of the authenticated user's passkeys, identified by its credential record ID (not the raw WebAuthn credential ID).

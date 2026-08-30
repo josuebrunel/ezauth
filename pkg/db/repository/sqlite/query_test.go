@@ -210,3 +210,107 @@ func TestSqliteQuerier_TokenOperations(t *testing.T) {
 		}
 	})
 }
+
+func TestSqliteQuerier_WebauthnCredentialOperations(t *testing.T) {
+	querier := &SqliteQuerier{}
+	ctx := context.Background()
+	now := time.Now()
+
+	cred := &models.WebauthnCredential{
+		ID:           "cred-123",
+		UserID:       "user-123",
+		CredentialID: "raw-credential-id",
+		PublicKey:    "base64-public-key",
+		SignCount:    0,
+		Transports:   "internal,hybrid",
+		Name:         "YubiKey 5",
+		Data:         models.JSONMap{"id": "raw-credential-id"},
+		CreatedAt:    now,
+	}
+
+	t.Run("Insert", func(t *testing.T) {
+		q := querier.QueryWebauthnCredentialInsert(ctx, cred)
+		sql, args, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("failed to build query: %v", err)
+		}
+		if !strings.Contains(sql, "INSERT") || !strings.Contains(sql, "ezauth_webauthn_credentials") {
+			t.Errorf("expected INSERT INTO ezauth_webauthn_credentials, got %q", sql)
+		}
+		if len(args) < 5 {
+			t.Errorf("expected args, got %d", len(args))
+		}
+	})
+
+	t.Run("GetByID", func(t *testing.T) {
+		q := querier.QueryWebauthnCredentialGetByID(ctx, cred.ID)
+		sql, args, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("failed to build query: %v", err)
+		}
+		if !strings.Contains(sql, "SELECT") || !strings.Contains(sql, "ezauth_webauthn_credentials") {
+			t.Errorf("unexpected SQL: %s", sql)
+		}
+		if len(args) != 1 || args[0] != cred.ID {
+			t.Errorf("unexpected args: %v", args)
+		}
+	})
+
+	t.Run("GetByCredentialID", func(t *testing.T) {
+		q := querier.QueryWebauthnCredentialGetByCredentialID(ctx, cred.CredentialID)
+		sql, args, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("failed to build query: %v", err)
+		}
+		if !strings.Contains(sql, "credential_id") {
+			t.Errorf("expected credential_id condition, got %s", sql)
+		}
+		if len(args) != 1 || args[0] != cred.CredentialID {
+			t.Errorf("unexpected args: %v", args)
+		}
+	})
+
+	t.Run("ListByUserID", func(t *testing.T) {
+		q := querier.QueryWebauthnCredentialListByUserID(ctx, cred.UserID)
+		sql, args, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("failed to build query: %v", err)
+		}
+		if !strings.Contains(sql, "user_id") {
+			t.Errorf("expected user_id condition, got %s", sql)
+		}
+		if len(args) != 1 || args[0] != cred.UserID {
+			t.Errorf("unexpected args: %v", args)
+		}
+	})
+
+	t.Run("Update", func(t *testing.T) {
+		updated := *cred
+		updated.SignCount = 5
+		q := querier.QueryWebauthnCredentialUpdate(ctx, &updated)
+		sql, _, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("failed to build query: %v", err)
+		}
+		if !strings.Contains(sql, "UPDATE") || !strings.Contains(sql, "ezauth_webauthn_credentials") {
+			t.Errorf("unexpected SQL: %s", sql)
+		}
+		if !strings.Contains(sql, "sign_count") {
+			t.Error("expected sign_count to be updated")
+		}
+	})
+
+	t.Run("Delete", func(t *testing.T) {
+		q := querier.QueryWebauthnCredentialDelete(ctx, cred.ID)
+		sql, args, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("failed to build query: %v", err)
+		}
+		if !strings.Contains(sql, "DELETE FROM") || !strings.Contains(sql, "ezauth_webauthn_credentials") {
+			t.Errorf("unexpected SQL: %s", sql)
+		}
+		if len(args) != 1 || args[0] != cred.ID {
+			t.Errorf("unexpected args: %v", args)
+		}
+	})
+}

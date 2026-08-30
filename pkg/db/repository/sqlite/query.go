@@ -269,3 +269,105 @@ func (q *SqliteQuerier) QueryTokenRevokeAllByUserID(ctx context.Context, userID 
 func (q *SqliteQuerier) QueryTokenDelete(ctx context.Context, id string) bob.Query {
 	return sqlite.Delete(dm.From(models.TableToken), dm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
 }
+
+func (q *SqliteQuerier) QueryWebauthnCredentialInsert(ctx context.Context, cred *models.WebauthnCredential) bob.Query {
+	if cred.ID == "" {
+		cred.ID = util.NewIDStripped()
+	}
+	if cred.CreatedAt.IsZero() {
+		cred.CreatedAt = time.Now().UTC()
+	}
+	return sqlite.Insert(
+		im.Into(models.TableWebauthnCredential,
+			"id",
+			models.ColumnUserID,
+			models.ColumnCredentialID,
+			models.ColumnPublicKey,
+			models.ColumnSignCount,
+			models.ColumnTransports,
+			models.ColumnAttestationType,
+			models.ColumnName,
+			models.ColumnData,
+			models.ColumnCreatedAt,
+		),
+		im.Values(
+			sqlite.Arg(cred.ID),
+			sqlite.Arg(cred.UserID),
+			sqlite.Arg(cred.CredentialID),
+			sqlite.Arg(cred.PublicKey),
+			sqlite.Arg(cred.SignCount),
+			sqlite.Arg(cred.Transports),
+			sqlite.Arg(cred.AttestationType),
+			sqlite.Arg(cred.Name),
+			sqlite.Arg(cred.Data),
+			sqlite.Arg(cred.CreatedAt),
+		),
+		im.Returning("*"),
+	)
+}
+
+func (q *SqliteQuerier) QueryWebauthnCredentialGetByID(ctx context.Context, id string) bob.Query {
+	return sqlite.Select(sm.From(models.TableWebauthnCredential), sm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
+}
+
+func (q *SqliteQuerier) QueryWebauthnCredentialGetByCredentialID(ctx context.Context, credentialID string) bob.Query {
+	return sqlite.Select(sm.From(models.TableWebauthnCredential), sm.Where(sqlite.Quote(models.ColumnCredentialID).EQ(sqlite.Arg(credentialID))))
+}
+
+func (q *SqliteQuerier) QueryWebauthnCredentialListByUserID(ctx context.Context, userID string) bob.Query {
+	return sqlite.Select(sm.From(models.TableWebauthnCredential), sm.Where(sqlite.Quote(models.ColumnUserID).EQ(sqlite.Arg(userID))))
+}
+
+func (q *SqliteQuerier) QueryWebauthnCredentialUpdate(ctx context.Context, cred *models.WebauthnCredential) bob.Query {
+	return sqlite.Update(
+		um.Table(models.TableWebauthnCredential),
+		um.SetCol(models.ColumnSignCount).ToArg(cred.SignCount),
+		um.SetCol(models.ColumnData).ToArg(cred.Data),
+		um.SetCol(models.ColumnName).ToArg(cred.Name),
+		um.SetCol(models.ColumnLastUsedAt).ToArg(cred.LastUsedAt),
+		um.Where(sqlite.Quote("id").EQ(sqlite.Arg(cred.ID))),
+		um.Returning("*"),
+	)
+}
+
+func (q *SqliteQuerier) QueryWebauthnCredentialDelete(ctx context.Context, id string) bob.Query {
+	return sqlite.Delete(dm.From(models.TableWebauthnCredential), dm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
+}
+
+func (q *SqliteQuerier) QueryWebauthnChallengeInsert(ctx context.Context, ch *models.WebauthnChallenge) bob.Query {
+	if ch.ID == "" {
+		ch.ID = util.NewIDStripped()
+	}
+	if ch.CreatedAt.IsZero() {
+		ch.CreatedAt = time.Now().UTC()
+	}
+	return sqlite.Insert(
+		im.Into(models.TableWebauthnChallenge,
+			"id",
+			models.ColumnSessionKey,
+			models.ColumnChallengeType,
+			models.ColumnUserID,
+			models.ColumnData,
+			models.ColumnExpiresAt,
+			models.ColumnCreatedAt,
+		),
+		im.Values(
+			sqlite.Arg(ch.ID),
+			sqlite.Arg(ch.SessionKey),
+			sqlite.Arg(ch.ChallengeType),
+			sqlite.Arg(ch.UserID),
+			sqlite.Arg(ch.Data),
+			sqlite.Arg(ch.ExpiresAt),
+			sqlite.Arg(ch.CreatedAt),
+		),
+		im.Returning("*"),
+	)
+}
+
+func (q *SqliteQuerier) QueryWebauthnChallengeGetBySessionKey(ctx context.Context, sessionKey string) bob.Query {
+	return sqlite.Select(sm.From(models.TableWebauthnChallenge), sm.Where(sqlite.Quote(models.ColumnSessionKey).EQ(sqlite.Arg(sessionKey))))
+}
+
+func (q *SqliteQuerier) QueryWebauthnChallengeDelete(ctx context.Context, id string) bob.Query {
+	return sqlite.Delete(dm.From(models.TableWebauthnChallenge), dm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
+}

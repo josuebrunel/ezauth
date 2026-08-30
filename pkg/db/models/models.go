@@ -243,6 +243,42 @@ const (
 	TokenTypeMFARecovery   = "mfa_recovery"
 )
 
+// WebAuthn ceremony challenge types, stored on WebauthnChallenge.ChallengeType.
+const (
+	WebauthnChallengeTypeRegistration = "webauthn_registration"
+	WebauthnChallengeTypeLogin        = "webauthn_login"
+)
+
+// WebauthnChallenge stores the server-side state (challenge and ceremony
+// parameters) of an in-progress WebAuthn registration or login ceremony,
+// looked up by an opaque SessionKey. Unlike Token, UserID may be empty: a
+// discoverable (usernameless) login challenge has no known user until the
+// assertion is verified.
+type WebauthnChallenge struct {
+	ID            string    `db:"id" json:"-"`
+	SessionKey    string    `db:"session_key" json:"-"`
+	ChallengeType string    `db:"challenge_type" json:"-"`
+	UserID        string    `db:"user_id" json:"-"`
+	Data          JSONMap   `db:"data" json:"-"`
+	ExpiresAt     time.Time `db:"expires_at" json:"-"`
+	CreatedAt     time.Time `db:"created_at" json:"-"`
+}
+
+// WebauthnCredential represents a registered WebAuthn/passkey credential for a user.
+type WebauthnCredential struct {
+	ID              string     `db:"id" json:"id"`
+	UserID          string     `db:"user_id" json:"user_id"`
+	CredentialID    string     `db:"credential_id" json:"-"`
+	PublicKey       string     `db:"public_key" json:"-"`
+	SignCount       uint32     `db:"sign_count" json:"sign_count"`
+	Transports      string     `db:"transports" json:"transports"`
+	AttestationType string     `db:"attestation_type" json:"attestation_type"`
+	Name            string     `db:"name" json:"name"`
+	Data            JSONMap    `db:"data" json:"-"`
+	CreatedAt       time.Time  `db:"created_at" json:"created_at"`
+	LastUsedAt      *time.Time `db:"last_used_at" json:"last_used_at,omitempty"`
+}
+
 // Token represents an authentication or action token (e.g., refresh token, password reset token).
 type Token struct {
 	ID        string    `db:"id" json:"id"`

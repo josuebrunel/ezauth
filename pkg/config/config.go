@@ -145,6 +145,16 @@ type Hashing struct {
 	Argon2KeyLength   uint32 `json:"argon2_key_length" env:"HASHING_ARGON2_KEY_LENGTH" default:"32"`
 }
 
+// WebAuthn defines the Relying Party settings for WebAuthn/passkey support.
+// RPID should be the effective domain (e.g. "example.com", no scheme/port).
+// RPOrigins is a comma-separated list of allowed origins (e.g. "https://example.com").
+// WebAuthn support is disabled unless both RPID and RPOrigins are set.
+type WebAuthn struct {
+	RPID          string `json:"rp_id" env:"WEBAUTHN_RP_ID"`
+	RPDisplayName string `json:"rp_display_name" env:"WEBAUTHN_RP_DISPLAY_NAME" default:"EzAuth"`
+	RPOrigins     string `json:"rp_origins" env:"WEBAUTHN_RP_ORIGINS"`
+}
+
 // RateLimit defines the rate limiting configuration.
 type RateLimit struct {
 	Enabled    bool          `json:"enabled" env:"RATE_LIMIT_ENABLED" default:"false"`
@@ -171,6 +181,7 @@ type Config struct {
 	Pages          Pages          `json:"pages"`
 	TimeOut        time.Duration  `json:"timeout" env:"TIMEOUT" default:"30s"`
 	MFAIssuer      string         `json:"mfa_issuer" env:"MFA_ISSUER" default:"EzAuth"`
+	WebAuthn       WebAuthn       `json:"webauthn"`
 }
 
 // LoadConfig loads the configuration from environment variables.
