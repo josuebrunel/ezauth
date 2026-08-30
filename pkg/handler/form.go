@@ -86,6 +86,110 @@ func (h *Handler) FormRegister(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, h.svc.Cfg.Redirects.AfterRegister, http.StatusFound)
 }
 
+// FormInvitationCreate issues a new invitation on behalf of the current session user.
+func (h *Handler) FormInvitationCreate(w http.ResponseWriter, r *http.Request) {
+	inviter, err := h.GetSessionUser(r.Context())
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
+		return
+	}
+
+	req := service.RequestInvitation{
+		Email: r.FormValue("email"),
+		Roles: r.FormValue("roles"),
+	}
+
+	info, err := h.svc.InvitationCreate(r.Context(), inviter, req)
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusBadRequest, err)
+		return
+	}
+	WriteJSONResponse(w, http.StatusOK, info, nil)
+}
+
+// FormInvitationsList lists the invitations issued by the current session user.
+func (h *Handler) FormInvitationsList(w http.ResponseWriter, r *http.Request) {
+	inviter, err := h.GetSessionUser(r.Context())
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
+		return
+	}
+
+	invitations, err := h.svc.Invitations(r.Context(), inviter.ID)
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusInternalServerError, err)
+		return
+	}
+	WriteJSONResponse(w, http.StatusOK, invitations, nil)
+}
+
+// FormInvitationRevoke revokes one of the current session user's invitations.
+func (h *Handler) FormInvitationRevoke(w http.ResponseWriter, r *http.Request) {
+	inviter, err := h.GetSessionUser(r.Context())
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
+		return
+	}
+
+	id := chi.URLParam(r, "id")
+	if err := h.svc.InvitationRevoke(r.Context(), inviter, id); err != nil {
+		WriteJSONResponseError(w, http.StatusBadRequest, err)
+		return
+	}
+	WriteJSONResponse(w, http.StatusOK, map[string]string{"message": "invitation revoked"}, nil)
+}
+
+// FormInvitationAccept completes registration for an invitation via form submission.
+func (h *Handler) FormInvitationAccept(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.InvitationAccept, ErrInvalidRequestBody.Error())
+		return
+	}
+
+	req := service.RequestInvitationAccept{
+		Token:     r.FormValue("token"),
+		Password:  r.FormValue("password"),
+		Username:  r.FormValue("username"),
+		FirstName: r.FormValue("first_name"),
+		LastName:  r.FormValue("last_name"),
+		Locale:    r.FormValue("locale"),
+		Timezone:  r.FormValue("timezone"),
+	}
+
+	if req.Password != r.FormValue("password_confirm") {
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.InvitationAccept, "passwords do not match")
+		return
+	}
+
+	if preview, err := h.svc.InvitationPreview(r.Context(), req.Token); err == nil {
+		hookUser := &models.User{Email: preview.Email, Username: req.Username, FirstName: req.FirstName, LastName: req.LastName, Roles: preview.Roles}
+		if err := h.svc.Hook.BeforeUserCreated(r.Context(), hookUser); err != nil {
+			h.redirectWithError(w, r, h.svc.Cfg.Pages.InvitationAccept, err.Error())
+			return
+		}
+	}
+
+	user, tokenResp, err := h.svc.InvitationAccept(r.Context(), req)
+	if err != nil {
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.InvitationAccept, err.Error())
+		return
+	}
+
+	if err := h.svc.Hook.AfterUserCreated(r.Context(), user); err != nil {
+		xlog.Error("hook AfterUserCreated failed", "user_id", user.ID, "err", err)
+	}
+	if err := h.svc.Hook.AfterUserSignedIn(r.Context(), user); err != nil {
+		xlog.Error("hook AfterUserSignedIn failed", "user_id", user.ID, "err", err)
+	}
+
+	h.setAuthCookies(r.Context(), tokenResp)
+	http.Redirect(w, r, h.svc.Cfg.Redirects.AfterRegister, http.StatusFound)
+}
+
 // FormLogin handles user login via form submission.
 func (h *Handler) FormLogin(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {

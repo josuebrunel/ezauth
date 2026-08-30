@@ -79,6 +79,13 @@ POST requests to these endpoints are automatically protected by `filippo.io/csrf
 
 Like `GET /auth/csrf`, these return JSON rather than redirecting — WebAuthn ceremonies always require client-side JavaScript (`navigator.credentials.create()`/`.get()`). The request body for `*/finish` endpoints must be the browser's raw response verbatim.
 
+### Invitations (Form)
+`GET /auth/invitation/accept` (Redirects to `Pages.InvitationAccept`, preserving `?token=...`)
+`POST /auth/invitation/accept` (fields: `token`, `password`, `password_confirm`, plus optional `username`/`first_name`/`last_name`/`locale`/`timezone`; sets auth cookies)
+`POST /auth/invitations` (fields: `email`, optional `roles`; requires a logged-in session)
+`GET /auth/invitations`, `DELETE /auth/invitations/{id}` (Require a logged-in session)
+`GET /auth/invitations/preview?token=...` (No auth required; returns JSON)
+
 ### OAuth2
 `GET /auth/oauth2/{provider}/login` (Initiates login)
 `GET /auth/oauth2/{provider}/callback` (Callback handler. URL: `{base_url}/auth/oauth2/{provider}/callback`)
@@ -273,6 +280,39 @@ Begins a discoverable (usernameless) WebAuthn login ceremony. No request body ne
 
 **Response Data:** Same as Register.
 
+### Invitation Preview
+`GET /auth/api/invitations/preview?token=...`
+
+Looks up a pending invitation by its token, e.g. to prefill a registration form. No authentication required.
+
+**Response Data:**
+```json
+{
+  "id": "...",
+  "email": "newperson@example.com",
+  "roles": "member",
+  "data": {"org_id": "org-123"},
+  "created_at": "...",
+  "expires_at": "..."
+}
+```
+
+### Invitation Accept
+`POST /auth/api/invitations/accept`
+
+Completes registration for an invitation: creates the invitee's account with the invitation's pre-verified email and roles, and returns session tokens.
+
+**Request Body:**
+```json
+{
+  "token": "...",
+  "password": "their-chosen-password",
+  "username": "optional"
+}
+```
+
+**Response Data:** Same as Register.
+
 ## Protected Endpoints
 
 These endpoints require an `Authorization: Bearer <access_token>` header (in addition to `X-API-Key`).
@@ -389,3 +429,29 @@ Lists the authenticated user's registered passkeys.
 `DELETE /auth/api/webauthn/credentials/{id}`
 
 Deletes one of the authenticated user's passkeys, identified by its credential record ID (not the raw WebAuthn credential ID).
+
+### Invitation Create
+`POST /auth/api/invitations`
+
+Issues a new invitation and emails the invitee a link to accept it. `ezauth` enforces no authorization on who may invite — check that yourself (e.g. `caller.HasRole("admin")`) before calling this.
+
+**Request Body:**
+```json
+{
+  "email": "newperson@example.com",
+  "roles": "member",
+  "data": {"org_id": "org-123"}
+}
+```
+
+**Response Data:** the created invitation (same shape as [Invitation Preview](#invitation-preview), without a `data` leak beyond what the caller supplied).
+
+### Invitations List
+`GET /auth/api/invitations`
+
+Lists the invitations issued by the authenticated user.
+
+### Invitation Revoke
+`DELETE /auth/api/invitations/{id}`
+
+Revokes one of the authenticated user's invitations by its record ID.

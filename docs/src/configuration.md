@@ -19,6 +19,7 @@
 | `EZAUTH_ACCOUNT_LOCKOUT_ENABLED`      | Count failed logins and auto-lock accounts after too many.        | `true`  |
 | `EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS` | Consecutive failed attempts before locking the account.            | `5`     |
 | `EZAUTH_ACCOUNT_LOCKOUT_DURATION`     | How long a locked account stays locked before auto-unlocking.      | `15m`   |
+| `EZAUTH_INVITATION_TTL`               | How long an invitation stays valid before expiring.                | `168h` (7 days) |
 
 ## WebAuthn/Passkey Settings
 
@@ -80,6 +81,8 @@ Customize the subject and body of emails sent by `ezauth`. Templates use Go `tex
 | `EZAUTH_EMAIL_PASSWORDLESS_BODY`      | Body for magic link emails.        | `Click the following link to login: {{.Link}}`               |
 | `EZAUTH_EMAIL_PASSWORD_RESET_SUBJECT` | Subject for password reset emails. | `Password Reset Request`                                     |
 | `EZAUTH_EMAIL_PASSWORD_RESET_BODY`    | Body for password reset emails.    | `Click the following link to reset your password: {{.Link}}` |
+| `EZAUTH_EMAIL_INVITATION_SUBJECT`     | Subject for invitation emails.     | `You've been invited`                                         |
+| `EZAUTH_EMAIL_INVITATION_BODY`        | Body for invitation emails.        | `Click the following link to accept your invitation: {{.Link}}` |
 
 ## SMS OTP Settings
 
@@ -103,6 +106,7 @@ Used for the Form-based handlers (browser flows).
 | `EZAUTH_LOGIN_PAGE_URL`          | URL of your custom Login page (for redirects).    | `/login`    |
 | `EZAUTH_REGISTER_PAGE_URL`       | URL of your custom Register page (for redirects). | `/register` |
 | `EZAUTH_MFA_VERIFY_PAGE_URL`     | URL of your custom MFA code-entry page (for step-up login redirects). | `/mfa/verify` |
+| `EZAUTH_INVITATION_ACCEPT_PAGE_URL` | URL of your custom invitation-acceptance page. | `/invitation/accept` |
 
 ## OAuth2 Settings
 

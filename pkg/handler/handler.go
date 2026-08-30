@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 
 	csrf "filippo.io/csrf/gorilla"
@@ -166,6 +167,18 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 			r.Delete("/webauthn/credentials/{id}", h.FormWebauthnCredentialDelete)
 			r.Get("/trusted-devices", h.FormTrustedDevicesList)
 			r.Delete("/trusted-devices/{id}", h.FormTrustedDeviceRevoke)
+			r.Get("/invitation/accept", func(w http.ResponseWriter, r *http.Request) {
+				target := h.svc.Cfg.Pages.InvitationAccept
+				if token := r.URL.Query().Get("token"); token != "" {
+					target += "?token=" + url.QueryEscape(token)
+				}
+				http.Redirect(w, r, target, http.StatusFound)
+			})
+			r.Post("/invitation/accept", h.FormInvitationAccept)
+			r.Post("/invitations", h.FormInvitationCreate)
+			r.Get("/invitations", h.FormInvitationsList)
+			r.Delete("/invitations/{id}", h.FormInvitationRevoke)
+			r.Get("/invitations/preview", h.InvitationPreview)
 		})
 
 		// Routes protected by API Key
@@ -186,6 +199,8 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 				r.Post("/mfa/login/verify", h.MFALoginVerify)
 				r.Post("/webauthn/login/begin", h.WebauthnLoginBegin)
 				r.Post("/webauthn/login/finish", h.WebauthnLoginFinish)
+				r.Post("/invitations/accept", h.InvitationAccept)
+				r.Get("/invitations/preview", h.InvitationPreview)
 
 				// Protected routes
 				r.Group(func(r chi.Router) {
@@ -204,6 +219,9 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 					r.Delete("/webauthn/credentials/{id}", h.WebauthnCredentialDelete)
 					r.Get("/trusted-devices", h.TrustedDevicesList)
 					r.Delete("/trusted-devices/{id}", h.TrustedDeviceRevoke)
+					r.Post("/invitations", h.InvitationCreate)
+					r.Get("/invitations", h.InvitationsList)
+					r.Delete("/invitations/{id}", h.InvitationRevoke)
 				})
 			})
 		})

@@ -438,7 +438,7 @@ tokens, err := auth.Service.SMSOTPVerify(ctx, service.RequestSMSOTPVerify{
 `UserAuthenticate` enforces `IsActive` as a login gate and counts consecutive failed attempts, locking the account (clearing `IsActive`) for `EZAUTH_ACCOUNT_LOCKOUT_DURATION` after `EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS` in a row; it auto-unlocks (and resets the counter) on the first login attempt after that window passes. A successful login resets the counter immediately.
 
 ```go
-_, err := auth.UserAuthenticate(ctx, req)
+_, err := auth.Service.UserAuthenticate(ctx, req)
 switch {
 case errors.Is(err, service.ErrAccountLocked):
     // Too many recent failed attempts; auto-expires.
@@ -448,6 +448,29 @@ case errors.Is(err, service.ErrAccountDisabled):
 ```
 
 Set `EZAUTH_ACCOUNT_LOCKOUT_ENABLED=false` to stop counting/locking on failed attempts while still enforcing `IsActive` for accounts disabled some other way.
+
+## Invitation-Based Onboarding
+
+An existing user invites someone by email; the invitee gets a link that pre-fills registration with their email pre-verified and, optionally, a pre-assigned role. `ezauth` enforces no authorization on who may invite (same stance as `Impersonate`) — check that yourself before calling it. `Roles` and `Data` are opaque to `ezauth` beyond being carried through to the created account.
+
+```go
+info, err := auth.Service.InvitationCreate(ctx, inviter, service.RequestInvitation{
+    Email: "newperson@example.com",
+    Roles: "member",
+    Data:  map[string]any{"org_id": "org-123"},
+})
+
+// The invitee later submits a password from the emailed link:
+user, tokens, err := auth.Service.InvitationAccept(ctx, service.RequestInvitationAccept{
+    Token:    tokenFromLink,
+    Password: "their-chosen-password",
+})
+
+invitations, err := auth.Service.Invitations(ctx, inviter.ID)
+err = auth.Service.InvitationRevoke(ctx, inviter, invitations[0].ID)
+```
+
+`EZAUTH_INVITATION_TTL` (default 7 days) controls how long an invitation stays valid. `EZAUTH_INVITATION_ACCEPT_PAGE_URL` (`Pages.InvitationAccept`) is where `GET /auth/invitation/accept?token=...` redirects, with the token preserved as a query param.
 
 ## Hooks
 

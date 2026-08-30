@@ -245,6 +245,7 @@ const (
 	TokenTypeMFARecovery   = "mfa_recovery"
 	TokenTypeSMSOTP        = "sms_otp"
 	TokenTypeTrustedDevice = "trusted_device"
+	TokenTypeInvitation    = "invitation"
 )
 
 // WebAuthn ceremony challenge types, stored on WebauthnChallenge.ChallengeType.

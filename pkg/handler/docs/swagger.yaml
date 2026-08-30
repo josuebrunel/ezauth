@@ -9,6 +9,15 @@ definitions:
       error:
         type: string
     type: object
+  handler.ApiResponse-array_service_InvitationInfo:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/service.InvitationInfo'
+        type: array
+      error:
+        type: string
+    type: object
   handler.ApiResponse-array_service_TrustedDeviceInfo:
     properties:
       data:
@@ -71,6 +80,13 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/models.WebauthnCredential'
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-service_InvitationInfo:
+    properties:
+      data:
+        $ref: '#/definitions/service.InvitationInfo'
       error:
         type: string
     type: object
@@ -671,6 +687,22 @@ definitions:
     - VerificationRequired
     - VerificationPreferred
     - VerificationDiscouraged
+  service.InvitationInfo:
+    properties:
+      created_at:
+        type: string
+      data:
+        additionalProperties: {}
+        type: object
+      email:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+      roles:
+        type: string
+    type: object
   service.LoginResponse:
     properties:
       access_token:
@@ -715,6 +747,35 @@ definitions:
       phone:
         type: string
       timezone:
+        type: string
+      username:
+        type: string
+    type: object
+  service.RequestInvitation:
+    properties:
+      data:
+        additionalProperties: {}
+        description: optional, caller-defined (e.g. org id) opaque to ezauth
+        type: object
+      email:
+        type: string
+      roles:
+        description: optional, comma-separated
+        type: string
+    type: object
+  service.RequestInvitationAccept:
+    properties:
+      first_name:
+        type: string
+      last_name:
+        type: string
+      locale:
+        type: string
+      password:
+        type: string
+      timezone:
+        type: string
+      token:
         type: string
       username:
         type: string
@@ -772,6 +833,9 @@ definitions:
     type: object
   webauthncose.COSEAlgorithmIdentifier:
     enum:
+    - -48
+    - -49
+    - -50
     - -7
     - -8
     - -9
@@ -788,11 +852,11 @@ definitions:
     - -258
     - -259
     - -65535
-    - -48
-    - -49
-    - -50
     type: integer
     x-enum-varnames:
+    - AlgMLDSA44
+    - AlgMLDSA65
+    - AlgMLDSA87
     - AlgES256
     - AlgEdDSA
     - AlgESP256
@@ -809,15 +873,137 @@ definitions:
     - AlgRS384
     - AlgRS512
     - AlgRS1
-    - AlgMLDSA44
-    - AlgMLDSA65
-    - AlgMLDSA87
 info:
   contact: {}
   description: Authentication service/library for Go.
   title: EzAuth API
   version: "1.0"
 paths:
+  /auth/api/invitations:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-array_service_InvitationInfo'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: List invitations
+      tags:
+      - invitation
+    post:
+      consumes:
+      - application/json
+      description: Emails an invitee a link to accept an invitation and complete registration
+      parameters:
+      - description: Invitation Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestInvitation'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_InvitationInfo'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Create an invitation
+      tags:
+      - invitation
+  /auth/api/invitations/{id}:
+    delete:
+      parameters:
+      - description: Invitation record ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Revoke an invitation
+      tags:
+      - invitation
+  /auth/api/invitations/accept:
+    post:
+      consumes:
+      - application/json
+      description: Creates the invitee's account with the invitation's pre-verified
+        email and roles, and returns session tokens
+      parameters:
+      - description: Invitation Accept Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestInvitationAccept'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Accept an invitation
+      tags:
+      - invitation
+  /auth/api/invitations/preview:
+    get:
+      parameters:
+      - description: Invitation token
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_InvitationInfo'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Preview an invitation
+      tags:
+      - invitation
   /auth/api/mfa/confirm:
     post:
       consumes:

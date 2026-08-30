@@ -15,6 +15,211 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/auth/api/invitations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invitation"
+                ],
+                "summary": "List invitations",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-array_service_InvitationInfo"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Emails an invitee a link to accept an invitation and complete registration",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invitation"
+                ],
+                "summary": "Create an invitation",
+                "parameters": [
+                    {
+                        "description": "Invitation Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.RequestInvitation"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-service_InvitationInfo"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/api/invitations/accept": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Creates the invitee's account with the invitation's pre-verified email and roles, and returns session tokens",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invitation"
+                ],
+                "summary": "Accept an invitation",
+                "parameters": [
+                    {
+                        "description": "Invitation Accept Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.RequestInvitationAccept"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-service_TokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/api/invitations/preview": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invitation"
+                ],
+                "summary": "Preview an invitation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invitation token",
+                        "name": "token",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-service_InvitationInfo"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/api/invitations/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invitation"
+                ],
+                "summary": "Revoke an invitation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invitation record ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-map_string_string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/api/mfa/confirm": {
             "post": {
                 "security": [
@@ -1330,6 +1535,20 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.ApiResponse-array_service_InvitationInfo": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/service.InvitationInfo"
+                    }
+                },
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
         "handler.ApiResponse-array_service_TrustedDeviceInfo": {
             "type": "object",
             "properties": {
@@ -1426,6 +1645,17 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "$ref": "#/definitions/models.WebauthnCredential"
+                },
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.ApiResponse-service_InvitationInfo": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/service.InvitationInfo"
                 },
                 "error": {
                     "type": "string"
@@ -2236,6 +2466,30 @@ const docTemplate = `{
                 "VerificationDiscouraged"
             ]
         },
+        "service.InvitationInfo": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "data": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "email": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "roles": {
+                    "type": "string"
+                }
+            }
+        },
         "service.LoginResponse": {
             "type": "object",
             "properties": {
@@ -2302,6 +2556,49 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "timezone": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.RequestInvitation": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "description": "optional, caller-defined (e.g. org id) opaque to ezauth",
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "email": {
+                    "type": "string"
+                },
+                "roles": {
+                    "description": "optional, comma-separated",
+                    "type": "string"
+                }
+            }
+        },
+        "service.RequestInvitationAccept": {
+            "type": "object",
+            "properties": {
+                "first_name": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "locale": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "timezone": {
+                    "type": "string"
+                },
+                "token": {
                     "type": "string"
                 },
                 "username": {
@@ -2392,6 +2689,9 @@ const docTemplate = `{
         "webauthncose.COSEAlgorithmIdentifier": {
             "type": "integer",
             "enum": [
+                -48,
+                -49,
+                -50,
                 -7,
                 -8,
                 -9,
@@ -2407,12 +2707,12 @@ const docTemplate = `{
                 -257,
                 -258,
                 -259,
-                -65535,
-                -48,
-                -49,
-                -50
+                -65535
             ],
             "x-enum-varnames": [
+                "AlgMLDSA44",
+                "AlgMLDSA65",
+                "AlgMLDSA87",
                 "AlgES256",
                 "AlgEdDSA",
                 "AlgESP256",
@@ -2428,10 +2728,7 @@ const docTemplate = `{
                 "AlgRS256",
                 "AlgRS384",
                 "AlgRS512",
-                "AlgRS1",
-                "AlgMLDSA44",
-                "AlgMLDSA65",
-                "AlgMLDSA87"
+                "AlgRS1"
             ]
         }
     },

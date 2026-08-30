@@ -37,4 +37,6 @@ var (
 	ErrWebauthnSessionKeyRequired   = errors.New("session_key is required")
 	ErrNoPendingWebauthnLogin       = errors.New("no pending webauthn login")
 	ErrWebauthnCredentialIDRequired = errors.New("credential id is required")
+	ErrInvitationTokenRequired      = errors.New("token is required")
+	ErrInvitationIDRequired         = errors.New("invitation id is required")
 )

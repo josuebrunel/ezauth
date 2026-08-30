@@ -135,6 +135,13 @@ type EmailTemplates struct {
 	PasswordlessBody     string `json:"passwordless_body" env:"EMAIL_PASSWORDLESS_BODY" default:"Click the following link to login: {{.Link}}"`
 	PasswordResetSubject string `json:"password_reset_subject" env:"EMAIL_PASSWORD_RESET_SUBJECT" default:"Password Reset Request"`
 	PasswordResetBody    string `json:"password_reset_body" env:"EMAIL_PASSWORD_RESET_BODY" default:"Click the following link to reset your password: {{.Link}}"`
+	InvitationSubject    string `json:"invitation_subject" env:"EMAIL_INVITATION_SUBJECT" default:"You've been invited"`
+	InvitationBody       string `json:"invitation_body" env:"EMAIL_INVITATION_BODY" default:"Click the following link to accept your invitation: {{.Link}}"`
+}
+
+// Invitation defines the invite-by-email onboarding settings.
+type Invitation struct {
+	TTL time.Duration `json:"ttl" env:"INVITATION_TTL" default:"168h"`
 }
 
 // Redirects defines the redirection URLs after successful actions.
@@ -145,9 +152,10 @@ type Redirects struct {
 
 // Pages defines the URLs for the authentication pages.
 type Pages struct {
-	Login     string `json:"login" env:"LOGIN_PAGE_URL" default:"/login"`
-	Register  string `json:"register" env:"REGISTER_PAGE_URL" default:"/register"`
-	MFAVerify string `json:"mfa_verify" env:"MFA_VERIFY_PAGE_URL" default:"/mfa/verify"`
+	Login            string `json:"login" env:"LOGIN_PAGE_URL" default:"/login"`
+	Register         string `json:"register" env:"REGISTER_PAGE_URL" default:"/register"`
+	MFAVerify        string `json:"mfa_verify" env:"MFA_VERIFY_PAGE_URL" default:"/mfa/verify"`
+	InvitationAccept string `json:"invitation_accept" env:"INVITATION_ACCEPT_PAGE_URL" default:"/invitation/accept"`
 }
 
 // Hashing defines the password hashing algorithm and its parameters.
@@ -207,6 +215,7 @@ type Config struct {
 	RateLimit      RateLimit      `json:"rate_limit"`
 	TrustedDevice  TrustedDevice  `json:"trusted_device"`
 	AccountLockout AccountLockout `json:"account_lockout"`
+	Invitation     Invitation     `json:"invitation"`
 	OAuth2         OAuth2         `json:"oauth2"`
 	SMTP           SMTP           `json:"smtp"`
 	EmailTemplates EmailTemplates `json:"email_templates"`

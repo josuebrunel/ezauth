@@ -408,6 +408,12 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 | POST   | `/auth/webauthn/register/finish`   | Complete passkey registration                                              |
 | GET    | `/auth/webauthn/credentials`       | List the logged-in session user's passkeys                                 |
 | DELETE | `/auth/webauthn/credentials/{id}`  | Delete one of the logged-in session user's passkeys                        |
+| GET    | `/auth/invitation/accept`          | Redirects to `Pages.InvitationAccept` with the token preserved (see [Invitation-Based Onboarding](#invitation-based-onboarding)) |
+| POST   | `/auth/invitation/accept`          | Complete registration from an invitation and set auth cookies              |
+| POST   | `/auth/invitations`                | Create an invitation as the logged-in session user                         |
+| GET    | `/auth/invitations`                | List invitations issued by the logged-in session user                      |
+| DELETE | `/auth/invitations/{id}`           | Revoke one of the logged-in session user's invitations                     |
+| GET    | `/auth/invitations/preview`        | Preview a pending invitation by its token (no auth required)               |
 
 #### Form Field Reference
 
@@ -426,6 +432,8 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 | `/auth/mfa/confirm`            | `code`                                  |                                                                                                                   |
 | `/auth/mfa/disable`            | `code`                                  |                                                                                                                   |
 | `/auth/mfa/login/verify` (remember) | `code`                             | `remember_device` (any non-empty value)                                                                          |
+| `/auth/invitations`            | `email`                                 | `roles`                                                                                                          |
+| `/auth/invitation/accept`      | `token`, `password`, `password_confirm` | `username`, `first_name`, `last_name`, `locale`, `timezone`                                                     |
 
 > [!NOTE]
 > Passwords must be between 8 and 128 characters long. The `/auth/webauthn/*` endpoints are not listed here: they take the browser's raw `navigator.credentials` JSON response as the request body (plus `session_key`/`name` query params), not form-encoded fields — see [WebAuthn / Passkeys](#webauthn--passkeys).
@@ -462,6 +470,11 @@ These endpoints accept `application/json` and return JSON responses.
 | POST   | `/auth/api/webauthn/register/finish` | Complete passkey registration (Protected) |
 | GET    | `/auth/api/webauthn/credentials`     | List the authenticated user's passkeys (Protected) |
 | DELETE | `/auth/api/webauthn/credentials/{id}` | Delete one of the authenticated user's passkeys (Protected) |
+| POST   | `/auth/api/invitations`            | Create an invitation (Protected, see [Invitation-Based Onboarding](#invitation-based-onboarding)) |
+| GET    | `/auth/api/invitations`            | List invitations issued by the authenticated user (Protected) |
+| DELETE | `/auth/api/invitations/{id}`       | Revoke one of the authenticated user's invitations (Protected) |
+| GET    | `/auth/api/invitations/preview`    | Preview a pending invitation by its token |
+| POST   | `/auth/api/invitations/accept`     | Complete registration from an invitation and receive tokens |
 
 ## Middlewares
  
@@ -732,7 +745,7 @@ Set `EZAUTH_SMS_OTP_BODY` (default `Your verification code is: {{.Code}}`) to cu
 `UserAuthenticate` enforces the `IsActive` column as a login gate and counts consecutive failed password attempts: after `EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS` (default 5) in a row, the account is locked — `IsActive` is cleared — for `EZAUTH_ACCOUNT_LOCKOUT_DURATION` (default 15 minutes), then automatically unlocked (and the counter reset) on the next login attempt after that window passes. A successful login before the threshold resets the counter immediately. Set `EZAUTH_ACCOUNT_LOCKOUT_ENABLED=false` to stop counting/auto-locking failed attempts while still enforcing `IsActive` for accounts deactivated some other way (e.g. an administrative suspension).
 
 ```go
-_, err := auth.UserAuthenticate(ctx, service.RequestBasicAuth{Email: email, Password: password})
+_, err := auth.Service.UserAuthenticate(ctx, service.RequestBasicAuth{Email: email, Password: password})
 if errors.Is(err, service.ErrAccountLocked) {
     // Too many failed attempts recently; try again after the lockout window.
 } else if errors.Is(err, service.ErrAccountDisabled) {
@@ -741,6 +754,53 @@ if errors.Is(err, service.ErrAccountLocked) {
 ```
 
 `Login`/`FormLogin` surface `ErrAccountLocked`/`ErrAccountDisabled` distinctly (rather than a generic "invalid credentials") in both JSON API and form-based (cookie) modes, since — once an account is locked — even the correct password fails, so hiding the lockout state provides little security benefit while confusing legitimate users.
+
+## Invitation-Based Onboarding
+
+An existing user (e.g. a team admin) can invite someone by email; the invitee gets a link that pre-fills registration with their email pre-verified and, optionally, a pre-assigned role. Like `Impersonate`, `ezauth` enforces no authorization on who may invite — check that yourself (e.g. `inviter.HasRole("admin")`) before calling it. `Roles` and `Data` are opaque to `ezauth` beyond being carried through to the created account, so a multi-tenancy/RBAC layer built on top can put an org ID or role name in `Data`/`Roles` without `ezauth` needing to know what they mean.
+
+```go
+// inviter must already be authenticated; check authorization yourself first.
+info, err := auth.Service.InvitationCreate(ctx, inviter, service.RequestInvitation{
+    Email: "newperson@example.com",
+    Roles: "member",
+    Data:  map[string]any{"org_id": "org-123"},
+})
+
+// Later, the invitee visits the emailed link and submits a password:
+user, tokens, err := auth.Service.InvitationAccept(ctx, service.RequestInvitationAccept{
+    Token:    tokenFromLink,
+    Password: "their-chosen-password",
+})
+// user.EmailVerified is already true, and user.Roles == "member".
+
+// Managing invitations:
+invitations, err := auth.Service.Invitations(ctx, inviter.ID)
+err = auth.Service.InvitationRevoke(ctx, inviter, invitations[0].ID)
+```
+
+### Standalone-service Mode
+
+```bash
+# Create an invitation (requires the inviter's own Bearer token):
+curl -X POST https://your-host/auth/api/invitations -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" -d '{"email": "newperson@example.com", "roles": "member"}'
+
+# The invitee previews their invitation (no auth required):
+curl "https://your-host/auth/api/invitations/preview?token=<token>" -H "X-API-Key: your-api-key"
+
+# ...then accepts it:
+curl -X POST https://your-host/auth/api/invitations/accept -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" -d '{"token": "<token>", "password": "their-chosen-password"}'
+
+# Manage invitations (requires the inviter's own Bearer token):
+curl https://your-host/auth/api/invitations -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+curl -X DELETE https://your-host/auth/api/invitations/<id> -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+```
+
+For form-based (cookie) clients, `POST /auth/invitations` (fields `email`, `roles`), `GET /auth/invitations`, and `DELETE /auth/invitations/{id}` work the same way against the logged-in session user; `GET /auth/invitation/accept?token=...` (the link emailed to the invitee) redirects to `Pages.InvitationAccept` with the token preserved as a query param, and `POST /auth/invitation/accept` (fields `token`, `password`, `password_confirm`, plus optional `username`/`first_name`/`last_name`) completes registration and sets auth cookies.
+
+Set `EZAUTH_INVITATION_TTL` (default 168h/7 days) to control how long an invitation stays valid, and `EZAUTH_EMAIL_INVITATION_SUBJECT`/`EZAUTH_EMAIL_INVITATION_BODY` to customize the invitation email.
 
 ## Hooks
 
