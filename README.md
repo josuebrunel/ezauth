@@ -393,6 +393,8 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 | GET    | `/auth/passwordless/login`         | Login via magic link                                                        |
 | GET    | `/auth/oauth2/{provider}/login`    | Login via OAuth2 provider                                                   |
 | GET    | `/auth/oauth2/{provider}/callback` | OAuth2 provider callback. URL: `{base_url}/auth/oauth2/{provider}/callback` |
+| POST   | `/auth/sms-otp/request`            | Request an SMS one-time login code (see [SMS OTP](#sms-otp))                |
+| POST   | `/auth/sms-otp/verify`             | Login via SMS one-time code                                                 |
 | GET    | `/auth/mfa/verify`                 | Redirects to `Pages.MFAVerify` (see [Multi-Factor Authentication](#multi-factor-authentication-totp)) |
 | POST   | `/auth/mfa/login/verify`           | Complete a step-up login using the session-stashed pre-auth token           |
 | POST   | `/auth/mfa/enroll`                 | Begin TOTP enrollment for the logged-in session user                        |
@@ -416,6 +418,8 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 | `/auth/password-reset/confirm` | `token`, `password`                     |                                                                                                                   |
 | `/auth/passwordless/request`   | `email`                                 |                                                                                                                   |
 | `/auth/passwordless/login`     | `token` (query param)                   |                                                                                                                   |
+| `/auth/sms-otp/request`        | `phone`                                 |                                                                                                                   |
+| `/auth/sms-otp/verify`         | `phone`, `code`                         |                                                                                                                   |
 | `/auth/mfa/login/verify`       | `code`                                  |                                                                                                                   |
 | `/auth/mfa/confirm`            | `code`                                  |                                                                                                                   |
 | `/auth/mfa/disable`            | `code`                                  |                                                                                                                   |
@@ -436,6 +440,8 @@ These endpoints accept `application/json` and return JSON responses.
 | POST   | `/auth/api/password-reset/confirm` | Confirm password reset            |
 | POST   | `/auth/api/passwordless/request`   | Request magic link                |
 | GET    | `/auth/api/passwordless/login`     | Login via magic link              |
+| POST   | `/auth/api/sms-otp/request`        | Request an SMS one-time login code (see [SMS OTP](#sms-otp)) |
+| POST   | `/auth/api/sms-otp/verify`         | Login via SMS one-time code       |
 | GET    | `/auth/api/userinfo`               | Get current user info (Protected) |
 | POST   | `/auth/api/logout`                 | Revoke refresh token (Protected)  |
 | POST   | `/auth/api/impersonate`            | Start impersonating a user (Protected, see [Impersonation](#impersonation)) |
@@ -663,6 +669,36 @@ curl -X DELETE https://your-host/auth/api/webauthn/credentials/<id> -H "Authoriz
 ```
 
 The cookie-mode equivalents live at `/auth/webauthn/register/begin`, `/auth/webauthn/register/finish`, `/auth/webauthn/login/begin`, `/auth/webauthn/login/finish`, `/auth/webauthn/credentials`, and `/auth/webauthn/credentials/{id}` — same request/response shapes, but authenticated via the session cookie (and CSRF token) instead of a Bearer token, and `login/finish` sets auth cookies and returns `{"redirect": "..."}` instead of raw tokens.
+
+## SMS OTP
+
+`ezauth` supports SMS-based one-time-password login, mirroring the email-based passwordless (magic link) flow: a 6-digit code is sent to a phone number, and submitting it back logs the user in (or registers a new phone-only account, exactly like an unrecognized email does for passwordless).
+
+> [!IMPORTANT]
+> SMS sending requires a Twilio-compatible provider — set `EZAUTH_SMS_TWILIO_ACCOUNT_SID`, `EZAUTH_SMS_TWILIO_AUTH_TOKEN`, and `EZAUTH_SMS_TWILIO_FROM`. Without them, `ezauth` logs a warning and uses a mock sender that doesn't actually send anything (useful for local development/tests). Phone numbers are enforced unique across accounts at the database level (a partial/filtered unique index; empty phones are exempt).
+
+```go
+err := auth.Service.SMSOTPRequest(ctx, service.RequestSMSOTP{Phone: "+15551234567"})
+
+tokens, err := auth.Service.SMSOTPVerify(ctx, service.RequestSMSOTPVerify{
+    Phone: "+15551234567",
+    Code:  "123456",
+})
+```
+
+### Standalone-service Mode
+
+```bash
+curl -X POST https://your-host/auth/api/sms-otp/request -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" -d '{"phone": "+15551234567"}'
+
+curl -X POST https://your-host/auth/api/sms-otp/verify -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" -d '{"phone": "+15551234567", "code": "123456"}'
+```
+
+For form-based (cookie) clients, `POST /auth/sms-otp/request` (field `phone`) and `POST /auth/sms-otp/verify` (fields `phone`, `code`) work the same way and set auth cookies on success.
+
+Set `EZAUTH_SMS_OTP_BODY` (default `Your verification code is: {{.Code}}`) to customize the SMS message template; `{{.Code}}` and `{{.Phone}}` are available.
 
 ## Hooks
 

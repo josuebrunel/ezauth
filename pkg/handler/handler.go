@@ -148,6 +148,8 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 			r.Post("/password-reset/confirm", h.FormPasswordResetConfirm)
 			r.Post("/passwordless/request", h.FormPasswordlessRequest)
 			r.Get("/passwordless/login", h.FormPasswordlessLogin)
+			r.Post("/sms-otp/request", h.FormSMSOTPRequest)
+			r.Post("/sms-otp/verify", h.FormSMSOTPVerify)
 			r.Get("/oauth2/{provider}/login", h.OAuth2Login)
 			r.Get("/mfa/verify", func(w http.ResponseWriter, r *http.Request) {
 				http.Redirect(w, r, h.svc.Cfg.Pages.MFAVerify, http.StatusFound)
@@ -177,6 +179,8 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 				r.Post("/password-reset/confirm", h.PasswordResetConfirm)
 				r.Post("/passwordless/request", h.PasswordlessRequest)
 				r.Get("/passwordless/login", h.PasswordlessLogin)
+				r.Post("/sms-otp/request", h.SMSOTPRequest)
+				r.Post("/sms-otp/verify", h.SMSOTPVerify)
 				r.Post("/mfa/login/verify", h.MFALoginVerify)
 				r.Post("/webauthn/login/begin", h.WebauthnLoginBegin)
 				r.Post("/webauthn/login/finish", h.WebauthnLoginFinish)

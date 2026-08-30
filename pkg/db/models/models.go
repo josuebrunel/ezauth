@@ -241,6 +241,7 @@ const (
 	TokenTypeApiKey        = "apikey"
 	TokenTypeMFAPreAuth    = "mfa_preauth"
 	TokenTypeMFARecovery   = "mfa_recovery"
+	TokenTypeSMSOTP        = "sms_otp"
 )
 
 // WebAuthn ceremony challenge types, stored on WebauthnChallenge.ChallengeType.

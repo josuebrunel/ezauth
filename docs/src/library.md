@@ -340,6 +340,13 @@ When using the form-based endpoints (e.g., `/auth/register`, `/auth/login`), `ez
 ### Magic Link Login (`/auth/passwordless/login`)
 -   `token` (Required, passed as a query parameter: `?token=...`)
 
+### SMS OTP Request (`/auth/sms-otp/request`)
+-   `phone` (Required)
+
+### SMS OTP Verify (`/auth/sms-otp/verify`)
+-   `phone` (Required)
+-   `code` (Required)
+
 ### MFA Login Verify (`/auth/mfa/login/verify`)
 -   `code` (Required, TOTP or recovery code; the pending `mfa_token` is read from the session, not the form)
 
@@ -398,6 +405,21 @@ user, tokens, err := auth.WebauthnFinishLogin(ctx, sessionKey, r)
 creds, err := auth.WebauthnCredentials(ctx, user.ID)
 err = auth.WebauthnDeleteCredential(ctx, user, credentialRecordID)
 ```
+
+## SMS OTP
+
+`ezauth` supports SMS-based one-time-password login, mirroring the passwordless (magic link) flow but via a 6-digit SMS code. An unrecognized phone number gets a temporary, unverified account, same as an unrecognized email does for passwordless. Requires `EZAUTH_SMS_TWILIO_ACCOUNT_SID`/`_AUTH_TOKEN`/`_FROM`; falls back to a mock sender otherwise. Phone numbers are enforced unique at the database level.
+
+```go
+err := auth.Service.SMSOTPRequest(ctx, service.RequestSMSOTP{Phone: "+15551234567"})
+
+tokens, err := auth.Service.SMSOTPVerify(ctx, service.RequestSMSOTPVerify{
+    Phone: "+15551234567",
+    Code:  "123456",
+})
+```
+
+`EZAUTH_SMS_OTP_BODY` customizes the SMS message template (`{{.Code}}`, `{{.Phone}}` available).
 
 ## Hooks
 

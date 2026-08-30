@@ -62,6 +62,10 @@ POST requests to these endpoints are automatically protected by `filippo.io/csrf
 `POST /auth/passwordless/request`
 `GET /auth/passwordless/login?token=...`
 
+### SMS OTP (Form)
+`POST /auth/sms-otp/request` (field: `phone`)
+`POST /auth/sms-otp/verify` (fields: `phone`, `code`)
+
 ### MFA (Form)
 `GET /auth/mfa/verify` (Redirects to `Pages.MFAVerify`)
 `POST /auth/mfa/login/verify` (Completes a step-up login using the session-stashed `mfa_token`)
@@ -195,6 +199,33 @@ Sends a magic login link to the user's email.
 `GET /auth/api/passwordless/login?token=...`
 
 Authenticates a user using a magic link token.
+
+**Response Data:** Same as Register.
+
+### SMS OTP Request
+`POST /auth/api/sms-otp/request`
+
+Sends a one-time login code to the given phone number. An unrecognized phone number gets a temporary, unverified account (same as an unrecognized email does for Passwordless Request).
+
+**Request Body:**
+```json
+{
+  "phone": "+15551234567"
+}
+```
+
+### SMS OTP Verify
+`POST /auth/api/sms-otp/verify`
+
+Authenticates a user using the one-time code sent via SMS. On success, the phone number is marked verified.
+
+**Request Body:**
+```json
+{
+  "phone": "+15551234567",
+  "code": "123456"
+}
+```
 
 **Response Data:** Same as Register.
 

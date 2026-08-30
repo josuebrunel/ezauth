@@ -76,6 +76,17 @@ Customize the subject and body of emails sent by `ezauth`. Templates use Go `tex
 | `EZAUTH_EMAIL_PASSWORD_RESET_SUBJECT` | Subject for password reset emails. | `Password Reset Request`                                     |
 | `EZAUTH_EMAIL_PASSWORD_RESET_BODY`    | Body for password reset emails.    | `Click the following link to reset your password: {{.Link}}` |
 
+## SMS OTP Settings
+
+Used for sending SMS one-time login codes. SMS OTP support falls back to a mock sender (no message actually sent) unless all three of `EZAUTH_SMS_TWILIO_ACCOUNT_SID`, `EZAUTH_SMS_TWILIO_AUTH_TOKEN`, and `EZAUTH_SMS_TWILIO_FROM` are set.
+
+| Variable                        | Description                              | Default |
+| -------------------------------- | ----------------------------------------- | ------- |
+| `EZAUTH_SMS_TWILIO_ACCOUNT_SID`  | Twilio Account SID.                       |         |
+| `EZAUTH_SMS_TWILIO_AUTH_TOKEN`   | Twilio Auth Token.                        |         |
+| `EZAUTH_SMS_TWILIO_FROM`         | The phone number to send from.            |         |
+| `EZAUTH_SMS_OTP_BODY`            | SMS body template. `{{.Code}}`, `{{.Phone}}` available. | `Your verification code is: {{.Code}}` |
+
 ## Form/Redirect Settings
 
 Used for the Form-based handlers (browser flows).

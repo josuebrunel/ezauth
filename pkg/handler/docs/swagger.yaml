@@ -705,6 +705,18 @@ definitions:
       email:
         type: string
     type: object
+  service.RequestSMSOTP:
+    properties:
+      phone:
+        type: string
+    type: object
+  service.RequestSMSOTPVerify:
+    properties:
+      code:
+        type: string
+      phone:
+        type: string
+    type: object
   service.TokenResponse:
     properties:
       access_token:
@@ -718,6 +730,9 @@ definitions:
     type: object
   webauthncose.COSEAlgorithmIdentifier:
     enum:
+    - -48
+    - -49
+    - -50
     - -7
     - -8
     - -9
@@ -734,11 +749,11 @@ definitions:
     - -258
     - -259
     - -65535
-    - -48
-    - -49
-    - -50
     type: integer
     x-enum-varnames:
+    - AlgMLDSA44
+    - AlgMLDSA65
+    - AlgMLDSA87
     - AlgES256
     - AlgEdDSA
     - AlgESP256
@@ -755,9 +770,6 @@ definitions:
     - AlgRS384
     - AlgRS512
     - AlgRS1
-    - AlgMLDSA44
-    - AlgMLDSA65
-    - AlgMLDSA87
 info:
   contact: {}
   description: Authentication service/library for Go.
@@ -887,6 +899,70 @@ paths:
       summary: Complete MFA step-up login
       tags:
       - mfa
+  /auth/api/sms-otp/request:
+    post:
+      consumes:
+      - application/json
+      description: Send a one-time login code to the user's phone number
+      parameters:
+      - description: SMS OTP Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestSMSOTP'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Request SMS OTP
+      tags:
+      - auth
+  /auth/api/sms-otp/verify:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate using the one-time code sent via SMS
+      parameters:
+      - description: SMS OTP Verify Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestSMSOTPVerify'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Verify SMS OTP
+      tags:
+      - auth
   /auth/api/webauthn/credentials:
     get:
       produces:

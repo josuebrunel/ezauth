@@ -96,6 +96,10 @@ func (q *MysqlQuerier) QueryUserGetByUsername(ctx context.Context, username stri
 	return mysql.Select(sm.From(models.TableUser), sm.Where(mysql.Quote(models.ColumnUsername).EQ(mysql.Arg(username))))
 }
 
+func (q *MysqlQuerier) QueryUserGetByPhone(ctx context.Context, phone string) bob.Query {
+	return mysql.Select(sm.From(models.TableUser), sm.Where(mysql.Quote(models.ColumnPhone).EQ(mysql.Arg(phone))))
+}
+
 func (q *MysqlQuerier) QueryUserGetByID(ctx context.Context, id string) bob.Query {
 	return mysql.Select(sm.From(models.TableUser), sm.Where(mysql.Quote("id").EQ(mysql.Arg(id))))
 }

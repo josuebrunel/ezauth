@@ -16,6 +16,7 @@ type Auth struct {
 	Cfg               *config.Config
 	Repo              *repository.Repository
 	Mailer            Mailer
+	SMS               SMSSender
 	PathPrefix        string
 	Hook              Hook
 	WebAuthn          *webauthn.WebAuthn
@@ -33,10 +34,19 @@ func New(cfg *config.Config, repo *repository.Repository, pathPrefix string) *Au
 		xlog.Warn("SMTP not configured, using mock mailer — emails will not be sent")
 	}
 
+	var sms SMSSender
+	if cfg.SMS.AccountSID != "" && cfg.SMS.AuthToken != "" && cfg.SMS.From != "" {
+		sms = NewTwilioSMSSender(cfg.SMS)
+	} else {
+		sms = NewMockSMSSender()
+		xlog.Warn("SMS provider not configured, using mock sender — SMS OTP codes will not be sent")
+	}
+
 	a := &Auth{
 		Cfg:             cfg,
 		Repo:            repo,
 		Mailer:          mailer,
+		SMS:             sms,
 		PathPrefix:      pathPrefix,
 		Hook:            DefaultHook{},
 		customProviders: make(map[string]OAuth2Provider),

@@ -207,6 +207,108 @@
                 }
             }
         },
+        "/auth/api/sms-otp/request": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Send a one-time login code to the user's phone number",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Request SMS OTP",
+                "parameters": [
+                    {
+                        "description": "SMS OTP Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.RequestSMSOTP"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-map_string_string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/api/sms-otp/verify": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Authenticate using the one-time code sent via SMS",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Verify SMS OTP",
+                "parameters": [
+                    {
+                        "description": "SMS OTP Verify Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.RequestSMSOTPVerify"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-service_TokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/api/webauthn/credentials": {
             "get": {
                 "security": [
@@ -2104,6 +2206,25 @@
                 }
             }
         },
+        "service.RequestSMSOTP": {
+            "type": "object",
+            "properties": {
+                "phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.RequestSMSOTPVerify": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                }
+            }
+        },
         "service.TokenResponse": {
             "type": "object",
             "properties": {
@@ -2124,6 +2245,9 @@
         "webauthncose.COSEAlgorithmIdentifier": {
             "type": "integer",
             "enum": [
+                -48,
+                -49,
+                -50,
                 -7,
                 -8,
                 -9,
@@ -2139,12 +2263,12 @@
                 -257,
                 -258,
                 -259,
-                -65535,
-                -48,
-                -49,
-                -50
+                -65535
             ],
             "x-enum-varnames": [
+                "AlgMLDSA44",
+                "AlgMLDSA65",
+                "AlgMLDSA87",
                 "AlgES256",
                 "AlgEdDSA",
                 "AlgESP256",
@@ -2160,10 +2284,7 @@
                 "AlgRS256",
                 "AlgRS384",
                 "AlgRS512",
-                "AlgRS1",
-                "AlgMLDSA44",
-                "AlgMLDSA65",
-                "AlgMLDSA87"
+                "AlgRS1"
             ]
         }
     },

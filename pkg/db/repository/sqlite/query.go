@@ -97,6 +97,10 @@ func (q *SqliteQuerier) QueryUserGetByUsername(ctx context.Context, username str
 	return sqlite.Select(sm.From(models.TableUser), sm.Where(sqlite.Quote(models.ColumnUsername).EQ(sqlite.Arg(username))))
 }
 
+func (q *SqliteQuerier) QueryUserGetByPhone(ctx context.Context, phone string) bob.Query {
+	return sqlite.Select(sm.From(models.TableUser), sm.Where(sqlite.Quote(models.ColumnPhone).EQ(sqlite.Arg(phone))))
+}
+
 func (q *SqliteQuerier) QueryUserGetByID(ctx context.Context, id string) bob.Query {
 	return sqlite.Select(sm.From(models.TableUser), sm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
 }

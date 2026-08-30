@@ -128,8 +128,8 @@ type EmailTemplateData struct {
 
 // RenderTemplate renders a template string with the given data.
 // Returns the original template string if parsing or execution fails.
-func RenderTemplate(tmpl string, data EmailTemplateData) string {
-	t, err := template.New("email").Parse(tmpl)
+func RenderTemplate[T any](tmpl string, data T) string {
+	t, err := template.New("template").Parse(tmpl)
 	if err != nil {
 		return tmpl
 	}

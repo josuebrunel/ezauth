@@ -112,6 +112,21 @@ type SMTP struct {
 	From     string `json:"from" env:"SMTP_FROM"`
 }
 
+// SMS defines the settings for the SMS OTP provider (Twilio-compatible REST API).
+// SMS OTP support is disabled unless AccountSID, AuthToken, and From are all set.
+type SMS struct {
+	AccountSID string `json:"account_sid" env:"SMS_TWILIO_ACCOUNT_SID"`
+	AuthToken  string `json:"auth_token" env:"SMS_TWILIO_AUTH_TOKEN"`
+	From       string `json:"from" env:"SMS_TWILIO_FROM"`
+}
+
+// SMSTemplates defines the customizable SMS OTP message template.
+// Uses Go text/template syntax with {{.Variable}} placeholders.
+// Available variable: {{.Code}}
+type SMSTemplates struct {
+	OTPBody string `json:"otp_body" env:"SMS_OTP_BODY" default:"Your verification code is: {{.Code}}"`
+}
+
 // EmailTemplates defines customizable email templates.
 // Templates use Go text/template syntax with {{.Variable}} placeholders.
 // Available variables: {{.Link}}, {{.Token}}, {{.Email}}
@@ -177,6 +192,8 @@ type Config struct {
 	OAuth2         OAuth2         `json:"oauth2"`
 	SMTP           SMTP           `json:"smtp"`
 	EmailTemplates EmailTemplates `json:"email_templates"`
+	SMS            SMS            `json:"sms"`
+	SMSTemplates   SMSTemplates   `json:"sms_templates"`
 	Redirects      Redirects      `json:"redirects"`
 	Pages          Pages          `json:"pages"`
 	TimeOut        time.Duration  `json:"timeout" env:"TIMEOUT" default:"30s"`
@@ -192,6 +209,7 @@ func (c Config) Sanitized() Config {
 	c.CSRFSecret = "***"
 	c.ApiKey = "***"
 	c.SMTP.Password = "***"
+	c.SMS.AuthToken = "***"
 	c.OAuth2.Google.ClientSecret = "***"
 	c.OAuth2.Github.ClientSecret = "***"
 	c.OAuth2.Facebook.ClientSecret = "***"

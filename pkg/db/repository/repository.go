@@ -25,6 +25,7 @@ type UserQuerier interface {
 	QueryUserInsert(ctx context.Context, user *models.User) bob.Query
 	QueryUserGetByEmail(ctx context.Context, email string) bob.Query
 	QueryUserGetByUsername(ctx context.Context, username string) bob.Query
+	QueryUserGetByPhone(ctx context.Context, phone string) bob.Query
 	QueryUserGetByID(ctx context.Context, id string) bob.Query
 	QueryUserGetByProvider(ctx context.Context, provider, providerID string) bob.Query
 	QueryUserUpdate(ctx context.Context, user *models.User) bob.Query
@@ -162,6 +163,17 @@ func (r Repository) UserGetByUsername(ctx context.Context, username string) (*mo
 	user, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
 	if err != nil {
 		xlog.Error("Failed to get user by username", "error", err, "username", username)
+		return nil, err
+	}
+	return user, nil
+}
+
+// UserGetByPhone retrieves a user by their phone number.
+func (r Repository) UserGetByPhone(ctx context.Context, phone string) (*models.User, error) {
+	query := r.QueryUserGetByPhone(ctx, phone)
+	user, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
+	if err != nil {
+		xlog.Error("Failed to get user by phone", "error", err)
 		return nil, err
 	}
 	return user, nil

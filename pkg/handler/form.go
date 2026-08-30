@@ -415,6 +415,53 @@ func (h *Handler) FormPasswordlessLogin(w http.ResponseWriter, r *http.Request) 
 	http.Redirect(w, r, h.svc.Cfg.Redirects.AfterLogin, http.StatusFound)
 }
 
+// FormSMSOTPRequest handles the request for an SMS one-time login code via form.
+func (h *Handler) FormSMSOTPRequest(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrInvalidRequestBody.Error())
+		return
+	}
+
+	req := service.RequestSMSOTP{
+		Phone: r.FormValue("phone"),
+	}
+
+	if err := h.svc.SMSOTPRequest(r.Context(), req); err != nil {
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, err.Error())
+		return
+	}
+
+	h.redirectWithSuccess(w, r, h.svc.Cfg.Pages.Login, "verification code sent")
+}
+
+// FormSMSOTPVerify handles login via an SMS one-time code submitted via form.
+func (h *Handler) FormSMSOTPVerify(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrInvalidRequestBody.Error())
+		return
+	}
+
+	req := service.RequestSMSOTPVerify{
+		Phone: r.FormValue("phone"),
+		Code:  r.FormValue("code"),
+	}
+
+	tokenResp, err := h.svc.SMSOTPVerify(r.Context(), req)
+	if err != nil {
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, err.Error())
+		return
+	}
+
+	if user, err := h.svc.Repo.UserGetByPhone(r.Context(), req.Phone); err == nil {
+		if err := h.svc.Hook.AfterUserSignedIn(r.Context(), user); err != nil {
+			xlog.Error("hook AfterUserSignedIn failed", "user_id", user.ID, "err", err)
+		}
+	}
+
+	h.setAuthCookies(r.Context(), tokenResp)
+	http.Redirect(w, r, h.svc.Cfg.Redirects.AfterLogin, http.StatusFound)
+}
+
 // FormPasswordResetRequest handles the request for a password reset link via form.
 func (h *Handler) FormPasswordResetRequest(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {

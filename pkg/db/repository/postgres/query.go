@@ -97,6 +97,10 @@ func (q *PSQLQuerier) QueryUserGetByUsername(ctx context.Context, username strin
 	return psql.Select(sm.From(psql.Quote(models.TableUser)), sm.Where(psql.Quote(models.ColumnUsername).EQ(psql.Arg(username))))
 }
 
+func (q *PSQLQuerier) QueryUserGetByPhone(ctx context.Context, phone string) bob.Query {
+	return psql.Select(sm.From(psql.Quote(models.TableUser)), sm.Where(psql.Quote(models.ColumnPhone).EQ(psql.Arg(phone))))
+}
+
 func (q *PSQLQuerier) QueryUserGetByID(ctx context.Context, id string) bob.Query {
 	return psql.Select(sm.From(psql.Quote(models.TableUser)), sm.Where(psql.Quote("id").EQ(psql.Arg(id))))
 }
