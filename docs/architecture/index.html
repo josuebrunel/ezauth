@@ -1162,10 +1162,13 @@
 <h3 id="service-business-logic"><code>Service</code> (Business Logic)</h3>
 <p>The <code>service</code> package (located in <code>pkg/service/</code>) contains the core authentication logic. It is independent of the HTTP layer. This is where you'll find logic for:</p>
 <ul>
-<li>User authentication and hashing.</li>
+<li>User authentication and hashing, including account lockout after repeated failed attempts.</li>
 <li>Token generation and validation (JWT and Refresh Tokens).</li>
 <li>Password reset and passwordless flows.</li>
-<li>Interaction with the Mailer.</li>
+<li>Multi-Factor Authentication (TOTP), WebAuthn/Passkeys, and SMS OTP.</li>
+<li>Admin impersonation, invitation-based onboarding, guarded email change, and admin user management.</li>
+<li>Interaction with the Mailer and, for SMS OTP, the <code>SMSSender</code>.</li>
+<li>Dispatching lifecycle events to the <code>Hook</code> interface (see <a href="../library/#hooks">Hooks</a>).</li>
 </ul>
 <h3 id="handler-http-layer"><code>Handler</code> (HTTP Layer)</h3>
 <p>The <code>handler</code> package (located in <code>pkg/handler/</code>) defines the RESTful API. It uses the <code>service</code> package to perform actions. It is responsible for:</p>
@@ -1190,6 +1193,8 @@
 <h2 id="extension-points">Extension Points</h2>
 <ul>
 <li><strong>Mailer</strong>: You can provide your own implementation of the <code>Mailer</code> interface if you need to use a service other than SMTP (e.g., SendGrid, Mailgun).</li>
+<li><strong>SMSSender</strong>: You can provide your own implementation of the <code>SMSSender</code> interface to deliver SMS OTP codes through your provider of choice (e.g., Twilio, SNS).</li>
+<li><strong>Hooks</strong>: Implement the <code>Hook</code> interface (or embed <code>service.DefaultHook</code> and override only what you need) to intercept before/after lifecycle events — user creation/update/deletion, sign-in/sign-out, password reset, OAuth2, MFA enable/disable, and impersonation start/end. See <a href="../library/#hooks">Hooks</a> for the full list and usage.</li>
 <li><strong>Custom Router</strong>: You can pass your own <code>chi.Router</code> to the <code>Handler</code> if you want to add global middlewares or customize the routing behavior.</li>
 </ul>
 

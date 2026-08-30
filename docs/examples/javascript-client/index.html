@@ -952,6 +952,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#step-up-login-multi-factor-authentication" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step-up Login (Multi-Factor Authentication)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#token-refresh" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1066,6 +1077,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#step-up-login-multi-factor-authentication" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step-up Login (Multi-Factor Authentication)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#token-refresh" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1162,6 +1184,61 @@ r.Handle(&quot;/*&quot;, http.FileServer(http.FS(staticFS)))
         return data.data; // The user object
     }
     return null;
+}
+</code></pre>
+<h3 id="step-up-login-multi-factor-authentication">Step-up Login (Multi-Factor Authentication)</h3>
+<p>If the account has TOTP MFA enabled, <code>POST /auth/api/login</code> doesn't return tokens directly — it returns <code>{ "mfa_required": true, "mfa_token": "..." }</code> instead. Prompt the user for their authenticator code and exchange it (plus the <code>mfa_token</code>) at <code>POST /auth/api/mfa/login/verify</code> to get real session tokens. Passing <code>remember_device: true</code> returns a <code>device_token</code>; send it back via the <code>X-Device-Token</code> header on future logins to skip the step-up prompt for <code>EZAUTH_TRUSTED_DEVICE_TTL</code>.</p>
+<pre><code class="language-javascript">async function login(email, password) {
+    const response = await fetch('/auth/api/login', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            // Send a previously-issued device token, if any, to skip MFA on trusted devices.
+            'X-Device-Token': localStorage.getItem('device_token') || '',
+        },
+        body: JSON.stringify({ email, password })
+    });
+
+    if (!response.ok) return { ok: false };
+
+    const { data } = await response.json();
+
+    if (data.mfa_required) {
+        // Stash the mfa_token; the UI should now prompt for a TOTP/recovery code.
+        sessionStorage.setItem('mfa_token', data.mfa_token);
+        return { ok: true, mfaRequired: true };
+    }
+
+    storeTokens(data);
+    return { ok: true, mfaRequired: false };
+}
+
+async function verifyMFA(code, rememberDevice = false) {
+    const mfaToken = sessionStorage.getItem('mfa_token');
+
+    const response = await fetch('/auth/api/mfa/login/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mfa_token: mfaToken, code, remember_device: rememberDevice })
+    });
+
+    if (!response.ok) return false; // wrong code — let the user retry
+
+    const { data } = await response.json();
+    sessionStorage.removeItem('mfa_token');
+
+    if (data.device_token) {
+        // Only present when remember_device was true; persist for the X-Device-Token header above.
+        localStorage.setItem('device_token', data.device_token);
+    }
+
+    storeTokens(data);
+    return true;
+}
+
+function storeTokens({ access_token, refresh_token }) {
+    localStorage.setItem('access_token', access_token);
+    localStorage.setItem('refresh_token', refresh_token);
 }
 </code></pre>
 <h3 id="token-refresh">Token Refresh</h3>

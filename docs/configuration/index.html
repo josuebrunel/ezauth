@@ -435,6 +435,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#webauthnpasskey-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WebAuthn/Passkey Settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#hashing-settings" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -483,6 +494,17 @@
     <span class="md-ellipsis">
       
         Email Templates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sms-otp-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SMS OTP Settings
       
     </span>
   </a>
@@ -1155,6 +1177,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#webauthnpasskey-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WebAuthn/Passkey Settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#hashing-settings" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1203,6 +1236,17 @@
     <span class="md-ellipsis">
       
         Email Templates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sms-otp-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SMS OTP Settings
       
     </span>
   </a>
@@ -1414,6 +1458,69 @@
 <td>Request timeout duration.</td>
 <td><code>30s</code></td>
 </tr>
+<tr>
+<td><code>EZAUTH_MFA_ISSUER</code></td>
+<td>Issuer name shown in authenticator apps for TOTP MFA.</td>
+<td><code>EzAuth</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_TRUSTED_DEVICE_TTL</code></td>
+<td>How long a "remembered" device skips MFA step-up.</td>
+<td><code>720h</code> (30 days)</td>
+</tr>
+<tr>
+<td><code>EZAUTH_TRUSTED_DEVICE_COOKIE_NAME</code></td>
+<td>Cookie name for the trusted-device token (form/cookie clients).</td>
+<td><code>ezauth_device</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_ACCOUNT_LOCKOUT_ENABLED</code></td>
+<td>Count failed logins and auto-lock accounts after too many.</td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS</code></td>
+<td>Consecutive failed attempts before locking the account.</td>
+<td><code>5</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_ACCOUNT_LOCKOUT_DURATION</code></td>
+<td>How long a locked account stays locked before auto-unlocking.</td>
+<td><code>15m</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_INVITATION_TTL</code></td>
+<td>How long an invitation stays valid before expiring.</td>
+<td><code>168h</code> (7 days)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="webauthnpasskey-settings">WebAuthn/Passkey Settings</h2>
+<p>WebAuthn support is disabled unless both <code>EZAUTH_WEBAUTHN_RP_ID</code> and <code>EZAUTH_WEBAUTHN_RP_ORIGINS</code> are set.</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EZAUTH_WEBAUTHN_RP_ID</code></td>
+<td>Relying Party ID: the effective domain (e.g. <code>example.com</code>, no scheme/port).</td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_WEBAUTHN_RP_DISPLAY_NAME</code></td>
+<td>Relying Party display name shown during registration.</td>
+<td><code>EzAuth</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_WEBAUTHN_RP_ORIGINS</code></td>
+<td>Comma-separated list of allowed origins (e.g. <code>https://example.com</code>).</td>
+<td></td>
+</tr>
 </tbody>
 </table>
 <h2 id="hashing-settings">Hashing Settings</h2>
@@ -1577,6 +1684,69 @@
 <td>Body for password reset emails.</td>
 <td><code>Click the following link to reset your password: {{.Link}}</code></td>
 </tr>
+<tr>
+<td><code>EZAUTH_EMAIL_INVITATION_SUBJECT</code></td>
+<td>Subject for invitation emails.</td>
+<td><code>You've been invited</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_EMAIL_INVITATION_BODY</code></td>
+<td>Body for invitation emails.</td>
+<td><code>Click the following link to accept your invitation: {{.Link}}</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_EMAIL_CHANGE_SUBJECT</code></td>
+<td>Subject for the verification email sent to a <em>new</em> address.</td>
+<td><code>Confirm your new email address</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_EMAIL_CHANGE_BODY</code></td>
+<td>Body for the verification email sent to a <em>new</em> address.</td>
+<td><code>Click the following link to confirm your new email address: {{.Link}}</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_EMAIL_CHANGE_NOTIFY_SUBJECT</code></td>
+<td>Subject for the notice sent to the <em>current</em> address.</td>
+<td><code>Your email address is being changed</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_EMAIL_CHANGE_NOTIFY_BODY</code></td>
+<td>Body for the notice sent to the <em>current</em> address. <code>{{.NewEmail}}</code> available.</td>
+<td><code>A request was made to change the email on your account to {{.NewEmail}}. If this wasn't you, please secure your account immediately.</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="sms-otp-settings">SMS OTP Settings</h2>
+<p>Used for sending SMS one-time login codes. SMS OTP support falls back to a mock sender (no message actually sent) unless all three of <code>EZAUTH_SMS_TWILIO_ACCOUNT_SID</code>, <code>EZAUTH_SMS_TWILIO_AUTH_TOKEN</code>, and <code>EZAUTH_SMS_TWILIO_FROM</code> are set.</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EZAUTH_SMS_TWILIO_ACCOUNT_SID</code></td>
+<td>Twilio Account SID.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_SMS_TWILIO_AUTH_TOKEN</code></td>
+<td>Twilio Auth Token.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_SMS_TWILIO_FROM</code></td>
+<td>The phone number to send from.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_SMS_OTP_BODY</code></td>
+<td>SMS body template. <code>{{.Code}}</code>, <code>{{.Phone}}</code> available.</td>
+<td><code>Your verification code is: {{.Code}}</code></td>
+</tr>
 </tbody>
 </table>
 <h2 id="formredirect-settings">Form/Redirect Settings</h2>
@@ -1609,6 +1779,16 @@
 <td><code>EZAUTH_REGISTER_PAGE_URL</code></td>
 <td>URL of your custom Register page (for redirects).</td>
 <td><code>/register</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_MFA_VERIFY_PAGE_URL</code></td>
+<td>URL of your custom MFA code-entry page (for step-up login redirects).</td>
+<td><code>/mfa/verify</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_INVITATION_ACCEPT_PAGE_URL</code></td>
+<td>URL of your custom invitation-acceptance page.</td>
+<td><code>/invitation/accept</code></td>
 </tr>
 </tbody>
 </table>

@@ -1027,19 +1027,31 @@
 <p><code>ezauth</code> is a simple and easy-to-use authentication library and service for Golang. It provides a robust set of features to handle user registration, login, session management, and more.</p>
 <h2 id="features">Features</h2>
 <ul>
-<li><strong>Email/Password Authentication</strong>: Secure user registration and login.</li>
+<li><strong>Email/Password Authentication</strong>: Secure user registration and login, with account lockout after repeated failed attempts.</li>
 <li><strong>JWT-based Sessions</strong>: Access and Refresh tokens with rotation for enhanced security.</li>
 <li><strong>OAuth2 Support</strong>: Built-in support for Google, GitHub, Facebook, Discord, GitLab, Slack, LinkedIn, and Spotify, plus custom/OIDC provider registration.</li>
 <li><strong>Password Reset &amp; Passwordless</strong>: Magic link and password reset flows.</li>
+<li><strong>Multi-Factor Authentication</strong>: TOTP-based MFA with step-up login, recovery codes, and "remember this device" trusted devices.</li>
+<li><strong>WebAuthn / Passkeys</strong>: Passwordless registration and login via platform/roaming authenticators.</li>
+<li><strong>SMS OTP</strong>: One-time codes over SMS for phone-based login/signup, via a pluggable <code>SMSSender</code> interface.</li>
+<li><strong>Admin Impersonation</strong>: Admins can act as another user for support/debugging, then swap back to their own session.</li>
+<li><strong>Invitation-Based Onboarding</strong>: Invite users by email with pre-verified addresses and pre-assigned roles.</li>
+<li><strong>Guarded Email Change</strong>: Email changes require the current password and a confirmation link to the new address.</li>
+<li><strong>Admin User Management</strong>: Search/filter/paginate users, suspend/reactivate accounts, and view auth history.</li>
 <li><strong>Extended User Profiles</strong>: Store additional user information like username, name, locale, timezone, and roles.</li>
-<li><strong>Multi-Database Support</strong>: Support for SQLite and PostgreSQL.</li>
+<li><strong>Extensible Hooks</strong>: Intercept before/after lifecycle events (user creation, sign-in, MFA, impersonation, and more).</li>
+<li><strong>Multi-Database Support</strong>: Support for SQLite, PostgreSQL, and MySQL.</li>
 <li><strong>Flexible Integration</strong>: Use it as a standalone service or embed it as a library.</li>
 </ul>
+<blockquote>
+<p>[!IMPORTANT]
+<code>ezauth</code> performs no built-in authorization. Admin-facing features (Impersonation, Invitations, Admin User Management) enforce no role checks themselves — your application is responsible for verifying the caller is allowed (e.g. <code>caller.HasRole("admin")</code>) before exposing them.</p>
+</blockquote>
 <h2 id="getting-started">Getting Started</h2>
 <p><code>ezauth</code> can be used in two primary ways:</p>
 <ol>
+<li><strong><a href="library/">Library</a></strong>: Embed <code>ezauth</code> directly into your Go application. This is the primary, most flexible way to use <code>ezauth</code>.</li>
 <li><strong><a href="standalone/">Standalone Service</a></strong>: Run <code>ezauth</code> as an independent authentication service.</li>
-<li><strong><a href="library/">Library</a></strong>: Embed <code>ezauth</code> directly into your Go application.</li>
 </ol>
 <h2 id="documentation-sections">Documentation Sections</h2>
 <ul>

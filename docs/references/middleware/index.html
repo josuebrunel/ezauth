@@ -736,10 +736,21 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#loginrequired" class="md-nav__link">
+  <a href="#loginrequiredmiddleware" class="md-nav__link">
     <span class="md-ellipsis">
       
-        LoginRequired
+        LoginRequiredMiddleware
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sessionmiddleware" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SessionMiddleware
       
     </span>
   </a>
@@ -1030,10 +1041,21 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#loginrequired" class="md-nav__link">
+  <a href="#loginrequiredmiddleware" class="md-nav__link">
     <span class="md-ellipsis">
       
-        LoginRequired
+        LoginRequiredMiddleware
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sessionmiddleware" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SessionMiddleware
       
     </span>
   </a>
@@ -1118,22 +1140,29 @@
 <h1 id="middleware-reference">Middleware Reference</h1>
 <p><code>ezauth</code> provides several middlewares to handle authentication and authorization.</p>
 <h2 id="core-middleware">Core Middleware</h2>
-<h3 id="loginrequired"><code>LoginRequired</code></h3>
+<h3 id="loginrequiredmiddleware"><code>LoginRequiredMiddleware</code></h3>
 <p>Checks if a user is authenticated. This middleware is "content-aware":</p>
 <ul>
 <li><strong>Browser Request</strong>: Redirects to the configured Login Page.</li>
 <li><strong>API Request</strong> (<code>/api/*</code> or <code>Accept: application/json</code>): Returns <code>401 Unauthorized</code>.</li>
 </ul>
-<pre><code class="language-go">func (h *Handler) LoginRequired(next http.Handler) http.Handler
+<pre><code class="language-go">func (h *Handler) LoginRequiredMiddleware(next http.Handler) http.Handler
 </code></pre>
 <p><strong>Usage:</strong></p>
 <pre><code class="language-go">r.Group(func(r chi.Router) {
-    r.Use(auth.Handler.LoginRequired)
+    r.Use(auth.LoginRequiredMiddleware)
     r.Get(&quot;/dashboard&quot;, dashboardHandler)
 })
 </code></pre>
+<h3 id="sessionmiddleware"><code>SessionMiddleware</code></h3>
+<p>Manages the cookie-based session (via <code>scs</code>) and loads the authenticated user into the request context for Form-based (non-API) routes. Must be mounted on the router for <code>GetSessionUser</code>, <code>GetSessionTokens</code>, <code>IsAuthenticated</code>, and flash-message helpers to work.</p>
+<pre><code class="language-go">func (h *Handler) SessionMiddleware(next http.Handler) http.Handler
+</code></pre>
+<p><strong>Usage:</strong></p>
+<pre><code class="language-go">r.Use(auth.SessionMiddleware)
+</code></pre>
 <h3 id="loadusermiddleware"><code>LoadUserMiddleware</code></h3>
-<p>Loads the authenticated user into the request context. This allows downstream handlers to use <code>auth.GetSessionUser(ctx)</code> without needing access to the <code>Handler</code> instance. This is useful if you want to use <code>ezauth</code>'s user data in your own handlers that are not part of the <code>auth</code> package logic.</p>
+<p>Loads the authenticated user into the request context from a Bearer token or API key, without requiring the cookie-based session. This allows downstream handlers to use <code>auth.GetSessionUser(ctx)</code> without needing access to the <code>Handler</code> instance. This is useful if you want to use <code>ezauth</code>'s user data in your own handlers that are not part of the <code>auth</code> package logic.</p>
 <pre><code class="language-go">func (h *Handler) LoadUserMiddleware(next http.Handler) http.Handler
 </code></pre>
 <h2 id="json-api-middleware">JSON API Middleware</h2>
