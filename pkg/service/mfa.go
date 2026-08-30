@@ -46,10 +46,11 @@ type LoginResponse struct {
 }
 
 // CompleteBasicLogin finishes a password-authenticated login. If the user has MFA
-// enabled, it issues a short-lived pre-auth token instead of a full session, which
-// must be exchanged via MFALoginVerify. Otherwise it mints session tokens directly.
-func (a *Auth) CompleteBasicLogin(ctx context.Context, user *models.User) (*LoginResponse, error) {
-	if user.MfaEnabled {
+// enabled and deviceToken isn't a trusted device for this user (see TrustDevice),
+// it issues a short-lived pre-auth token instead of a full session, which must be
+// exchanged via MFALoginVerify. Otherwise it mints session tokens directly.
+func (a *Auth) CompleteBasicLogin(ctx context.Context, user *models.User, deviceToken string) (*LoginResponse, error) {
+	if user.MfaEnabled && !a.IsTrustedDevice(ctx, user, deviceToken) {
 		mfaToken, err := a.mfaIssuePreAuthToken(ctx, user)
 		if err != nil {
 			xlog.Error("failed to issue mfa pre-auth token", "user_id", user.ID, "err", err)
@@ -181,39 +182,50 @@ func (a *Auth) MFADisable(ctx context.Context, user *models.User, code string) e
 
 // MFALoginVerify completes a step-up login: it validates the pre-auth token issued
 // by CompleteBasicLogin and a TOTP or recovery code, then mints real session tokens.
-func (a *Auth) MFALoginVerify(ctx context.Context, mfaToken, code string) (*models.User, *TokenResponse, error) {
+// When rememberDevice is true, it also issues a trusted-device token (see
+// TrustDevice) so future logins from the same device can skip this step-up for
+// Cfg.TrustedDevice.TTL; deviceToken is empty when rememberDevice is false.
+func (a *Auth) MFALoginVerify(ctx context.Context, mfaToken, code string, rememberDevice bool) (user *models.User, tokens *TokenResponse, deviceToken string, err error) {
 	token, err := a.Repo.TokenGetByToken(ctx, mfaToken)
 	if err != nil || token.TokenType != models.TokenTypeMFAPreAuth {
 		xlog.Debug("mfa login verify failed: token not found or wrong type", "err", err)
-		return nil, nil, ErrInvalidOrExpiredMFAToken
+		return nil, nil, "", ErrInvalidOrExpiredMFAToken
 	}
 
 	if token.Revoked || time.Now().After(token.ExpiresAt) {
 		xlog.Debug("mfa login verify failed: token expired or revoked", "token_id", token.ID)
-		return nil, nil, ErrInvalidOrExpiredMFAToken
+		return nil, nil, "", ErrInvalidOrExpiredMFAToken
 	}
 
-	user, err := a.Repo.UserGetByID(ctx, token.UserID)
+	user, err = a.Repo.UserGetByID(ctx, token.UserID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 
 	if !a.mfaValidateAnyCode(ctx, user, code) {
 		xlog.Debug("mfa login verify failed: invalid code", "user_id", user.ID)
-		return nil, nil, ErrInvalidMFACode
+		return nil, nil, "", ErrInvalidMFACode
 	}
 
 	if err := a.Repo.TokenRevoke(ctx, token.ID); err != nil {
 		xlog.Error("failed to revoke mfa pre-auth token", "token_id", token.ID, "err", err)
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 
-	tokens, err := a.TokenCreate(ctx, user)
+	if rememberDevice {
+		deviceToken, err = a.TrustDevice(ctx, user, "")
+		if err != nil {
+			xlog.Warn("failed to issue trusted device token", "user_id", user.ID, "err", err)
+			deviceToken = ""
+		}
+	}
+
+	tokens, err = a.TokenCreate(ctx, user)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 	xlog.Info("mfa step-up completed", "user_id", user.ID)
-	return user, tokens, nil
+	return user, tokens, deviceToken, nil
 }
 
 // mfaValidateAnyCode accepts either a live TOTP code or an unused recovery code.

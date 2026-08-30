@@ -349,6 +349,7 @@ When using the form-based endpoints (e.g., `/auth/register`, `/auth/login`), `ez
 
 ### MFA Login Verify (`/auth/mfa/login/verify`)
 -   `code` (Required, TOTP or recovery code; the pending `mfa_token` is read from the session, not the form)
+-   `remember_device` (Optional; when set, marks the device trusted and sets the trusted-device cookie)
 
 ### MFA Confirm (`/auth/mfa/confirm`)
 -   `code` (Required, TOTP code from the authenticator app)
@@ -369,10 +370,10 @@ enroll, err := auth.MFAEnroll(ctx, user)
 
 recoveryCodes, err := auth.MFAConfirm(ctx, user, code) // enables MFA
 
-// Step-up login:
-loginResp, err := auth.CompleteBasicLogin(ctx, user)
+// Step-up login (deviceToken is "" if the caller doesn't support "remember this device"):
+loginResp, err := auth.CompleteBasicLogin(ctx, user, deviceToken)
 if loginResp.MFARequired {
-    user, tokens, err := auth.MFALoginVerify(ctx, loginResp.MFAToken, code)
+    user, tokens, newDeviceToken, err := auth.MFALoginVerify(ctx, loginResp.MFAToken, code, rememberDevice)
 }
 
 // Disabling:
@@ -380,6 +381,17 @@ err = auth.MFADisable(ctx, user, code)
 ```
 
 For cookie-based (form) clients, `auth.GetMFAEnrollment(ctx)` reads back the pending secret/QR URL stashed in the session by `POST /auth/mfa/enroll`, and `Pages.MFAVerify` (`EZAUTH_MFA_VERIFY_PAGE_URL`) is where `FormLogin` redirects when a step-up is required. `EZAUTH_MFA_ISSUER` sets the issuer name shown in authenticator apps.
+
+### Remember This Device (Trusted Devices)
+
+Passing `rememberDevice=true` to `MFALoginVerify` also issues a trusted-device token; presenting it to `CompleteBasicLogin` on a later login skips MFA step-up entirely until it expires (`EZAUTH_TRUSTED_DEVICE_TTL`, default 30 days).
+
+```go
+devices, err := auth.TrustedDevices(ctx, user.ID)
+err = auth.RevokeTrustedDevice(ctx, user, devices[0].ID)
+```
+
+JSON API clients send the stored device token back via the `X-Device-Token` header on `POST /auth/api/login`. Form/cookie clients get this for free: `FormLogin` reads the trusted-device cookie itself, and `FormMFALoginVerify` sets it (`EZAUTH_TRUSTED_DEVICE_COOKIE_NAME`) when the verification form's `remember_device` field is set.
 
 ## WebAuthn / Passkeys
 

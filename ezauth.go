@@ -356,15 +356,35 @@ func (e *EzAuth) MFADisable(ctx context.Context, user *models.User, code string)
 }
 
 // CompleteBasicLogin finishes a password-authenticated login, issuing a step-up
-// MFA token instead of session tokens if the user has MFA enabled.
-func (e *EzAuth) CompleteBasicLogin(ctx context.Context, user *models.User) (*service.LoginResponse, error) {
-	return e.Service.CompleteBasicLogin(ctx, user)
+// MFA token instead of session tokens if the user has MFA enabled and deviceToken
+// isn't a trusted device for this user (see TrustDevice). Pass an empty
+// deviceToken if the caller doesn't support "remember this device".
+func (e *EzAuth) CompleteBasicLogin(ctx context.Context, user *models.User, deviceToken string) (*service.LoginResponse, error) {
+	return e.Service.CompleteBasicLogin(ctx, user, deviceToken)
 }
 
 // MFALoginVerify completes a step-up login: it validates the pre-auth token issued
-// by CompleteBasicLogin and a TOTP or recovery code, then mints real session tokens.
-func (e *EzAuth) MFALoginVerify(ctx context.Context, mfaToken, code string) (*models.User, *service.TokenResponse, error) {
-	return e.Service.MFALoginVerify(ctx, mfaToken, code)
+// by CompleteBasicLogin and a TOTP or recovery code, then mints real session
+// tokens. When rememberDevice is true, deviceToken is also set; pass it back to
+// CompleteBasicLogin on a future login from the same device to skip step-up.
+func (e *EzAuth) MFALoginVerify(ctx context.Context, mfaToken, code string, rememberDevice bool) (user *models.User, tokens *service.TokenResponse, deviceToken string, err error) {
+	return e.Service.MFALoginVerify(ctx, mfaToken, code, rememberDevice)
+}
+
+// TrustDevice issues a new trusted-device token for user, valid for
+// Cfg.TrustedDevice.TTL, so future logins from that device skip MFA step-up.
+func (e *EzAuth) TrustDevice(ctx context.Context, user *models.User, name string) (string, error) {
+	return e.Service.TrustDevice(ctx, user, name)
+}
+
+// TrustedDevices lists the trusted devices registered for a user.
+func (e *EzAuth) TrustedDevices(ctx context.Context, userID string) ([]service.TrustedDeviceInfo, error) {
+	return e.Service.TrustedDevices(ctx, userID)
+}
+
+// RevokeTrustedDevice revokes one of user's trusted devices by its record ID.
+func (e *EzAuth) RevokeTrustedDevice(ctx context.Context, user *models.User, deviceID string) error {
+	return e.Service.RevokeTrustedDevice(ctx, user, deviceID)
 }
 
 // GetMFAEnrollment returns the TOTP secret and otpauth:// URL stashed for the

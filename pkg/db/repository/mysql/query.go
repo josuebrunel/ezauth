@@ -251,6 +251,17 @@ func (q *MysqlQuerier) QueryTokenGetByToken(ctx context.Context, token string) b
 	return mysql.Select(sm.From(models.TableToken), sm.Where(mysql.Quote(models.ColumnToken).EQ(mysql.Arg(token))))
 }
 
+func (q *MysqlQuerier) QueryTokenListByUserIDAndType(ctx context.Context, userID, tokenType string) bob.Query {
+	return mysql.Select(
+		sm.From(models.TableToken),
+		sm.Where(
+			mysql.Quote(models.ColumnUserID).EQ(mysql.Arg(userID)).
+				And(mysql.Quote(models.ColumnTokenType).EQ(mysql.Arg(tokenType))).
+				And(mysql.Quote(models.ColumnRevoked).EQ(mysql.Arg(false))),
+		),
+	)
+}
+
 func (q *MysqlQuerier) QueryTokenRevoke(ctx context.Context, id string) bob.Query {
 	return mysql.Update(
 		um.Table(models.TableToken),

@@ -115,7 +115,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	loginResp, err := h.svc.CompleteBasicLogin(r.Context(), user)
+	loginResp, err := h.svc.CompleteBasicLogin(r.Context(), user, r.Header.Get(DeviceTokenHeader))
 	if err != nil {
 		WriteJSONResponseError(w, http.StatusInternalServerError, ErrCouldNotCreateToken)
 		return

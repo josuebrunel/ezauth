@@ -164,6 +164,8 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 			r.Post("/webauthn/register/finish", h.FormWebauthnRegisterFinish)
 			r.Get("/webauthn/credentials", h.FormWebauthnCredentialsList)
 			r.Delete("/webauthn/credentials/{id}", h.FormWebauthnCredentialDelete)
+			r.Get("/trusted-devices", h.FormTrustedDevicesList)
+			r.Delete("/trusted-devices/{id}", h.FormTrustedDeviceRevoke)
 		})
 
 		// Routes protected by API Key
@@ -200,6 +202,8 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 					r.Post("/webauthn/register/finish", h.WebauthnRegisterFinish)
 					r.Get("/webauthn/credentials", h.WebauthnCredentialsList)
 					r.Delete("/webauthn/credentials/{id}", h.WebauthnCredentialDelete)
+					r.Get("/trusted-devices", h.TrustedDevicesList)
+					r.Delete("/trusted-devices/{id}", h.TrustedDeviceRevoke)
 				})
 			})
 		})

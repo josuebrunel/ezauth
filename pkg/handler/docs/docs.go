@@ -196,7 +196,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.ApiResponse-service_TokenResponse"
+                            "$ref": "#/definitions/handler.ApiResponse-handler_mfaLoginVerifyResponse"
                         }
                     },
                     "400": {
@@ -309,6 +309,81 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/api/trusted-devices": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mfa"
+                ],
+                "summary": "List trusted devices",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-array_service_TrustedDeviceInfo"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/api/trusted-devices/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mfa"
+                ],
+                "summary": "Revoke a trusted device",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Trusted device record ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-map_string_string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.ApiResponse-string"
                         }
@@ -1255,6 +1330,20 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.ApiResponse-array_service_TrustedDeviceInfo": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/service.TrustedDeviceInfo"
+                    }
+                },
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
         "handler.ApiResponse-handler_ImpersonateResponse": {
             "type": "object",
             "properties": {
@@ -1271,6 +1360,17 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "$ref": "#/definitions/handler.mfaConfirmResponse"
+                },
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.ApiResponse-handler_mfaLoginVerifyResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handler.mfaLoginVerifyResponse"
                 },
                 "error": {
                     "type": "string"
@@ -1467,6 +1567,29 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "mfa_token": {
+                    "type": "string"
+                },
+                "remember_device": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handler.mfaLoginVerifyResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "device_token": {
+                    "type": "string"
+                },
+                "expires_in": {
+                    "type": "integer"
+                },
+                "refresh_token": {
+                    "type": "string"
+                },
+                "token_type": {
                     "type": "string"
                 }
             }
@@ -2249,12 +2372,26 @@ const docTemplate = `{
                 }
             }
         },
+        "service.TrustedDeviceInfo": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "webauthncose.COSEAlgorithmIdentifier": {
             "type": "integer",
             "enum": [
-                -48,
-                -49,
-                -50,
                 -7,
                 -8,
                 -9,
@@ -2270,12 +2407,12 @@ const docTemplate = `{
                 -257,
                 -258,
                 -259,
-                -65535
+                -65535,
+                -48,
+                -49,
+                -50
             ],
             "x-enum-varnames": [
-                "AlgMLDSA44",
-                "AlgMLDSA65",
-                "AlgMLDSA87",
                 "AlgES256",
                 "AlgEdDSA",
                 "AlgESP256",
@@ -2291,7 +2428,10 @@ const docTemplate = `{
                 "AlgRS256",
                 "AlgRS384",
                 "AlgRS512",
-                "AlgRS1"
+                "AlgRS1",
+                "AlgMLDSA44",
+                "AlgMLDSA65",
+                "AlgMLDSA87"
             ]
         }
     },

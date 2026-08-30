@@ -103,7 +103,12 @@ func (h *Handler) FormLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	loginResp, err := h.svc.CompleteBasicLogin(r.Context(), user)
+	deviceToken := ""
+	if c, err := r.Cookie(h.svc.Cfg.TrustedDevice.CookieName); err == nil {
+		deviceToken = c.Value
+	}
+
+	loginResp, err := h.svc.CompleteBasicLogin(r.Context(), user, deviceToken)
 	if err != nil {
 		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrCouldNotCreateToken.Error())
 		return
@@ -143,13 +148,26 @@ func (h *Handler) FormMFALoginVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, tokenResp, err := h.svc.MFALoginVerify(r.Context(), mfaToken, code)
+	rememberDevice := r.FormValue("remember_device") != ""
+	user, tokenResp, deviceToken, err := h.svc.MFALoginVerify(r.Context(), mfaToken, code, rememberDevice)
 	if err != nil {
 		h.redirectWithError(w, r, h.svc.Cfg.Pages.MFAVerify, err.Error())
 		return
 	}
 
 	h.Session.Remove(r.Context(), sessionMFATokenKey)
+
+	if deviceToken != "" {
+		http.SetCookie(w, &http.Cookie{
+			Name:     h.svc.Cfg.TrustedDevice.CookieName,
+			Value:    deviceToken,
+			Path:     "/",
+			Expires:  time.Now().Add(h.svc.Cfg.TrustedDevice.TTL),
+			HttpOnly: true,
+			Secure:   strings.HasPrefix(h.svc.Cfg.BaseURL, "https://"),
+			SameSite: http.SameSiteLaxMode,
+		})
+	}
 
 	if err := h.svc.Hook.AfterUserSignedIn(r.Context(), user); err != nil {
 		xlog.Error("hook AfterUserSignedIn failed", "user_id", user.ID, "err", err)

@@ -36,6 +36,7 @@ type TokenQuerier interface {
 	QueryTokenInsert(ctx context.Context, token *models.Token) bob.Query
 	QueryTokenGetByID(ctx context.Context, id string) bob.Query
 	QueryTokenGetByToken(ctx context.Context, token string) bob.Query
+	QueryTokenListByUserIDAndType(ctx context.Context, userID, tokenType string) bob.Query
 	QueryTokenRevoke(ctx context.Context, id string) bob.Query
 	QueryTokenRevokeAllByUserID(ctx context.Context, userID string) bob.Query
 	QueryTokenDelete(ctx context.Context, id string) bob.Query
@@ -261,6 +262,18 @@ func (r Repository) TokenGetByToken(ctx context.Context, tokenValue string) (*mo
 		return nil, err
 	}
 	return token, nil
+}
+
+// TokenListByUserIDAndType lists all non-revoked tokens of a given type for a user
+// (e.g. trusted devices).
+func (r Repository) TokenListByUserIDAndType(ctx context.Context, userID, tokenType string) ([]*models.Token, error) {
+	query := r.QueryTokenListByUserIDAndType(ctx, userID, tokenType)
+	tokens, err := bob.All(ctx, r.bdb, query, scan.StructMapper[*models.Token]())
+	if err != nil {
+		xlog.Error("Failed to list tokens by user and type", "error", err, "user_id", userID, "token_type", tokenType)
+		return nil, err
+	}
+	return tokens, nil
 }
 
 // TokenRevoke marks a token as revoked in the database.

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	ezmiddleware "github.com/josuebrunel/ezauth/pkg/handler/middleware"
+	"github.com/josuebrunel/ezauth/pkg/service"
 	"github.com/josuebrunel/gopkg/xlog"
 )
 
@@ -17,8 +18,14 @@ type mfaConfirmResponse struct {
 }
 
 type mfaLoginVerifyRequest struct {
-	MFAToken string `json:"mfa_token"`
-	Code     string `json:"code"`
+	MFAToken       string `json:"mfa_token"`
+	Code           string `json:"code"`
+	RememberDevice bool   `json:"remember_device"`
+}
+
+type mfaLoginVerifyResponse struct {
+	*service.TokenResponse
+	DeviceToken string `json:"device_token,omitempty"`
 }
 
 // MFAEnroll begins TOTP enrollment for the authenticated user.
@@ -152,6 +159,8 @@ func (h *Handler) MFADisable(w http.ResponseWriter, r *http.Request) {
 }
 
 // MFALoginVerify completes a step-up login started by Login when MFA is required.
+// If remember_device is true, the response also carries a device_token; sending
+// it back via the X-Device-Token header on a future Login skips this step-up.
 // @Summary Complete MFA step-up login
 // @Description Exchanges an mfa_token and TOTP/recovery code for session tokens
 // @Tags mfa
@@ -159,7 +168,7 @@ func (h *Handler) MFADisable(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param request body mfaLoginVerifyRequest true "MFA Login Verify Request"
 // @Security ApiKeyAuth
-// @Success 200 {object} ApiResponse[service.TokenResponse]
+// @Success 200 {object} ApiResponse[mfaLoginVerifyResponse]
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 401 {object} ApiResponse[string]
 // @Router /auth/api/mfa/login/verify [post]
@@ -178,7 +187,7 @@ func (h *Handler) MFALoginVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, tokenResp, err := h.svc.MFALoginVerify(r.Context(), req.MFAToken, req.Code)
+	user, tokenResp, deviceToken, err := h.svc.MFALoginVerify(r.Context(), req.MFAToken, req.Code, req.RememberDevice)
 	if err != nil {
 		WriteJSONResponseError(w, http.StatusUnauthorized, err)
 		return
@@ -188,5 +197,5 @@ func (h *Handler) MFALoginVerify(w http.ResponseWriter, r *http.Request) {
 		xlog.Error("hook AfterUserSignedIn failed", "user_id", user.ID, "err", err)
 	}
 
-	WriteJSONResponse(w, http.StatusOK, tokenResp, nil)
+	WriteJSONResponse(w, http.StatusOK, mfaLoginVerifyResponse{TokenResponse: tokenResp, DeviceToken: deviceToken}, nil)
 }

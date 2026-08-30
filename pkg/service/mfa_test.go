@@ -20,8 +20,9 @@ func setupMFATestDB(t *testing.T) *Auth {
 			Dialect: dialect,
 			DSN:     dsn,
 		},
-		JWTSecret: "test-secret",
-		MFAIssuer: "EzAuthTest",
+		JWTSecret:     "test-secret",
+		MFAIssuer:     "EzAuthTest",
+		TrustedDevice: config.TrustedDevice{TTL: 720 * time.Hour},
 	}
 	auth, err := NewFromConfig(cfg, "auth")
 	if err != nil {
@@ -120,7 +121,7 @@ func TestMFALoginStepUp(t *testing.T) {
 	user := mfaTestUser(t, auth, ctx)
 
 	t.Run("no mfa: CompleteBasicLogin returns tokens directly", func(t *testing.T) {
-		resp, err := auth.CompleteBasicLogin(ctx, user)
+		resp, err := auth.CompleteBasicLogin(ctx, user, "")
 		if err != nil {
 			t.Fatalf("CompleteBasicLogin failed: %v", err)
 		}
@@ -144,7 +145,7 @@ func TestMFALoginStepUp(t *testing.T) {
 
 	var mfaToken string
 	t.Run("mfa enabled: CompleteBasicLogin issues a pre-auth token", func(t *testing.T) {
-		resp, err := auth.CompleteBasicLogin(ctx, user)
+		resp, err := auth.CompleteBasicLogin(ctx, user, "")
 		if err != nil {
 			t.Fatalf("CompleteBasicLogin failed: %v", err)
 		}
@@ -155,13 +156,13 @@ func TestMFALoginStepUp(t *testing.T) {
 	})
 
 	t.Run("login verify rejects wrong code", func(t *testing.T) {
-		if _, _, err := auth.MFALoginVerify(ctx, mfaToken, "000000"); err == nil {
+		if _, _, _, err := auth.MFALoginVerify(ctx, mfaToken, "000000", false); err == nil {
 			t.Fatal("expected error for wrong code")
 		}
 	})
 
 	t.Run("login verify rejects unknown token", func(t *testing.T) {
-		if _, _, err := auth.MFALoginVerify(ctx, "not-a-real-token", "000000"); err != ErrInvalidOrExpiredMFAToken {
+		if _, _, _, err := auth.MFALoginVerify(ctx, "not-a-real-token", "000000", false); err != ErrInvalidOrExpiredMFAToken {
 			t.Fatalf("expected ErrInvalidOrExpiredMFAToken, got %v", err)
 		}
 	})
@@ -171,7 +172,7 @@ func TestMFALoginStepUp(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to generate totp code: %v", err)
 		}
-		gotUser, tokens, err := auth.MFALoginVerify(ctx, mfaToken, validCode)
+		gotUser, tokens, _, err := auth.MFALoginVerify(ctx, mfaToken, validCode, false)
 		if err != nil {
 			t.Fatalf("MFALoginVerify failed: %v", err)
 		}
@@ -179,27 +180,27 @@ func TestMFALoginStepUp(t *testing.T) {
 			t.Fatalf("unexpected result: user=%+v tokens=%+v", gotUser, tokens)
 		}
 
-		if _, _, err := auth.MFALoginVerify(ctx, mfaToken, validCode); err != ErrInvalidOrExpiredMFAToken {
+		if _, _, _, err := auth.MFALoginVerify(ctx, mfaToken, validCode, false); err != ErrInvalidOrExpiredMFAToken {
 			t.Fatalf("expected pre-auth token to be single-use, got %v", err)
 		}
 	})
 
 	t.Run("login verify accepts an unused recovery code exactly once", func(t *testing.T) {
-		resp, err := auth.CompleteBasicLogin(ctx, user)
+		resp, err := auth.CompleteBasicLogin(ctx, user, "")
 		if err != nil {
 			t.Fatalf("CompleteBasicLogin failed: %v", err)
 		}
 
 		recoveryCode := recoveryCodes[1]
-		if _, _, err := auth.MFALoginVerify(ctx, resp.MFAToken, recoveryCode); err != nil {
+		if _, _, _, err := auth.MFALoginVerify(ctx, resp.MFAToken, recoveryCode, false); err != nil {
 			t.Fatalf("MFALoginVerify with recovery code failed: %v", err)
 		}
 
-		resp2, err := auth.CompleteBasicLogin(ctx, user)
+		resp2, err := auth.CompleteBasicLogin(ctx, user, "")
 		if err != nil {
 			t.Fatalf("CompleteBasicLogin failed: %v", err)
 		}
-		if _, _, err := auth.MFALoginVerify(ctx, resp2.MFAToken, recoveryCode); err == nil {
+		if _, _, _, err := auth.MFALoginVerify(ctx, resp2.MFAToken, recoveryCode, false); err == nil {
 			t.Fatal("expected reused recovery code to be rejected")
 		}
 	})

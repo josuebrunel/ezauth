@@ -14,6 +14,8 @@
 | `EZAUTH_CSRF_SECRET`   | Secret key for CSRF protection. Falls back to JWT_SECRET.     | (falls back to JWT_SECRET) |
 | `EZAUTH_TIMEOUT`       | Request timeout duration.                                      | `30s`                   |
 | `EZAUTH_MFA_ISSUER`    | Issuer name shown in authenticator apps for TOTP MFA.          | `EzAuth`                |
+| `EZAUTH_TRUSTED_DEVICE_TTL`         | How long a "remembered" device skips MFA step-up.  | `720h` (30 days)        |
+| `EZAUTH_TRUSTED_DEVICE_COOKIE_NAME` | Cookie name for the trusted-device token (form/cookie clients). | `ezauth_device` |
 
 ## WebAuthn/Passkey Settings
 

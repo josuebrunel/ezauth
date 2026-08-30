@@ -178,6 +178,13 @@ type RateLimit struct {
 	ByClientIP bool          `json:"by_client_ip" env:"RATE_LIMIT_BY_CLIENT_IP" default:"true"`
 }
 
+// TrustedDevice defines the "remember this device" settings for skipping MFA
+// step-up on subsequent logins from a device the user has already verified.
+type TrustedDevice struct {
+	TTL        time.Duration `json:"ttl" env:"TRUSTED_DEVICE_TTL" default:"720h"`
+	CookieName string        `json:"cookie_name" env:"TRUSTED_DEVICE_COOKIE_NAME" default:"ezauth_device"`
+}
+
 // Config defines the overall configuration for ezauth.
 type Config struct {
 	Addr           string         `json:"addr" env:"ADDR" default:":8080"`
@@ -189,6 +196,7 @@ type Config struct {
 	CSRFSecret     string         `json:"csrf_secret" env:"CSRF_SECRET"`
 	Hashing        Hashing        `json:"hashing"`
 	RateLimit      RateLimit      `json:"rate_limit"`
+	TrustedDevice  TrustedDevice  `json:"trusted_device"`
 	OAuth2         OAuth2         `json:"oauth2"`
 	SMTP           SMTP           `json:"smtp"`
 	EmailTemplates EmailTemplates `json:"email_templates"`

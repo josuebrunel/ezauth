@@ -400,6 +400,8 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 | POST   | `/auth/mfa/enroll`                 | Begin TOTP enrollment for the logged-in session user                        |
 | POST   | `/auth/mfa/confirm`                | Confirm enrollment and enable MFA                                           |
 | POST   | `/auth/mfa/disable`                | Disable MFA                                                                 |
+| GET    | `/auth/trusted-devices`            | List the logged-in session user's trusted devices (see [Remember This Device](#remember-this-device-trusted-devices)) |
+| DELETE | `/auth/trusted-devices/{id}`       | Revoke one of the logged-in session user's trusted devices                 |
 | POST   | `/auth/webauthn/login/begin`       | Begin a discoverable WebAuthn login ceremony (see [WebAuthn / Passkeys](#webauthn--passkeys)) |
 | POST   | `/auth/webauthn/login/finish`      | Complete a WebAuthn login and set auth cookies                             |
 | POST   | `/auth/webauthn/register/begin`    | Begin passkey registration for the logged-in session user                  |
@@ -423,6 +425,7 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 | `/auth/mfa/login/verify`       | `code`                                  |                                                                                                                   |
 | `/auth/mfa/confirm`            | `code`                                  |                                                                                                                   |
 | `/auth/mfa/disable`            | `code`                                  |                                                                                                                   |
+| `/auth/mfa/login/verify` (remember) | `code`                             | `remember_device` (any non-empty value)                                                                          |
 
 > [!NOTE]
 > Passwords must be between 8 and 128 characters long. The `/auth/webauthn/*` endpoints are not listed here: they take the browser's raw `navigator.credentials` JSON response as the request body (plus `session_key`/`name` query params), not form-encoded fields — see [WebAuthn / Passkeys](#webauthn--passkeys).
@@ -451,6 +454,8 @@ These endpoints accept `application/json` and return JSON responses.
 | POST   | `/auth/api/mfa/enroll`             | Begin TOTP enrollment (Protected) |
 | POST   | `/auth/api/mfa/confirm`            | Confirm enrollment and enable MFA (Protected) |
 | POST   | `/auth/api/mfa/disable`            | Disable MFA (Protected)           |
+| GET    | `/auth/api/trusted-devices`        | List the authenticated user's trusted devices (Protected, see [Remember This Device](#remember-this-device-trusted-devices)) |
+| DELETE | `/auth/api/trusted-devices/{id}`   | Revoke one of the authenticated user's trusted devices (Protected) |
 | POST   | `/auth/api/webauthn/login/begin`   | Begin a discoverable WebAuthn login ceremony (see [WebAuthn / Passkeys](#webauthn--passkeys)) |
 | POST   | `/auth/api/webauthn/login/finish`  | Complete a WebAuthn login and receive tokens |
 | POST   | `/auth/api/webauthn/register/begin`  | Begin passkey registration (Protected) |
@@ -605,6 +610,28 @@ curl -X POST https://your-host/auth/api/mfa/confirm -H "Authorization: Bearer <a
 For form-based (cookie) clients, `POST /auth/mfa/enroll`, `/auth/mfa/confirm`, and `/auth/mfa/disable` work the same way against the logged-in session user; `FormLogin` redirects to `Pages.MFAVerify` when a step-up is required, stashing the pending `mfa_token` server-side in the session (never exposed to the client) until `POST /auth/mfa/login/verify` completes it. Use `auth.GetMFAEnrollment(ctx)` to read back the pending secret/QR URL for rendering the enrollment page.
 
 Set `EZAUTH_MFA_ISSUER` (default `EzAuth`) to control the issuer name shown in authenticator apps, and `EZAUTH_MFA_VERIFY_PAGE_URL` (default `/mfa/verify`) to point at your own MFA code-entry page.
+
+### Remember This Device (Trusted Devices)
+
+Completing MFA step-up can optionally mark the current device as trusted, so future logins from it skip MFA entirely until the trust expires (`EZAUTH_TRUSTED_DEVICE_TTL`, default 30 days).
+
+```go
+// At MFA step-up (pass rememberDevice=true):
+user, tokens, deviceToken, err := auth.MFALoginVerify(ctx, loginResp.MFAToken, code, true)
+// Store deviceToken (client-side) and send it back on the next login attempt.
+
+// On a later password login, pass the stored deviceToken:
+loginResp, err := auth.CompleteBasicLogin(ctx, user, deviceToken)
+// If deviceToken is still valid, loginResp.MFARequired is false — no step-up needed.
+
+// Managing trusted devices:
+devices, err := auth.TrustedDevices(ctx, user.ID)
+err = auth.RevokeTrustedDevice(ctx, user, devices[0].ID)
+```
+
+For the JSON API, a client sends its stored device token back via the `X-Device-Token` request header on `POST /auth/api/login`, and `POST /auth/api/mfa/login/verify` accepts `"remember_device": true` in its body, returning a `device_token` field to store. For form-based (cookie) clients, this is fully automatic: `FormLogin` reads the trusted-device cookie itself, and checking a `remember_device` field on the MFA verification form makes `FormMFALoginVerify` set that cookie (`EZAUTH_TRUSTED_DEVICE_COOKIE_NAME`, default `ezauth_device`) directly — no extra wiring needed.
+
+List/revoke trusted devices via `GET`/`DELETE /auth/api/trusted-devices[/{id}]` (Bearer) or `GET`/`DELETE /auth/trusted-devices[/{id}]` (cookie session).
 
 ## WebAuthn / Passkeys
 

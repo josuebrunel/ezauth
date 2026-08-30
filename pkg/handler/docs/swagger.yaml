@@ -9,6 +9,15 @@ definitions:
       error:
         type: string
     type: object
+  handler.ApiResponse-array_service_TrustedDeviceInfo:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/service.TrustedDeviceInfo'
+        type: array
+      error:
+        type: string
+    type: object
   handler.ApiResponse-handler_ImpersonateResponse:
     properties:
       data:
@@ -20,6 +29,13 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/handler.mfaConfirmResponse'
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-handler_mfaLoginVerifyResponse:
+    properties:
+      data:
+        $ref: '#/definitions/handler.mfaLoginVerifyResponse'
       error:
         type: string
     type: object
@@ -148,6 +164,21 @@ definitions:
       code:
         type: string
       mfa_token:
+        type: string
+      remember_device:
+        type: boolean
+    type: object
+  handler.mfaLoginVerifyResponse:
+    properties:
+      access_token:
+        type: string
+      device_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
         type: string
     type: object
   handler.webauthnLoginBeginResponse:
@@ -728,11 +759,19 @@ definitions:
       token_type:
         type: string
     type: object
+  service.TrustedDeviceInfo:
+    properties:
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
   webauthncose.COSEAlgorithmIdentifier:
     enum:
-    - -48
-    - -49
-    - -50
     - -7
     - -8
     - -9
@@ -749,11 +788,11 @@ definitions:
     - -258
     - -259
     - -65535
+    - -48
+    - -49
+    - -50
     type: integer
     x-enum-varnames:
-    - AlgMLDSA44
-    - AlgMLDSA65
-    - AlgMLDSA87
     - AlgES256
     - AlgEdDSA
     - AlgESP256
@@ -770,6 +809,9 @@ definitions:
     - AlgRS384
     - AlgRS512
     - AlgRS1
+    - AlgMLDSA44
+    - AlgMLDSA65
+    - AlgMLDSA87
 info:
   contact: {}
   description: Authentication service/library for Go.
@@ -885,7 +927,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
+            $ref: '#/definitions/handler.ApiResponse-handler_mfaLoginVerifyResponse'
         "400":
           description: Bad Request
           schema:
@@ -963,6 +1005,50 @@ paths:
       summary: Verify SMS OTP
       tags:
       - auth
+  /auth/api/trusted-devices:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-array_service_TrustedDeviceInfo'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: List trusted devices
+      tags:
+      - mfa
+  /auth/api/trusted-devices/{id}:
+    delete:
+      parameters:
+      - description: Trusted device record ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Revoke a trusted device
+      tags:
+      - mfa
   /auth/api/webauthn/credentials:
     get:
       produces:

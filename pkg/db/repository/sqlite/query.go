@@ -254,6 +254,17 @@ func (q *SqliteQuerier) QueryTokenGetByToken(ctx context.Context, token string) 
 	return sqlite.Select(sm.From(models.TableToken), sm.Where(sqlite.Quote(models.ColumnToken).EQ(sqlite.Arg(token))))
 }
 
+func (q *SqliteQuerier) QueryTokenListByUserIDAndType(ctx context.Context, userID, tokenType string) bob.Query {
+	return sqlite.Select(
+		sm.From(models.TableToken),
+		sm.Where(
+			sqlite.Quote(models.ColumnUserID).EQ(sqlite.Arg(userID)).
+				And(sqlite.Quote(models.ColumnTokenType).EQ(sqlite.Arg(tokenType))).
+				And(sqlite.Quote(models.ColumnRevoked).EQ(sqlite.Arg(false))),
+		),
+	)
+}
+
 func (q *SqliteQuerier) QueryTokenRevoke(ctx context.Context, id string) bob.Query {
 	return sqlite.Update(
 		um.Table(models.TableToken),

@@ -259,6 +259,17 @@ func (q *PSQLQuerier) QueryTokenGetByToken(ctx context.Context, token string) bo
 	return psql.Select(sm.From(psql.Quote(models.TableToken)), sm.Where(psql.Quote(models.ColumnToken).EQ(psql.Arg(token))))
 }
 
+func (q *PSQLQuerier) QueryTokenListByUserIDAndType(ctx context.Context, userID, tokenType string) bob.Query {
+	return psql.Select(
+		sm.From(psql.Quote(models.TableToken)),
+		sm.Where(
+			psql.Quote(models.ColumnUserID).EQ(psql.Arg(userID)).
+				And(psql.Quote(models.ColumnTokenType).EQ(psql.Arg(tokenType))).
+				And(psql.Quote(models.ColumnRevoked).EQ(psql.Arg(false))),
+		),
+	)
+}
+
 func (q *PSQLQuerier) QueryTokenRevoke(ctx context.Context, id string) bob.Query {
 	return psql.Update(
 		um.Table(psql.Quote(models.TableToken)),

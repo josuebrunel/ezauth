@@ -68,8 +68,9 @@ POST requests to these endpoints are automatically protected by `filippo.io/csrf
 
 ### MFA (Form)
 `GET /auth/mfa/verify` (Redirects to `Pages.MFAVerify`)
-`POST /auth/mfa/login/verify` (Completes a step-up login using the session-stashed `mfa_token`)
+`POST /auth/mfa/login/verify` (Completes a step-up login using the session-stashed `mfa_token`; a `remember_device` field sets the trusted-device cookie)
 `POST /auth/mfa/enroll`, `POST /auth/mfa/confirm`, `POST /auth/mfa/disable` (Require a logged-in session)
+`GET /auth/trusted-devices`, `DELETE /auth/trusted-devices/{id}` (Require a logged-in session)
 
 ### WebAuthn / Passkeys (Form)
 `POST /auth/webauthn/login/begin`, `POST /auth/webauthn/login/finish?session_key=...` (No prior auth required; `login/finish` sets auth cookies and returns `{"redirect": "..."}`)
@@ -125,7 +126,7 @@ Creates a new user and returns authentication tokens.
 ### Login
 `POST /auth/api/login`
 
-Authenticates a user and returns tokens.
+Authenticates a user and returns tokens. If the client has a stored trusted-device token (see [Trusted Devices](#trusted-devices)), send it via the `X-Device-Token` header to skip MFA step-up.
 
 **Request Body:**
 ```json
@@ -232,17 +233,22 @@ Authenticates a user using the one-time code sent via SMS. On success, the phone
 ### MFA Login Verify
 `POST /auth/api/mfa/login/verify`
 
-Completes a step-up login started by Login when the account has MFA enabled.
+Completes a step-up login started by Login when the account has MFA enabled. Set `remember_device` to also mark the device trusted, skipping MFA step-up on future logins for `EZAUTH_TRUSTED_DEVICE_TTL`.
 
 **Request Body:**
 ```json
 {
   "mfa_token": "...",
-  "code": "123456"
+  "code": "123456",
+  "remember_device": false
 }
 ```
 
-**Response Data:** Same as Register.
+**Response Data:** Same as Register, plus `device_token` when `remember_device` was set — send it back via the `X-Device-Token` header on a future Login request to skip MFA step-up.
+
+### Trusted Devices
+`GET /auth/api/trusted-devices` (Protected) — lists the authenticated user's trusted devices.
+`DELETE /auth/api/trusted-devices/{id}` (Protected) — revokes one by its record ID.
 
 ### WebAuthn Login Begin
 `POST /auth/api/webauthn/login/begin`
