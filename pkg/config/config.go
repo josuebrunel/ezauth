@@ -185,6 +185,15 @@ type TrustedDevice struct {
 	CookieName string        `json:"cookie_name" env:"TRUSTED_DEVICE_COOKIE_NAME" default:"ezauth_device"`
 }
 
+// AccountLockout defines the brute-force lockout settings enforced by
+// UserAuthenticate: after MaxAttempts consecutive failed logins, the account is
+// locked (IsActive is cleared) for LockoutDuration.
+type AccountLockout struct {
+	Enabled         bool          `json:"enabled" env:"ACCOUNT_LOCKOUT_ENABLED" default:"true"`
+	MaxAttempts     int           `json:"max_attempts" env:"ACCOUNT_LOCKOUT_MAX_ATTEMPTS" default:"5"`
+	LockoutDuration time.Duration `json:"lockout_duration" env:"ACCOUNT_LOCKOUT_DURATION" default:"15m"`
+}
+
 // Config defines the overall configuration for ezauth.
 type Config struct {
 	Addr           string         `json:"addr" env:"ADDR" default:":8080"`
@@ -197,6 +206,7 @@ type Config struct {
 	Hashing        Hashing        `json:"hashing"`
 	RateLimit      RateLimit      `json:"rate_limit"`
 	TrustedDevice  TrustedDevice  `json:"trusted_device"`
+	AccountLockout AccountLockout `json:"account_lockout"`
 	OAuth2         OAuth2         `json:"oauth2"`
 	SMTP           SMTP           `json:"smtp"`
 	EmailTemplates EmailTemplates `json:"email_templates"`

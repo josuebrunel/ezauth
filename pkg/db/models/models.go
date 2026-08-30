@@ -42,32 +42,34 @@ func (j *JSONMap) Scan(value any) error {
 
 // User represents a user in the system.
 type User struct {
-	ID              string     `db:"id" json:"id"`
-	Email           string     `db:"email" json:"email"`
-	Username        string     `db:"username" json:"username"`
-	PasswordHash    string     `db:"password_hash" json:"-"`
-	Provider        string     `db:"provider" json:"provider"`
-	ProviderID      *string    `db:"provider_id" json:"provider_id,omitempty"`
-	EmailVerified   bool       `db:"email_verified" json:"email_verified"`
-	AppMetadata     JSONMap    `db:"app_metadata" json:"app_metadata"`
-	UserMetadata    JSONMap    `db:"user_metadata" json:"user_metadata"`
-	FirstName       string     `db:"first_name" json:"first_name"`
-	LastName        string     `db:"last_name" json:"last_name"`
-	LastActiveAt    *time.Time `db:"last_active_at" json:"last_active_at,omitempty"`
-	LastLoginAt     *time.Time `db:"last_login_at" json:"last_login_at,omitempty"`
-	Locale          string     `db:"locale" json:"locale"`
-	Timezone        string     `db:"timezone" json:"timezone"`
-	EmailVerifiedAt *time.Time `db:"email_verified_at" json:"email_verified_at,omitempty"`
-	Phone           string     `db:"phone" json:"phone"`
-	PhoneVerified   bool       `db:"phone_verified" json:"phone_verified"`
-	IsActive        bool       `db:"is_active" json:"is_active"`
-	AvatarURL       string     `db:"avatar_url" json:"avatar_url"`
-	Nickname        string     `db:"nickname" json:"nickname"`
-	Roles           string     `db:"roles" json:"roles"`
-	MfaSecret       *string    `db:"mfa_secret" json:"-"`
-	MfaEnabled      bool       `db:"mfa_enabled" json:"mfa_enabled"`
-	CreatedAt       time.Time  `db:"created_at" json:"created_at"`
-	UpdatedAt       time.Time  `db:"updated_at" json:"updated_at"`
+	ID                  string     `db:"id" json:"id"`
+	Email               string     `db:"email" json:"email"`
+	Username            string     `db:"username" json:"username"`
+	PasswordHash        string     `db:"password_hash" json:"-"`
+	Provider            string     `db:"provider" json:"provider"`
+	ProviderID          *string    `db:"provider_id" json:"provider_id,omitempty"`
+	EmailVerified       bool       `db:"email_verified" json:"email_verified"`
+	AppMetadata         JSONMap    `db:"app_metadata" json:"app_metadata"`
+	UserMetadata        JSONMap    `db:"user_metadata" json:"user_metadata"`
+	FirstName           string     `db:"first_name" json:"first_name"`
+	LastName            string     `db:"last_name" json:"last_name"`
+	LastActiveAt        *time.Time `db:"last_active_at" json:"last_active_at,omitempty"`
+	LastLoginAt         *time.Time `db:"last_login_at" json:"last_login_at,omitempty"`
+	Locale              string     `db:"locale" json:"locale"`
+	Timezone            string     `db:"timezone" json:"timezone"`
+	EmailVerifiedAt     *time.Time `db:"email_verified_at" json:"email_verified_at,omitempty"`
+	Phone               string     `db:"phone" json:"phone"`
+	PhoneVerified       bool       `db:"phone_verified" json:"phone_verified"`
+	IsActive            bool       `db:"is_active" json:"is_active"`
+	AvatarURL           string     `db:"avatar_url" json:"avatar_url"`
+	Nickname            string     `db:"nickname" json:"nickname"`
+	Roles               string     `db:"roles" json:"roles"`
+	MfaSecret           *string    `db:"mfa_secret" json:"-"`
+	MfaEnabled          bool       `db:"mfa_enabled" json:"mfa_enabled"`
+	FailedLoginAttempts int        `db:"failed_login_attempts" json:"-"`
+	LockedUntil         *time.Time `db:"locked_until" json:"-"`
+	CreatedAt           time.Time  `db:"created_at" json:"created_at"`
+	UpdatedAt           time.Time  `db:"updated_at" json:"updated_at"`
 }
 
 // HasRole checks if the user has the specified role.

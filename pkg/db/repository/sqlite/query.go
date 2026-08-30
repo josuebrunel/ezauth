@@ -76,7 +76,11 @@ func (q *SqliteQuerier) QueryUserInsert(ctx context.Context, user *models.User) 
 			sqlite.Arg(user.EmailVerifiedAt),
 			sqlite.Arg(user.Phone),
 			sqlite.Arg(user.PhoneVerified),
-			sqlite.Arg(user.IsActive),
+			// New accounts always start active; deactivation is only ever a
+			// subsequent action (lockout, admin suspension), never part of
+			// creation, so this doesn't depend on the zero-valued bool the
+			// caller's struct literal happens to carry.
+			sqlite.Arg(true),
 			sqlite.Arg(user.AvatarURL),
 			sqlite.Arg(user.Nickname),
 			sqlite.Arg(user.Roles),
@@ -208,6 +212,18 @@ func (q *SqliteQuerier) QueryUserUpdate(ctx context.Context, user *models.User) 
 	qm = append(qm, um.SetCol(models.ColumnMfaEnabled).ToArg(user.MfaEnabled))
 
 	return sqlite.Update(qm...)
+}
+
+func (q *SqliteQuerier) QueryUserSetLockoutState(ctx context.Context, userID string, attempts int, lockedUntil *time.Time, isActive bool) bob.Query {
+	return sqlite.Update(
+		um.Table(models.TableUser),
+		um.SetCol(models.ColumnFailedLoginAttempts).ToArg(attempts),
+		um.SetCol(models.ColumnLockedUntil).ToArg(lockedUntil),
+		um.SetCol(models.ColumnIsActive).ToArg(isActive),
+		um.SetCol(models.ColumnUpdatedAt).ToArg(time.Now().UTC()),
+		um.Where(sqlite.Quote("id").EQ(sqlite.Arg(userID))),
+		um.Returning("*"),
+	)
 }
 
 func (q *SqliteQuerier) QueryUserDelete(ctx context.Context, id string) bob.Query {

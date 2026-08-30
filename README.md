@@ -727,6 +727,21 @@ For form-based (cookie) clients, `POST /auth/sms-otp/request` (field `phone`) an
 
 Set `EZAUTH_SMS_OTP_BODY` (default `Your verification code is: {{.Code}}`) to customize the SMS message template; `{{.Code}}` and `{{.Phone}}` are available.
 
+## Account Lockout
+
+`UserAuthenticate` enforces the `IsActive` column as a login gate and counts consecutive failed password attempts: after `EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS` (default 5) in a row, the account is locked — `IsActive` is cleared — for `EZAUTH_ACCOUNT_LOCKOUT_DURATION` (default 15 minutes), then automatically unlocked (and the counter reset) on the next login attempt after that window passes. A successful login before the threshold resets the counter immediately. Set `EZAUTH_ACCOUNT_LOCKOUT_ENABLED=false` to stop counting/auto-locking failed attempts while still enforcing `IsActive` for accounts deactivated some other way (e.g. an administrative suspension).
+
+```go
+_, err := auth.UserAuthenticate(ctx, service.RequestBasicAuth{Email: email, Password: password})
+if errors.Is(err, service.ErrAccountLocked) {
+    // Too many failed attempts recently; try again after the lockout window.
+} else if errors.Is(err, service.ErrAccountDisabled) {
+    // IsActive is false for a reason other than lockout (no auto-expiry).
+}
+```
+
+`Login`/`FormLogin` surface `ErrAccountLocked`/`ErrAccountDisabled` distinctly (rather than a generic "invalid credentials") in both JSON API and form-based (cookie) modes, since — once an account is locked — even the correct password fails, so hiding the lockout state provides little security benefit while confusing legitimate users.
+
 ## Hooks
 
 ezauth provides a hook system that lets you intercept auth lifecycle events. This is useful for:

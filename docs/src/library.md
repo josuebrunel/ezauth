@@ -433,6 +433,22 @@ tokens, err := auth.Service.SMSOTPVerify(ctx, service.RequestSMSOTPVerify{
 
 `EZAUTH_SMS_OTP_BODY` customizes the SMS message template (`{{.Code}}`, `{{.Phone}}` available).
 
+## Account Lockout
+
+`UserAuthenticate` enforces `IsActive` as a login gate and counts consecutive failed attempts, locking the account (clearing `IsActive`) for `EZAUTH_ACCOUNT_LOCKOUT_DURATION` after `EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS` in a row; it auto-unlocks (and resets the counter) on the first login attempt after that window passes. A successful login resets the counter immediately.
+
+```go
+_, err := auth.UserAuthenticate(ctx, req)
+switch {
+case errors.Is(err, service.ErrAccountLocked):
+    // Too many recent failed attempts; auto-expires.
+case errors.Is(err, service.ErrAccountDisabled):
+    // IsActive is false for some other reason (no auto-expiry).
+}
+```
+
+Set `EZAUTH_ACCOUNT_LOCKOUT_ENABLED=false` to stop counting/locking on failed attempts while still enforcing `IsActive` for accounts disabled some other way.
+
 ## Hooks
 
 ezauth provides a hook system that lets you intercept auth lifecycle events. This is useful for:

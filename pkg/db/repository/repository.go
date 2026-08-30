@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/josuebrunel/ezauth/pkg/db/repository/mysql"
@@ -29,6 +30,7 @@ type UserQuerier interface {
 	QueryUserGetByID(ctx context.Context, id string) bob.Query
 	QueryUserGetByProvider(ctx context.Context, provider, providerID string) bob.Query
 	QueryUserUpdate(ctx context.Context, user *models.User) bob.Query
+	QueryUserSetLockoutState(ctx context.Context, userID string, attempts int, lockedUntil *time.Time, isActive bool) bob.Query
 	QueryUserDelete(ctx context.Context, id string) bob.Query
 }
 
@@ -206,6 +208,29 @@ func (r Repository) UserUpdate(ctx context.Context, user *models.User) (*models.
 	updatedUser, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
 	if err != nil {
 		xlog.Error("Failed to update user", "error", err, "email", user.Email)
+		return nil, err
+	}
+	return updatedUser, nil
+}
+
+// UserSetLockoutState sets a user's brute-force lockout bookkeeping (failed
+// attempt counter, lockout expiry, and the enforced is_active gate) in a single
+// targeted update, independent of UserUpdate's partial-update semantics — which
+// can't clear lockedUntil back to NULL once set.
+func (r Repository) UserSetLockoutState(ctx context.Context, userID string, attempts int, lockedUntil *time.Time, isActive bool) (*models.User, error) {
+	query := r.QueryUserSetLockoutState(ctx, userID, attempts, lockedUntil, isActive)
+
+	if r.Opts.Dialect == DialectMysql {
+		if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+			xlog.Error("Failed to set user lockout state", "error", err, "user_id", userID)
+			return nil, err
+		}
+		return r.UserGetByID(ctx, userID)
+	}
+
+	updatedUser, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
+	if err != nil {
+		xlog.Error("Failed to set user lockout state", "error", err, "user_id", userID)
 		return nil, err
 	}
 	return updatedUser, nil

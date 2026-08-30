@@ -16,6 +16,9 @@
 | `EZAUTH_MFA_ISSUER`    | Issuer name shown in authenticator apps for TOTP MFA.          | `EzAuth`                |
 | `EZAUTH_TRUSTED_DEVICE_TTL`         | How long a "remembered" device skips MFA step-up.  | `720h` (30 days)        |
 | `EZAUTH_TRUSTED_DEVICE_COOKIE_NAME` | Cookie name for the trusted-device token (form/cookie clients). | `ezauth_device` |
+| `EZAUTH_ACCOUNT_LOCKOUT_ENABLED`      | Count failed logins and auto-lock accounts after too many.        | `true`  |
+| `EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS` | Consecutive failed attempts before locking the account.            | `5`     |
+| `EZAUTH_ACCOUNT_LOCKOUT_DURATION`     | How long a locked account stays locked before auto-unlocking.      | `15m`   |
 
 ## WebAuthn/Passkey Settings
 

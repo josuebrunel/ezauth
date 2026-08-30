@@ -143,6 +143,8 @@ Authenticates a user and returns tokens. If the client has a stored trusted-devi
   "mfa_token": "..."
 }
 ```
+
+Returns `401` with a distinct error message (rather than the generic "invalid email or password") if the account is locked from too many failed attempts, or disabled some other way — see [Account Lockout](#account-lockout).
 Exchange `mfa_token` via `POST /auth/api/mfa/login/verify` (see below) to receive real session tokens.
 
 ### Refresh Token

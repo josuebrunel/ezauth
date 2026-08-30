@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
@@ -111,6 +112,10 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.svc.UserAuthenticate(r.Context(), req)
 	if err != nil {
+		if errors.Is(err, service.ErrAccountLocked) || errors.Is(err, service.ErrAccountDisabled) {
+			WriteJSONResponseError(w, http.StatusUnauthorized, err)
+			return
+		}
 		WriteJSONResponseError(w, http.StatusUnauthorized, ErrInvalidCredentials)
 		return
 	}

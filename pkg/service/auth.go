@@ -191,7 +191,20 @@ func (a *Auth) validatePassword(password string) error {
 	return nil
 }
 
-// UserAuthenticate authenticates a user with email and password.
+// ErrAccountLocked is returned when an account is temporarily locked after too
+// many consecutive failed login attempts.
+var ErrAccountLocked = errors.New("account is temporarily locked due to too many failed login attempts")
+
+// ErrAccountDisabled is returned when an account's IsActive gate is off for a
+// reason other than brute-force lockout (e.g. an administrative suspension),
+// so it has no LockedUntil expiry and won't auto-recover.
+var ErrAccountDisabled = errors.New("account is disabled")
+
+// UserAuthenticate authenticates a user with email and password. It enforces
+// the IsActive gate and brute-force lockout: after Cfg.AccountLockout.MaxAttempts
+// consecutive failed attempts, the account is locked (IsActive cleared) for
+// Cfg.AccountLockout.LockoutDuration, then auto-unlocked on the next attempt
+// after that window passes.
 func (a *Auth) UserAuthenticate(ctx context.Context, req RequestBasicAuth) (*models.User, error) {
 	xlog.Debug("authenticating user", "email", req.Email)
 	user, err := a.Repo.UserGetByEmail(ctx, req.Email)
@@ -201,12 +214,63 @@ func (a *Auth) UserAuthenticate(ctx context.Context, req RequestBasicAuth) (*mod
 		return nil, errors.New("invalid credentials")
 	}
 
-	if !verifyPassword(req.Password, user.PasswordHash) {
+	if !user.IsActive && user.LockedUntil != nil && time.Now().After(*user.LockedUntil) {
+		if unlocked, err := a.Repo.UserSetLockoutState(ctx, user.ID, 0, nil, true); err != nil {
+			xlog.Error("failed to auto-unlock account", "user_id", user.ID, "err", err)
+		} else {
+			user = unlocked
+		}
+	}
+
+	// Always run the password comparison, even on an inactive account, so a
+	// locked/disabled account's response takes the same time as a wrong-password
+	// response and doesn't leak account state via timing.
+	passwordOK := verifyPassword(req.Password, user.PasswordHash)
+
+	if !user.IsActive {
+		xlog.Debug("authentication failed: account not active", "user_id", user.ID)
+		if user.LockedUntil != nil {
+			return nil, ErrAccountLocked
+		}
+		return nil, ErrAccountDisabled
+	}
+
+	if !passwordOK {
 		xlog.Debug("authentication failed: invalid credentials", "email", req.Email)
+		if a.Cfg.AccountLockout.Enabled {
+			a.recordFailedLogin(ctx, user)
+		}
 		return nil, errors.New("invalid credentials")
 	}
+
+	if user.FailedLoginAttempts > 0 {
+		if reset, err := a.Repo.UserSetLockoutState(ctx, user.ID, 0, nil, true); err != nil {
+			xlog.Warn("failed to reset failed login attempt counter", "user_id", user.ID, "err", err)
+		} else {
+			user = reset
+		}
+	}
+
 	xlog.Info("user authenticated", "id", user.ID, "email", user.Email)
 	return user, nil
+}
+
+// recordFailedLogin increments a user's failed-login counter and, once it
+// reaches Cfg.AccountLockout.MaxAttempts, locks the account for
+// Cfg.AccountLockout.LockoutDuration.
+func (a *Auth) recordFailedLogin(ctx context.Context, user *models.User) {
+	attempts := user.FailedLoginAttempts + 1
+	isActive := true
+	var lockedUntil *time.Time
+	if attempts >= a.Cfg.AccountLockout.MaxAttempts {
+		isActive = false
+		until := time.Now().Add(a.Cfg.AccountLockout.LockoutDuration)
+		lockedUntil = &until
+		xlog.Warn("account locked after too many failed login attempts", "user_id", user.ID, "attempts", attempts)
+	}
+	if _, err := a.Repo.UserSetLockoutState(ctx, user.ID, attempts, lockedUntil, isActive); err != nil {
+		xlog.Error("failed to record failed login attempt", "user_id", user.ID, "err", err)
+	}
 }
 
 var dummyBcryptHash = "$2a$14$ggvoBThQ9l3LSe3o0Y5aKO5opqgoaDgMYONZvGwuN.7Duu/xUO36C"

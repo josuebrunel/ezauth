@@ -76,7 +76,9 @@ func (q *PSQLQuerier) QueryUserInsert(ctx context.Context, user *models.User) bo
 			psql.Arg(user.EmailVerifiedAt),
 			psql.Arg(user.Phone),
 			psql.Arg(user.PhoneVerified),
-			psql.Arg(user.IsActive),
+			// New accounts always start active; see the sqlite querier for why
+			// this isn't user.IsActive.
+			psql.Arg(true),
 			psql.Arg(user.AvatarURL),
 			psql.Arg(user.Nickname),
 			psql.Arg(user.Roles),
@@ -213,6 +215,18 @@ func (q *PSQLQuerier) QueryUserUpdate(ctx context.Context, user *models.User) bo
 
 func (q *PSQLQuerier) QueryUserCheckPasswordHash(ctx context.Context, email, passwordHash string) bob.Query {
 	return psql.Select(sm.From(psql.Quote(models.TableUser)), sm.Where(psql.Quote(models.ColumnEmail).EQ(psql.Arg(email)).And(psql.Quote(models.ColumnPasswordHash).EQ(psql.Arg(passwordHash)))))
+}
+
+func (q *PSQLQuerier) QueryUserSetLockoutState(ctx context.Context, userID string, attempts int, lockedUntil *time.Time, isActive bool) bob.Query {
+	return psql.Update(
+		um.Table(psql.Quote(models.TableUser)),
+		um.SetCol(models.ColumnFailedLoginAttempts).ToArg(attempts),
+		um.SetCol(models.ColumnLockedUntil).ToArg(lockedUntil),
+		um.SetCol(models.ColumnIsActive).ToArg(isActive),
+		um.SetCol(models.ColumnUpdatedAt).ToArg(time.Now().UTC()),
+		um.Where(psql.Quote("id").EQ(psql.Arg(userID))),
+		um.Returning("*"),
+	)
 }
 
 func (q *PSQLQuerier) QueryUserDelete(ctx context.Context, id string) bob.Query {

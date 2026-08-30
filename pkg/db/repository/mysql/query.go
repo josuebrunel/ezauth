@@ -76,7 +76,9 @@ func (q *MysqlQuerier) QueryUserInsert(ctx context.Context, user *models.User) b
 			mysql.Arg(user.EmailVerifiedAt),
 			mysql.Arg(user.Phone),
 			mysql.Arg(user.PhoneVerified),
-			mysql.Arg(user.IsActive),
+			// New accounts always start active; see the sqlite querier for why
+			// this isn't user.IsActive.
+			mysql.Arg(true),
 			mysql.Arg(user.AvatarURL),
 			mysql.Arg(user.Nickname),
 			mysql.Arg(user.Roles),
@@ -206,6 +208,17 @@ func (q *MysqlQuerier) QueryUserUpdate(ctx context.Context, user *models.User) b
 	qm = append(qm, um.SetCol(models.ColumnMfaEnabled).ToArg(user.MfaEnabled))
 
 	return mysql.Update(qm...)
+}
+
+func (q *MysqlQuerier) QueryUserSetLockoutState(ctx context.Context, userID string, attempts int, lockedUntil *time.Time, isActive bool) bob.Query {
+	return mysql.Update(
+		um.Table(models.TableUser),
+		um.SetCol(models.ColumnFailedLoginAttempts).ToArg(attempts),
+		um.SetCol(models.ColumnLockedUntil).ToArg(lockedUntil),
+		um.SetCol(models.ColumnIsActive).ToArg(isActive),
+		um.SetCol(models.ColumnUpdatedAt).ToArg(time.Now().UTC()),
+		um.Where(mysql.Quote("id").EQ(mysql.Arg(userID))),
+	)
 }
 
 func (q *MysqlQuerier) QueryUserDelete(ctx context.Context, id string) bob.Query {
