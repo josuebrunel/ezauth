@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/config"
-	"github.com/josuebrunel/ezauth/pkg/db/migrations"
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/josuebrunel/ezauth/pkg/util"
 	"github.com/pquerna/otp/totp"
@@ -29,7 +28,7 @@ func setupMFATestDB(t *testing.T) *Auth {
 		t.Fatalf("failed to create auth service: %v", err)
 	}
 
-	if err := migrations.MigrateUpWithDBConn(auth.Repo.DB(), dialect); err != nil {
+	if err := ensureMigrated(auth.Repo.DB(), dialect, dsn); err != nil {
 		t.Fatalf("failed to run migrations: %v", err)
 	}
 

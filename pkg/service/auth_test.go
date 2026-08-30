@@ -6,7 +6,6 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/josuebrunel/ezauth/pkg/config"
-	"github.com/josuebrunel/ezauth/pkg/db/migrations"
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/josuebrunel/ezauth/pkg/util"
 	"golang.org/x/oauth2"
@@ -37,12 +36,7 @@ func setupBasicAuthTestDB(t *testing.T) *Auth {
 		t.Fatalf("failed to create auth service: %v", err)
 	}
 
-	if err := migrations.MigrateDownWithDBConn(auth.Repo.DB(), dialect); err != nil {
-
-		t.Logf("failed to run migrations down: %v", err)
-	}
-
-	if err := migrations.MigrateUpWithDBConn(auth.Repo.DB(), dialect); err != nil {
+	if err := ensureMigrated(auth.Repo.DB(), dialect, dsn); err != nil {
 		t.Fatalf("failed to run migrations: %v", err)
 	}
 
@@ -356,7 +350,7 @@ func setupOAuth2AuthTestDB(t *testing.T) *Auth {
 	if err != nil {
 		t.Fatalf("failed to create auth service: %v", err)
 	}
-	if err := migrations.MigrateUpWithDBConn(auth.Repo.DB(), dialect); err != nil {
+	if err := ensureMigrated(auth.Repo.DB(), dialect, dsn); err != nil {
 		t.Fatalf("failed to run migrations: %v", err)
 	}
 	return auth
@@ -565,7 +559,7 @@ func setupTestDB(t *testing.T) *Auth {
 		t.Fatalf("failed to create auth service: %v", err)
 	}
 
-	if err := migrations.MigrateUpWithDBConn(auth.Repo.DB(), dialect); err != nil {
+	if err := ensureMigrated(auth.Repo.DB(), dialect, dsn); err != nil {
 		t.Fatalf("failed to run migrations: %v", err)
 	}
 

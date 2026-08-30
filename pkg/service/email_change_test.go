@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/josuebrunel/ezauth/pkg/config"
-	"github.com/josuebrunel/ezauth/pkg/db/migrations"
 	"github.com/josuebrunel/ezauth/pkg/util"
 )
 
@@ -29,7 +28,7 @@ func setupEmailChangeTestDB(t *testing.T) *Auth {
 	if err != nil {
 		t.Fatalf("failed to create auth service: %v", err)
 	}
-	if err := migrations.MigrateUpWithDBConn(auth.Repo.DB(), dialect); err != nil {
+	if err := ensureMigrated(auth.Repo.DB(), dialect, dsn); err != nil {
 		t.Fatalf("failed to run migrations: %v", err)
 	}
 	return auth

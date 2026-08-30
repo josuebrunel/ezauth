@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/config"
-	"github.com/josuebrunel/ezauth/pkg/db/migrations"
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/josuebrunel/ezauth/pkg/service"
 	"github.com/josuebrunel/ezauth/pkg/util"
@@ -46,13 +45,7 @@ func setupTestHandler(t *testing.T) *Handler {
 		t.Fatalf("failed to create auth service: %v", err)
 	}
 
-	// Reset DB (Down then Up) to handle dirty state from previous tests or manual changes
-	if err := migrations.MigrateDownWithDBConn(authSvc.Repo.DB(), dialect); err != nil {
-		// Just log error, down might fail if tables don't exist
-		t.Logf("failed to run migrations down: %v", err)
-	}
-
-	if err := migrations.MigrateUpWithDBConn(authSvc.Repo.DB(), dialect); err != nil {
+	if err := ensureMigrated(authSvc.Repo.DB(), dialect, dsn); err != nil {
 		t.Fatalf("failed to run migrations: %v", err)
 	}
 

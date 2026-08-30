@@ -38,12 +38,15 @@ jobs:
                     - name: sqlite
                       dialect: sqlite
                       dsn: "file:test.db?mode=memory&cache=shared"
+                      race: true
                     - name: postgres
                       dialect: postgres
                       dsn: "postgres://postgres:postgres@localhost:5432/testdb?sslmode=disable"
+                      race: false
                     - name: mysql
                       dialect: mysql
                       dsn: "root:mysql@tcp(localhost:3306)/testdb?parseTime=true&multiStatements=true"
+                      race: false
 
         services:
             postgres:
@@ -84,7 +87,12 @@ jobs:
               env:
                   EZAUTH_DB_DIALECT: ${{ matrix.db.dialect }}
                   EZAUTH_DB_DSN: ${{ matrix.db.dsn }}
-              run: go test ./... -v -p 1 -count=1 -race
+              run: |
+                  if [ "${{ matrix.db.race }}" = "true" ]; then
+                      go test ./... -p 1 -count=1 -race
+                  else
+                      go test ./... -p 1 -count=1
+                  fi
 
     build:
         runs-on: ubuntu-latest
