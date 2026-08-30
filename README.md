@@ -24,135 +24,6 @@ Simple and easy to use authentication library for Golang.
 
 ## Usage
 
-### As a Standalone Service
-
-You can run `ezauth` as a separate service that handles authentication for your microservices.
-
-1. **Configuration**: Set environment variables.
-   ```bash
-   export EZAUTH_ADDR=":8080"
-   export EZAUTH_API_KEY="your-master-api-key"
-   export EZAUTH_BASE_URL="http://localhost:8080"
-   export EZAUTH_DB_DIALECT="sqlite3"  # or "postgres" or "mysql"
-   export EZAUTH_DB_DSN="auth.db"      # for mysql: "user:pass@tcp(localhost:3306)/dbname?parseTime=true"
-   export EZAUTH_DB_SCHEMA="public"    # Optional: Database schema (PostgreSQL only)
-   export EZAUTH_JWT_SECRET="super-secret-key"
-   export EZAUTH_CSRF_SECRET="your-csrf-secret"  # Optional; defaults to JWT_SECRET if not set
-   export EZAUTH_HASHING_ALGORITHM="bcrypt"      # Optional; "bcrypt" or "argon2id"
-   export EZAUTH_RATE_LIMIT_ENABLED="false"       # Optional; enable rate limiting on auth endpoints
-
-   # SMTP (Optional - for Email features)
-   export EZAUTH_SMTP_HOST="smtp.example.com"
-   export EZAUTH_SMTP_PORT="587"
-   export EZAUTH_SMTP_USER="user@example.com"
-   export EZAUTH_SMTP_PASSWORD="password"
-   export EZAUTH_SMTP_FROM="noreply@example.com"
-
-   # Email Templates (Optional - customize email content)
-   # Uses Go text/template syntax: {{.Link}}, {{.Token}}, {{.Email}}
-   export EZAUTH_EMAIL_PASSWORDLESS_SUBJECT="Magic Link Login"
-   export EZAUTH_EMAIL_PASSWORDLESS_BODY="Click the following link to login: {{.Link}}"
-   export EZAUTH_EMAIL_PASSWORD_RESET_SUBJECT="Password Reset Request"
-   export EZAUTH_EMAIL_PASSWORD_RESET_BODY="Click the following link to reset your password: {{.Link}}"
-
-   # Pages & Redirects (For Form-based auth)
-   export EZAUTH_REDIRECT_AFTER_LOGIN="/"
-   export EZAUTH_REDIRECT_AFTER_REGISTER="/"
-   export EZAUTH_LOGIN_PAGE_URL="/login"
-   export EZAUTH_REGISTER_PAGE_URL="/register"
-
-    # OAuth2 (Optional)
-    export EZAUTH_OAUTH2_CALLBACK_URL="http://localhost:3000/callback"
-
-    # Google
-    export EZAUTH_OAUTH2_GOOGLE_CLIENT_ID="your-google-client-id"
-    export EZAUTH_OAUTH2_GOOGLE_CLIENT_SECRET="your-google-client-secret"
-    export EZAUTH_OAUTH2_GOOGLE_REDIRECT_URL="http://localhost:8080/auth/oauth2/google/callback"
-    export EZAUTH_OAUTH2_GOOGLE_SCOPES="email,profile"
-
-    # GitHub
-    export EZAUTH_OAUTH2_GITHUB_CLIENT_ID="your-github-client-id"
-    export EZAUTH_OAUTH2_GITHUB_CLIENT_SECRET="your-github-client-secret"
-    export EZAUTH_OAUTH2_GITHUB_REDIRECT_URL="http://localhost:8080/auth/oauth2/github/callback"
-    export EZAUTH_OAUTH2_GITHUB_SCOPES="user:email"
-
-    # Facebook
-    export EZAUTH_OAUTH2_FACEBOOK_CLIENT_ID="your-facebook-client-id"
-    export EZAUTH_OAUTH2_FACEBOOK_CLIENT_SECRET="your-facebook-client-secret"
-    export EZAUTH_OAUTH2_FACEBOOK_REDIRECT_URL="http://localhost:8080/auth/oauth2/facebook/callback"
-    export EZAUTH_OAUTH2_FACEBOOK_SCOPES="email"
-
-    # Discord
-    export EZAUTH_OAUTH2_DISCORD_CLIENT_ID="your-discord-client-id"
-    export EZAUTH_OAUTH2_DISCORD_CLIENT_SECRET="your-discord-client-secret"
-    export EZAUTH_OAUTH2_DISCORD_REDIRECT_URL="http://localhost:8080/auth/oauth2/discord/callback"
-    export EZAUTH_OAUTH2_DISCORD_SCOPES="identify,email"
-
-    # GitLab
-    export EZAUTH_OAUTH2_GITLAB_CLIENT_ID="your-gitlab-client-id"
-    export EZAUTH_OAUTH2_GITLAB_CLIENT_SECRET="your-gitlab-client-secret"
-    export EZAUTH_OAUTH2_GITLAB_REDIRECT_URL="http://localhost:8080/auth/oauth2/gitlab/callback"
-    export EZAUTH_OAUTH2_GITLAB_SCOPES="read_user"
-
-    # Slack
-    export EZAUTH_OAUTH2_SLACK_CLIENT_ID="your-slack-client-id"
-    export EZAUTH_OAUTH2_SLACK_CLIENT_SECRET="your-slack-client-secret"
-    export EZAUTH_OAUTH2_SLACK_REDIRECT_URL="http://localhost:8080/auth/oauth2/slack/callback"
-    export EZAUTH_OAUTH2_SLACK_SCOPES="openid,email"
-
-    # LinkedIn
-    export EZAUTH_OAUTH2_LINKEDIN_CLIENT_ID="your-linkedin-client-id"
-    export EZAUTH_OAUTH2_LINKEDIN_CLIENT_SECRET="your-linkedin-client-secret"
-    export EZAUTH_OAUTH2_LINKEDIN_REDIRECT_URL="http://localhost:8080/auth/oauth2/linkedin/callback"
-    export EZAUTH_OAUTH2_LINKEDIN_SCOPES="openid,profile,email"
-
-    # Spotify
-    export EZAUTH_OAUTH2_SPOTIFY_CLIENT_ID="your-spotify-client-id"
-    export EZAUTH_OAUTH2_SPOTIFY_CLIENT_SECRET="your-spotify-client-secret"
-    export EZAUTH_OAUTH2_SPOTIFY_REDIRECT_URL="http://localhost:8080/auth/oauth2/spotify/callback"
-    export EZAUTH_OAUTH2_SPOTIFY_SCOPES="user-read-email,user-read-private"
-   ```
-
-### Custom OAuth2 / OIDC Providers
-
-You can register arbitrary custom providers dynamically via environment variables (Standalone-service mode) or in Go code (Library mode) as shown below.
-
-#### Standalone-service mode (via Env Vars)
-1. Add your provider's name to `EZAUTH_OAUTH2_PROVIDERS` (comma-separated).
-2. Configure prefix variables for each provider (`EZAUTH_OAUTH2_<NAME>_`):
-   - `CLIENT_ID`, `CLIENT_SECRET`, `REDIRECT_URL` (required)
-   - `SCOPES` (optional, comma-separated)
-   - Either `ISSUER_URL` (for automatic OIDC discovery) or manual endpoint parameters (`AUTH_URL`, `TOKEN_URL`, `USERINFO_URL`, `ID_FIELD` (default `id`), `EMAIL_FIELD` (default `email`)).
-
-#### Library Mode (Go Code)
-You can register custom providers programmatically using the `RegisterOAuth2Provider` API. We ship pre-made presets (Discord, Slack, GitLab) and a generic OIDC discovery helper in the optional `github.com/josuebrunel/ezauth/pkg/service/providers` package:
-
-```go
-import (
-    "github.com/josuebrunel/ezauth/pkg/service/providers"
-)
-
-// 1. OIDC Discovery
-oktaProvider, err := providers.OIDC(ctx, "https://your-domain.okta.com", "client-id", "client-secret", "http://localhost:8080/auth/oauth2/okta/callback", []string{"openid", "profile", "email"})
-if err == nil {
-    auth.RegisterOAuth2Provider("okta", oktaProvider)
-}
-
-// 2. Out-of-the-box Preset
-discordProvider := providers.Discord("client-id", "client-secret", "http://localhost:8080/auth/oauth2/discord/callback")
-auth.RegisterOAuth2Provider("discord", discordProvider)
-```
-
-2. **Build and Run**:
-   Build the binary from `cmd/ezauthapi/main.go`.
-   ```bash
-   go build -o ezauthapi ./cmd/ezauthapi
-   ```
-   Then, run the compiled binary:
-   ```bash
-   ./ezauthapi
-   ```
-
 ### As a Library
 
 Embed `ezauth` directly into your existing Go application.
@@ -222,6 +93,36 @@ func main() {
 
 > [!IMPORTANT]
 > OAuth2 auto-linking requires the provider to return `email_verified: true` in the user info response. If a provider does not return this field (or returns `false`), the user will be prompted to log in with their existing password rather than being automatically linked. This prevents account takeover via unverified email addresses.
+
+### Custom OAuth2 / OIDC Providers
+
+You can register arbitrary custom providers dynamically via environment variables (Standalone-service mode) or in Go code (Library mode) as shown below.
+
+#### Standalone-service mode (via Env Vars)
+1. Add your provider's name to `EZAUTH_OAUTH2_PROVIDERS` (comma-separated).
+2. Configure prefix variables for each provider (`EZAUTH_OAUTH2_<NAME>_`):
+   - `CLIENT_ID`, `CLIENT_SECRET`, `REDIRECT_URL` (required)
+   - `SCOPES` (optional, comma-separated)
+   - Either `ISSUER_URL` (for automatic OIDC discovery) or manual endpoint parameters (`AUTH_URL`, `TOKEN_URL`, `USERINFO_URL`, `ID_FIELD` (default `id`), `EMAIL_FIELD` (default `email`)).
+
+#### Library Mode (Go Code)
+You can register custom providers programmatically using the `RegisterOAuth2Provider` API. We ship pre-made presets (Discord, Slack, GitLab) and a generic OIDC discovery helper in the optional `github.com/josuebrunel/ezauth/pkg/service/providers` package:
+
+```go
+import (
+    "github.com/josuebrunel/ezauth/pkg/service/providers"
+)
+
+// 1. OIDC Discovery
+oktaProvider, err := providers.OIDC(ctx, "https://your-domain.okta.com", "client-id", "client-secret", "http://localhost:8080/auth/oauth2/okta/callback", []string{"openid", "profile", "email"})
+if err == nil {
+    auth.RegisterOAuth2Provider("okta", oktaProvider)
+}
+
+// 2. Out-of-the-box Preset
+discordProvider := providers.Discord("client-id", "client-secret", "http://localhost:8080/auth/oauth2/discord/callback")
+auth.RegisterOAuth2Provider("discord", discordProvider)
+```
 
 ## Session Management (Cookies)
 
@@ -972,6 +873,105 @@ auth.SetHook(MyHook{
 ```
 
 It's safe to call `SetHook` at any point — including after the server is running.
+
+## Standalone Service
+
+You can run `ezauth` as a separate service that handles authentication for your microservices, instead of embedding it as a library.
+
+1. **Configuration**: Set environment variables.
+   ```bash
+   export EZAUTH_ADDR=":8080"
+   export EZAUTH_API_KEY="your-master-api-key"
+   export EZAUTH_BASE_URL="http://localhost:8080"
+   export EZAUTH_DB_DIALECT="sqlite3"  # or "postgres" or "mysql"
+   export EZAUTH_DB_DSN="auth.db"      # for mysql: "user:pass@tcp(localhost:3306)/dbname?parseTime=true"
+   export EZAUTH_DB_SCHEMA="public"    # Optional: Database schema (PostgreSQL only)
+   export EZAUTH_JWT_SECRET="super-secret-key"
+   export EZAUTH_CSRF_SECRET="your-csrf-secret"  # Optional; defaults to JWT_SECRET if not set
+   export EZAUTH_HASHING_ALGORITHM="bcrypt"      # Optional; "bcrypt" or "argon2id"
+   export EZAUTH_RATE_LIMIT_ENABLED="false"       # Optional; enable rate limiting on auth endpoints
+
+   # SMTP (Optional - for Email features)
+   export EZAUTH_SMTP_HOST="smtp.example.com"
+   export EZAUTH_SMTP_PORT="587"
+   export EZAUTH_SMTP_USER="user@example.com"
+   export EZAUTH_SMTP_PASSWORD="password"
+   export EZAUTH_SMTP_FROM="noreply@example.com"
+
+   # Email Templates (Optional - customize email content)
+   # Uses Go text/template syntax: {{.Link}}, {{.Token}}, {{.Email}}
+   export EZAUTH_EMAIL_PASSWORDLESS_SUBJECT="Magic Link Login"
+   export EZAUTH_EMAIL_PASSWORDLESS_BODY="Click the following link to login: {{.Link}}"
+   export EZAUTH_EMAIL_PASSWORD_RESET_SUBJECT="Password Reset Request"
+   export EZAUTH_EMAIL_PASSWORD_RESET_BODY="Click the following link to reset your password: {{.Link}}"
+
+   # Pages & Redirects (For Form-based auth)
+   export EZAUTH_REDIRECT_AFTER_LOGIN="/"
+   export EZAUTH_REDIRECT_AFTER_REGISTER="/"
+   export EZAUTH_LOGIN_PAGE_URL="/login"
+   export EZAUTH_REGISTER_PAGE_URL="/register"
+
+    # OAuth2 (Optional)
+    export EZAUTH_OAUTH2_CALLBACK_URL="http://localhost:3000/callback"
+
+    # Google
+    export EZAUTH_OAUTH2_GOOGLE_CLIENT_ID="your-google-client-id"
+    export EZAUTH_OAUTH2_GOOGLE_CLIENT_SECRET="your-google-client-secret"
+    export EZAUTH_OAUTH2_GOOGLE_REDIRECT_URL="http://localhost:8080/auth/oauth2/google/callback"
+    export EZAUTH_OAUTH2_GOOGLE_SCOPES="email,profile"
+
+    # GitHub
+    export EZAUTH_OAUTH2_GITHUB_CLIENT_ID="your-github-client-id"
+    export EZAUTH_OAUTH2_GITHUB_CLIENT_SECRET="your-github-client-secret"
+    export EZAUTH_OAUTH2_GITHUB_REDIRECT_URL="http://localhost:8080/auth/oauth2/github/callback"
+    export EZAUTH_OAUTH2_GITHUB_SCOPES="user:email"
+
+    # Facebook
+    export EZAUTH_OAUTH2_FACEBOOK_CLIENT_ID="your-facebook-client-id"
+    export EZAUTH_OAUTH2_FACEBOOK_CLIENT_SECRET="your-facebook-client-secret"
+    export EZAUTH_OAUTH2_FACEBOOK_REDIRECT_URL="http://localhost:8080/auth/oauth2/facebook/callback"
+    export EZAUTH_OAUTH2_FACEBOOK_SCOPES="email"
+
+    # Discord
+    export EZAUTH_OAUTH2_DISCORD_CLIENT_ID="your-discord-client-id"
+    export EZAUTH_OAUTH2_DISCORD_CLIENT_SECRET="your-discord-client-secret"
+    export EZAUTH_OAUTH2_DISCORD_REDIRECT_URL="http://localhost:8080/auth/oauth2/discord/callback"
+    export EZAUTH_OAUTH2_DISCORD_SCOPES="identify,email"
+
+    # GitLab
+    export EZAUTH_OAUTH2_GITLAB_CLIENT_ID="your-gitlab-client-id"
+    export EZAUTH_OAUTH2_GITLAB_CLIENT_SECRET="your-gitlab-client-secret"
+    export EZAUTH_OAUTH2_GITLAB_REDIRECT_URL="http://localhost:8080/auth/oauth2/gitlab/callback"
+    export EZAUTH_OAUTH2_GITLAB_SCOPES="read_user"
+
+    # Slack
+    export EZAUTH_OAUTH2_SLACK_CLIENT_ID="your-slack-client-id"
+    export EZAUTH_OAUTH2_SLACK_CLIENT_SECRET="your-slack-client-secret"
+    export EZAUTH_OAUTH2_SLACK_REDIRECT_URL="http://localhost:8080/auth/oauth2/slack/callback"
+    export EZAUTH_OAUTH2_SLACK_SCOPES="openid,email"
+
+    # LinkedIn
+    export EZAUTH_OAUTH2_LINKEDIN_CLIENT_ID="your-linkedin-client-id"
+    export EZAUTH_OAUTH2_LINKEDIN_CLIENT_SECRET="your-linkedin-client-secret"
+    export EZAUTH_OAUTH2_LINKEDIN_REDIRECT_URL="http://localhost:8080/auth/oauth2/linkedin/callback"
+    export EZAUTH_OAUTH2_LINKEDIN_SCOPES="openid,profile,email"
+
+    # Spotify
+    export EZAUTH_OAUTH2_SPOTIFY_CLIENT_ID="your-spotify-client-id"
+    export EZAUTH_OAUTH2_SPOTIFY_CLIENT_SECRET="your-spotify-client-secret"
+    export EZAUTH_OAUTH2_SPOTIFY_REDIRECT_URL="http://localhost:8080/auth/oauth2/spotify/callback"
+    export EZAUTH_OAUTH2_SPOTIFY_SCOPES="user-read-email,user-read-private"
+   ```
+
+2. **Build and Run**:
+   Build the binary from `cmd/ezauthapi/main.go`.
+   ```bash
+   go build -o ezauthapi ./cmd/ezauthapi
+   ```
+   Then, run the compiled binary:
+   ```bash
+   ./ezauthapi
+   ```
 
 ## Swagger Documentation
 

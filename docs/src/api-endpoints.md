@@ -97,6 +97,12 @@ Like `GET /auth/csrf`, these return JSON rather than redirecting — WebAuthn ce
 
 ezauth enforces no authorization on who may call these — same stance as impersonation. Protect these routes with your own admin-only check before exposing them.
 
+### Impersonation (Form)
+`POST /auth/impersonate` (field: `target_user_id`; requires a logged-in session; swaps the session cookie over to the target user, stashing the admin's own tokens)
+`POST /auth/impersonate/stop` (Requires an active impersonation session; restores the admin's own stashed session — no re-login required)
+
+ezauth enforces no authorization on who may call `/auth/impersonate` — protect it with your own admin-only check before exposing it.
+
 ### OAuth2
 `GET /auth/oauth2/{provider}/login` (Initiates login)
 `GET /auth/oauth2/{provider}/callback` (Callback handler. URL: `{base_url}/auth/oauth2/{provider}/callback`)
@@ -486,6 +492,54 @@ Requires the current password to confirm intent, then emails a verification link
 Applies the requested email change and revokes every other session. No authentication required (the token itself is the credential).
 
 **Response Data:** the updated user profile (same shape as User Info).
+
+### Impersonate
+`POST /auth/api/impersonate`
+
+Mints a new token pair for a target user on behalf of the authenticated caller (the "admin"). ezauth enforces no authorization on who may call this — protect it with your own admin-only check (e.g. `adminUser.HasRole("admin")`) before exposing it. Fails with `400` if the caller is already impersonating someone (stop that session first).
+
+**Request Body:**
+```json
+{
+  "target_user_id": "usr_123",
+  "refresh_token": "<the admin's own current refresh token>"
+}
+```
+
+`refresh_token` is the admin's own refresh token, echoed back unchanged as `original_refresh_token` so a stateless JSON client can restore its own session later via `/auth/api/impersonate/stop`.
+
+**Response Data:**
+```json
+{
+  "access_token": "<new access token, authenticated as the target user>",
+  "refresh_token": "<new refresh token, authenticated as the target user>",
+  "expires_in": 3600,
+  "token_type": "Bearer",
+  "original_access_token": "<the admin's own access token, unchanged>",
+  "original_refresh_token": "<the admin's own refresh token, unchanged>",
+  "impersonator_id": "usr_admin",
+  "target_user_id": "usr_123"
+}
+```
+
+The new `access_token` carries an `act` claim identifying the impersonator; use `ezauth.GetImpersonatorID(ctx)` to read it.
+
+### Stop Impersonation
+`POST /auth/api/impersonate/stop`
+
+Revokes an impersonation refresh token, ending that session. Call it with the impersonation token pair (not the admin's original one).
+
+**Request Body:**
+```json
+{
+  "refresh_token": "<the impersonation refresh token to revoke>"
+}
+```
+
+**Response Data:**
+```json
+{"message": "impersonation ended"}
+```
 
 ### Admin: List/Search Users
 `GET /auth/api/admin/users`

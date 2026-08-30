@@ -4,7 +4,7 @@
 
 ## Core Middleware
 
-### `LoginRequired`
+### `LoginRequiredMiddleware`
 
 Checks if a user is authenticated. This middleware is "content-aware":
 
@@ -12,21 +12,35 @@ Checks if a user is authenticated. This middleware is "content-aware":
 -   **API Request** (`/api/*` or `Accept: application/json`): Returns `401 Unauthorized`.
 
 ```go
-func (h *Handler) LoginRequired(next http.Handler) http.Handler
+func (h *Handler) LoginRequiredMiddleware(next http.Handler) http.Handler
 ```
 
 **Usage:**
 
 ```go
 r.Group(func(r chi.Router) {
-    r.Use(auth.Handler.LoginRequired)
+    r.Use(auth.LoginRequiredMiddleware)
     r.Get("/dashboard", dashboardHandler)
 })
 ```
 
+### `SessionMiddleware`
+
+Manages the cookie-based session (via `scs`) and loads the authenticated user into the request context for Form-based (non-API) routes. Must be mounted on the router for `GetSessionUser`, `GetSessionTokens`, `IsAuthenticated`, and flash-message helpers to work.
+
+```go
+func (h *Handler) SessionMiddleware(next http.Handler) http.Handler
+```
+
+**Usage:**
+
+```go
+r.Use(auth.SessionMiddleware)
+```
+
 ### `LoadUserMiddleware`
 
-Loads the authenticated user into the request context. This allows downstream handlers to use `auth.GetSessionUser(ctx)` without needing access to the `Handler` instance. This is useful if you want to use `ezauth`'s user data in your own handlers that are not part of the `auth` package logic.
+Loads the authenticated user into the request context from a Bearer token or API key, without requiring the cookie-based session. This allows downstream handlers to use `auth.GetSessionUser(ctx)` without needing access to the `Handler` instance. This is useful if you want to use `ezauth`'s user data in your own handlers that are not part of the `auth` package logic.
 
 ```go
 func (h *Handler) LoadUserMiddleware(next http.Handler) http.Handler

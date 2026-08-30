@@ -487,6 +487,43 @@ updated, err := auth.Service.EmailChangeConfirm(ctx, tokenFromLink)
 
 `EZAUTH_EMAIL_CHANGE_SUBJECT`/`EZAUTH_EMAIL_CHANGE_BODY` customize the verification email sent to the new address; `EZAUTH_EMAIL_CHANGE_NOTIFY_SUBJECT`/`EZAUTH_EMAIL_CHANGE_NOTIFY_BODY` customize the notice sent to the old one (`{{.NewEmail}}` available in both).
 
+## Impersonation
+
+`ezauth` supports admin impersonation: an authenticated user can act as another user (e.g. for customer support debugging), then swap back to their own session.
+
+> [!IMPORTANT]
+> `ezauth` enforces **no authorization** for who may impersonate (same stance as [Invitation-Based Onboarding](#invitation-based-onboarding) and [Admin User Management](#admin-user-management)). The `Impersonate` method mints tokens for any target user on behalf of whoever calls it — check `adminUser.HasRole("admin")` (or equivalent) yourself before calling it.
+
+```go
+// adminUser must already be authenticated; check authorization yourself first.
+if !adminUser.HasRole("admin") {
+    // reject
+}
+
+tokenResp, err := auth.Service.Impersonate(ctx, adminUser, targetUserID)
+// tokenResp.AccessToken / tokenResp.RefreshToken now authenticate as targetUser,
+// with the access token carrying an "act" claim identifying adminUser.
+
+// ... later, end the impersonation session:
+err = auth.Service.StopImpersonating(ctx, tokenResp.RefreshToken)
+```
+
+Detecting whether the current request is an impersonation session depends on which auth mode the route uses:
+
+```go
+// Bearer/JWT mode (requires AuthMiddleware): reads the "act" claim.
+impersonatorID, err := ezauth.GetImpersonatorID(ctx)
+
+// Cookie/session mode: reads the swapped-in session data.
+adminID, isImpersonating := auth.IsImpersonating(ctx)
+if isImpersonating {
+    admin, _ := auth.GetImpersonator(ctx) // full *models.User for adminID
+    fmt.Println("acting as admin:", admin.Email)
+}
+```
+
+These two are backed by different mechanisms (JWT claims vs. session storage) and aren't interchangeable — use whichever matches how your route is authenticated. See the [Impersonation section of the README](https://github.com/josuebrunel/ezauth#impersonation) for the standalone-service (JSON API / form) equivalents.
+
 ## Admin User Management
 
 Beyond impersonation, `ezauth` exposes admin-facing methods to list/search/filter users, suspend/reactivate an account, and view a user's auth history. `ezauth` enforces no authorization on who may call these (same stance as `Impersonate`) — check that yourself before exposing them.
@@ -583,6 +620,8 @@ func (h MyHook) AfterUserSignedIn(ctx context.Context, u *models.User) error {
 | `AfterPasswordResetConfirmed` | After a password reset is confirmed        | No (errors are logged) |
 | `AfterOAuth2SignedIn`         | After an existing user signs in via OAuth2 | No (errors are logged) |
 | `AfterOAuth2Created`          | After a new user is created via OAuth2     | No (errors are logged) |
+| `AfterImpersonationStarted`   | After an admin begins impersonating a user | No (errors are logged) |
+| `AfterImpersonationEnded`     | After an impersonation session ends        | No (errors are logged) |
 | `AfterMFAEnabled`             | After a user enables TOTP MFA              | No (errors are logged) |
 | `AfterMFADisabled`            | After a user disables TOTP MFA             | No (errors are logged) |
 

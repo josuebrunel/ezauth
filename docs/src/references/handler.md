@@ -41,14 +41,6 @@ Implements the `http.Handler` interface, allowing the `Handler` to be mounted on
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 ```
 
-### `ServeHTTP`
-
-Implements the `http.Handler` interface, allowing the `Handler` to be mounted on any Go HTTP router.
-
-```go
-func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request)
-```
-
 ### `GetSessionUser`
 
 Retrieves the authenticated user. It checks:
@@ -97,6 +89,53 @@ The following methods are attached to routes internally by `New`, but are public
 -   `PasswordResetConfirm(w, r)`: Confirm password reset
 -   `PasswordlessRequest(w, r)`: Request magic link
 -   `PasswordlessLogin(w, r)`: Login via magic link
+
+### Impersonation
+`ezauth` enforces no authorization here — protect these with your own admin-only check.
+-   `Impersonate(w, r)`: Start impersonating a target user (JSON)
+-   `StopImpersonation(w, r)`: End an impersonation session (JSON)
+-   `FormImpersonate(w, r)`: Start impersonating (form; swaps the session cookie)
+-   `FormStopImpersonation(w, r)`: End impersonation (form; restores the admin's own session)
+
+### Multi-Factor Authentication (TOTP)
+-   `MFAEnroll(w, r)`: Generate a TOTP secret + provisioning URI (JSON)
+-   `MFAConfirm(w, r)`: Verify enrollment code, enable MFA, return recovery codes (JSON)
+-   `MFADisable(w, r)`: Disable MFA (JSON)
+-   `MFALoginVerify(w, r)`: Complete a step-up login with a TOTP/recovery code (JSON)
+-   `FormMFAEnroll(w, r)`, `FormMFAConfirm(w, r)`, `FormMFADisable(w, r)`, `FormMFALoginVerify(w, r)`: Form equivalents
+
+### Trusted Devices
+-   `TrustedDevicesList(w, r)`, `TrustedDeviceRevoke(w, r)`: JSON
+-   `FormTrustedDevicesList(w, r)`, `FormTrustedDeviceRevoke(w, r)`: Form equivalents
+
+### WebAuthn / Passkeys
+-   `WebauthnRegisterBegin(w, r)`, `WebauthnRegisterFinish(w, r)`: Register a new credential (JSON)
+-   `WebauthnLoginBegin(w, r)`, `WebauthnLoginFinish(w, r)`: Discoverable (usernameless) login (JSON)
+-   `WebauthnCredentialsList(w, r)`, `WebauthnCredentialDelete(w, r)`: Manage credentials (JSON)
+-   `FormWebauthnRegisterBegin(w, r)`, `FormWebauthnRegisterFinish(w, r)`, `FormWebauthnLoginBegin(w, r)`, `FormWebauthnLoginFinish(w, r)`, `FormWebauthnCredentialsList(w, r)`, `FormWebauthnCredentialDelete(w, r)`: Form equivalents (these return JSON rather than redirecting — WebAuthn ceremonies require client-side JavaScript)
+
+### SMS OTP
+-   `SMSOTPRequest(w, r)`, `SMSOTPVerify(w, r)`: JSON
+-   `FormSMSOTPRequest(w, r)`, `FormSMSOTPVerify(w, r)`: Form equivalents
+
+### Invitation-Based Onboarding
+`ezauth` enforces no authorization on who may invite — same stance as impersonation.
+-   `InvitationCreate(w, r)`, `InvitationsList(w, r)`, `InvitationRevoke(w, r)`: Manage invitations (JSON; require a logged-in caller)
+-   `InvitationPreview(w, r)`: Look up invite details by token, no auth required (JSON)
+-   `InvitationAccept(w, r)`: Accept an invite and set a password (JSON)
+-   `FormInvitationCreate(w, r)`, `FormInvitationsList(w, r)`, `FormInvitationRevoke(w, r)`, `FormInvitationAccept(w, r)`: Form equivalents
+
+### Guarded Email Change
+-   `EmailChangeRequest(w, r)`: Requires current password; sends a confirmation link (JSON)
+-   `EmailChangeConfirm(w, r)`: Applies the change and revokes other sessions (JSON)
+-   `FormEmailChangeRequest(w, r)`, `FormEmailChangeConfirm(w, r)`: Form equivalents
+
+### Admin User Management
+`ezauth` enforces no authorization on who may call these — same stance as impersonation.
+-   `AdminUsersList(w, r)`: Search/filter/paginate users (JSON)
+-   `AdminUserSuspend(w, r)`, `AdminUserReactivate(w, r)`: Suspend/reactivate an account (JSON)
+-   `AdminUserAuthHistory(w, r)`: View a user's auth history (JSON)
+-   `FormAdminUsersList(w, r)`, `FormAdminUserSuspend(w, r)`, `FormAdminUserReactivate(w, r)`, `FormAdminUserAuthHistory(w, r)`: Form equivalents
 
 ### Form Handlers
 These handlers process `application/x-www-form-urlencoded` requests and return HTML redirects.

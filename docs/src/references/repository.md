@@ -56,6 +56,20 @@ Retrieves a user by OAuth2 provider ID.
 func (r Repository) UserGetByProvider(ctx context.Context, provider, providerID string) (*models.User, error)
 ```
 
+### `UserGetByUsername`
+Retrieves a user by username.
+
+```go
+func (r Repository) UserGetByUsername(ctx context.Context, username string) (*models.User, error)
+```
+
+### `UserGetByPhone`
+Retrieves a user by phone number (used by SMS OTP login).
+
+```go
+func (r Repository) UserGetByPhone(ctx context.Context, phone string) (*models.User, error)
+```
+
 ### `UserUpdate`
 Updates an existing user record. Automatically updates `UpdatedAt` to the current UTC time.
 
@@ -63,11 +77,25 @@ Updates an existing user record. Automatically updates `UpdatedAt` to the curren
 func (r Repository) UserUpdate(ctx context.Context, user *models.User) (*models.User, error)
 ```
 
+### `UserSetLockoutState`
+Sets the failed-attempt counter, an optional lockout expiry, and `IsActive` in one call. Used by both the account-lockout feature (temporary, auto-expiring) and admin suspend/reactivate (permanent, no expiry — `lockedUntil` is `nil`).
+
+```go
+func (r Repository) UserSetLockoutState(ctx context.Context, userID string, attempts int, lockedUntil *time.Time, isActive bool) (*models.User, error)
+```
+
 ### `UserDelete`
 Deletes a user record.
 
 ```go
 func (r Repository) UserDelete(ctx context.Context, id string) error
+```
+
+### `UsersList`
+Search/filter/paginate users via `models.UserListFilter` (`Search`, `Status`, `CreatedAfter`/`CreatedBefore`, `LastActiveAfter`/`LastActiveBefore`). `Search` is a case-insensitive substring match against email or username on all 3 dialects (Postgres uses `ILIKE`, sqlite/mysql `LIKE`).
+
+```go
+func (r Repository) UsersList(ctx context.Context, filter models.UserListFilter, limit, offset int) (users []*models.User, hasMore bool, err error)
 ```
 
 ## Token Methods
@@ -86,6 +114,20 @@ Retrieves a token record by its value.
 func (r Repository) TokenGetByToken(ctx context.Context, tokenValue string) (*models.Token, error)
 ```
 
+### `TokenListByUserIDAndType`
+Lists a user's tokens of a given type (e.g. all trusted-device tokens, or all invitation tokens issued by a user).
+
+```go
+func (r Repository) TokenListByUserIDAndType(ctx context.Context, userID, tokenType string) ([]*models.Token, error)
+```
+
+### `TokenListByUserID`
+Lists a user's most recent tokens of any type, newest first. Backs `UserAuthHistory`.
+
+```go
+func (r Repository) TokenListByUserID(ctx context.Context, userID string, limit int) ([]*models.Token, error)
+```
+
 ### `TokenRevoke`
 Marks a token as revoked.
 
@@ -93,9 +135,39 @@ Marks a token as revoked.
 func (r Repository) TokenRevoke(ctx context.Context, id string) error
 ```
 
+### `TokenRevokeAllByUserID`
+Revokes every active token for a user (e.g. all sessions, after a confirmed email change).
+
+```go
+func (r Repository) TokenRevokeAllByUserID(ctx context.Context, userID string) error
+```
+
 ### `TokenDelete`
 Permanently deletes a token.
 
 ```go
 func (r Repository) TokenDelete(ctx context.Context, id string) error
+```
+
+## WebAuthn Credential Methods
+
+Stores registered passkey/authenticator credentials for a user.
+
+```go
+func (r Repository) WebauthnCredentialCreate(ctx context.Context, cred *models.WebauthnCredential) (*models.WebauthnCredential, error)
+func (r Repository) WebauthnCredentialGetByID(ctx context.Context, id string) (*models.WebauthnCredential, error)
+func (r Repository) WebauthnCredentialGetByCredentialID(ctx context.Context, credentialID string) (*models.WebauthnCredential, error)
+func (r Repository) WebauthnCredentialListByUserID(ctx context.Context, userID string) ([]*models.WebauthnCredential, error)
+func (r Repository) WebauthnCredentialUpdate(ctx context.Context, cred *models.WebauthnCredential) (*models.WebauthnCredential, error)
+func (r Repository) WebauthnCredentialDelete(ctx context.Context, id string) error
+```
+
+## WebAuthn Challenge Methods
+
+Stores in-flight registration/login ceremony challenges. Login challenges are discoverable (usernameless), so no user is known yet — this is why challenges live in their own table with a nullable, unconstrained `user_id` instead of being stored as `Token` rows (whose `user_id` is `NOT NULL` with a foreign key).
+
+```go
+func (r Repository) WebauthnChallengeCreate(ctx context.Context, ch *models.WebauthnChallenge) (*models.WebauthnChallenge, error)
+func (r Repository) WebauthnChallengeGetBySessionKey(ctx context.Context, sessionKey string) (*models.WebauthnChallenge, error)
+func (r Repository) WebauthnChallengeDelete(ctx context.Context, id string) error
 ```

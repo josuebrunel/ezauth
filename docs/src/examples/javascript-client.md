@@ -78,6 +78,65 @@ async function getUserInfo() {
 }
 ```
 
+### Step-up Login (Multi-Factor Authentication)
+
+If the account has TOTP MFA enabled, `POST /auth/api/login` doesn't return tokens directly — it returns `{ "mfa_required": true, "mfa_token": "..." }` instead. Prompt the user for their authenticator code and exchange it (plus the `mfa_token`) at `POST /auth/api/mfa/login/verify` to get real session tokens. Passing `remember_device: true` returns a `device_token`; send it back via the `X-Device-Token` header on future logins to skip the step-up prompt for `EZAUTH_TRUSTED_DEVICE_TTL`.
+
+```javascript
+async function login(email, password) {
+    const response = await fetch('/auth/api/login', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            // Send a previously-issued device token, if any, to skip MFA on trusted devices.
+            'X-Device-Token': localStorage.getItem('device_token') || '',
+        },
+        body: JSON.stringify({ email, password })
+    });
+
+    if (!response.ok) return { ok: false };
+
+    const { data } = await response.json();
+
+    if (data.mfa_required) {
+        // Stash the mfa_token; the UI should now prompt for a TOTP/recovery code.
+        sessionStorage.setItem('mfa_token', data.mfa_token);
+        return { ok: true, mfaRequired: true };
+    }
+
+    storeTokens(data);
+    return { ok: true, mfaRequired: false };
+}
+
+async function verifyMFA(code, rememberDevice = false) {
+    const mfaToken = sessionStorage.getItem('mfa_token');
+
+    const response = await fetch('/auth/api/mfa/login/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mfa_token: mfaToken, code, remember_device: rememberDevice })
+    });
+
+    if (!response.ok) return false; // wrong code — let the user retry
+
+    const { data } = await response.json();
+    sessionStorage.removeItem('mfa_token');
+
+    if (data.device_token) {
+        // Only present when remember_device was true; persist for the X-Device-Token header above.
+        localStorage.setItem('device_token', data.device_token);
+    }
+
+    storeTokens(data);
+    return true;
+}
+
+function storeTokens({ access_token, refresh_token }) {
+    localStorage.setItem('access_token', access_token);
+    localStorage.setItem('refresh_token', refresh_token);
+}
+```
+
 ### Token Refresh
 
 `ezauth` provides a refresh endpoint. When the access token expires (401 Unauthorized), use the refresh token to get a new one.
