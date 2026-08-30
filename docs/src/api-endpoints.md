@@ -90,6 +90,13 @@ Like `GET /auth/csrf`, these return JSON rather than redirecting — WebAuthn ce
 `POST /auth/email-change/request` (fields: `current_password`, `new_email`; requires a logged-in session)
 `GET /auth/email-change/confirm?token=...` (No auth required; applies the change, clears the session, and redirects to `Pages.Login`)
 
+### Admin User Management (Form)
+`GET /auth/admin/users` (Query params: `search`, `status`, `created_after`/`created_before`, `last_active_after`/`last_active_before`, `limit`/`offset`; requires a logged-in session)
+`POST /auth/admin/users/{id}/suspend`, `POST /auth/admin/users/{id}/reactivate` (Require a logged-in session)
+`GET /auth/admin/users/{id}/history` (Query param: `limit`; requires a logged-in session)
+
+ezauth enforces no authorization on who may call these — same stance as impersonation. Protect these routes with your own admin-only check before exposing them.
+
 ### OAuth2
 `GET /auth/oauth2/{provider}/login` (Initiates login)
 `GET /auth/oauth2/{provider}/callback` (Callback handler. URL: `{base_url}/auth/oauth2/{provider}/callback`)
@@ -479,3 +486,50 @@ Requires the current password to confirm intent, then emails a verification link
 Applies the requested email change and revokes every other session. No authentication required (the token itself is the credential).
 
 **Response Data:** the updated user profile (same shape as User Info).
+
+### Admin: List/Search Users
+`GET /auth/api/admin/users`
+
+ezauth enforces no authorization on who may call this — same stance as impersonation. Protect this route with your own admin-only check before exposing it.
+
+**Query Parameters:**
+| Param | Description |
+| --- | --- |
+| `search` | Substring match against email or username |
+| `status` | `active`, `locked`, or `suspended` |
+| `created_after` / `created_before` | RFC3339 timestamp, filters by account creation time |
+| `last_active_after` / `last_active_before` | RFC3339 timestamp, filters by last-active time |
+| `limit` | Page size (default 20, max 100) |
+| `offset` | Page offset |
+
+**Response Data:**
+```json
+{
+  "users": [{"id": "...", "email": "...", "..." : "..."}],
+  "has_more": false
+}
+```
+
+### Admin: Suspend User
+`POST /auth/api/admin/users/{id}/suspend`
+
+Deactivates the user's account (`IsActive` cleared, no auto-expiry — distinct from a brute-force lockout).
+
+### Admin: Reactivate User
+`POST /auth/api/admin/users/{id}/reactivate`
+
+Re-enables a suspended or locked-out account and clears any lockout bookkeeping.
+
+### Admin: User Auth History
+`GET /auth/api/admin/users/{id}/history`
+
+Returns the user's most recent authentication-related token events (logins, password resets, MFA step-ups, ...), newest first. A lightweight proxy for a proper audit log, not a full audit trail.
+
+**Query Parameters:** `limit` (default 50, max 200)
+
+**Response Data:**
+```json
+[
+  {"token_type": "refresh", "created_at": "...", "expires_at": "...", "revoked": false}
+]
+```

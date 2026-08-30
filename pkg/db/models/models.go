@@ -72,6 +72,34 @@ type User struct {
 	UpdatedAt           time.Time  `db:"updated_at" json:"updated_at"`
 }
 
+// User account status values for UserListFilter.Status. These are derived
+// from IsActive/LockedUntil rather than stored directly: "active" is
+// IsActive; "locked" is a temporary, auto-expiring brute-force lockout
+// (IsActive false, LockedUntil set — see the account lockout feature);
+// "suspended" is an administrative deactivation with no auto-expiry
+// (IsActive false, LockedUntil nil).
+const (
+	UserStatusActive    = "active"
+	UserStatusLocked    = "locked"
+	UserStatusSuspended = "suspended"
+)
+
+// UserListFilter defines the search/filter criteria for an admin user listing.
+// All fields are optional (zero-valued means "no filter").
+type UserListFilter struct {
+	// Search matches (case-insensitively, substring) against email or username.
+	Search string
+
+	// Status filters by account status; one of UserStatusActive,
+	// UserStatusLocked, or UserStatusSuspended, or "" for no filter.
+	Status string
+
+	CreatedAfter     *time.Time
+	CreatedBefore    *time.Time
+	LastActiveAfter  *time.Time
+	LastActiveBefore *time.Time
+}
+
 // HasRole checks if the user has the specified role.
 // Roles are stored as a comma-separated string.
 func (u *User) HasRole(role string) bool {

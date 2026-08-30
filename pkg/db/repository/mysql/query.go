@@ -225,6 +225,53 @@ func (q *MysqlQuerier) QueryUserDelete(ctx context.Context, id string) bob.Query
 	return mysql.Delete(dm.From(models.TableUser), dm.Where(mysql.Quote("id").EQ(mysql.Arg(id))))
 }
 
+func (q *MysqlQuerier) QueryUsersList(ctx context.Context, filter models.UserListFilter, limit, offset int) bob.Query {
+	mods := []bob.Mod[*dialect.SelectQuery]{
+		sm.From(models.TableUser),
+		sm.OrderBy(mysql.Quote(models.ColumnCreatedAt)).Desc(),
+		sm.Limit(int64(limit)),
+		sm.Offset(int64(offset)),
+	}
+
+	if filter.Search != "" {
+		pattern := "%" + filter.Search + "%"
+		mods = append(mods, sm.Where(
+			mysql.Quote(models.ColumnEmail).Like(mysql.Arg(pattern)).
+				Or(mysql.Quote(models.ColumnUsername).Like(mysql.Arg(pattern))),
+		))
+	}
+
+	switch filter.Status {
+	case models.UserStatusActive:
+		mods = append(mods, sm.Where(mysql.Quote(models.ColumnIsActive).EQ(mysql.Arg(true))))
+	case models.UserStatusLocked:
+		mods = append(mods,
+			sm.Where(mysql.Quote(models.ColumnIsActive).EQ(mysql.Arg(false))),
+			sm.Where(mysql.Quote(models.ColumnLockedUntil).IsNotNull()),
+		)
+	case models.UserStatusSuspended:
+		mods = append(mods,
+			sm.Where(mysql.Quote(models.ColumnIsActive).EQ(mysql.Arg(false))),
+			sm.Where(mysql.Quote(models.ColumnLockedUntil).IsNull()),
+		)
+	}
+
+	if filter.CreatedAfter != nil {
+		mods = append(mods, sm.Where(mysql.Quote(models.ColumnCreatedAt).GTE(mysql.Arg(*filter.CreatedAfter))))
+	}
+	if filter.CreatedBefore != nil {
+		mods = append(mods, sm.Where(mysql.Quote(models.ColumnCreatedAt).LTE(mysql.Arg(*filter.CreatedBefore))))
+	}
+	if filter.LastActiveAfter != nil {
+		mods = append(mods, sm.Where(mysql.Quote(models.ColumnLastActiveAt).GTE(mysql.Arg(*filter.LastActiveAfter))))
+	}
+	if filter.LastActiveBefore != nil {
+		mods = append(mods, sm.Where(mysql.Quote(models.ColumnLastActiveAt).LTE(mysql.Arg(*filter.LastActiveBefore))))
+	}
+
+	return mysql.Select(mods...)
+}
+
 func (q *MysqlQuerier) QueryTokenInsert(ctx context.Context, token *models.Token) bob.Query {
 	if token.ID == "" {
 		token.ID = util.NewIDStripped()
@@ -272,6 +319,15 @@ func (q *MysqlQuerier) QueryTokenListByUserIDAndType(ctx context.Context, userID
 				And(mysql.Quote(models.ColumnTokenType).EQ(mysql.Arg(tokenType))).
 				And(mysql.Quote(models.ColumnRevoked).EQ(mysql.Arg(false))),
 		),
+	)
+}
+
+func (q *MysqlQuerier) QueryTokenListByUserID(ctx context.Context, userID string, limit int) bob.Query {
+	return mysql.Select(
+		sm.From(models.TableToken),
+		sm.Where(mysql.Quote(models.ColumnUserID).EQ(mysql.Arg(userID))),
+		sm.OrderBy(mysql.Quote(models.ColumnCreatedAt)).Desc(),
+		sm.Limit(int64(limit)),
 	)
 }
 

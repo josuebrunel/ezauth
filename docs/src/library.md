@@ -487,6 +487,26 @@ updated, err := auth.Service.EmailChangeConfirm(ctx, tokenFromLink)
 
 `EZAUTH_EMAIL_CHANGE_SUBJECT`/`EZAUTH_EMAIL_CHANGE_BODY` customize the verification email sent to the new address; `EZAUTH_EMAIL_CHANGE_NOTIFY_SUBJECT`/`EZAUTH_EMAIL_CHANGE_NOTIFY_BODY` customize the notice sent to the old one (`{{.NewEmail}}` available in both).
 
+## Admin User Management
+
+Beyond impersonation, `ezauth` exposes admin-facing methods to list/search/filter users, suspend/reactivate an account, and view a user's auth history. `ezauth` enforces no authorization on who may call these (same stance as `Impersonate`) — check that yourself before exposing them.
+
+```go
+result, err := auth.Service.UsersList(ctx, service.ListUsersOptions{
+    Search: "alice",
+    Status: models.UserStatusSuspended, // "active" | "locked" | "suspended"
+    Limit:  20,
+})
+// result.Users (PasswordHash stripped), result.HasMore
+
+user, err := auth.Service.UserSuspend(ctx, targetUserID)
+user, err = auth.Service.UserReactivate(ctx, targetUserID)
+
+history, err := auth.Service.UserAuthHistory(ctx, targetUserID, 50)
+```
+
+`ListUsersOptions` also supports `CreatedAfter`/`CreatedBefore` and `LastActiveAfter`/`LastActiveBefore` (`*time.Time`) for date-range filtering. `UserStatusActive`/`Locked`/`Suspended` are derived from the existing `IsActive`/lockout columns: locked is a temporary, auto-expiring brute-force lockout (see [Account Lockout](#account-lockout)); suspended is `UserSuspend`'s permanent-until-reactivated deactivation. `UserAuthHistory` is a lightweight proxy built from the Tokens table every other feature writes to, not a full audit log.
+
 ## Hooks
 
 ezauth provides a hook system that lets you intercept auth lifecycle events. This is useful for:

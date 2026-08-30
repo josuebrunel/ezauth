@@ -233,6 +233,55 @@ func (q *PSQLQuerier) QueryUserDelete(ctx context.Context, id string) bob.Query 
 	return psql.Delete(dm.From(psql.Quote(models.TableUser)), dm.Where(psql.Quote("id").EQ(psql.Arg(id))))
 }
 
+func (q *PSQLQuerier) QueryUsersList(ctx context.Context, filter models.UserListFilter, limit, offset int) bob.Query {
+	mods := []bob.Mod[*dialect.SelectQuery]{
+		sm.From(psql.Quote(models.TableUser)),
+		sm.OrderBy(psql.Quote(models.ColumnCreatedAt)).Desc(),
+		sm.Limit(limit),
+		sm.Offset(offset),
+	}
+
+	if filter.Search != "" {
+		pattern := "%" + filter.Search + "%"
+		mods = append(mods, sm.Where(
+			// ILIKE (not LIKE) for case-insensitive matching, matching sqlite/mysql's
+			// default LIKE case-insensitivity.
+			psql.Quote(models.ColumnEmail).OP("ILIKE", psql.Arg(pattern)).
+				Or(psql.Quote(models.ColumnUsername).OP("ILIKE", psql.Arg(pattern))),
+		))
+	}
+
+	switch filter.Status {
+	case models.UserStatusActive:
+		mods = append(mods, sm.Where(psql.Quote(models.ColumnIsActive).EQ(psql.Arg(true))))
+	case models.UserStatusLocked:
+		mods = append(mods,
+			sm.Where(psql.Quote(models.ColumnIsActive).EQ(psql.Arg(false))),
+			sm.Where(psql.Quote(models.ColumnLockedUntil).IsNotNull()),
+		)
+	case models.UserStatusSuspended:
+		mods = append(mods,
+			sm.Where(psql.Quote(models.ColumnIsActive).EQ(psql.Arg(false))),
+			sm.Where(psql.Quote(models.ColumnLockedUntil).IsNull()),
+		)
+	}
+
+	if filter.CreatedAfter != nil {
+		mods = append(mods, sm.Where(psql.Quote(models.ColumnCreatedAt).GTE(psql.Arg(*filter.CreatedAfter))))
+	}
+	if filter.CreatedBefore != nil {
+		mods = append(mods, sm.Where(psql.Quote(models.ColumnCreatedAt).LTE(psql.Arg(*filter.CreatedBefore))))
+	}
+	if filter.LastActiveAfter != nil {
+		mods = append(mods, sm.Where(psql.Quote(models.ColumnLastActiveAt).GTE(psql.Arg(*filter.LastActiveAfter))))
+	}
+	if filter.LastActiveBefore != nil {
+		mods = append(mods, sm.Where(psql.Quote(models.ColumnLastActiveAt).LTE(psql.Arg(*filter.LastActiveBefore))))
+	}
+
+	return psql.Select(mods...)
+}
+
 func (q *PSQLQuerier) QueryTokenInsert(ctx context.Context, token *models.Token) bob.Query {
 	if token.ID == "" {
 		token.ID = util.NewID()
@@ -281,6 +330,15 @@ func (q *PSQLQuerier) QueryTokenListByUserIDAndType(ctx context.Context, userID,
 				And(psql.Quote(models.ColumnTokenType).EQ(psql.Arg(tokenType))).
 				And(psql.Quote(models.ColumnRevoked).EQ(psql.Arg(false))),
 		),
+	)
+}
+
+func (q *PSQLQuerier) QueryTokenListByUserID(ctx context.Context, userID string, limit int) bob.Query {
+	return psql.Select(
+		sm.From(psql.Quote(models.TableToken)),
+		sm.Where(psql.Quote(models.ColumnUserID).EQ(psql.Arg(userID))),
+		sm.OrderBy(psql.Quote(models.ColumnCreatedAt)).Desc(),
+		sm.Limit(limit),
 	)
 }
 

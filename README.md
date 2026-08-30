@@ -416,6 +416,10 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 | GET    | `/auth/invitations/preview`        | Preview a pending invitation by its token (no auth required)               |
 | POST   | `/auth/email-change/request`       | Request an email change as the logged-in session user (see [Guarded Email Change](#guarded-email-change)) |
 | GET    | `/auth/email-change/confirm`       | Confirm an email change, clear the session, and redirect to `Pages.Login`  |
+| GET    | `/auth/admin/users`                | List/search/filter users as the logged-in session user (see [Admin User Management](#admin-user-management)) |
+| POST   | `/auth/admin/users/{id}/suspend`   | Suspend a user's account                                                    |
+| POST   | `/auth/admin/users/{id}/reactivate`| Reactivate a user's account                                                 |
+| GET    | `/auth/admin/users/{id}/history`   | View a user's auth history                                                  |
 
 #### Form Field Reference
 
@@ -480,6 +484,10 @@ These endpoints accept `application/json` and return JSON responses.
 | POST   | `/auth/api/invitations/accept`     | Complete registration from an invitation and receive tokens |
 | POST   | `/auth/api/email-change/request`   | Request an email change (Protected, see [Guarded Email Change](#guarded-email-change)) |
 | GET    | `/auth/api/email-change/confirm`   | Confirm an email change |
+| GET    | `/auth/api/admin/users`            | List/search/filter users (Protected, see [Admin User Management](#admin-user-management)) |
+| POST   | `/auth/api/admin/users/{id}/suspend` | Suspend a user's account (Protected) |
+| POST   | `/auth/api/admin/users/{id}/reactivate` | Reactivate a user's account (Protected) |
+| GET    | `/auth/api/admin/users/{id}/history` | View a user's auth history (Protected) |
 
 ## Middlewares
  
@@ -836,6 +844,42 @@ curl "https://your-host/auth/api/email-change/confirm?token=<token>" -H "X-API-K
 For form-based (cookie) clients, `POST /auth/email-change/request` (fields `current_password`, `new_email`) works the same way against the logged-in session user, and `GET /auth/email-change/confirm?token=...` applies the change, clears the session (since it was just revoked along with every other one), and redirects to `Pages.Login`.
 
 Set `EZAUTH_EMAIL_CHANGE_SUBJECT`/`EZAUTH_EMAIL_CHANGE_BODY` to customize the verification email sent to the new address, and `EZAUTH_EMAIL_CHANGE_NOTIFY_SUBJECT`/`EZAUTH_EMAIL_CHANGE_NOTIFY_BODY` to customize the notice sent to the old one.
+
+## Admin User Management
+
+Beyond impersonation, `ezauth` exposes admin-facing endpoints to list/search users, suspend/reactivate an account, and view a user's auth history. Like `Impersonate`, `ezauth` enforces no authorization on who may call these — check that yourself (e.g. `caller.HasRole("admin")`) before exposing them, since as shipped they're reachable by any authenticated user.
+
+```go
+result, err := auth.Service.UsersList(ctx, service.ListUsersOptions{
+    Search: "alice",                    // matches email or username
+    Status: models.UserStatusSuspended, // "active" | "locked" | "suspended"
+    Limit:  20,
+    Offset: 0,
+})
+// result.Users (PasswordHash stripped), result.HasMore
+
+user, err := auth.Service.UserSuspend(ctx, targetUserID)
+user, err = auth.Service.UserReactivate(ctx, targetUserID)
+
+history, err := auth.Service.UserAuthHistory(ctx, targetUserID, 50)
+// []service.AuthHistoryEntry — token_type/created_at/expires_at/revoked, newest first
+```
+
+`UserStatusActive`/`UserStatusLocked`/`UserStatusSuspended` distinguish three states derived from the existing `IsActive`/lockout columns: **active** (`IsActive` true), **locked** (temporarily and automatically expiring — see [Account Lockout](#account-lockout)), and **suspended** (`IsActive` false with no expiry, i.e. this feature's `UserSuspend`). `UserAuthHistory` is a lightweight proxy for a proper audit log built from the same Tokens table every other feature already writes to — it is not a full audit trail.
+
+### Standalone-service Mode
+
+```bash
+# All require the caller's own Bearer token; ezauth adds no role check.
+curl "https://your-host/auth/api/admin/users?search=alice&status=suspended&limit=20" \
+  -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+
+curl -X POST https://your-host/auth/api/admin/users/<id>/suspend -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+curl -X POST https://your-host/auth/api/admin/users/<id>/reactivate -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+curl "https://your-host/auth/api/admin/users/<id>/history" -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+```
+
+`GET /auth/api/admin/users` accepts `search`, `status` (`active`/`locked`/`suspended`), `created_after`/`created_before`, `last_active_after`/`last_active_before` (RFC3339 timestamps), and `limit`/`offset` (default 20, max 100). For form-based (cookie) clients, the same query params work against `/auth/admin/users`, `/auth/admin/users/{id}/suspend`, `/auth/admin/users/{id}/reactivate`, and `/auth/admin/users/{id}/history`, authenticated via the logged-in session user instead of a Bearer token.
 
 ## Hooks
 

@@ -32,6 +32,7 @@ type UserQuerier interface {
 	QueryUserUpdate(ctx context.Context, user *models.User) bob.Query
 	QueryUserSetLockoutState(ctx context.Context, userID string, attempts int, lockedUntil *time.Time, isActive bool) bob.Query
 	QueryUserDelete(ctx context.Context, id string) bob.Query
+	QueryUsersList(ctx context.Context, filter models.UserListFilter, limit, offset int) bob.Query
 }
 
 type TokenQuerier interface {
@@ -39,6 +40,7 @@ type TokenQuerier interface {
 	QueryTokenGetByID(ctx context.Context, id string) bob.Query
 	QueryTokenGetByToken(ctx context.Context, token string) bob.Query
 	QueryTokenListByUserIDAndType(ctx context.Context, userID, tokenType string) bob.Query
+	QueryTokenListByUserID(ctx context.Context, userID string, limit int) bob.Query
 	QueryTokenRevoke(ctx context.Context, id string) bob.Query
 	QueryTokenRevokeAllByUserID(ctx context.Context, userID string) bob.Query
 	QueryTokenDelete(ctx context.Context, id string) bob.Query
@@ -246,6 +248,22 @@ func (r Repository) UserDelete(ctx context.Context, id string) error {
 	return nil
 }
 
+// UsersList lists/filters users (see models.UserListFilter), most recently
+// created first. hasMore reports whether more results exist beyond this
+// page, computed by fetching one extra row rather than a separate COUNT(*) query.
+func (r Repository) UsersList(ctx context.Context, filter models.UserListFilter, limit, offset int) (users []*models.User, hasMore bool, err error) {
+	query := r.QueryUsersList(ctx, filter, limit+1, offset)
+	users, err = bob.All(ctx, r.bdb, query, scan.StructMapper[*models.User]())
+	if err != nil {
+		xlog.Error("Failed to list users", "error", err)
+		return nil, false, err
+	}
+	if len(users) > limit {
+		return users[:limit], true, nil
+	}
+	return users, false, nil
+}
+
 // TokenCreate creates a new refresh token or password reset token in the database.
 func (r Repository) TokenCreate(ctx context.Context, token *models.Token) (*models.Token, error) {
 	query := r.QueryTokenInsert(ctx, token)
@@ -296,6 +314,18 @@ func (r Repository) TokenListByUserIDAndType(ctx context.Context, userID, tokenT
 	tokens, err := bob.All(ctx, r.bdb, query, scan.StructMapper[*models.Token]())
 	if err != nil {
 		xlog.Error("Failed to list tokens by user and type", "error", err, "user_id", userID, "token_type", tokenType)
+		return nil, err
+	}
+	return tokens, nil
+}
+
+// TokenListByUserID lists the most recent tokens of any type for a user
+// (e.g. for an admin-facing auth history view), most recently created first.
+func (r Repository) TokenListByUserID(ctx context.Context, userID string, limit int) ([]*models.Token, error) {
+	query := r.QueryTokenListByUserID(ctx, userID, limit)
+	tokens, err := bob.All(ctx, r.bdb, query, scan.StructMapper[*models.Token]())
+	if err != nil {
+		xlog.Error("Failed to list tokens by user", "error", err, "user_id", userID)
 		return nil, err
 	}
 	return tokens, nil

@@ -8,6 +8,227 @@
     },
     "basePath": "/",
     "paths": {
+        "/auth/api/admin/users": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "List/search users (admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by email/username substring",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status: active, locked, or suspended",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 timestamp",
+                        "name": "created_after",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 timestamp",
+                        "name": "created_before",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 timestamp",
+                        "name": "last_active_after",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 timestamp",
+                        "name": "last_active_before",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size (default 20, max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-service_ListUsersResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/api/admin/users/{id}/history": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "View a user's auth history (admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Max entries (default 50, max 200)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-array_service_AuthHistoryEntry"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/api/admin/users/{id}/reactivate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Reactivate a user (admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-models_User"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/api/admin/users/{id}/suspend": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Suspend a user (admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-models_User"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/api/email-change/confirm": {
             "get": {
                 "security": [
@@ -1616,6 +1837,20 @@
                 }
             }
         },
+        "handler.ApiResponse-array_service_AuthHistoryEntry": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/service.AuthHistoryEntry"
+                    }
+                },
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
         "handler.ApiResponse-array_service_InvitationInfo": {
             "type": "object",
             "properties": {
@@ -1737,6 +1972,17 @@
             "properties": {
                 "data": {
                     "$ref": "#/definitions/service.InvitationInfo"
+                },
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.ApiResponse-service_ListUsersResult": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/service.ListUsersResult"
                 },
                 "error": {
                     "type": "string"
@@ -2547,6 +2793,23 @@
                 "VerificationDiscouraged"
             ]
         },
+        "service.AuthHistoryEntry": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "revoked": {
+                    "type": "boolean"
+                },
+                "token_type": {
+                    "type": "string"
+                }
+            }
+        },
         "service.InvitationInfo": {
             "type": "object",
             "properties": {
@@ -2568,6 +2831,20 @@
                 },
                 "roles": {
                     "type": "string"
+                }
+            }
+        },
+        "service.ListUsersResult": {
+            "type": "object",
+            "properties": {
+                "has_more": {
+                    "type": "boolean"
+                },
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.User"
+                    }
                 }
             }
         },
@@ -2781,9 +3058,6 @@
         "webauthncose.COSEAlgorithmIdentifier": {
             "type": "integer",
             "enum": [
-                -48,
-                -49,
-                -50,
                 -7,
                 -8,
                 -9,
@@ -2799,12 +3073,12 @@
                 -257,
                 -258,
                 -259,
-                -65535
+                -65535,
+                -48,
+                -49,
+                -50
             ],
             "x-enum-varnames": [
-                "AlgMLDSA44",
-                "AlgMLDSA65",
-                "AlgMLDSA87",
                 "AlgES256",
                 "AlgEdDSA",
                 "AlgESP256",
@@ -2820,7 +3094,10 @@
                 "AlgRS256",
                 "AlgRS384",
                 "AlgRS512",
-                "AlgRS1"
+                "AlgRS1",
+                "AlgMLDSA44",
+                "AlgMLDSA65",
+                "AlgMLDSA87"
             ]
         }
     },

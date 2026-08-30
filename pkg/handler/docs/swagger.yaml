@@ -9,6 +9,15 @@ definitions:
       error:
         type: string
     type: object
+  handler.ApiResponse-array_service_AuthHistoryEntry:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/service.AuthHistoryEntry'
+        type: array
+      error:
+        type: string
+    type: object
   handler.ApiResponse-array_service_InvitationInfo:
     properties:
       data:
@@ -87,6 +96,13 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/service.InvitationInfo'
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-service_ListUsersResult:
+    properties:
+      data:
+        $ref: '#/definitions/service.ListUsersResult'
       error:
         type: string
     type: object
@@ -687,6 +703,17 @@ definitions:
     - VerificationRequired
     - VerificationPreferred
     - VerificationDiscouraged
+  service.AuthHistoryEntry:
+    properties:
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      revoked:
+        type: boolean
+      token_type:
+        type: string
+    type: object
   service.InvitationInfo:
     properties:
       created_at:
@@ -702,6 +729,15 @@ definitions:
         type: string
       roles:
         type: string
+    type: object
+  service.ListUsersResult:
+    properties:
+      has_more:
+        type: boolean
+      users:
+        items:
+          $ref: '#/definitions/models.User'
+        type: array
     type: object
   service.LoginResponse:
     properties:
@@ -840,9 +876,6 @@ definitions:
     type: object
   webauthncose.COSEAlgorithmIdentifier:
     enum:
-    - -48
-    - -49
-    - -50
     - -7
     - -8
     - -9
@@ -859,11 +892,11 @@ definitions:
     - -258
     - -259
     - -65535
+    - -48
+    - -49
+    - -50
     type: integer
     x-enum-varnames:
-    - AlgMLDSA44
-    - AlgMLDSA65
-    - AlgMLDSA87
     - AlgES256
     - AlgEdDSA
     - AlgESP256
@@ -880,12 +913,150 @@ definitions:
     - AlgRS384
     - AlgRS512
     - AlgRS1
+    - AlgMLDSA44
+    - AlgMLDSA65
+    - AlgMLDSA87
 info:
   contact: {}
   description: Authentication service/library for Go.
   title: EzAuth API
   version: "1.0"
 paths:
+  /auth/api/admin/users:
+    get:
+      parameters:
+      - description: Filter by email/username substring
+        in: query
+        name: search
+        type: string
+      - description: 'Filter by status: active, locked, or suspended'
+        in: query
+        name: status
+        type: string
+      - description: RFC3339 timestamp
+        in: query
+        name: created_after
+        type: string
+      - description: RFC3339 timestamp
+        in: query
+        name: created_before
+        type: string
+      - description: RFC3339 timestamp
+        in: query
+        name: last_active_after
+        type: string
+      - description: RFC3339 timestamp
+        in: query
+        name: last_active_before
+        type: string
+      - description: Page size (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Page offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_ListUsersResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: List/search users (admin)
+      tags:
+      - admin
+  /auth/api/admin/users/{id}/history:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Max entries (default 50, max 200)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-array_service_AuthHistoryEntry'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: View a user's auth history (admin)
+      tags:
+      - admin
+  /auth/api/admin/users/{id}/reactivate:
+    post:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-models_User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Reactivate a user (admin)
+      tags:
+      - admin
+  /auth/api/admin/users/{id}/suspend:
+    post:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-models_User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Suspend a user (admin)
+      tags:
+      - admin
   /auth/api/email-change/confirm:
     get:
       description: Applies the requested email change and revokes other sessions

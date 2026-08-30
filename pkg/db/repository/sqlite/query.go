@@ -230,6 +230,53 @@ func (q *SqliteQuerier) QueryUserDelete(ctx context.Context, id string) bob.Quer
 	return sqlite.Delete(dm.From(models.TableUser), dm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
 }
 
+func (q *SqliteQuerier) QueryUsersList(ctx context.Context, filter models.UserListFilter, limit, offset int) bob.Query {
+	mods := []bob.Mod[*dialect.SelectQuery]{
+		sm.From(models.TableUser),
+		sm.OrderBy(sqlite.Quote(models.ColumnCreatedAt)).Desc(),
+		sm.Limit(limit),
+		sm.Offset(offset),
+	}
+
+	if filter.Search != "" {
+		pattern := "%" + filter.Search + "%"
+		mods = append(mods, sm.Where(
+			sqlite.Quote(models.ColumnEmail).Like(sqlite.Arg(pattern)).
+				Or(sqlite.Quote(models.ColumnUsername).Like(sqlite.Arg(pattern))),
+		))
+	}
+
+	switch filter.Status {
+	case models.UserStatusActive:
+		mods = append(mods, sm.Where(sqlite.Quote(models.ColumnIsActive).EQ(sqlite.Arg(true))))
+	case models.UserStatusLocked:
+		mods = append(mods,
+			sm.Where(sqlite.Quote(models.ColumnIsActive).EQ(sqlite.Arg(false))),
+			sm.Where(sqlite.Quote(models.ColumnLockedUntil).IsNotNull()),
+		)
+	case models.UserStatusSuspended:
+		mods = append(mods,
+			sm.Where(sqlite.Quote(models.ColumnIsActive).EQ(sqlite.Arg(false))),
+			sm.Where(sqlite.Quote(models.ColumnLockedUntil).IsNull()),
+		)
+	}
+
+	if filter.CreatedAfter != nil {
+		mods = append(mods, sm.Where(sqlite.Quote(models.ColumnCreatedAt).GTE(sqlite.Arg(*filter.CreatedAfter))))
+	}
+	if filter.CreatedBefore != nil {
+		mods = append(mods, sm.Where(sqlite.Quote(models.ColumnCreatedAt).LTE(sqlite.Arg(*filter.CreatedBefore))))
+	}
+	if filter.LastActiveAfter != nil {
+		mods = append(mods, sm.Where(sqlite.Quote(models.ColumnLastActiveAt).GTE(sqlite.Arg(*filter.LastActiveAfter))))
+	}
+	if filter.LastActiveBefore != nil {
+		mods = append(mods, sm.Where(sqlite.Quote(models.ColumnLastActiveAt).LTE(sqlite.Arg(*filter.LastActiveBefore))))
+	}
+
+	return sqlite.Select(mods...)
+}
+
 func (q *SqliteQuerier) QueryTokenInsert(ctx context.Context, token *models.Token) bob.Query {
 	if token.ID == "" {
 		token.ID = util.NewIDStripped()
@@ -278,6 +325,15 @@ func (q *SqliteQuerier) QueryTokenListByUserIDAndType(ctx context.Context, userI
 				And(sqlite.Quote(models.ColumnTokenType).EQ(sqlite.Arg(tokenType))).
 				And(sqlite.Quote(models.ColumnRevoked).EQ(sqlite.Arg(false))),
 		),
+	)
+}
+
+func (q *SqliteQuerier) QueryTokenListByUserID(ctx context.Context, userID string, limit int) bob.Query {
+	return sqlite.Select(
+		sm.From(models.TableToken),
+		sm.Where(sqlite.Quote(models.ColumnUserID).EQ(sqlite.Arg(userID))),
+		sm.OrderBy(sqlite.Quote(models.ColumnCreatedAt)).Desc(),
+		sm.Limit(limit),
 	)
 }
 

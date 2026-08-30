@@ -181,6 +181,10 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 			r.Get("/invitations", h.FormInvitationsList)
 			r.Delete("/invitations/{id}", h.FormInvitationRevoke)
 			r.Get("/invitations/preview", h.InvitationPreview)
+			r.Get("/admin/users", h.FormAdminUsersList)
+			r.Post("/admin/users/{id}/suspend", h.FormAdminUserSuspend)
+			r.Post("/admin/users/{id}/reactivate", h.FormAdminUserReactivate)
+			r.Get("/admin/users/{id}/history", h.FormAdminUserAuthHistory)
 		})
 
 		// Routes protected by API Key
@@ -226,6 +230,10 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 					r.Get("/invitations", h.InvitationsList)
 					r.Delete("/invitations/{id}", h.InvitationRevoke)
 					r.Post("/email-change/request", h.EmailChangeRequest)
+					r.Get("/admin/users", h.AdminUsersList)
+					r.Post("/admin/users/{id}/suspend", h.AdminUserSuspend)
+					r.Post("/admin/users/{id}/reactivate", h.AdminUserReactivate)
+					r.Get("/admin/users/{id}/history", h.AdminUserAuthHistory)
 				})
 			})
 		})
