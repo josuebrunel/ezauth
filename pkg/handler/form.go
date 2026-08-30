@@ -615,6 +615,50 @@ func (h *Handler) FormPasswordResetRequest(w http.ResponseWriter, r *http.Reques
 	h.redirectWithSuccess(w, r, h.svc.Cfg.Pages.Login, "password reset link sent")
 }
 
+// FormEmailChangeRequest initiates a guarded email change for the current
+// session user, requiring their current password.
+func (h *Handler) FormEmailChangeRequest(w http.ResponseWriter, r *http.Request) {
+	user, err := h.GetSessionUser(r.Context())
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
+		return
+	}
+
+	req := service.RequestEmailChange{
+		CurrentPassword: r.FormValue("current_password"),
+		NewEmail:        r.FormValue("new_email"),
+	}
+
+	if err := h.svc.EmailChangeRequest(r.Context(), user, req); err != nil {
+		WriteJSONResponseError(w, http.StatusBadRequest, err)
+		return
+	}
+	WriteJSONResponse(w, http.StatusOK, map[string]string{"message": "confirmation email sent to the new address"}, nil)
+}
+
+// FormEmailChangeConfirm completes a guarded email change via the emailed
+// link. Since confirming revokes every session (including the one following
+// this link), it clears auth cookies and sends the user back to log in again.
+func (h *Handler) FormEmailChangeConfirm(w http.ResponseWriter, r *http.Request) {
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrTokenRequired.Error())
+		return
+	}
+
+	if _, err := h.svc.EmailChangeConfirm(r.Context(), token); err != nil {
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, err.Error())
+		return
+	}
+
+	h.clearAuthCookies(r.Context())
+	http.Redirect(w, r, h.svc.Cfg.Pages.Login, http.StatusFound)
+}
+
 // FormPasswordResetConfirm handles the confirmation of a password reset via form.
 func (h *Handler) FormPasswordResetConfirm(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {

@@ -121,9 +121,10 @@ func (m *MockMailer) Send(to string, subject string, body string) error {
 
 // EmailTemplateData contains variables available in email templates.
 type EmailTemplateData struct {
-	Link  string // Full URL for the action (e.g., magic link URL)
-	Token string // Raw token value
-	Email string // User's email address
+	Link     string // Full URL for the action (e.g., magic link URL)
+	Token    string // Raw token value
+	Email    string // User's email address
+	NewEmail string // Used by the email-change flow: the requested new address
 }
 
 // RenderTemplate renders a template string with the given data.

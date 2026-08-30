@@ -83,6 +83,10 @@ Customize the subject and body of emails sent by `ezauth`. Templates use Go `tex
 | `EZAUTH_EMAIL_PASSWORD_RESET_BODY`    | Body for password reset emails.    | `Click the following link to reset your password: {{.Link}}` |
 | `EZAUTH_EMAIL_INVITATION_SUBJECT`     | Subject for invitation emails.     | `You've been invited`                                         |
 | `EZAUTH_EMAIL_INVITATION_BODY`        | Body for invitation emails.        | `Click the following link to accept your invitation: {{.Link}}` |
+| `EZAUTH_EMAIL_CHANGE_SUBJECT`         | Subject for the verification email sent to a *new* address. | `Confirm your new email address` |
+| `EZAUTH_EMAIL_CHANGE_BODY`            | Body for the verification email sent to a *new* address.    | `Click the following link to confirm your new email address: {{.Link}}` |
+| `EZAUTH_EMAIL_CHANGE_NOTIFY_SUBJECT`  | Subject for the notice sent to the *current* address.        | `Your email address is being changed` |
+| `EZAUTH_EMAIL_CHANGE_NOTIFY_BODY`     | Body for the notice sent to the *current* address. `{{.NewEmail}}` available. | `A request was made to change the email on your account to {{.NewEmail}}. If this wasn't you, please secure your account immediately.` |
 
 ## SMS OTP Settings
 

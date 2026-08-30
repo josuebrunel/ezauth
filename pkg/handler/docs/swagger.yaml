@@ -751,6 +751,13 @@ definitions:
       username:
         type: string
     type: object
+  service.RequestEmailChange:
+    properties:
+      current_password:
+        type: string
+      new_email:
+        type: string
+    type: object
   service.RequestInvitation:
     properties:
       data:
@@ -879,6 +886,61 @@ info:
   title: EzAuth API
   version: "1.0"
 paths:
+  /auth/api/email-change/confirm:
+    get:
+      description: Applies the requested email change and revokes other sessions
+      parameters:
+      - description: Email change token
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-models_User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Confirm an email change
+      tags:
+      - user
+  /auth/api/email-change/request:
+    post:
+      consumes:
+      - application/json
+      description: Verifies the current password, then emails a confirmation link
+        to the new address
+      parameters:
+      - description: Email Change Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestEmailChange'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Request an email change
+      tags:
+      - user
   /auth/api/invitations:
     get:
       produces:

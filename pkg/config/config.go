@@ -137,6 +137,14 @@ type EmailTemplates struct {
 	PasswordResetBody    string `json:"password_reset_body" env:"EMAIL_PASSWORD_RESET_BODY" default:"Click the following link to reset your password: {{.Link}}"`
 	InvitationSubject    string `json:"invitation_subject" env:"EMAIL_INVITATION_SUBJECT" default:"You've been invited"`
 	InvitationBody       string `json:"invitation_body" env:"EMAIL_INVITATION_BODY" default:"Click the following link to accept your invitation: {{.Link}}"`
+
+	// EmailChangeSubject/Body are sent to the *new* address to verify it before the change takes effect.
+	EmailChangeSubject string `json:"email_change_subject" env:"EMAIL_CHANGE_SUBJECT" default:"Confirm your new email address"`
+	EmailChangeBody    string `json:"email_change_body" env:"EMAIL_CHANGE_BODY" default:"Click the following link to confirm your new email address: {{.Link}}"`
+
+	// EmailChangeNotify* are sent to the *current* address to warn that a change was requested (account-takeover mitigation).
+	EmailChangeNotifySubject string `json:"email_change_notify_subject" env:"EMAIL_CHANGE_NOTIFY_SUBJECT" default:"Your email address is being changed"`
+	EmailChangeNotifyBody    string `json:"email_change_notify_body" env:"EMAIL_CHANGE_NOTIFY_BODY" default:"A request was made to change the email on your account to {{.NewEmail}}. If this wasn't you, please secure your account immediately."`
 }
 
 // Invitation defines the invite-by-email onboarding settings.

@@ -86,6 +86,10 @@ Like `GET /auth/csrf`, these return JSON rather than redirecting — WebAuthn ce
 `GET /auth/invitations`, `DELETE /auth/invitations/{id}` (Require a logged-in session)
 `GET /auth/invitations/preview?token=...` (No auth required; returns JSON)
 
+### Email Change (Form)
+`POST /auth/email-change/request` (fields: `current_password`, `new_email`; requires a logged-in session)
+`GET /auth/email-change/confirm?token=...` (No auth required; applies the change, clears the session, and redirects to `Pages.Login`)
+
 ### OAuth2
 `GET /auth/oauth2/{provider}/login` (Initiates login)
 `GET /auth/oauth2/{provider}/callback` (Callback handler. URL: `{base_url}/auth/oauth2/{provider}/callback`)
@@ -455,3 +459,23 @@ Lists the invitations issued by the authenticated user.
 `DELETE /auth/api/invitations/{id}`
 
 Revokes one of the authenticated user's invitations by its record ID.
+
+### Email Change Request
+`POST /auth/api/email-change/request`
+
+Requires the current password to confirm intent, then emails a verification link to the new address. The account's email doesn't change until confirmed; the old address also gets a notice of the request.
+
+**Request Body:**
+```json
+{
+  "current_password": "...",
+  "new_email": "new-address@example.com"
+}
+```
+
+### Email Change Confirm
+`GET /auth/api/email-change/confirm?token=...`
+
+Applies the requested email change and revokes every other session. No authentication required (the token itself is the credential).
+
+**Response Data:** the updated user profile (same shape as User Info).

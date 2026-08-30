@@ -414,6 +414,8 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 | GET    | `/auth/invitations`                | List invitations issued by the logged-in session user                      |
 | DELETE | `/auth/invitations/{id}`           | Revoke one of the logged-in session user's invitations                     |
 | GET    | `/auth/invitations/preview`        | Preview a pending invitation by its token (no auth required)               |
+| POST   | `/auth/email-change/request`       | Request an email change as the logged-in session user (see [Guarded Email Change](#guarded-email-change)) |
+| GET    | `/auth/email-change/confirm`       | Confirm an email change, clear the session, and redirect to `Pages.Login`  |
 
 #### Form Field Reference
 
@@ -434,6 +436,7 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 | `/auth/mfa/login/verify` (remember) | `code`                             | `remember_device` (any non-empty value)                                                                          |
 | `/auth/invitations`            | `email`                                 | `roles`                                                                                                          |
 | `/auth/invitation/accept`      | `token`, `password`, `password_confirm` | `username`, `first_name`, `last_name`, `locale`, `timezone`                                                     |
+| `/auth/email-change/request`   | `current_password`, `new_email`         |                                                                                                                   |
 
 > [!NOTE]
 > Passwords must be between 8 and 128 characters long. The `/auth/webauthn/*` endpoints are not listed here: they take the browser's raw `navigator.credentials` JSON response as the request body (plus `session_key`/`name` query params), not form-encoded fields — see [WebAuthn / Passkeys](#webauthn--passkeys).
@@ -475,6 +478,8 @@ These endpoints accept `application/json` and return JSON responses.
 | DELETE | `/auth/api/invitations/{id}`       | Revoke one of the authenticated user's invitations (Protected) |
 | GET    | `/auth/api/invitations/preview`    | Preview a pending invitation by its token |
 | POST   | `/auth/api/invitations/accept`     | Complete registration from an invitation and receive tokens |
+| POST   | `/auth/api/email-change/request`   | Request an email change (Protected, see [Guarded Email Change](#guarded-email-change)) |
+| GET    | `/auth/api/email-change/confirm`   | Confirm an email change |
 
 ## Middlewares
  
@@ -801,6 +806,36 @@ curl -X DELETE https://your-host/auth/api/invitations/<id> -H "Authorization: Be
 For form-based (cookie) clients, `POST /auth/invitations` (fields `email`, `roles`), `GET /auth/invitations`, and `DELETE /auth/invitations/{id}` work the same way against the logged-in session user; `GET /auth/invitation/accept?token=...` (the link emailed to the invitee) redirects to `Pages.InvitationAccept` with the token preserved as a query param, and `POST /auth/invitation/accept` (fields `token`, `password`, `password_confirm`, plus optional `username`/`first_name`/`last_name`) completes registration and sets auth cookies.
 
 Set `EZAUTH_INVITATION_TTL` (default 168h/7 days) to control how long an invitation stays valid, and `EZAUTH_EMAIL_INVITATION_SUBJECT`/`EZAUTH_EMAIL_INVITATION_BODY` to customize the invitation email.
+
+## Guarded Email Change
+
+Changing the account email is treated as a distinct, security-sensitive operation, the same way password reset already is — not just another field on a generic profile update. Initiating a change requires the current password; the new address only takes effect once it's verified via a link sent to *it* (the old address stays active and receiving mail in the meantime); and the old address gets a notice that a change was requested, since an unrequested email change is a classic account-takeover step. Confirming the change also revokes every other session, matching how password reset already treats a successful reset.
+
+```go
+err := auth.Service.EmailChangeRequest(ctx, user, service.RequestEmailChange{
+    CurrentPassword: "their-current-password",
+    NewEmail:        "new-address@example.com",
+})
+
+// Later, from the link sent to the *new* address:
+updated, err := auth.Service.EmailChangeConfirm(ctx, tokenFromLink)
+// updated.Email is now the new address; every other session was just revoked.
+```
+
+### Standalone-service Mode
+
+```bash
+# Request the change (requires the user's own Bearer token):
+curl -X POST https://your-host/auth/api/email-change/request -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" -d '{"current_password": "...", "new_email": "new-address@example.com"}'
+
+# Confirm from the link sent to the new address (no auth required):
+curl "https://your-host/auth/api/email-change/confirm?token=<token>" -H "X-API-Key: your-api-key"
+```
+
+For form-based (cookie) clients, `POST /auth/email-change/request` (fields `current_password`, `new_email`) works the same way against the logged-in session user, and `GET /auth/email-change/confirm?token=...` applies the change, clears the session (since it was just revoked along with every other one), and redirects to `Pages.Login`.
+
+Set `EZAUTH_EMAIL_CHANGE_SUBJECT`/`EZAUTH_EMAIL_CHANGE_BODY` to customize the verification email sent to the new address, and `EZAUTH_EMAIL_CHANGE_NOTIFY_SUBJECT`/`EZAUTH_EMAIL_CHANGE_NOTIFY_BODY` to customize the notice sent to the old one.
 
 ## Hooks
 

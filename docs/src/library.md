@@ -472,6 +472,21 @@ err = auth.Service.InvitationRevoke(ctx, inviter, invitations[0].ID)
 
 `EZAUTH_INVITATION_TTL` (default 7 days) controls how long an invitation stays valid. `EZAUTH_INVITATION_ACCEPT_PAGE_URL` (`Pages.InvitationAccept`) is where `GET /auth/invitation/accept?token=...` redirects, with the token preserved as a query param.
 
+## Guarded Email Change
+
+Changing the account email is a distinct, security-sensitive operation, handled the same way password reset already is: the current password is required to initiate, the new address must be verified via an emailed link before the change takes effect (the old address stays active until then), and the old address gets a notice of the pending change. Confirming revokes every other session.
+
+```go
+err := auth.Service.EmailChangeRequest(ctx, user, service.RequestEmailChange{
+    CurrentPassword: "their-current-password",
+    NewEmail:        "new-address@example.com",
+})
+
+updated, err := auth.Service.EmailChangeConfirm(ctx, tokenFromLink)
+```
+
+`EZAUTH_EMAIL_CHANGE_SUBJECT`/`EZAUTH_EMAIL_CHANGE_BODY` customize the verification email sent to the new address; `EZAUTH_EMAIL_CHANGE_NOTIFY_SUBJECT`/`EZAUTH_EMAIL_CHANGE_NOTIFY_BODY` customize the notice sent to the old one (`{{.NewEmail}}` available in both).
+
 ## Hooks
 
 ezauth provides a hook system that lets you intercept auth lifecycle events. This is useful for:

@@ -246,6 +246,7 @@ const (
 	TokenTypeSMSOTP        = "sms_otp"
 	TokenTypeTrustedDevice = "trusted_device"
 	TokenTypeInvitation    = "invitation"
+	TokenTypeEmailChange   = "email_change"
 )
 
 // WebAuthn ceremony challenge types, stored on WebauthnChallenge.ChallengeType.
