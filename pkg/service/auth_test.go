@@ -30,6 +30,7 @@ func setupBasicAuthTestDB(t *testing.T) *Auth {
 			DSN:     dsn,
 		},
 		JWTSecret: "test-secret",
+		Hashing:   config.Hashing{BcryptCost: 4}, // bcrypt.MinCost: correctness doesn't need real cost-14 hashing
 	}
 	auth, err := NewFromConfig(cfg, "auth")
 	if err != nil {
@@ -345,6 +346,7 @@ func setupOAuth2AuthTestDB(t *testing.T) *Auth {
 			DSN:     dsn,
 		},
 		JWTSecret: "test-secret",
+		Hashing:   config.Hashing{BcryptCost: 4}, // bcrypt.MinCost: correctness doesn't need real cost-14 hashing
 	}
 	auth, err := NewFromConfig(cfg, "auth")
 	if err != nil {
@@ -547,6 +549,7 @@ func setupTestDB(t *testing.T) *Auth {
 			DSN:     dsn,
 		},
 		JWTSecret: "test-secret",
+		Hashing:   config.Hashing{BcryptCost: 4}, // bcrypt.MinCost: correctness doesn't need real cost-14 hashing
 		EmailTemplates: config.EmailTemplates{
 			PasswordlessSubject:  "Magic Link Login",
 			PasswordlessBody:     "Click the following link to login: {{.Link}}",

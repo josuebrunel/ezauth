@@ -27,6 +27,7 @@ func setupFormTestHandler(t *testing.T) *Handler {
 			DSN:     dsn,
 		},
 		JWTSecret: "test-secret",
+		Hashing:   config.Hashing{BcryptCost: 4}, // bcrypt.MinCost: correctness doesn't need real cost-14 hashing
 		Addr:      ":8080",
 		ApiKey:    "test-api-key",
 		Redirects: config.Redirects{

@@ -127,7 +127,11 @@ func (a *Auth) UserHashPassword(password string) (string, error) {
 	case "argon2id":
 		return argon2idHash(password, a.Cfg.Hashing)
 	default:
-		bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+		cost := a.Cfg.Hashing.BcryptCost
+		if cost == 0 {
+			cost = 14 // preserves prior behavior for configs built without LoadConfig (e.g. tests)
+		}
+		bytes, err := bcrypt.GenerateFromPassword([]byte(password), cost)
 		return string(bytes), err
 	}
 }

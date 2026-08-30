@@ -17,6 +17,7 @@ func setupEmailChangeTestDB(t *testing.T) *Auth {
 			DSN:     dsn,
 		},
 		JWTSecret: "test-secret",
+		Hashing:   config.Hashing{BcryptCost: 4}, // bcrypt.MinCost: correctness doesn't need real cost-14 hashing
 		EmailTemplates: config.EmailTemplates{
 			EmailChangeSubject:       "Confirm your new email address",
 			EmailChangeBody:          "Click the following link to confirm your new email address: {{.Link}}",

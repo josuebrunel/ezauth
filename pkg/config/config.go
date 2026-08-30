@@ -168,7 +168,11 @@ type Pages struct {
 
 // Hashing defines the password hashing algorithm and its parameters.
 type Hashing struct {
-	Algorithm         string `json:"algorithm" env:"HASHING_ALGORITHM" default:"bcrypt"`
+	Algorithm string `json:"algorithm" env:"HASHING_ALGORITHM" default:"bcrypt"`
+	// BcryptCost is the bcrypt work factor (4-31). Lower is faster but weaker; 14 is a
+	// strong modern default for production. Tests should use a low value (e.g. 4, the
+	// minimum) since correctness doesn't depend on bcrypt actually being slow.
+	BcryptCost        int    `json:"bcrypt_cost" env:"HASHING_BCRYPT_COST" default:"14"`
 	Argon2Memory      uint32 `json:"argon2_memory" env:"HASHING_ARGON2_MEMORY" default:"65536"`
 	Argon2Iterations  uint32 `json:"argon2_iterations" env:"HASHING_ARGON2_ITERATIONS" default:"3"`
 	Argon2Parallelism uint8  `json:"argon2_parallelism" env:"HASHING_ARGON2_PARALLELISM" default:"4"`

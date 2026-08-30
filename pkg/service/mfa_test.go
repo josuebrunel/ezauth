@@ -20,6 +20,7 @@ func setupMFATestDB(t *testing.T) *Auth {
 			DSN:     dsn,
 		},
 		JWTSecret:     "test-secret",
+		Hashing:       config.Hashing{BcryptCost: 4}, // bcrypt.MinCost: correctness doesn't need real cost-14 hashing
 		MFAIssuer:     "EzAuthTest",
 		TrustedDevice: config.TrustedDevice{TTL: 720 * time.Hour},
 	}

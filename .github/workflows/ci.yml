@@ -89,7 +89,7 @@ jobs:
                   EZAUTH_DB_DSN: ${{ matrix.db.dsn }}
               run: |
                   if [ "${{ matrix.db.race }}" = "true" ]; then
-                      go test ./... -p 1 -count=1 -race -timeout=20m
+                      go test ./... -p 1 -count=1 -race
                   else
                       go test ./... -p 1 -count=1
                   fi
