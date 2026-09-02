@@ -91,13 +91,44 @@ func (h *Handler) GetImpersonator(ctx context.Context) (*models.User, error) {
 //
 // This is the Bearer/JWT-mode counterpart to IsImpersonating/GetImpersonator, which
 // operate on cookie-based sessions instead — the two are backed by different
-// mechanisms and aren't interchangeable.
+// storage mechanisms, so use CurrentImpersonatorID/CurrentImpersonator below if
+// your handler needs to support both transports without branching on which applies.
 func GetImpersonatorID(ctx context.Context) (string, error) {
 	id, ok := ctx.Value(ezmiddleware.ImpersonatorContextKey).(string)
 	if !ok || id == "" {
 		return "", errors.New("not an impersonation session")
 	}
 	return id, nil
+}
+
+// CurrentImpersonatorID returns the acting admin's user ID for the current
+// request, regardless of transport: it checks the cookie-session stash first
+// (IsImpersonating), then falls back to the Bearer/JWT "act" claim
+// (GetImpersonatorID). Returns ok=false if neither applies.
+//
+// The session-manager middleware (SessionMiddleware/LoadAndSaveMiddleware,
+// wired in by default — see Handler.New) always runs before route handlers,
+// even on Bearer-only routes, so calling this is safe regardless of which
+// transport the current request actually used.
+func (h *Handler) CurrentImpersonatorID(ctx context.Context) (string, bool) {
+	if id, ok := h.IsImpersonating(ctx); ok {
+		return id, true
+	}
+	if id, err := GetImpersonatorID(ctx); err == nil {
+		return id, true
+	}
+	return "", false
+}
+
+// CurrentImpersonator returns the acting admin's user for the current
+// request, regardless of transport. Returns an error if the request isn't
+// an impersonation session under either transport. See CurrentImpersonatorID.
+func (h *Handler) CurrentImpersonator(ctx context.Context) (*models.User, error) {
+	id, ok := h.CurrentImpersonatorID(ctx)
+	if !ok {
+		return nil, errors.New("not impersonating")
+	}
+	return h.svc.Repo.UserGetByID(ctx, id)
 }
 
 // GetSessionTokens retrieves the tokens from the session.

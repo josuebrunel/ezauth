@@ -339,6 +339,20 @@ func (e *EzAuth) GetImpersonator(ctx context.Context) (*models.User, error) {
 	return e.Handler.GetImpersonator(ctx)
 }
 
+// CurrentImpersonatorID returns the acting admin's user ID for the current
+// request, regardless of transport (cookie session or Bearer/JWT) — the
+// transport-agnostic counterpart to IsImpersonating/GetImpersonatorID for
+// callers that support both and don't want to branch on which applies.
+func (e *EzAuth) CurrentImpersonatorID(ctx context.Context) (string, bool) {
+	return e.Handler.CurrentImpersonatorID(ctx)
+}
+
+// CurrentImpersonator returns the acting admin's user for the current
+// request, regardless of transport. See CurrentImpersonatorID.
+func (e *EzAuth) CurrentImpersonator(ctx context.Context) (*models.User, error) {
+	return e.Handler.CurrentImpersonator(ctx)
+}
+
 // MFAEnroll begins TOTP MFA enrollment for user, generating and persisting a new
 // secret. MFA is not enabled until the enrollment is confirmed via MFAConfirm.
 func (e *EzAuth) MFAEnroll(ctx context.Context, user *models.User) (*service.MFAEnrollResponse, error) {
