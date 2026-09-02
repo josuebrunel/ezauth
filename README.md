@@ -560,6 +560,23 @@ For the JSON API, a client sends its stored device token back via the `X-Device-
 
 List/revoke trusted devices via `GET`/`DELETE /auth/api/trusted-devices[/{id}]` (Bearer) or `GET`/`DELETE /auth/trusted-devices[/{id}]` (cookie session).
 
+## Sessions
+
+Every refresh token issued to a user (one per login, across devices/clients) is a
+session. Let users see and remotely revoke their own active sessions — e.g. a
+"log out other devices" account-security page.
+
+```go
+sessions, err := auth.Sessions(ctx, user.ID)
+// []service.SessionInfo{ID, CreatedAt, ExpiresAt}, most recent first.
+
+err = auth.RevokeSession(ctx, user, sessions[0].ID)      // log out one device
+err = auth.RevokeAllSessions(ctx, user, currentID)        // log out other devices, keep currentID
+err = auth.RevokeAllSessions(ctx, user, "")                // log out everywhere
+```
+
+For the JSON API: `GET /auth/api/sessions` lists sessions, `DELETE /auth/api/sessions/{id}` revokes one, and `DELETE /auth/api/sessions?except={id}` revokes all but the session named by `except` (omit `except` to log out everywhere). Cookie clients use the same routes under `/auth/sessions[...]`.
+
 ## WebAuthn / Passkeys
 
 `ezauth` supports WebAuthn/FIDO2 passkey registration and login, as an alternative or complement to password/MFA login. Login is **discoverable (usernameless)**: the browser's platform UI lets the user pick which passkey to use, so no prior email/username is required.
