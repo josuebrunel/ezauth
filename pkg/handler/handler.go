@@ -109,6 +109,7 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 
 	h.r.Get("/ping", h.Ping)
 	h.r.Get("/swagger/*", httpSwagger.WrapHandler)
+	h.r.Get("/.well-known/jwks.json", h.JWKS)
 
 	// Initialize routes
 	routePath := "/" + h.path

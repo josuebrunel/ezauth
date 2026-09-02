@@ -48,7 +48,10 @@ func New(cfg *config.Config, path string) (*EzAuth, error) {
 		return nil, err
 	}
 
-	svc := service.New(cfg, repo, path)
+	svc, err := service.New(cfg, repo, path)
+	if err != nil {
+		return nil, err
+	}
 	h := handler.New(svc, path)
 
 	if cfg.Debug {
@@ -79,7 +82,10 @@ func New(cfg *config.Config, path string) (*EzAuth, error) {
 // path is the base URL path where the authentication routes will be mounted (e.g., "auth").
 func NewWithDB(cfg *config.Config, db *sql.DB, path string) (*EzAuth, error) {
 	repo := repository.New(db, cfg.DB.Dialect)
-	svc := service.New(cfg, repo, path)
+	svc, err := service.New(cfg, repo, path)
+	if err != nil {
+		return nil, err
+	}
 	h := handler.New(svc, path)
 
 	auth := &EzAuth{
@@ -351,6 +357,13 @@ func (e *EzAuth) CurrentImpersonatorID(ctx context.Context) (string, bool) {
 // request, regardless of transport. See CurrentImpersonatorID.
 func (e *EzAuth) CurrentImpersonator(ctx context.Context) (*models.User, error) {
 	return e.Handler.CurrentImpersonator(ctx)
+}
+
+// JWKS returns the JSON Web Key Set of the current asymmetric access-token
+// signing key(s) (empty for the default HS256 mode). Also served at
+// GET /.well-known/jwks.json.
+func (e *EzAuth) JWKS() service.JWKSet {
+	return e.Service.JWKS()
 }
 
 // MFAEnroll begins TOTP MFA enrollment for user, generating and persisting a new

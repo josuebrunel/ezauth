@@ -8,7 +8,7 @@ import (
 
 // AuthMiddleware is a middleware that authenticates requests using a JWT bearer token.
 func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
-	return middleware.AuthMiddleware(h.svc.Cfg.JWTSecret)(next)
+	return middleware.AuthMiddleware(h.svc.JWTKeyFunc(), h.svc.JWTSigningMethods())(next)
 }
 
 // APIKeyMiddleware checks for a valid API key in the X-API-Key header.

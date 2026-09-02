@@ -26,7 +26,11 @@ const (
 type UserLoader func(context.Context) (*models.User, error)
 
 // AuthMiddleware is a middleware that authenticates requests using a JWT bearer token.
-func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
+// keyFunc resolves the verification key for a token (see jwt.Keyfunc — e.g. by its
+// "kid" header, to support asymmetric key rotation); validMethods restricts which
+// signing algorithms are accepted (e.g. []string{"HS256"} or []string{"RS256"}),
+// guarding against algorithm-confusion attacks.
+func AuthMiddleware(keyFunc jwt.Keyfunc, validMethods []string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")
@@ -41,12 +45,7 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 				return
 			}
 
-			token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
-				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-					return nil, jwt.ErrSignatureInvalid
-				}
-				return []byte(jwtSecret), nil
-			})
+			token, err := jwt.Parse(tokenString, keyFunc, jwt.WithValidMethods(validMethods))
 
 			if err != nil {
 				WriteJSONResponseError(w, http.StatusUnauthorized, ErrInvalidToken)

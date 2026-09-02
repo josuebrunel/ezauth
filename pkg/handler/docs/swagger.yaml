@@ -759,6 +759,34 @@ definitions:
       roles:
         type: string
     type: object
+  service.JWK:
+    properties:
+      alg:
+        type: string
+      crv:
+        description: OKP (Ed25519)
+        type: string
+      e:
+        type: string
+      kid:
+        type: string
+      kty:
+        type: string
+      "n":
+        description: RSA
+        type: string
+      use:
+        type: string
+      x:
+        type: string
+    type: object
+  service.JWKSet:
+    properties:
+      keys:
+        items:
+          $ref: '#/definitions/service.JWK'
+        type: array
+    type: object
   service.ListAuditLogsResult:
     properties:
       events:
@@ -969,6 +997,18 @@ info:
   title: EzAuth API
   version: "1.0"
 paths:
+  /.well-known/jwks.json:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.JWKSet'
+      summary: JSON Web Key Set
+      tags:
+      - jwt
   /auth/api/admin/users:
     get:
       parameters:

@@ -28,9 +28,15 @@ func MockUserLoader(user *models.User, err error) UserLoader {
 	}
 }
 
+// hs256KeyFunc returns a jwt.Keyfunc that always resolves to secret, for
+// testing AuthMiddleware against HS256-signed tokens.
+func hs256KeyFunc(secret string) jwt.Keyfunc {
+	return func(*jwt.Token) (any, error) { return []byte(secret), nil }
+}
+
 func TestAuthMiddleware(t *testing.T) {
 	secret := "secret"
-	mw := AuthMiddleware(secret)
+	mw := AuthMiddleware(hs256KeyFunc(secret), []string{"HS256"})
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := r.Context().Value(UserContextKey).(string)
 		if !ok || userID != "user1" {
@@ -58,7 +64,7 @@ func TestAuthMiddleware(t *testing.T) {
 
 func TestAuthMiddleware_ImpersonatorContextKey(t *testing.T) {
 	secret := "secret"
-	mw := AuthMiddleware(secret)
+	mw := AuthMiddleware(hs256KeyFunc(secret), []string{"HS256"})
 
 	t.Run("sets impersonator id when act claim present", func(t *testing.T) {
 		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
