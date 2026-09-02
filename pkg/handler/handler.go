@@ -188,6 +188,7 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 			r.Post("/admin/users/{id}/suspend", h.FormAdminUserSuspend)
 			r.Post("/admin/users/{id}/reactivate", h.FormAdminUserReactivate)
 			r.Get("/admin/users/{id}/history", h.FormAdminUserAuthHistory)
+			r.Get("/admin/users/{id}/audit-logs", h.FormAdminUserAuditLogsList)
 		})
 
 		// Routes protected by API Key
@@ -240,6 +241,7 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 					r.Post("/admin/users/{id}/suspend", h.AdminUserSuspend)
 					r.Post("/admin/users/{id}/reactivate", h.AdminUserReactivate)
 					r.Get("/admin/users/{id}/history", h.AdminUserAuthHistory)
+					r.Get("/admin/users/{id}/audit-logs", h.AdminUserAuditLogsList)
 				})
 			})
 		})

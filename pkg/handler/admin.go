@@ -240,3 +240,95 @@ func (h *Handler) FormAdminUserAuthHistory(w http.ResponseWriter, r *http.Reques
 	}
 	WriteJSONResponse(w, http.StatusOK, history, nil)
 }
+
+// parseAuditLogsOptions builds ListAuditLogsOptions from query params shared
+// by the JSON API and form variants of AdminUserAuditLogsList:
+//
+//	event_type, limit, offset, since, until (all optional; since/until are
+//	RFC3339 timestamps).
+func parseAuditLogsOptions(r *http.Request) (service.ListAuditLogsOptions, error) {
+	q := r.URL.Query()
+	limit, _ := strconv.Atoi(q.Get("limit"))
+	offset, _ := strconv.Atoi(q.Get("offset"))
+
+	opts := service.ListAuditLogsOptions{
+		EventType: q.Get("event_type"),
+		Limit:     limit,
+		Offset:    offset,
+	}
+
+	for param, dst := range map[string]**time.Time{
+		"since": &opts.Since,
+		"until": &opts.Until,
+	} {
+		v := q.Get(param)
+		if v == "" {
+			continue
+		}
+		t, err := time.Parse(time.RFC3339, v)
+		if err != nil {
+			return opts, ErrInvalidTimestampFilter
+		}
+		*dst = &t
+	}
+
+	return opts, nil
+}
+
+// AdminUserAuditLogsList lists/filters a user's persisted audit log.
+//
+// ezauth performs no authorization check here — see AdminUsersList.
+// @Summary List a user's audit log (admin)
+// @Tags admin
+// @Produce json
+// @Param id path string true "User ID"
+// @Param event_type query string false "Filter by event type, e.g. login.failed"
+// @Param since query string false "RFC3339 timestamp"
+// @Param until query string false "RFC3339 timestamp"
+// @Param limit query int false "Page size (default 50, max 200)"
+// @Param offset query int false "Page offset"
+// @Security BearerAuth
+// @Security ApiKeyAuth
+// @Success 200 {object} ApiResponse[service.ListAuditLogsResult]
+// @Failure 400 {object} ApiResponse[string]
+// @Failure 500 {object} ApiResponse[string]
+// @Router /auth/api/admin/users/{id}/audit-logs [get]
+func (h *Handler) AdminUserAuditLogsList(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	opts, err := parseAuditLogsOptions(r)
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	result, err := h.svc.AuditLogs(r.Context(), id, opts)
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusInternalServerError, err)
+		return
+	}
+	WriteJSONResponse(w, http.StatusOK, result, nil)
+}
+
+// FormAdminUserAuditLogsList lists/filters a user's audit log for the
+// current session user.
+// ezauth performs no authorization check here — see AdminUsersList.
+func (h *Handler) FormAdminUserAuditLogsList(w http.ResponseWriter, r *http.Request) {
+	if _, err := h.GetSessionUser(r.Context()); err != nil {
+		WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
+		return
+	}
+
+	id := chi.URLParam(r, "id")
+	opts, err := parseAuditLogsOptions(r)
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	result, err := h.svc.AuditLogs(r.Context(), id, opts)
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusInternalServerError, err)
+		return
+	}
+	WriteJSONResponse(w, http.StatusOK, result, nil)
+}

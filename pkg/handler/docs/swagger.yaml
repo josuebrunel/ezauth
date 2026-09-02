@@ -108,6 +108,13 @@ definitions:
       error:
         type: string
     type: object
+  handler.ApiResponse-service_ListAuditLogsResult:
+    properties:
+      data:
+        $ref: '#/definitions/service.ListAuditLogsResult'
+      error:
+        type: string
+    type: object
   handler.ApiResponse-service_ListUsersResult:
     properties:
       data:
@@ -243,6 +250,19 @@ definitions:
   map_string_string:
     additionalProperties:
       type: string
+    type: object
+  models.AuditLog:
+    properties:
+      created_at:
+        type: string
+      event_type:
+        type: string
+      id:
+        type: string
+      metadata:
+        $ref: '#/definitions/models.JSONMap'
+      user_id:
+        type: string
     type: object
   models.JSONMap:
     additionalProperties: {}
@@ -739,6 +759,15 @@ definitions:
       roles:
         type: string
     type: object
+  service.ListAuditLogsResult:
+    properties:
+      events:
+        items:
+          $ref: '#/definitions/models.AuditLog'
+        type: array
+      has_more:
+        type: boolean
+    type: object
   service.ListUsersResult:
     properties:
       has_more:
@@ -994,6 +1023,55 @@ paths:
       - BearerAuth: []
       - ApiKeyAuth: []
       summary: List/search users (admin)
+      tags:
+      - admin
+  /auth/api/admin/users/{id}/audit-logs:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Filter by event type, e.g. login.failed
+        in: query
+        name: event_type
+        type: string
+      - description: RFC3339 timestamp
+        in: query
+        name: since
+        type: string
+      - description: RFC3339 timestamp
+        in: query
+        name: until
+        type: string
+      - description: Page size (default 50, max 200)
+        in: query
+        name: limit
+        type: integer
+      - description: Page offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_ListAuditLogsResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: List a user's audit log (admin)
       tags:
       - admin
   /auth/api/admin/users/{id}/history:

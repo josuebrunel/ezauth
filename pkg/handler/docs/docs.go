@@ -104,6 +104,84 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/api/admin/users/{id}/audit-logs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "List a user's audit log (admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by event type, e.g. login.failed",
+                        "name": "event_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 timestamp",
+                        "name": "since",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 timestamp",
+                        "name": "until",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size (default 50, max 200)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-service_ListAuditLogsResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/api/admin/users/{id}/history": {
             "get": {
                 "security": [
@@ -2113,6 +2191,17 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.ApiResponse-service_ListAuditLogsResult": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/service.ListAuditLogsResult"
+                },
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
         "handler.ApiResponse-service_ListUsersResult": {
             "type": "object",
             "properties": {
@@ -2318,6 +2407,26 @@ const docTemplate = `{
             "type": "object",
             "additionalProperties": {
                 "type": "string"
+            }
+        },
+        "models.AuditLog": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "event_type": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "metadata": {
+                    "$ref": "#/definitions/models.JSONMap"
+                },
+                "user_id": {
+                    "type": "string"
+                }
             }
         },
         "models.JSONMap": {
@@ -2966,6 +3075,20 @@ const docTemplate = `{
                 },
                 "roles": {
                     "type": "string"
+                }
+            }
+        },
+        "service.ListAuditLogsResult": {
+            "type": "object",
+            "properties": {
+                "events": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.AuditLog"
+                    }
+                },
+                "has_more": {
+                    "type": "boolean"
                 }
             }
         },
