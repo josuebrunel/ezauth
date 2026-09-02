@@ -476,7 +476,14 @@ For form-based (cookie) clients, `POST /auth/impersonate` (with a `target_user_i
 - **Bearer/JWT mode**: `ezauth.GetImpersonatorID(ctx)` returns the acting admin's user ID from the access token's `act` claim (requires `AuthMiddleware`).
 - **Cookie/session mode**: `auth.IsImpersonating(ctx)` and `auth.GetImpersonator(ctx)` report whether the current session is an impersonation session and who the acting admin is.
 
-These two are backed by different mechanisms (JWT claims vs. session storage) and aren't interchangeable — use whichever matches how your route is authenticated.
+These two are backed by different storage mechanisms (JWT claims vs. session storage), so a route that can be reached over either transport would otherwise need to branch on which one applies. For that case, use the transport-agnostic pair instead — they check both and return whichever applies:
+
+```go
+adminID, ok := auth.CurrentImpersonatorID(ctx) // (string, bool)
+admin, err := auth.CurrentImpersonator(ctx)     // (*models.User, error)
+```
+
+Safe to call regardless of transport: the session-manager middleware always runs first (see `SessionMiddleware`), even on Bearer-only routes, so the cookie-mode check never panics for lack of loaded session data — it just finds nothing and falls through to the JWT check.
 
 ## Multi-Factor Authentication (TOTP)
 
