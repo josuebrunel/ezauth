@@ -640,6 +640,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#well-known-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Well-Known Endpoints
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#form-handlers-browser" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1574,6 +1585,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#well-known-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Well-Known Endpoints
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#form-handlers-browser" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2239,6 +2261,8 @@
   &quot;data&quot;: &quot;The actual response data&quot;
 }
 </code></pre>
+<h2 id="well-known-endpoints">Well-Known Endpoints</h2>
+<p><code>GET /.well-known/jwks.json</code> — served at the domain root, outside both prefixes above, per the well-known-URI convention. Publishes the JSON Web Key Set for the current (and, during a rotation, previous) asymmetric access-token signing key — see <a href="../library/#asymmetric-jwt-signing-jwks">Asymmetric JWT Signing (JWKS)</a>. Returns <code>{"keys": []}</code> when signing with the default symmetric HS256 algorithm (no API key required).</p>
 <h2 id="form-handlers-browser">Form Handlers (Browser)</h2>
 <p>These endpoints accept <code>application/x-www-form-urlencoded</code> and redirect upon success or failure. Authentication tokens are stored in an HTTP-only cookie named <code>ezauthsess</code>.</p>
 <p>POST requests to these endpoints are automatically protected by <code>filippo.io/csrf/gorilla</code> using modern browser <strong>Fetch Metadata headers</strong> (e.g., <code>Sec-Fetch-Site: same-origin</code>). You do not need to manually include a CSRF token in your requests.</p>

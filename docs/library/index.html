@@ -703,6 +703,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#asymmetric-jwt-signing-jwks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Asymmetric JWT Signing (JWKS)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#form-field-reference" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1644,6 +1655,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#asymmetric-jwt-signing-jwks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Asymmetric JWT Signing (JWKS)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#form-field-reference" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2276,6 +2298,12 @@ user, err := auth.Service.UserCreate(ctx, &amp;service.RequestBasicAuth{
 // Generate tokens for a user
 tokens, err := auth.Service.TokenCreate(ctx, user)
 </code></pre>
+<h2 id="asymmetric-jwt-signing-jwks">Asymmetric JWT Signing (JWKS)</h2>
+<p>By default <code>ezauth</code> signs access tokens with symmetric HS256 (<code>EZAUTH_JWT_SECRET</code>) — any resource server verifying tokens itself must hold that same secret. Set <code>EZAUTH_JWT_ALGORITHM=RS256</code> or <code>EdDSA</code> (plus PEM-encoded <code>EZAUTH_JWT_PRIVATE_KEY</code>/<code>EZAUTH_JWT_PUBLIC_KEY</code>) to sign asymmetrically instead: <code>ezauth</code> keeps the private key, and independent resource servers verify tokens against the public key published at <code>GET /.well-known/jwks.json</code> — no shared secret required.</p>
+<pre><code class="language-go">set := auth.JWKS() // service.JWKSet{Keys: []service.JWK} — empty for the default HS256 mode
+</code></pre>
+<p><strong>Key rotation</strong>: each key gets a <code>kid</code>, either explicit (<code>EZAUTH_JWT_KEY_ID</code>) or auto-derived from the public key. To rotate without invalidating already-issued tokens, move the outgoing key's public key/kid to <code>EZAUTH_JWT_PREVIOUS_PUBLIC_KEY</code>/<code>EZAUTH_JWT_PREVIOUS_KEY_ID</code> and point <code>EZAUTH_JWT_PRIVATE_KEY</code>/<code>PUBLIC_KEY</code>/<code>KEY_ID</code> at the new key — new tokens sign under the new key while tokens already signed under the previous one keep verifying (both are published in the JWKS) until they expire naturally (access tokens are short-lived, 1 hour).</p>
+<p>See the <a href="https://github.com/josuebrunel/ezauth#asymmetric-jwt-signing-jwks">Asymmetric JWT Signing section of the README</a> for a full config example.</p>
 <h2 id="form-field-reference">Form Field Reference</h2>
 <p>When using the form-based endpoints (e.g., <code>/auth/register</code>, <code>/auth/login</code>), <code>ezauth</code> expects the following form fields in the POST request body (<code>application/x-www-form-urlencoded</code>):</p>
 <h3 id="registration-authregister">Registration (<code>/auth/register</code>)</h3>

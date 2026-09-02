@@ -1498,6 +1498,36 @@
 <td>How long an invitation stays valid before expiring.</td>
 <td><code>168h</code> (7 days)</td>
 </tr>
+<tr>
+<td><code>EZAUTH_JWT_ALGORITHM</code></td>
+<td>Access-token signing algorithm: <code>HS256</code> (symmetric), <code>RS256</code>, or <code>EdDSA</code> (asymmetric).</td>
+<td><code>HS256</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_JWT_PRIVATE_KEY</code></td>
+<td>PEM-encoded (PKCS8) private key; required for <code>RS256</code>/<code>EdDSA</code>.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_JWT_PUBLIC_KEY</code></td>
+<td>PEM-encoded (PKIX) public key; required for <code>RS256</code>/<code>EdDSA</code>, published via JWKS.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_JWT_KEY_ID</code></td>
+<td>Explicit <code>kid</code> for the signing key; auto-derived from the public key if unset.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_JWT_PREVIOUS_PUBLIC_KEY</code></td>
+<td>Outgoing key's public key, kept for verification during rotation.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_JWT_PREVIOUS_KEY_ID</code></td>
+<td>Outgoing key's <code>kid</code>; auto-derived from <code>EZAUTH_JWT_PREVIOUS_PUBLIC_KEY</code> if unset.</td>
+<td></td>
+</tr>
 </tbody>
 </table>
 <h2 id="webauthnpasskey-settings">WebAuthn/Passkey Settings</h2>

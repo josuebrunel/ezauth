@@ -913,6 +913,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#asymmetric-jwt-signing-jwks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Asymmetric JWT Signing (JWKS)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#password-flows" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1717,6 +1728,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#asymmetric-jwt-signing-jwks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Asymmetric JWT Signing (JWKS)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#password-flows" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2202,8 +2224,8 @@
 </code></pre>
 <h2 id="constructor">Constructor</h2>
 <h3 id="new"><code>New</code></h3>
-<p>Creates a new <code>Auth</code> service.</p>
-<pre><code class="language-go">func New(cfg *config.Config, repo *repository.Repository, pathPrefix string) *Auth
+<p>Creates a new <code>Auth</code> service. Returns an error if <code>cfg.JWT</code> (or <code>cfg.JWTSecret</code>, for the default HS256 mode) describes invalid JWT signing configuration — e.g. an unsupported algorithm or unparsable PEM key.</p>
+<pre><code class="language-go">func New(cfg *config.Config, repo *repository.Repository, pathPrefix string) (*Auth, error)
 </code></pre>
 <h3 id="newfromconfig"><code>NewFromConfig</code></h3>
 <p>Creates a new <code>Auth</code> service and initializes the repository connection based on the config.</p>
@@ -2243,6 +2265,13 @@
 <p>Revokes a refresh token immediately.</p>
 <pre><code class="language-go">func (a *Auth) TokenRevoke(ctx context.Context, refreshToken string) error
 </code></pre>
+<h2 id="asymmetric-jwt-signing-jwks">Asymmetric JWT Signing (JWKS)</h2>
+<p>Configured via <code>Cfg.JWT</code> (<code>Algorithm</code>, <code>PrivateKey</code>, <code>PublicKey</code>, <code>KeyID</code>, <code>PreviousPublicKey</code>, <code>PreviousKeyID</code> — see <a href="../../configuration/">Configuration</a>); defaults to symmetric HS256 (<code>Cfg.JWTSecret</code>) when <code>Cfg.JWT.Algorithm</code> is unset.</p>
+<pre><code class="language-go">func (a *Auth) JWTKeyFunc() jwt.Keyfunc          // resolves the verification key by the token's &quot;kid&quot; — used by AuthMiddleware
+func (a *Auth) JWTSigningMethods() []string      // accepted algorithm(s) for jwt.WithValidMethods
+func (a *Auth) JWKS() JWKSet                     // JSON Web Key Set for GET /.well-known/jwks.json; empty for HS256
+</code></pre>
+<p><code>JWKSet</code>/<code>JWK</code> are RFC 7517 types covering RSA and Ed25519 (OKP) public keys.</p>
 <h2 id="password-flows">Password Flows</h2>
 <h3 id="passwordresetrequest"><code>PasswordResetRequest</code></h3>
 <p>Generates a reset token and sends it via email.</p>

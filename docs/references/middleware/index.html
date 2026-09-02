@@ -1167,7 +1167,7 @@
 </code></pre>
 <h2 id="json-api-middleware">JSON API Middleware</h2>
 <h3 id="authmiddleware-bearer"><code>AuthMiddleware</code> (Bearer)</h3>
-<p>Validates the <code>Authorization: Bearer &lt;token&gt;</code> header. It parses the JWT, verifies the signature using <code>EZAUTH_JWT_SECRET</code>, and sets the user ID in the context.</p>
+<p>Validates the <code>Authorization: Bearer &lt;token&gt;</code> header. It parses the JWT, verifies the signature against the configured signing key (<code>EZAUTH_JWT_SECRET</code> for the default HS256 mode, or the asymmetric key(s) under <code>EZAUTH_JWT_*</code> — see <a href="../../library/#asymmetric-jwt-signing-jwks">Asymmetric JWT Signing (JWKS)</a>), and sets the user ID in the context.</p>
 <pre><code class="language-go">func (h *Handler) AuthMiddleware(next http.Handler) http.Handler
 </code></pre>
 <h3 id="apikeymiddleware"><code>APIKeyMiddleware</code></h3>
