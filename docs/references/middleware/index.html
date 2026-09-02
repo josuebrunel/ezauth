@@ -287,6 +287,8 @@
       
         
       
+        
+      
     
     
     
@@ -385,6 +387,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -400,6 +430,14 @@
   
     
     
+      
+        
+      
+        
+      
+        
+      
+        
       
         
       
@@ -425,7 +463,7 @@
   <span class="md-ellipsis">
     
   
-    Usage
+    Guides
   
 
     
@@ -441,7 +479,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Usage
+    Guides
   
 
           </label>
@@ -461,7 +499,7 @@
   <span class="md-ellipsis">
     
   
-    As a Library
+    Embed as a Library
   
 
     
@@ -503,6 +541,118 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/sessions-middleware-helpers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sessions, Middleware and Helpers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/sign-in-methods/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sign-in Methods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/account-security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Account Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/admin-operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Admin and Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -520,8 +670,6 @@
   
     
     
-      
-        
       
         
       
@@ -588,34 +736,6 @@
     
   
     API Endpoints
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../architecture/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Architecture
   
 
     
@@ -1167,7 +1287,7 @@
 </code></pre>
 <h2 id="json-api-middleware">JSON API Middleware</h2>
 <h3 id="authmiddleware-bearer"><code>AuthMiddleware</code> (Bearer)</h3>
-<p>Validates the <code>Authorization: Bearer &lt;token&gt;</code> header. It parses the JWT, verifies the signature against the configured signing key (<code>EZAUTH_JWT_SECRET</code> for the default HS256 mode, or the asymmetric key(s) under <code>EZAUTH_JWT_*</code> — see <a href="../../library/#asymmetric-jwt-signing-jwks">Asymmetric JWT Signing (JWKS)</a>), and sets the user ID in the context.</p>
+<p>Validates the <code>Authorization: Bearer &lt;token&gt;</code> header. It parses the JWT, verifies the signature against the configured signing key (<code>EZAUTH_JWT_SECRET</code> for the default HS256 mode, or the asymmetric key(s) under <code>EZAUTH_JWT_*</code> — see <a href="../../guides/account-security/#asymmetric-jwt-signing-jwks">Asymmetric JWT Signing (JWKS)</a>), and sets the user ID in the context.</p>
 <pre><code class="language-go">func (h *Handler) AuthMiddleware(next http.Handler) http.Handler
 </code></pre>
 <h3 id="apikeymiddleware"><code>APIKeyMiddleware</code></h3>

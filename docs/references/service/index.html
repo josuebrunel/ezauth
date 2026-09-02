@@ -287,6 +287,8 @@
       
         
       
+        
+      
     
     
     
@@ -385,6 +387,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -400,6 +430,14 @@
   
     
     
+      
+        
+      
+        
+      
+        
+      
+        
       
         
       
@@ -425,7 +463,7 @@
   <span class="md-ellipsis">
     
   
-    Usage
+    Guides
   
 
     
@@ -441,7 +479,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Usage
+    Guides
   
 
           </label>
@@ -461,7 +499,7 @@
   <span class="md-ellipsis">
     
   
-    As a Library
+    Embed as a Library
   
 
     
@@ -503,6 +541,118 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/sessions-middleware-helpers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sessions, Middleware and Helpers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/sign-in-methods/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sign-in Methods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/account-security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Account Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/admin-operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Admin and Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -520,8 +670,6 @@
   
     
     
-      
-        
       
         
       
@@ -588,34 +736,6 @@
     
   
     API Endpoints
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../architecture/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Architecture
   
 
     
@@ -2405,7 +2525,7 @@ func (a *Auth) UserReactivate(ctx context.Context, userID string) (*models.User,
 <pre><code class="language-go">func (a *Auth) UserAuthHistory(ctx context.Context, userID string, limit int) ([]AuthHistoryEntry, error)
 </code></pre>
 <h2 id="audit-log">Audit Log</h2>
-<p><code>ezauth</code> persists a row to an audit log for security-relevant events (login success/failure, password reset, impersonation, account lockout, MFA, user create/delete) automatically, via a built-in hook that wraps whatever <code>Hook</code> you register — see <a href="../../library/#hooks">Hooks</a>. Enabled by default; disable with <code>EZAUTH_AUDIT_LOG_ENABLED=false</code>.</p>
+<p><code>ezauth</code> persists a row to an audit log for security-relevant events (login success/failure, password reset, impersonation, account lockout, MFA, user create/delete) automatically, via a built-in hook that wraps whatever <code>Hook</code> you register — see <a href="../../guides/admin-operations/#hooks">Hooks</a>. Enabled by default; disable with <code>EZAUTH_AUDIT_LOG_ENABLED=false</code>.</p>
 <pre><code class="language-go">func (a *Auth) AuditLogs(ctx context.Context, userID string, opts ListAuditLogsOptions) (*ListAuditLogsResult, error)
 </code></pre>
 <p><code>ListAuditLogsOptions</code> supports <code>EventType</code> (a <code>models.AuditEvent*</code> constant), <code>Since</code>/<code>Until</code> (<code>*time.Time</code>), and <code>Limit</code>/<code>Offset</code> (default 50, max 200). <code>ezauth</code> enforces no authorization on who may call this — same stance as <code>UsersList</code>.</p>

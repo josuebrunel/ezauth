@@ -11,8 +11,10 @@
       
       
       
-        <link rel="prev" href="../go-server/">
+        <link rel="prev" href="../account-security/">
       
+      
+        <link rel="next" href="../../api-endpoints/">
       
       
         
@@ -23,7 +25,7 @@
     
     
       
-        <title>Javascript Client - EzAuth</title>
+        <title>Admin and Operations - EzAuth</title>
       
     
     
@@ -74,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#javascript-client" class="md-skip">
+        <a href="#admin-and-operations" class="md-skip">
           Skip to content
         </a>
       
@@ -110,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Javascript Client
+              Admin and Operations
             
           </span>
         </div>
@@ -424,8 +426,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -445,13 +449,11 @@
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
@@ -472,7 +474,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -546,7 +548,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/sessions-middleware-helpers/" class="md-nav__link">
+      <a href="../sessions-middleware-helpers/" class="md-nav__link">
         
   
   
@@ -574,7 +576,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/sign-in-methods/" class="md-nav__link">
+      <a href="../sign-in-methods/" class="md-nav__link">
         
   
   
@@ -602,7 +604,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/account-security/" class="md-nav__link">
+      <a href="../account-security/" class="md-nav__link">
         
   
   
@@ -627,10 +629,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../guides/admin-operations/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Admin and Operations
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -646,6 +675,120 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#impersonation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Impersonation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#invitation-based-onboarding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Invitation-Based Onboarding
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#admin-user-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Admin User Management
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#audit-log" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit Log
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hooks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Hooks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#defining-a-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Defining a Hook
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#available-hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Hooks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#registering-the-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Registering the Hook
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -870,10 +1013,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -885,11 +1026,13 @@
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
@@ -910,7 +1053,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -928,7 +1071,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../go-server/" class="md-nav__link">
+      <a href="../../examples/go-server/" class="md-nav__link">
         
   
   
@@ -953,37 +1096,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Javascript Client
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../examples/javascript-client/" class="md-nav__link">
         
   
   
@@ -999,109 +1115,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Overview
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#backend-setup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Backend Setup
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#frontend-logic" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Frontend Logic
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Frontend Logic">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#login" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Login
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#accessing-protected-resources" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Accessing Protected Resources
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#step-up-login-multi-factor-authentication" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step-up Login (Multi-Factor Authentication)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#token-refresh" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Token Refresh
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1141,10 +1154,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
+  <a href="#impersonation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Overview
+        Impersonation
       
     </span>
   </a>
@@ -1152,10 +1165,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#backend-setup" class="md-nav__link">
+  <a href="#invitation-based-onboarding" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Backend Setup
+        Invitation-Based Onboarding
       
     </span>
   </a>
@@ -1163,22 +1176,44 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#frontend-logic" class="md-nav__link">
+  <a href="#admin-user-management" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Frontend Logic
+        Admin User Management
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Frontend Logic">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#audit-log" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit Log
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hooks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Hooks">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#login" class="md-nav__link">
+  <a href="#defining-a-hook" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Login
+        Defining a Hook
       
     </span>
   </a>
@@ -1186,10 +1221,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#accessing-protected-resources" class="md-nav__link">
+  <a href="#available-hooks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Accessing Protected Resources
+        Available Hooks
       
     </span>
   </a>
@@ -1197,21 +1232,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#step-up-login-multi-factor-authentication" class="md-nav__link">
+  <a href="#registering-the-hook" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step-up Login (Multi-Factor Authentication)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#token-refresh" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Token Refresh
+        Registering the Hook
       
     </span>
   </a>
@@ -1243,144 +1267,256 @@
   
 
 
-<h1 id="javascript-client">Javascript Client</h1>
-<p>This example demonstrates how to interact with <code>ezauth</code>'s JSON API using a Javascript client (SPA style).</p>
-<p>The full source code is available in <a href="https://github.com/josuebrunel/ezauth/tree/main/_example/javascript-client"><code>_example/javascript-client</code></a>.</p>
-<h2 id="overview">Overview</h2>
-<p>In this scenario, <code>ezauth</code> acts as a backend API. The Go server (<code>main.go</code>) serves static HTML/JS files, and the browser communicates directly with the <code>ezauth</code> endpoints mounted at <code>/auth</code>.</p>
+<h1 id="admin-and-operations">Admin and Operations</h1>
+<p>Admin-facing features: impersonation, invitation-based onboarding, user management, the persisted audit log, and the hook system.</p>
+<blockquote>
+<p>[!WARNING]
+These features enforce no role checks themselves — your application must verify the caller is allowed (e.g. <code>caller.HasRole("admin")</code>) before exposing them.</p>
+</blockquote>
+<h2 id="impersonation">Impersonation</h2>
+<p><code>ezauth</code> supports admin impersonation: an authenticated user can act as another user (e.g. for customer support debugging), then swap back to their own session.</p>
+<blockquote>
+<p>[!IMPORTANT]
+<code>ezauth</code> enforces <strong>no authorization</strong> for who may impersonate (same stance as <a href="#invitation-based-onboarding">Invitation-Based Onboarding</a> and <a href="#admin-user-management">Admin User Management</a>). The <code>Impersonate</code> method mints tokens for any target user on behalf of whoever calls it — check <code>adminUser.HasRole("admin")</code> (or equivalent) yourself before calling it.</p>
+</blockquote>
+<pre><code class="language-go">// adminUser must already be authenticated; check authorization yourself first.
+if !adminUser.HasRole(&quot;admin&quot;) {
+    // reject
+}
+
+tokenResp, err := auth.Service.Impersonate(ctx, adminUser, targetUserID)
+// tokenResp.AccessToken / tokenResp.RefreshToken now authenticate as targetUser,
+// with the access token carrying an &quot;act&quot; claim identifying adminUser.
+
+// ... later, end the impersonation session:
+err = auth.Service.StopImpersonating(ctx, tokenResp.RefreshToken)
+</code></pre>
+<p>Detecting whether the current request is an impersonation session depends on which auth mode the route uses:</p>
+<pre><code class="language-go">// Bearer/JWT mode (requires AuthMiddleware): reads the &quot;act&quot; claim.
+impersonatorID, err := ezauth.GetImpersonatorID(ctx)
+
+// Cookie/session mode: reads the swapped-in session data.
+adminID, isImpersonating := auth.IsImpersonating(ctx)
+if isImpersonating {
+    admin, _ := auth.GetImpersonator(ctx) // full *models.User for adminID
+    fmt.Println(&quot;acting as admin:&quot;, admin.Email)
+}
+</code></pre>
+<p>These two are backed by different mechanisms (JWT claims vs. session storage), so a route reachable over either transport would otherwise need to branch on which one applies. For that case, use the transport-agnostic pair instead — they check both and return whichever applies:</p>
+<pre><code class="language-go">adminID, ok := auth.CurrentImpersonatorID(ctx) // (string, bool)
+admin, err := auth.CurrentImpersonator(ctx)     // (*models.User, error)
+</code></pre>
+<p>Safe to call regardless of transport: the session-manager middleware always runs first, even on Bearer-only routes, so the cookie-mode check never panics for lack of loaded session data — it just finds nothing and falls through to the JWT check.</p>
+<p>See the <a href="https://github.com/josuebrunel/ezauth#impersonation">Impersonation section of the README</a> for the standalone-service (JSON API / form) equivalents.</p>
+<h2 id="invitation-based-onboarding">Invitation-Based Onboarding</h2>
+<p>An existing user invites someone by email; the invitee gets a link that pre-fills registration with their email pre-verified and, optionally, a pre-assigned role. <code>ezauth</code> enforces no authorization on who may invite (same stance as <code>Impersonate</code>) — check that yourself before calling it. <code>Roles</code> and <code>Data</code> are opaque to <code>ezauth</code> beyond being carried through to the created account.</p>
+<pre><code class="language-go">info, err := auth.Service.InvitationCreate(ctx, inviter, service.RequestInvitation{
+    Email: &quot;newperson@example.com&quot;,
+    Roles: &quot;member&quot;,
+    Data:  map[string]any{&quot;org_id&quot;: &quot;org-123&quot;},
+})
+
+// The invitee later submits a password from the emailed link:
+user, tokens, err := auth.Service.InvitationAccept(ctx, service.RequestInvitationAccept{
+    Token:    tokenFromLink,
+    Password: &quot;their-chosen-password&quot;,
+})
+
+invitations, err := auth.Service.Invitations(ctx, inviter.ID)
+err = auth.Service.InvitationRevoke(ctx, inviter, invitations[0].ID)
+</code></pre>
+<p><code>EZAUTH_INVITATION_TTL</code> (default 7 days) controls how long an invitation stays valid. <code>EZAUTH_INVITATION_ACCEPT_PAGE_URL</code> (<code>Pages.InvitationAccept</code>) is where <code>GET /auth/invitation/accept?token=...</code> redirects, with the token preserved as a query param.</p>
+<h2 id="admin-user-management">Admin User Management</h2>
+<p>Beyond impersonation, <code>ezauth</code> exposes admin-facing methods to list/search/filter users, suspend/reactivate an account, and view a user's auth history. <code>ezauth</code> enforces no authorization on who may call these (same stance as <code>Impersonate</code>) — check that yourself before exposing them.</p>
+<pre><code class="language-go">result, err := auth.Service.UsersList(ctx, service.ListUsersOptions{
+    Search: &quot;alice&quot;,
+    Status: models.UserStatusSuspended, // &quot;active&quot; | &quot;locked&quot; | &quot;suspended&quot;
+    Limit:  20,
+})
+// result.Users (PasswordHash stripped), result.HasMore
+
+user, err := auth.Service.UserSuspend(ctx, targetUserID)
+user, err = auth.Service.UserReactivate(ctx, targetUserID)
+
+history, err := auth.Service.UserAuthHistory(ctx, targetUserID, 50)
+</code></pre>
+<p><code>ListUsersOptions</code> also supports <code>CreatedAfter</code>/<code>CreatedBefore</code> and <code>LastActiveAfter</code>/<code>LastActiveBefore</code> (<code>*time.Time</code>) for date-range filtering. <code>UserStatusActive</code>/<code>Locked</code>/<code>Suspended</code> are derived from the existing <code>IsActive</code>/lockout columns: locked is a temporary, auto-expiring brute-force lockout (see <a href="../account-security/#account-lockout">Account Lockout</a>); suspended is <code>UserSuspend</code>'s permanent-until-reactivated deactivation. <code>UserAuthHistory</code> is a lightweight proxy built from the Tokens table every other feature writes to — for a real persisted audit trail of named security events, see <a href="#audit-log">Audit Log</a>.</p>
+<h2 id="audit-log">Audit Log</h2>
+<p><code>ezauth</code> persists a row to an audit log for security-relevant events — login success/failure, password reset, impersonation start/stop, account lockout, MFA enable/disable, user create/delete — automatically, via a built-in hook that wraps whatever <code>Hook</code> you register (see <a href="#hooks">Hooks</a>) so it keeps working whether or not you set your own. Enabled by default; disable with <code>EZAUTH_AUDIT_LOG_ENABLED=false</code>.</p>
+<pre><code class="language-go">result, err := auth.Service.AuditLogs(ctx, targetUserID, service.ListAuditLogsOptions{
+    EventType: models.AuditEventLoginFailed, // optional, e.g. &quot;login.failed&quot;
+    Since:     &amp;since,                       // optional, RFC3339
+    Limit:     50,
+})
+// result.Events ([]*models.AuditLog: event_type, metadata, created_at), result.HasMore
+</code></pre>
+<p>Event types are the <code>models.AuditEvent*</code> constants (e.g. <code>AuditEventLoginSucceeded</code>, <code>AuditEventAccountLocked</code>). Two events — <code>AfterLoginFailed</code> and <code>AfterAccountLocked</code> — aren't tied to an existing <code>Hook</code> method, so they're added as new ones; embed <code>DefaultHook</code> as usual and only override what you need. "Email verification" and "role changes" aren't recorded yet since <code>ezauth</code> doesn't have an email-verification-confirm flow or RBAC.</p>
+<p>For the JSON API: <code>GET /auth/api/admin/users/{id}/audit-logs</code> (query params <code>event_type</code>, <code>since</code>/<code>until</code> as RFC3339 timestamps, <code>limit</code>/<code>offset</code>; default 50, max 200) — same "no authz check, caller's responsibility" stance as the rest of <a href="#admin-user-management">Admin User Management</a>. Cookie clients use the same route under <code>/auth/admin/users/{id}/audit-logs</code>.</p>
+<h2 id="hooks">Hooks</h2>
+<p>ezauth provides a hook system that lets you intercept auth lifecycle events. This is useful for:</p>
 <ul>
-<li><strong>API Registration</strong>: <code>POST /auth/api/register</code></li>
-<li><strong>API Login</strong>: <code>POST /auth/api/login</code></li>
-<li><strong>User Info</strong>: <code>GET /auth/api/userinfo</code></li>
-<li><strong>Logout</strong>: <code>POST /auth/api/logout</code></li>
+<li>Validating input before user creation (e.g., checking a banned domains table)</li>
+<li>Sending welcome emails or audit logs after registration</li>
+<li>Notifying admins of new user registrations</li>
+<li>Audit logging of sign-ins, sign-outs, and account deletion</li>
 </ul>
-<h2 id="backend-setup">Backend Setup</h2>
-<p>The Go server simply mounts <code>ezauth</code> and serves static files.</p>
-<pre><code class="language-go">// Initialize ezauth with &quot;auth&quot; path prefix
-authApp, _ := ezauth.New(&amp;cfg, &quot;auth&quot;)
-
-// Mount handler
-r.Handle(&quot;/auth/*&quot;, authApp.Handler)
-
-// Serve static files
-r.Handle(&quot;/*&quot;, http.FileServer(http.FS(staticFS)))
-</code></pre>
-<h2 id="frontend-logic">Frontend Logic</h2>
-<h3 id="login">Login</h3>
-<p>Send a JSON request to <code>/auth/api/login</code>. The server verifies credentials and returns Access and Refresh tokens.</p>
-<pre><code class="language-javascript">async function login(email, password) {
-    const response = await fetch('/auth/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-    });
-
-    if (response.ok) {
-        const data = await response.json();
-        const { access_token, refresh_token } = data.data; // ezauth returns { data: ... } wrapped response
-
-        // Store tokens (localStorage for simplicity, but treat carefully)
-        localStorage.setItem('access_token', access_token);
-        localStorage.setItem('refresh_token', refresh_token);
-
-        return true;
-    }
-    return false;
+<h3 id="defining-a-hook">Defining a Hook</h3>
+<p>Embed <code>service.DefaultHook</code> and override only the methods you need:</p>
+<pre><code class="language-go">type MyHook struct {
+    service.DefaultHook
+    db  *sql.DB
+    log *slog.Logger
 }
-</code></pre>
-<h3 id="accessing-protected-resources">Accessing Protected Resources</h3>
-<p>To access protected endpoints (like <code>/auth/api/userinfo</code>), include the Access Token in the <code>Authorization</code> header.</p>
-<pre><code class="language-javascript">async function getUserInfo() {
-    const token = localStorage.getItem('access_token');
 
-    const response = await fetch('/auth/api/userinfo', {
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
-    });
-
-    if (response.ok) {
-        const data = await response.json();
-        return data.data; // The user object
+// BeforeUserCreated runs before a new user is persisted.
+// Return an error to abort the operation.
+func (h MyHook) BeforeUserCreated(ctx context.Context, u *models.User) error {
+    var banned bool
+    err := h.db.QueryRowContext(ctx,
+        &quot;SELECT EXISTS(SELECT 1 FROM banned_domains WHERE domain = ?)&quot;,
+        emailDomain(u.Email),
+    ).Scan(&amp;banned)
+    if err != nil {
+        return err
     }
-    return null;
+    if banned {
+        return errors.New(&quot;email domain is not allowed&quot;)
+    }
+    return nil
+}
+
+// AfterUserCreated runs after a user has been successfully persisted.
+func (h MyHook) AfterUserCreated(ctx context.Context, u *models.User) error {
+    // Audit log
+    _, err := h.db.ExecContext(ctx,
+        &quot;INSERT INTO audit_log (event, user_id, ts) VALUES (?, ?, ?)&quot;,
+        &quot;user.created&quot;, u.ID, time.Now(),
+    )
+    if err != nil {
+        return err
+    }
+    // Send welcome email (async — no extra framework needed)
+    go h.sendWelcomeEmail(u.Email)
+    h.log.InfoContext(ctx, &quot;new user registered&quot;, &quot;id&quot;, u.ID, &quot;email&quot;, u.Email)
+    return nil
+}
+
+// AfterUserSignedIn can be used for login notifications or audit trails.
+func (h MyHook) AfterUserSignedIn(ctx context.Context, u *models.User) error {
+    h.log.InfoContext(ctx, &quot;user signed in&quot;, &quot;id&quot;, u.ID, &quot;email&quot;, u.Email)
+    return nil
 }
 </code></pre>
-<h3 id="step-up-login-multi-factor-authentication">Step-up Login (Multi-Factor Authentication)</h3>
-<p>If the account has TOTP MFA enabled, <code>POST /auth/api/login</code> doesn't return tokens directly — it returns <code>{ "mfa_required": true, "mfa_token": "..." }</code> instead. Prompt the user for their authenticator code and exchange it (plus the <code>mfa_token</code>) at <code>POST /auth/api/mfa/login/verify</code> to get real session tokens. Passing <code>remember_device: true</code> returns a <code>device_token</code>; send it back via the <code>X-Device-Token</code> header on future logins to skip the step-up prompt for <code>EZAUTH_TRUSTED_DEVICE_TTL</code>.</p>
-<pre><code class="language-javascript">async function login(email, password) {
-    const response = await fetch('/auth/api/login', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            // Send a previously-issued device token, if any, to skip MFA on trusted devices.
-            'X-Device-Token': localStorage.getItem('device_token') || '',
-        },
-        body: JSON.stringify({ email, password })
-    });
-
-    if (!response.ok) return { ok: false };
-
-    const { data } = await response.json();
-
-    if (data.mfa_required) {
-        // Stash the mfa_token; the UI should now prompt for a TOTP/recovery code.
-        sessionStorage.setItem('mfa_token', data.mfa_token);
-        return { ok: true, mfaRequired: true };
-    }
-
-    storeTokens(data);
-    return { ok: true, mfaRequired: false };
-}
-
-async function verifyMFA(code, rememberDevice = false) {
-    const mfaToken = sessionStorage.getItem('mfa_token');
-
-    const response = await fetch('/auth/api/mfa/login/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mfa_token: mfaToken, code, remember_device: rememberDevice })
-    });
-
-    if (!response.ok) return false; // wrong code — let the user retry
-
-    const { data } = await response.json();
-    sessionStorage.removeItem('mfa_token');
-
-    if (data.device_token) {
-        // Only present when remember_device was true; persist for the X-Device-Token header above.
-        localStorage.setItem('device_token', data.device_token);
-    }
-
-    storeTokens(data);
-    return true;
-}
-
-function storeTokens({ access_token, refresh_token }) {
-    localStorage.setItem('access_token', access_token);
-    localStorage.setItem('refresh_token', refresh_token);
-}
+<h3 id="available-hooks">Available Hooks</h3>
+<table>
+<thead>
+<tr>
+<th>Hook</th>
+<th>Timing</th>
+<th>Abortable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>BeforeUserCreated</code></td>
+<td>Before creating a new user</td>
+<td>Yes (return error)</td>
+</tr>
+<tr>
+<td><code>AfterUserCreated</code></td>
+<td>After a new user is persisted</td>
+<td>No (errors are logged)</td>
+</tr>
+<tr>
+<td><code>BeforeUserUpdated</code></td>
+<td>Before updating a user</td>
+<td>Yes (return error)</td>
+</tr>
+<tr>
+<td><code>AfterUserUpdated</code></td>
+<td>After a user is updated</td>
+<td>No (errors are logged)</td>
+</tr>
+<tr>
+<td><code>BeforeUserDeleted</code></td>
+<td>Before deleting a user</td>
+<td>Yes (return error)</td>
+</tr>
+<tr>
+<td><code>AfterUserDeleted</code></td>
+<td>After a user is deleted</td>
+<td>No (errors are logged)</td>
+</tr>
+<tr>
+<td><code>AfterUserSignedIn</code></td>
+<td>After a successful sign-in</td>
+<td>No (errors are logged)</td>
+</tr>
+<tr>
+<td><code>AfterUserSignedOut</code></td>
+<td>After a successful sign-out</td>
+<td>No (errors are logged)</td>
+</tr>
+<tr>
+<td><code>AfterPasswordResetRequested</code></td>
+<td>After a password reset is requested</td>
+<td>No (errors are logged)</td>
+</tr>
+<tr>
+<td><code>AfterPasswordResetConfirmed</code></td>
+<td>After a password reset is confirmed</td>
+<td>No (errors are logged)</td>
+</tr>
+<tr>
+<td><code>AfterOAuth2SignedIn</code></td>
+<td>After an existing user signs in via OAuth2</td>
+<td>No (errors are logged)</td>
+</tr>
+<tr>
+<td><code>AfterOAuth2Created</code></td>
+<td>After a new user is created via OAuth2</td>
+<td>No (errors are logged)</td>
+</tr>
+<tr>
+<td><code>AfterImpersonationStarted</code></td>
+<td>After an admin begins impersonating a user</td>
+<td>No (errors are logged)</td>
+</tr>
+<tr>
+<td><code>AfterImpersonationEnded</code></td>
+<td>After an impersonation session ends</td>
+<td>No (errors are logged)</td>
+</tr>
+<tr>
+<td><code>AfterMFAEnabled</code></td>
+<td>After a user enables TOTP MFA</td>
+<td>No (errors are logged)</td>
+</tr>
+<tr>
+<td><code>AfterMFADisabled</code></td>
+<td>After a user disables TOTP MFA</td>
+<td>No (errors are logged)</td>
+</tr>
+<tr>
+<td><code>AfterLoginFailed</code></td>
+<td>After a failed login attempt (known user)</td>
+<td>No (errors are logged)</td>
+</tr>
+<tr>
+<td><code>AfterAccountLocked</code></td>
+<td>After an account is locked out</td>
+<td>No (errors are logged)</td>
+</tr>
+</tbody>
+</table>
+<p>Every one of these also feeds the built-in <a href="#audit-log">Audit Log</a> — your own hook and audit persistence both run, regardless of which <code>Hook</code> you register.</p>
+<h3 id="registering-the-hook">Registering the Hook</h3>
+<pre><code class="language-go">auth.SetHook(MyHook{
+    db:  sqlDB,
+    log: slog.Default(),
+})
 </code></pre>
-<h3 id="token-refresh">Token Refresh</h3>
-<p><code>ezauth</code> provides a refresh endpoint. When the access token expires (401 Unauthorized), use the refresh token to get a new one.</p>
-<pre><code class="language-javascript">async function refreshAccessToken() {
-    const refreshToken = localStorage.getItem('refresh_token');
-
-    const response = await fetch('/auth/api/token/refresh', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: refreshToken })
-    });
-
-    if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('access_token', data.data.access_token);
-        localStorage.setItem('refresh_token', data.data.refresh_token); // Update refresh token if rotated
-        return true;
-    }
-    return false;
-}
-</code></pre>
+<p>It's safe to call <code>SetHook</code> at any point — including after the server is running.</p>
 
 
 

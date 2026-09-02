@@ -11,10 +11,10 @@
       
       
       
-        <link rel="prev" href="../standalone/">
+        <link rel="prev" href="../guides/admin-operations/">
       
       
-        <link rel="next" href="../architecture/">
+        <link rel="next" href="../references/handler/">
       
       
         
@@ -287,6 +287,8 @@
       
         
       
+        
+      
     
     
     
@@ -385,6 +387,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -400,6 +430,14 @@
   
     
     
+      
+        
+      
+        
+      
+        
+      
+        
       
         
       
@@ -425,7 +463,7 @@
   <span class="md-ellipsis">
     
   
-    Usage
+    Guides
   
 
     
@@ -441,7 +479,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Usage
+    Guides
   
 
           </label>
@@ -461,7 +499,7 @@
   <span class="md-ellipsis">
     
   
-    As a Library
+    Embed as a Library
   
 
     
@@ -503,6 +541,118 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/sessions-middleware-helpers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sessions, Middleware and Helpers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/sign-in-methods/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sign-in Methods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/account-security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Account Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/admin-operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Admin and Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -520,8 +670,6 @@
   
     
     
-      
-        
       
         
       
@@ -1288,34 +1436,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../architecture/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Architecture
-  
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -2262,7 +2382,7 @@
 }
 </code></pre>
 <h2 id="well-known-endpoints">Well-Known Endpoints</h2>
-<p><code>GET /.well-known/jwks.json</code> — served at the domain root, outside both prefixes above, per the well-known-URI convention. Publishes the JSON Web Key Set for the current (and, during a rotation, previous) asymmetric access-token signing key — see <a href="../library/#asymmetric-jwt-signing-jwks">Asymmetric JWT Signing (JWKS)</a>. Returns <code>{"keys": []}</code> when signing with the default symmetric HS256 algorithm (no API key required).</p>
+<p><code>GET /.well-known/jwks.json</code> — served at the domain root, outside both prefixes above, per the well-known-URI convention. Publishes the JSON Web Key Set for the current (and, during a rotation, previous) asymmetric access-token signing key — see <a href="../guides/account-security/#asymmetric-jwt-signing-jwks">Asymmetric JWT Signing (JWKS)</a>. Returns <code>{"keys": []}</code> when signing with the default symmetric HS256 algorithm (no API key required).</p>
 <h2 id="form-handlers-browser">Form Handlers (Browser)</h2>
 <p>These endpoints accept <code>application/x-www-form-urlencoded</code> and redirect upon success or failure. Authentication tokens are stored in an HTTP-only cookie named <code>ezauthsess</code>.</p>
 <p>POST requests to these endpoints are automatically protected by <code>filippo.io/csrf/gorilla</code> using modern browser <strong>Fetch Metadata headers</strong> (e.g., <code>Sec-Fetch-Site: same-origin</code>). You do not need to manually include a CSRF token in your requests.</p>
@@ -2277,12 +2397,18 @@
 <code>GET /auth/register</code> (Redirects to configured Register Page)</p>
 <p><strong>Parameters:</strong>
 *   <code>email</code> (required)
-*   <code>password</code> (required)
+*   <code>password</code> (required, min 8 chars)
 *   <code>password_confirm</code> (required, must match password)
 *   <code>username</code> (optional)
 *   <code>first_name</code> (optional)
 *   <code>last_name</code> (optional)
-*   <code>meta_*</code> (Optional, any field prefixed with <code>meta_</code> will be stored in <code>UserMetadata</code>)</p>
+*   <code>locale</code> (optional)
+*   <code>timezone</code> (optional)
+*   <code>phone</code> (optional)
+*   <code>avatar_url</code> (optional)
+*   <code>nickname</code> (optional)
+*   <code>roles</code> (optional, comma-separated)
+*   <code>meta_*</code> (Optional, any field prefixed with <code>meta_</code> will be stored in <code>UserMetadata</code>, e.g. <code>meta_theme=dark</code> -&gt; <code>user_metadata: {"theme": "dark"}</code>)</p>
 <h3 id="login-form">Login (Form)</h3>
 <p><code>POST /auth/login</code>
 <code>GET /auth/login</code> (Redirects to configured Login Page)</p>
@@ -2381,7 +2507,7 @@
   &quot;mfa_token&quot;: &quot;...&quot;
 }
 </code></pre>
-<p>Returns <code>401</code> with a distinct error message (rather than the generic "invalid email or password") if the account is locked from too many failed attempts, or disabled some other way — see <a href="#account-lockout">Account Lockout</a>.
+<p>Returns <code>401</code> with a distinct error message (rather than the generic "invalid email or password") if the account is locked from too many failed attempts, or disabled some other way — see <a href="../guides/account-security/#account-lockout">Account Lockout</a>.
 Exchange <code>mfa_token</code> via <code>POST /auth/api/mfa/login/verify</code> (see below) to receive real session tokens.</p>
 <h3 id="refresh-token">Refresh Token</h3>
 <p><code>POST /auth/api/token/refresh</code></p>
