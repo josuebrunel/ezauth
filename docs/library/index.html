@@ -2087,7 +2087,7 @@ func main() {
 <p><code>ezauth</code> provides package-level helper functions for convenient access to authentication context. These can be used in your handlers or templates.</p>
 <blockquote>
 <p>[!IMPORTANT]
-These functions require the appropriate middleware (<code>SessionMiddleware</code>, <code>LoadUserMiddleware</code>, or <code>AuthMiddleware</code>) to be mounted on the router path.</p>
+Middleware prerequisites vary per helper: <code>SessionMiddleware</code> populates the session/cookie-based helpers (<code>GetUser</code>, <code>GetSessionTokens</code>, cookie-mode impersonation) and <code>AuthMiddleware</code> the JWT/Bearer ones (<code>GetUserID</code>, <code>GetImpersonatorID</code>). <code>GetUserID</code>, <code>GetUser</code>, and <code>IsAuthenticated</code> work under any of <code>SessionMiddleware</code>, <code>LoadUserMiddleware</code>, or <code>AuthMiddleware</code>.</p>
 </blockquote>
 <pre><code class="language-go">import &quot;github.com/josuebrunel/ezauth&quot;
 
@@ -2119,6 +2119,18 @@ func MyHandler(w http.ResponseWriter, r *http.Request) {
         if theme, ok := models.GetMeta[string](user, &quot;theme&quot;); ok {
             // ...
         }
+    }
+
+    // Get the session's access/refresh tokens (requires SessionMiddleware)
+    tokens, err := ezauth.GetSessionTokens(r.Context())
+    if err == nil {
+        accessToken := tokens[&quot;access_token&quot;] // ...
+    }
+
+    // Detect an impersonation session, regardless of transport
+    // (cookie session or Bearer/JWT &quot;act&quot; claim)
+    if adminID, ok := ezauth.CurrentImpersonatorID(r.Context()); ok {
+        // acting as another user on behalf of adminID
     }
 }
 </code></pre>
