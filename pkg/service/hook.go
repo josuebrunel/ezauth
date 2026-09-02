@@ -60,6 +60,16 @@ type Hook interface {
 
 	// AfterMFADisabled is called after a user disables TOTP MFA.
 	AfterMFADisabled(ctx context.Context, user *models.User) error
+
+	// AfterLoginFailed is called after a failed login attempt for a known
+	// user (wrong password). reason is a short machine-readable cause, e.g.
+	// "invalid_password".
+	AfterLoginFailed(ctx context.Context, user *models.User, reason string) error
+
+	// AfterAccountLocked is called after a user's account is locked out due
+	// to too many consecutive failed login attempts (see
+	// Config.AccountLockout).
+	AfterAccountLocked(ctx context.Context, user *models.User) error
 }
 
 // DefaultHook is a no-op implementation of Hook.
@@ -94,3 +104,111 @@ func (DefaultHook) AfterImpersonationEnded(_ context.Context, _ *models.User, _ 
 }
 func (DefaultHook) AfterMFAEnabled(_ context.Context, _ *models.User) error  { return nil }
 func (DefaultHook) AfterMFADisabled(_ context.Context, _ *models.User) error { return nil }
+func (DefaultHook) AfterLoginFailed(_ context.Context, _ *models.User, _ string) error {
+	return nil
+}
+func (DefaultHook) AfterAccountLocked(_ context.Context, _ *models.User) error { return nil }
+
+// auditHook wraps another Hook, persisting an audit-log row (see
+// Auth.recordAuditEvent) for each security-relevant lifecycle event before
+// delegating to the wrapped hook. Auth.New and Auth.SetHook always install
+// one of these as Auth.Hook, so persisted audit logging works regardless of
+// whether the consumer registers their own Hook.
+type auditHook struct {
+	auth *Auth
+	next Hook
+}
+
+// newAuditHook wraps next (DefaultHook{} if nil) with audit-log persistence.
+func newAuditHook(auth *Auth, next Hook) Hook {
+	if next == nil {
+		next = DefaultHook{}
+	}
+	return &auditHook{auth: auth, next: next}
+}
+
+func (h *auditHook) BeforeUserCreated(ctx context.Context, user *models.User) error {
+	return h.next.BeforeUserCreated(ctx, user)
+}
+
+func (h *auditHook) AfterUserCreated(ctx context.Context, user *models.User) error {
+	h.auth.recordAuditEvent(ctx, user.ID, models.AuditEventUserCreated, nil)
+	return h.next.AfterUserCreated(ctx, user)
+}
+
+func (h *auditHook) BeforeUserUpdated(ctx context.Context, user *models.User) error {
+	return h.next.BeforeUserUpdated(ctx, user)
+}
+
+func (h *auditHook) AfterUserUpdated(ctx context.Context, user *models.User) error {
+	return h.next.AfterUserUpdated(ctx, user)
+}
+
+func (h *auditHook) BeforeUserDeleted(ctx context.Context, user *models.User) error {
+	return h.next.BeforeUserDeleted(ctx, user)
+}
+
+func (h *auditHook) AfterUserDeleted(ctx context.Context, user *models.User) error {
+	h.auth.recordAuditEvent(ctx, user.ID, models.AuditEventUserDeleted, nil)
+	return h.next.AfterUserDeleted(ctx, user)
+}
+
+func (h *auditHook) AfterUserSignedIn(ctx context.Context, user *models.User) error {
+	h.auth.recordAuditEvent(ctx, user.ID, models.AuditEventLoginSucceeded, nil)
+	return h.next.AfterUserSignedIn(ctx, user)
+}
+
+func (h *auditHook) AfterUserSignedOut(ctx context.Context, user *models.User) error {
+	h.auth.recordAuditEvent(ctx, user.ID, models.AuditEventLogoutSucceeded, nil)
+	return h.next.AfterUserSignedOut(ctx, user)
+}
+
+func (h *auditHook) AfterPasswordResetRequested(ctx context.Context, user *models.User) error {
+	h.auth.recordAuditEvent(ctx, user.ID, models.AuditEventPasswordResetRequested, nil)
+	return h.next.AfterPasswordResetRequested(ctx, user)
+}
+
+func (h *auditHook) AfterPasswordResetConfirmed(ctx context.Context, user *models.User) error {
+	h.auth.recordAuditEvent(ctx, user.ID, models.AuditEventPasswordResetConfirmed, nil)
+	return h.next.AfterPasswordResetConfirmed(ctx, user)
+}
+
+func (h *auditHook) AfterOAuth2SignedIn(ctx context.Context, user *models.User, provider string) error {
+	h.auth.recordAuditEvent(ctx, user.ID, models.AuditEventOAuth2SignedIn, models.JSONMap{"provider": provider})
+	return h.next.AfterOAuth2SignedIn(ctx, user, provider)
+}
+
+func (h *auditHook) AfterOAuth2Created(ctx context.Context, user *models.User, provider string) error {
+	h.auth.recordAuditEvent(ctx, user.ID, models.AuditEventOAuth2Created, models.JSONMap{"provider": provider})
+	return h.next.AfterOAuth2Created(ctx, user, provider)
+}
+
+func (h *auditHook) AfterImpersonationStarted(ctx context.Context, admin *models.User, target *models.User) error {
+	h.auth.recordAuditEvent(ctx, target.ID, models.AuditEventImpersonationStarted, models.JSONMap{"actor_id": admin.ID})
+	return h.next.AfterImpersonationStarted(ctx, admin, target)
+}
+
+func (h *auditHook) AfterImpersonationEnded(ctx context.Context, admin *models.User, target *models.User) error {
+	h.auth.recordAuditEvent(ctx, target.ID, models.AuditEventImpersonationEnded, models.JSONMap{"actor_id": admin.ID})
+	return h.next.AfterImpersonationEnded(ctx, admin, target)
+}
+
+func (h *auditHook) AfterMFAEnabled(ctx context.Context, user *models.User) error {
+	h.auth.recordAuditEvent(ctx, user.ID, models.AuditEventMFAEnabled, nil)
+	return h.next.AfterMFAEnabled(ctx, user)
+}
+
+func (h *auditHook) AfterMFADisabled(ctx context.Context, user *models.User) error {
+	h.auth.recordAuditEvent(ctx, user.ID, models.AuditEventMFADisabled, nil)
+	return h.next.AfterMFADisabled(ctx, user)
+}
+
+func (h *auditHook) AfterLoginFailed(ctx context.Context, user *models.User, reason string) error {
+	h.auth.recordAuditEvent(ctx, user.ID, models.AuditEventLoginFailed, models.JSONMap{"reason": reason})
+	return h.next.AfterLoginFailed(ctx, user, reason)
+}
+
+func (h *auditHook) AfterAccountLocked(ctx context.Context, user *models.User) error {
+	h.auth.recordAuditEvent(ctx, user.ID, models.AuditEventAccountLocked, nil)
+	return h.next.AfterAccountLocked(ctx, user)
+}

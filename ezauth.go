@@ -101,9 +101,10 @@ func NewWithDB(cfg *config.Config, db *sql.DB, path string) (*EzAuth, error) {
 }
 
 // SetHook registers a Hook implementation to intercept auth lifecycle events.
-// See service.Hook and service.DefaultHook for details.
+// See service.Hook and service.DefaultHook for details. Built-in audit-log
+// persistence (Cfg.AuditLog.Enabled) still runs regardless of this hook.
 func (e *EzAuth) SetHook(hook service.Hook) {
-	e.Service.Hook = hook
+	e.Service.SetHook(hook)
 }
 
 // RegisterOAuth2Provider registers a custom OAuth2/OIDC provider on the service.

@@ -214,6 +214,14 @@ type AccountLockout struct {
 	LockoutDuration time.Duration `json:"lockout_duration" env:"ACCOUNT_LOCKOUT_DURATION" default:"15m"`
 }
 
+// AuditLog defines the persisted audit-log settings. When Enabled, ezauth
+// records a row to the audit log for each security-relevant lifecycle event
+// (login success/failure, password reset, impersonation, account lockout,
+// etc.) — see service.Hook.
+type AuditLog struct {
+	Enabled bool `json:"enabled" env:"AUDIT_LOG_ENABLED" default:"true"`
+}
+
 // Config defines the overall configuration for ezauth.
 type Config struct {
 	Addr           string         `json:"addr" env:"ADDR" default:":8080"`
@@ -238,6 +246,7 @@ type Config struct {
 	TimeOut        time.Duration  `json:"timeout" env:"TIMEOUT" default:"30s"`
 	MFAIssuer      string         `json:"mfa_issuer" env:"MFA_ISSUER" default:"EzAuth"`
 	WebAuthn       WebAuthn       `json:"webauthn"`
+	AuditLog       AuditLog       `json:"audit_log"`
 }
 
 // LoadConfig loads the configuration from environment variables.

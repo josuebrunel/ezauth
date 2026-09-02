@@ -48,9 +48,9 @@ func New(cfg *config.Config, repo *repository.Repository, pathPrefix string) *Au
 		Mailer:          mailer,
 		SMS:             sms,
 		PathPrefix:      pathPrefix,
-		Hook:            DefaultHook{},
 		customProviders: make(map[string]OAuth2Provider),
 	}
+	a.Hook = newAuditHook(a, DefaultHook{})
 
 	if cfg.WebAuthn.RPID != "" && cfg.WebAuthn.RPOrigins != "" {
 		wa, err := webauthn.New(&webauthn.Config{
@@ -68,6 +68,13 @@ func New(cfg *config.Config, repo *repository.Repository, pathPrefix string) *Au
 	}
 
 	return a
+}
+
+// SetHook registers hook as the consumer-supplied Hook implementation.
+// It's still wrapped with audit-log persistence (see auditHook in hook.go),
+// so replacing the hook never disables built-in audit logging.
+func (a *Auth) SetHook(hook Hook) {
+	a.Hook = newAuditHook(a, hook)
 }
 
 // NewFromConfig creates a new Auth service from a config.

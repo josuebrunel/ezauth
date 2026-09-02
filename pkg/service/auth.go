@@ -241,6 +241,9 @@ func (a *Auth) UserAuthenticate(ctx context.Context, req RequestBasicAuth) (*mod
 
 	if !passwordOK {
 		xlog.Debug("authentication failed: invalid credentials", "email", req.Email)
+		if err := a.Hook.AfterLoginFailed(ctx, user, "invalid_password"); err != nil {
+			xlog.Error("hook AfterLoginFailed failed", "user_id", user.ID, "err", err)
+		}
 		if a.Cfg.AccountLockout.Enabled {
 			a.recordFailedLogin(ctx, user)
 		}
@@ -274,6 +277,11 @@ func (a *Auth) recordFailedLogin(ctx context.Context, user *models.User) {
 	}
 	if _, err := a.Repo.UserSetLockoutState(ctx, user.ID, attempts, lockedUntil, isActive); err != nil {
 		xlog.Error("failed to record failed login attempt", "user_id", user.ID, "err", err)
+	}
+	if !isActive {
+		if err := a.Hook.AfterAccountLocked(ctx, user); err != nil {
+			xlog.Error("hook AfterAccountLocked failed", "user_id", user.ID, "err", err)
+		}
 	}
 }
 
