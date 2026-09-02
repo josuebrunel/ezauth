@@ -721,6 +721,120 @@
                 }
             }
         },
+        "/auth/api/sessions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sessions"
+                ],
+                "summary": "List active sessions",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-array_service_SessionInfo"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sessions"
+                ],
+                "summary": "Revoke all other sessions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session record ID to keep (e.g. the caller's current session)",
+                        "name": "except",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-map_string_string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/api/sessions/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sessions"
+                ],
+                "summary": "Revoke a session",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session record ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-map_string_string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/api/sms-otp/request": {
             "post": {
                 "security": [
@@ -1858,6 +1972,20 @@
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/service.InvitationInfo"
+                    }
+                },
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.ApiResponse-array_service_SessionInfo": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/service.SessionInfo"
                     }
                 },
                 "error": {
@@ -3017,6 +3145,20 @@
                     "type": "string"
                 },
                 "phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.SessionInfo": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
                     "type": "string"
                 }
             }

@@ -169,6 +169,9 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 			r.Delete("/webauthn/credentials/{id}", h.FormWebauthnCredentialDelete)
 			r.Get("/trusted-devices", h.FormTrustedDevicesList)
 			r.Delete("/trusted-devices/{id}", h.FormTrustedDeviceRevoke)
+			r.Get("/sessions", h.FormSessionsList)
+			r.Delete("/sessions/{id}", h.FormSessionRevoke)
+			r.Delete("/sessions", h.FormSessionsRevokeAll)
 			r.Get("/invitation/accept", func(w http.ResponseWriter, r *http.Request) {
 				target := h.svc.Cfg.Pages.InvitationAccept
 				if token := r.URL.Query().Get("token"); token != "" {
@@ -226,6 +229,9 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 					r.Delete("/webauthn/credentials/{id}", h.WebauthnCredentialDelete)
 					r.Get("/trusted-devices", h.TrustedDevicesList)
 					r.Delete("/trusted-devices/{id}", h.TrustedDeviceRevoke)
+					r.Get("/sessions", h.SessionsList)
+					r.Delete("/sessions/{id}", h.SessionRevoke)
+					r.Delete("/sessions", h.SessionsRevokeAll)
 					r.Post("/invitations", h.InvitationCreate)
 					r.Get("/invitations", h.InvitationsList)
 					r.Delete("/invitations/{id}", h.InvitationRevoke)

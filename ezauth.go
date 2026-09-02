@@ -387,6 +387,25 @@ func (e *EzAuth) RevokeTrustedDevice(ctx context.Context, user *models.User, dev
 	return e.Service.RevokeTrustedDevice(ctx, user, deviceID)
 }
 
+// Sessions lists a user's active (non-revoked) refresh-token sessions, one
+// per logged-in device/client.
+func (e *EzAuth) Sessions(ctx context.Context, userID string) ([]service.SessionInfo, error) {
+	return e.Service.Sessions(ctx, userID)
+}
+
+// RevokeSession revokes one of user's active sessions by its record ID (as
+// returned by Sessions), logging that device out immediately.
+func (e *EzAuth) RevokeSession(ctx context.Context, user *models.User, sessionID string) error {
+	return e.Service.RevokeSession(ctx, user, sessionID)
+}
+
+// RevokeAllSessions revokes all of user's active sessions except, if
+// non-empty, the one whose record ID matches exceptSessionID — "log out
+// other devices". Pass an empty exceptSessionID to log out everywhere.
+func (e *EzAuth) RevokeAllSessions(ctx context.Context, user *models.User, exceptSessionID string) error {
+	return e.Service.RevokeAllSessions(ctx, user, exceptSessionID)
+}
+
 // GetMFAEnrollment returns the TOTP secret and otpauth:// URL stashed for the
 // current cookie-based session by the form MFA enrollment flow, e.g. for
 // rendering a QR code on the enrollment page. Returns ok=false if none is pending.

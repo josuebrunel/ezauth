@@ -27,6 +27,15 @@ definitions:
       error:
         type: string
     type: object
+  handler.ApiResponse-array_service_SessionInfo:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/service.SessionInfo'
+        type: array
+      error:
+        type: string
+    type: object
   handler.ApiResponse-array_service_TrustedDeviceInfo:
     properties:
       data:
@@ -852,6 +861,15 @@ definitions:
       phone:
         type: string
     type: object
+  service.SessionInfo:
+    properties:
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+    type: object
   service.TokenResponse:
     properties:
       access_token:
@@ -1360,6 +1378,73 @@ paths:
       summary: Complete MFA step-up login
       tags:
       - mfa
+  /auth/api/sessions:
+    delete:
+      parameters:
+      - description: Session record ID to keep (e.g. the caller's current session)
+        in: query
+        name: except
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Revoke all other sessions
+      tags:
+      - sessions
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-array_service_SessionInfo'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: List active sessions
+      tags:
+      - sessions
+  /auth/api/sessions/{id}:
+    delete:
+      parameters:
+      - description: Session record ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Revoke a session
+      tags:
+      - sessions
   /auth/api/sms-otp/request:
     post:
       consumes:
