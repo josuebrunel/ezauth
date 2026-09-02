@@ -874,6 +874,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sessions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#webauthn-passkeys" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1367,6 +1378,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sessions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#webauthn-passkeys" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1527,7 +1549,8 @@
 -   <code>Impersonate(w, r)</code>: Start impersonating a target user (JSON)
 -   <code>StopImpersonation(w, r)</code>: End an impersonation session (JSON)
 -   <code>FormImpersonate(w, r)</code>: Start impersonating (form; swaps the session cookie)
--   <code>FormStopImpersonation(w, r)</code>: End impersonation (form; restores the admin's own session)</p>
+-   <code>FormStopImpersonation(w, r)</code>: End impersonation (form; restores the admin's own session)
+-   <code>CurrentImpersonatorID(ctx)</code>, <code>CurrentImpersonator(ctx)</code>: Detect impersonation regardless of transport (checks cookie-mode <code>IsImpersonating</code> first, then the Bearer/JWT <code>act</code> claim)</p>
 <h3 id="multi-factor-authentication-totp">Multi-Factor Authentication (TOTP)</h3>
 <ul>
 <li><code>MFAEnroll(w, r)</code>: Generate a TOTP secret + provisioning URI (JSON)</li>
@@ -1540,6 +1563,11 @@
 <ul>
 <li><code>TrustedDevicesList(w, r)</code>, <code>TrustedDeviceRevoke(w, r)</code>: JSON</li>
 <li><code>FormTrustedDevicesList(w, r)</code>, <code>FormTrustedDeviceRevoke(w, r)</code>: Form equivalents</li>
+</ul>
+<h3 id="sessions">Sessions</h3>
+<ul>
+<li><code>SessionsList(w, r)</code>, <code>SessionRevoke(w, r)</code>, <code>SessionsRevokeAll(w, r)</code>: List/revoke active refresh-token sessions (JSON)</li>
+<li><code>FormSessionsList(w, r)</code>, <code>FormSessionRevoke(w, r)</code>, <code>FormSessionsRevokeAll(w, r)</code>: Form equivalents</li>
 </ul>
 <h3 id="webauthn-passkeys">WebAuthn / Passkeys</h3>
 <ul>
@@ -1570,7 +1598,8 @@
 -   <code>AdminUsersList(w, r)</code>: Search/filter/paginate users (JSON)
 -   <code>AdminUserSuspend(w, r)</code>, <code>AdminUserReactivate(w, r)</code>: Suspend/reactivate an account (JSON)
 -   <code>AdminUserAuthHistory(w, r)</code>: View a user's auth history (JSON)
--   <code>FormAdminUsersList(w, r)</code>, <code>FormAdminUserSuspend(w, r)</code>, <code>FormAdminUserReactivate(w, r)</code>, <code>FormAdminUserAuthHistory(w, r)</code>: Form equivalents</p>
+-   <code>AdminUserAuditLogsList(w, r)</code>: List/filter a user's persisted audit log (JSON)
+-   <code>FormAdminUsersList(w, r)</code>, <code>FormAdminUserSuspend(w, r)</code>, <code>FormAdminUserReactivate(w, r)</code>, <code>FormAdminUserAuthHistory(w, r)</code>, <code>FormAdminUserAuditLogsList(w, r)</code>: Form equivalents</p>
 <h3 id="form-handlers">Form Handlers</h3>
 <p>These handlers process <code>application/x-www-form-urlencoded</code> requests and return HTML redirects.</p>
 <ul>

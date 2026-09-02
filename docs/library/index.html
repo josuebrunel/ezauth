@@ -869,6 +869,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sessions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#webauthn-passkeys" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -939,6 +950,17 @@
     <span class="md-ellipsis">
       
         Admin User Management
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#audit-log" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit Log
       
     </span>
   </a>
@@ -1788,6 +1810,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sessions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#webauthn-passkeys" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1858,6 +1891,17 @@
     <span class="md-ellipsis">
       
         Admin User Management
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#audit-log" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit Log
       
     </span>
   </a>
@@ -2322,6 +2366,16 @@ err = auth.MFADisable(ctx, user, code)
 err = auth.RevokeTrustedDevice(ctx, user, devices[0].ID)
 </code></pre>
 <p>JSON API clients send the stored device token back via the <code>X-Device-Token</code> header on <code>POST /auth/api/login</code>. Form/cookie clients get this for free: <code>FormLogin</code> reads the trusted-device cookie itself, and <code>FormMFALoginVerify</code> sets it (<code>EZAUTH_TRUSTED_DEVICE_COOKIE_NAME</code>) when the verification form's <code>remember_device</code> field is set.</p>
+<h2 id="sessions">Sessions</h2>
+<p>Every refresh token issued to a user (one per login, across devices/clients) is a session. Let users see and remotely revoke their own active sessions — e.g. a "log out other devices" account-security page.</p>
+<pre><code class="language-go">sessions, err := auth.Sessions(ctx, user.ID)
+// []service.SessionInfo{ID, CreatedAt, ExpiresAt}, most recent first.
+
+err = auth.RevokeSession(ctx, user, sessions[0].ID)      // log out one device
+err = auth.RevokeAllSessions(ctx, user, currentID)        // log out other devices, keep currentID
+err = auth.RevokeAllSessions(ctx, user, &quot;&quot;)                // log out everywhere
+</code></pre>
+<p>For the JSON API: <code>GET /auth/api/sessions</code> lists sessions, <code>DELETE /auth/api/sessions/{id}</code> revokes one, and <code>DELETE /auth/api/sessions?except={id}</code> revokes all but the session named by <code>except</code> (omit <code>except</code> to log out everywhere). Cookie clients use the same routes under <code>/auth/sessions[...]</code>.</p>
 <h2 id="webauthn-passkeys">WebAuthn / Passkeys</h2>
 <p><code>ezauth</code> supports WebAuthn/FIDO2 passkey registration and login. Login is <strong>discoverable (usernameless)</strong> — the browser's platform UI lets the user pick a passkey, so no prior email/username is required. WebAuthn is disabled unless <code>EZAUTH_WEBAUTHN_RP_ID</code> and <code>EZAUTH_WEBAUTHN_RP_ORIGINS</code> are both set, and ceremonies always require client-side JavaScript (<code>navigator.credentials.create()</code>/<code>.get()</code>) regardless of cookie vs. Bearer auth style.</p>
 <pre><code class="language-go">// Registration (user already authenticated):
@@ -2421,7 +2475,12 @@ if isImpersonating {
     fmt.Println(&quot;acting as admin:&quot;, admin.Email)
 }
 </code></pre>
-<p>These two are backed by different mechanisms (JWT claims vs. session storage) and aren't interchangeable — use whichever matches how your route is authenticated. See the <a href="https://github.com/josuebrunel/ezauth#impersonation">Impersonation section of the README</a> for the standalone-service (JSON API / form) equivalents.</p>
+<p>These two are backed by different mechanisms (JWT claims vs. session storage), so a route reachable over either transport would otherwise need to branch on which one applies. For that case, use the transport-agnostic pair instead — they check both and return whichever applies:</p>
+<pre><code class="language-go">adminID, ok := auth.CurrentImpersonatorID(ctx) // (string, bool)
+admin, err := auth.CurrentImpersonator(ctx)     // (*models.User, error)
+</code></pre>
+<p>Safe to call regardless of transport: the session-manager middleware always runs first, even on Bearer-only routes, so the cookie-mode check never panics for lack of loaded session data — it just finds nothing and falls through to the JWT check.</p>
+<p>See the <a href="https://github.com/josuebrunel/ezauth#impersonation">Impersonation section of the README</a> for the standalone-service (JSON API / form) equivalents.</p>
 <h2 id="admin-user-management">Admin User Management</h2>
 <p>Beyond impersonation, <code>ezauth</code> exposes admin-facing methods to list/search/filter users, suspend/reactivate an account, and view a user's auth history. <code>ezauth</code> enforces no authorization on who may call these (same stance as <code>Impersonate</code>) — check that yourself before exposing them.</p>
 <pre><code class="language-go">result, err := auth.Service.UsersList(ctx, service.ListUsersOptions{
@@ -2436,7 +2495,18 @@ user, err = auth.Service.UserReactivate(ctx, targetUserID)
 
 history, err := auth.Service.UserAuthHistory(ctx, targetUserID, 50)
 </code></pre>
-<p><code>ListUsersOptions</code> also supports <code>CreatedAfter</code>/<code>CreatedBefore</code> and <code>LastActiveAfter</code>/<code>LastActiveBefore</code> (<code>*time.Time</code>) for date-range filtering. <code>UserStatusActive</code>/<code>Locked</code>/<code>Suspended</code> are derived from the existing <code>IsActive</code>/lockout columns: locked is a temporary, auto-expiring brute-force lockout (see <a href="#account-lockout">Account Lockout</a>); suspended is <code>UserSuspend</code>'s permanent-until-reactivated deactivation. <code>UserAuthHistory</code> is a lightweight proxy built from the Tokens table every other feature writes to, not a full audit log.</p>
+<p><code>ListUsersOptions</code> also supports <code>CreatedAfter</code>/<code>CreatedBefore</code> and <code>LastActiveAfter</code>/<code>LastActiveBefore</code> (<code>*time.Time</code>) for date-range filtering. <code>UserStatusActive</code>/<code>Locked</code>/<code>Suspended</code> are derived from the existing <code>IsActive</code>/lockout columns: locked is a temporary, auto-expiring brute-force lockout (see <a href="#account-lockout">Account Lockout</a>); suspended is <code>UserSuspend</code>'s permanent-until-reactivated deactivation. <code>UserAuthHistory</code> is a lightweight proxy built from the Tokens table every other feature writes to — for a real persisted audit trail of named security events, see <a href="#audit-log">Audit Log</a>.</p>
+<h2 id="audit-log">Audit Log</h2>
+<p><code>ezauth</code> persists a row to an audit log for security-relevant events — login success/failure, password reset, impersonation start/stop, account lockout, MFA enable/disable, user create/delete — automatically, via a built-in hook that wraps whatever <code>Hook</code> you register (see <a href="#hooks">Hooks</a>) so it keeps working whether or not you set your own. Enabled by default; disable with <code>EZAUTH_AUDIT_LOG_ENABLED=false</code>.</p>
+<pre><code class="language-go">result, err := auth.Service.AuditLogs(ctx, targetUserID, service.ListAuditLogsOptions{
+    EventType: models.AuditEventLoginFailed, // optional, e.g. &quot;login.failed&quot;
+    Since:     &amp;since,                       // optional, RFC3339
+    Limit:     50,
+})
+// result.Events ([]*models.AuditLog: event_type, metadata, created_at), result.HasMore
+</code></pre>
+<p>Event types are the <code>models.AuditEvent*</code> constants (e.g. <code>AuditEventLoginSucceeded</code>, <code>AuditEventAccountLocked</code>). Two events — <code>AfterLoginFailed</code> and <code>AfterAccountLocked</code> — aren't tied to an existing <code>Hook</code> method, so they're added as new ones; embed <code>DefaultHook</code> as usual and only override what you need. "Email verification" and "role changes" aren't recorded yet since <code>ezauth</code> doesn't have an email-verification-confirm flow or RBAC.</p>
+<p>For the JSON API: <code>GET /auth/api/admin/users/{id}/audit-logs</code> (query params <code>event_type</code>, <code>since</code>/<code>until</code> as RFC3339 timestamps, <code>limit</code>/<code>offset</code>; default 50, max 200) — same "no authz check, caller's responsibility" stance as the rest of <a href="#admin-user-management">Admin User Management</a>. Cookie clients use the same route under <code>/auth/admin/users/{id}/audit-logs</code>.</p>
 <h2 id="hooks">Hooks</h2>
 <p>ezauth provides a hook system that lets you intercept auth lifecycle events. This is useful for:</p>
 <ul>
@@ -2582,8 +2652,19 @@ func (h MyHook) AfterUserSignedIn(ctx context.Context, u *models.User) error {
 <td>After a user disables TOTP MFA</td>
 <td>No (errors are logged)</td>
 </tr>
+<tr>
+<td><code>AfterLoginFailed</code></td>
+<td>After a failed login attempt (known user)</td>
+<td>No (errors are logged)</td>
+</tr>
+<tr>
+<td><code>AfterAccountLocked</code></td>
+<td>After an account is locked out</td>
+<td>No (errors are logged)</td>
+</tr>
 </tbody>
 </table>
+<p>Every one of these also feeds the built-in <a href="#audit-log">Audit Log</a> — your own hook and audit persistence both run, regardless of which <code>Hook</code> you register.</p>
 <h3 id="registering-the-hook">Registering the Hook</h3>
 <pre><code class="language-go">auth.SetHook(MyHook{
     db:  sqlDB,

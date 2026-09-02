@@ -1157,6 +1157,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sessions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#webauthn-passkeys" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1342,6 +1353,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#audit-log" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit Log
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1939,6 +1961,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sessions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#webauthn-passkeys" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2127,6 +2160,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#audit-log" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit Log
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2270,6 +2314,12 @@ func (a *Auth) IsTrustedDevice(ctx context.Context, user *models.User, deviceTok
 func (a *Auth) TrustedDevices(ctx context.Context, userID string) ([]TrustedDeviceInfo, error)
 func (a *Auth) RevokeTrustedDevice(ctx context.Context, user *models.User, deviceID string) error
 </code></pre>
+<h2 id="sessions">Sessions</h2>
+<p>Each refresh token issued to a user is a session (one per login/device). <code>RevokeAllSessions</code>'s <code>exceptSessionID</code> keeps the named session — pass <code>""</code> to log out everywhere.</p>
+<pre><code class="language-go">func (a *Auth) Sessions(ctx context.Context, userID string) ([]SessionInfo, error)
+func (a *Auth) RevokeSession(ctx context.Context, user *models.User, sessionID string) error
+func (a *Auth) RevokeAllSessions(ctx context.Context, user *models.User, exceptSessionID string) error
+</code></pre>
 <h2 id="webauthn-passkeys">WebAuthn / Passkeys</h2>
 <h3 id="registration">Registration</h3>
 <pre><code class="language-go">func (a *Auth) WebauthnBeginRegistration(ctx context.Context, user *models.User) (*protocol.CredentialCreation, string, error)
@@ -2322,9 +2372,14 @@ func (a *Auth) InvitationRevoke(ctx context.Context, inviter *models.User, invit
 func (a *Auth) UserReactivate(ctx context.Context, userID string) (*models.User, error)
 </code></pre>
 <h3 id="userauthhistory"><code>UserAuthHistory</code></h3>
-<p>Returns the user's most recent authentication-related token events, newest first. A lightweight proxy built from the Tokens table, not a full audit log.</p>
+<p>Returns the user's most recent authentication-related token events, newest first. A lightweight proxy built from the Tokens table — see <code>AuditLogs</code> below for a real persisted audit trail.</p>
 <pre><code class="language-go">func (a *Auth) UserAuthHistory(ctx context.Context, userID string, limit int) ([]AuthHistoryEntry, error)
 </code></pre>
+<h2 id="audit-log">Audit Log</h2>
+<p><code>ezauth</code> persists a row to an audit log for security-relevant events (login success/failure, password reset, impersonation, account lockout, MFA, user create/delete) automatically, via a built-in hook that wraps whatever <code>Hook</code> you register — see <a href="../../library/#hooks">Hooks</a>. Enabled by default; disable with <code>EZAUTH_AUDIT_LOG_ENABLED=false</code>.</p>
+<pre><code class="language-go">func (a *Auth) AuditLogs(ctx context.Context, userID string, opts ListAuditLogsOptions) (*ListAuditLogsResult, error)
+</code></pre>
+<p><code>ListAuditLogsOptions</code> supports <code>EventType</code> (a <code>models.AuditEvent*</code> constant), <code>Since</code>/<code>Until</code> (<code>*time.Time</code>), and <code>Limit</code>/<code>Offset</code> (default 50, max 200). <code>ezauth</code> enforces no authorization on who may call this — same stance as <code>UsersList</code>.</p>
 
 
 

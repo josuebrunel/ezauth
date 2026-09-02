@@ -1061,6 +1061,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#audit-log-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit Log Methods
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1503,6 +1514,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#audit-log-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit Log Methods
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1622,6 +1644,10 @@ func (r Repository) WebauthnCredentialDelete(ctx context.Context, id string) err
 <pre><code class="language-go">func (r Repository) WebauthnChallengeCreate(ctx context.Context, ch *models.WebauthnChallenge) (*models.WebauthnChallenge, error)
 func (r Repository) WebauthnChallengeGetBySessionKey(ctx context.Context, sessionKey string) (*models.WebauthnChallenge, error)
 func (r Repository) WebauthnChallengeDelete(ctx context.Context, id string) error
+</code></pre>
+<h2 id="audit-log-methods">Audit Log Methods</h2>
+<pre><code class="language-go">func (r Repository) AuditLogCreate(ctx context.Context, log *models.AuditLog) (*models.AuditLog, error)
+func (r Repository) AuditLogListByUserID(ctx context.Context, userID string, filter models.AuditLogFilter, limit, offset int) (logs []*models.AuditLog, hasMore bool, err error)
 </code></pre>
 
 
