@@ -783,7 +783,7 @@ history, err := auth.Service.UserAuthHistory(ctx, targetUserID, 50)
 // []service.AuthHistoryEntry — token_type/created_at/expires_at/revoked, newest first
 ```
 
-`UserStatusActive`/`UserStatusLocked`/`UserStatusSuspended` distinguish three states derived from the existing `IsActive`/lockout columns: **active** (`IsActive` true), **locked** (temporarily and automatically expiring — see [Account Lockout](#account-lockout)), and **suspended** (`IsActive` false with no expiry, i.e. this feature's `UserSuspend`). `UserAuthHistory` is a lightweight proxy for a proper audit log built from the same Tokens table every other feature already writes to — it is not a full audit trail.
+`UserStatusActive`/`UserStatusLocked`/`UserStatusSuspended` distinguish three states derived from the existing `IsActive`/lockout columns: **active** (`IsActive` true), **locked** (temporarily and automatically expiring — see [Account Lockout](#account-lockout)), and **suspended** (`IsActive` false with no expiry, i.e. this feature's `UserSuspend`). `UserAuthHistory` is a lightweight proxy built from the same Tokens table every other feature already writes to — for a real persisted audit trail of named security events, see [Audit Log](#audit-log).
 
 ### Standalone-service Mode
 
@@ -798,6 +798,30 @@ curl "https://your-host/auth/api/admin/users/<id>/history" -H "Authorization: Be
 ```
 
 `GET /auth/api/admin/users` accepts `search`, `status` (`active`/`locked`/`suspended`), `created_after`/`created_before`, `last_active_after`/`last_active_before` (RFC3339 timestamps), and `limit`/`offset` (default 20, max 100). For form-based (cookie) clients, the same query params work against `/auth/admin/users`, `/auth/admin/users/{id}/suspend`, `/auth/admin/users/{id}/reactivate`, and `/auth/admin/users/{id}/history`, authenticated via the logged-in session user instead of a Bearer token.
+
+## Audit Log
+
+ezauth persists a row to an audit log for security-relevant events — login success/failure, password reset, impersonation start/stop, account lockout, MFA enable/disable, user create/delete — automatically, via a built-in hook that wraps whatever `Hook` you register (see [Hooks](#hooks)) so it keeps working whether or not you set your own. Enabled by default; disable with `EZAUTH_AUDIT_LOG_ENABLED=false`.
+
+```go
+result, err := auth.Service.AuditLogs(ctx, targetUserID, service.ListAuditLogsOptions{
+    EventType: models.AuditEventLoginFailed, // optional, e.g. "login.failed"
+    Since:     &since,                       // optional, RFC3339
+    Limit:     50,
+})
+// result.Events ([]*models.AuditLog: event_type, metadata, created_at), result.HasMore
+```
+
+Event types are the `models.AuditEvent*` constants (e.g. `AuditEventLoginSucceeded`, `AuditEventAccountLocked`). Two events — `AfterLoginFailed` and `AfterAccountLocked` — aren't tied to an existing `Hook` method, so they're added as new ones; embed `DefaultHook` as usual and only override what you need. "Email verification" and "role changes" aren't recorded yet since ezauth doesn't have an email-verification-confirm flow or RBAC.
+
+### Standalone-service Mode
+
+```bash
+curl "https://your-host/auth/api/admin/users/<id>/audit-logs?event_type=login.failed&limit=50" \
+  -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+```
+
+Accepts `event_type`, `since`/`until` (RFC3339 timestamps), and `limit`/`offset` (default 50, max 200) — same auth stance as the rest of [Admin User Management](#admin-user-management) (no role check; gate this yourself). The cookie-session equivalent is `GET /auth/admin/users/{id}/audit-logs`.
 
 ## Hooks
 
@@ -879,6 +903,10 @@ func (h MyHook) AfterUserSignedIn(ctx context.Context, u *models.User) error {
 | `AfterImpersonationEnded`     | After an impersonation session ends        | No (errors are logged) |
 | `AfterMFAEnabled`             | After a user enables TOTP MFA              | No (errors are logged) |
 | `AfterMFADisabled`            | After a user disables TOTP MFA             | No (errors are logged) |
+| `AfterLoginFailed`            | After a failed login attempt (known user)  | No (errors are logged) |
+| `AfterAccountLocked`          | After an account is locked out             | No (errors are logged) |
+
+Every one of these also feeds the built-in [Audit Log](#audit-log) — your own hook and audit persistence both run, regardless of which `Hook` you register.
 
 ### Registering the Hook
 
