@@ -22,7 +22,10 @@ func TestCustomOAuth2ProviderRegistry(t *testing.T) {
 			},
 		},
 	}
-	auth := New(&config.Config{}, nil, "auth")
+	auth, err := New(&config.Config{JWTSecret: "test-secret"}, nil, "auth")
+	if err != nil {
+		t.Fatalf("failed to create auth service: %v", err)
+	}
 	auth.Cfg = cfg
 
 	// Register Google as a built-in provider (simulating registerBuiltinProviders)
@@ -40,7 +43,7 @@ func TestCustomOAuth2ProviderRegistry(t *testing.T) {
 	})
 
 	// Test 1: Unsupported provider before registration
-	_, err := auth.OAuth2GetConfig("okta")
+	_, err = auth.OAuth2GetConfig("okta")
 	if err == nil {
 		t.Error("expected error for unregistered provider, got nil")
 	}

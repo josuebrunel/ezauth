@@ -214,6 +214,28 @@ type AccountLockout struct {
 	LockoutDuration time.Duration `json:"lockout_duration" env:"ACCOUNT_LOCKOUT_DURATION" default:"15m"`
 }
 
+// JWT defines asymmetric access-token signing settings. By default ezauth
+// signs access tokens with symmetric HS256 (Config.JWTSecret) — set
+// Algorithm to "RS256" or "EdDSA" (PrivateKey/PublicKey required, PEM
+// encoded) to sign asymmetrically instead, so independent resource servers
+// can verify ezauth-issued tokens via the JWKS endpoint
+// (/.well-known/jwks.json) without holding a shared secret.
+//
+// PreviousPublicKey/PreviousKeyID let a key be rotated without invalidating
+// already-issued tokens: set them to the outgoing key's public key/kid
+// (KeyID, before rotating) so tokens it already signed keep verifying until
+// they expire, while new tokens sign with the new PrivateKey/PublicKey/KeyID.
+// KeyID/PreviousKeyID are optional; left unset, ezauth derives a stable kid
+// from the corresponding public key.
+type JWT struct {
+	Algorithm         string `json:"algorithm" env:"JWT_ALGORITHM" default:"HS256"`
+	PrivateKey        string `json:"-" env:"JWT_PRIVATE_KEY"`
+	PublicKey         string `json:"public_key" env:"JWT_PUBLIC_KEY"`
+	KeyID             string `json:"key_id" env:"JWT_KEY_ID"`
+	PreviousPublicKey string `json:"previous_public_key" env:"JWT_PREVIOUS_PUBLIC_KEY"`
+	PreviousKeyID     string `json:"previous_key_id" env:"JWT_PREVIOUS_KEY_ID"`
+}
+
 // AuditLog defines the persisted audit-log settings. When Enabled, ezauth
 // records a row to the audit log for each security-relevant lifecycle event
 // (login success/failure, password reset, impersonation, account lockout,
@@ -247,6 +269,7 @@ type Config struct {
 	MFAIssuer      string         `json:"mfa_issuer" env:"MFA_ISSUER" default:"EzAuth"`
 	WebAuthn       WebAuthn       `json:"webauthn"`
 	AuditLog       AuditLog       `json:"audit_log"`
+	JWT            JWT            `json:"jwt"`
 }
 
 // LoadConfig loads the configuration from environment variables.
@@ -266,6 +289,7 @@ func (c Config) Sanitized() Config {
 	c.OAuth2.Slack.ClientSecret = "***"
 	c.OAuth2.LinkedIn.ClientSecret = "***"
 	c.OAuth2.Spotify.ClientSecret = "***"
+	c.JWT.PrivateKey = "***"
 	return c
 }
 

@@ -2,6 +2,7 @@
 package service
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 
@@ -20,12 +21,18 @@ type Auth struct {
 	PathPrefix        string
 	Hook              Hook
 	WebAuthn          *webauthn.WebAuthn
+	jwtKeys           *jwtKeys
 	customProvidersMu sync.RWMutex
 	customProviders   map[string]OAuth2Provider
 }
 
 // New creates a new Auth service with the given config and repository.
-func New(cfg *config.Config, repo *repository.Repository, pathPrefix string) *Auth {
+func New(cfg *config.Config, repo *repository.Repository, pathPrefix string) (*Auth, error) {
+	jwtKeys, err := newJWTKeys(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("invalid JWT signing configuration: %w", err)
+	}
+
 	var mailer Mailer
 	if cfg.SMTP.Host != "" {
 		mailer = NewSMTPMailer(cfg.SMTP)
@@ -48,6 +55,7 @@ func New(cfg *config.Config, repo *repository.Repository, pathPrefix string) *Au
 		Mailer:          mailer,
 		SMS:             sms,
 		PathPrefix:      pathPrefix,
+		jwtKeys:         jwtKeys,
 		customProviders: make(map[string]OAuth2Provider),
 	}
 	a.Hook = newAuditHook(a, DefaultHook{})
@@ -67,7 +75,7 @@ func New(cfg *config.Config, repo *repository.Repository, pathPrefix string) *Au
 		xlog.Warn("WEBAUTHN_RP_ID/WEBAUTHN_RP_ORIGINS not set, passkey support disabled")
 	}
 
-	return a
+	return a, nil
 }
 
 // SetHook registers hook as the consumer-supplied Hook implementation.
@@ -88,5 +96,5 @@ func NewFromConfig(cfg *config.Config, pathPrefix string) (*Auth, error) {
 	if err != nil {
 		return nil, err
 	}
-	return New(cfg, repo, pathPrefix), nil
+	return New(cfg, repo, pathPrefix)
 }

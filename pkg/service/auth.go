@@ -804,8 +804,11 @@ func (a *Auth) generateAccessToken(user *models.User, actorID string) (string, t
 	if actorID != "" {
 		claims["act"] = map[string]any{"sub": actorID}
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	t, err := token.SignedString([]byte(a.Cfg.JWTSecret))
+	token := jwt.NewWithClaims(a.jwtKeys.method, claims)
+	if a.jwtKeys.keyID != "" {
+		token.Header["kid"] = a.jwtKeys.keyID
+	}
+	t, err := token.SignedString(a.jwtKeys.signingKey)
 	return t, exp, err
 }
 
