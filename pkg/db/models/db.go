@@ -5,6 +5,7 @@ const (
 	TableToken                = "ezauth_tokens"
 	TableWebauthnCredential   = "ezauth_webauthn_credentials"
 	TableWebauthnChallenge    = "ezauth_webauthn_challenges"
+	TableAuditLog             = "ezauth_audit_logs"
 	ColumnEmail               = "email"
 	ColumnUsername            = "username"
 	ColumnPasswordHash        = "password_hash"
@@ -49,4 +50,6 @@ const (
 	ColumnLastUsedAt      = "last_used_at"
 	ColumnSessionKey      = "session_key"
 	ColumnChallengeType   = "challenge_type"
+
+	ColumnEventType = "event_type"
 )

@@ -458,3 +458,51 @@ func (q *SqliteQuerier) QueryWebauthnChallengeGetBySessionKey(ctx context.Contex
 func (q *SqliteQuerier) QueryWebauthnChallengeDelete(ctx context.Context, id string) bob.Query {
 	return sqlite.Delete(dm.From(models.TableWebauthnChallenge), dm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
 }
+
+func (q *SqliteQuerier) QueryAuditLogInsert(ctx context.Context, log *models.AuditLog) bob.Query {
+	if log.ID == "" {
+		log.ID = util.NewIDStripped()
+	}
+	if log.CreatedAt.IsZero() {
+		log.CreatedAt = time.Now().UTC()
+	}
+	return sqlite.Insert(
+		im.Into(models.TableAuditLog,
+			"id",
+			models.ColumnUserID,
+			models.ColumnEventType,
+			models.ColumnMetadata,
+			models.ColumnCreatedAt,
+		),
+		im.Values(
+			sqlite.Arg(log.ID),
+			sqlite.Arg(log.UserID),
+			sqlite.Arg(log.EventType),
+			sqlite.Arg(log.Metadata),
+			sqlite.Arg(log.CreatedAt),
+		),
+		im.Returning("*"),
+	)
+}
+
+func (q *SqliteQuerier) QueryAuditLogListByUserID(ctx context.Context, userID string, filter models.AuditLogFilter, limit, offset int) bob.Query {
+	mods := []bob.Mod[*dialect.SelectQuery]{
+		sm.From(models.TableAuditLog),
+		sm.Where(sqlite.Quote(models.ColumnUserID).EQ(sqlite.Arg(userID))),
+		sm.OrderBy(sqlite.Quote(models.ColumnCreatedAt)).Desc(),
+		sm.Limit(limit),
+		sm.Offset(offset),
+	}
+
+	if filter.EventType != "" {
+		mods = append(mods, sm.Where(sqlite.Quote(models.ColumnEventType).EQ(sqlite.Arg(filter.EventType))))
+	}
+	if filter.Since != nil {
+		mods = append(mods, sm.Where(sqlite.Quote(models.ColumnCreatedAt).GTE(sqlite.Arg(*filter.Since))))
+	}
+	if filter.Until != nil {
+		mods = append(mods, sm.Where(sqlite.Quote(models.ColumnCreatedAt).LTE(sqlite.Arg(*filter.Until))))
+	}
+
+	return sqlite.Select(mods...)
+}

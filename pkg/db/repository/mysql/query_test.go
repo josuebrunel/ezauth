@@ -315,3 +315,64 @@ func TestMysqlQuerier_WebauthnCredentialOperations(t *testing.T) {
 		}
 	})
 }
+
+func TestMysqlQuerier_AuditLogOperations(t *testing.T) {
+	querier := &MysqlQuerier{}
+	ctx := context.Background()
+
+	log := &models.AuditLog{
+		UserID:    "user-123",
+		EventType: models.AuditEventLoginSucceeded,
+	}
+
+	t.Run("Insert", func(t *testing.T) {
+		q := querier.QueryAuditLogInsert(ctx, log)
+		sql, args, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("failed to build query: %v", err)
+		}
+		if !strings.Contains(sql, "INSERT") || !strings.Contains(sql, "ezauth_audit_logs") {
+			t.Errorf("expected INSERT INTO ezauth_audit_logs, got %q", sql)
+		}
+		if len(args) < 3 {
+			t.Errorf("expected at least 3 args, got %d", len(args))
+		}
+		if log.ID == "" {
+			t.Error("expected ID to be generated")
+		}
+	})
+
+	t.Run("ListByUserID", func(t *testing.T) {
+		q := querier.QueryAuditLogListByUserID(ctx, log.UserID, models.AuditLogFilter{}, 20, 0)
+		sql, args, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("failed to build query: %v", err)
+		}
+		if !strings.Contains(sql, "SELECT") || !strings.Contains(sql, "ezauth_audit_logs") {
+			t.Errorf("unexpected SQL: %s", sql)
+		}
+		if !strings.Contains(sql, "user_id") {
+			t.Errorf("expected user_id condition, got %s", sql)
+		}
+		if len(args) != 1 || args[0] != log.UserID {
+			t.Errorf("unexpected args: %v", args)
+		}
+	})
+
+	t.Run("ListByUserID with filters", func(t *testing.T) {
+		since := time.Now().Add(-24 * time.Hour)
+		until := time.Now()
+		filter := models.AuditLogFilter{EventType: models.AuditEventLoginFailed, Since: &since, Until: &until}
+		q := querier.QueryAuditLogListByUserID(ctx, log.UserID, filter, 20, 0)
+		sql, args, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("failed to build query: %v", err)
+		}
+		if !strings.Contains(sql, "event_type") {
+			t.Errorf("expected event_type condition, got %s", sql)
+		}
+		if len(args) != 4 {
+			t.Errorf("expected 4 args (user_id, event_type, since, until), got %d", len(args))
+		}
+	})
+}

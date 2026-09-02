@@ -449,3 +449,50 @@ func (q *MysqlQuerier) QueryWebauthnChallengeGetBySessionKey(ctx context.Context
 func (q *MysqlQuerier) QueryWebauthnChallengeDelete(ctx context.Context, id string) bob.Query {
 	return mysql.Delete(dm.From(models.TableWebauthnChallenge), dm.Where(mysql.Quote("id").EQ(mysql.Arg(id))))
 }
+
+func (q *MysqlQuerier) QueryAuditLogInsert(ctx context.Context, log *models.AuditLog) bob.Query {
+	if log.ID == "" {
+		log.ID = util.NewIDStripped()
+	}
+	if log.CreatedAt.IsZero() {
+		log.CreatedAt = time.Now().UTC()
+	}
+	return mysql.Insert(
+		im.Into(models.TableAuditLog,
+			"id",
+			models.ColumnUserID,
+			models.ColumnEventType,
+			models.ColumnMetadata,
+			models.ColumnCreatedAt,
+		),
+		im.Values(
+			mysql.Arg(log.ID),
+			mysql.Arg(log.UserID),
+			mysql.Arg(log.EventType),
+			mysql.Arg(log.Metadata),
+			mysql.Arg(log.CreatedAt),
+		),
+	)
+}
+
+func (q *MysqlQuerier) QueryAuditLogListByUserID(ctx context.Context, userID string, filter models.AuditLogFilter, limit, offset int) bob.Query {
+	mods := []bob.Mod[*dialect.SelectQuery]{
+		sm.From(models.TableAuditLog),
+		sm.Where(mysql.Quote(models.ColumnUserID).EQ(mysql.Arg(userID))),
+		sm.OrderBy(mysql.Quote(models.ColumnCreatedAt)).Desc(),
+		sm.Limit(int64(limit)),
+		sm.Offset(int64(offset)),
+	}
+
+	if filter.EventType != "" {
+		mods = append(mods, sm.Where(mysql.Quote(models.ColumnEventType).EQ(mysql.Arg(filter.EventType))))
+	}
+	if filter.Since != nil {
+		mods = append(mods, sm.Where(mysql.Quote(models.ColumnCreatedAt).GTE(mysql.Arg(*filter.Since))))
+	}
+	if filter.Until != nil {
+		mods = append(mods, sm.Where(mysql.Quote(models.ColumnCreatedAt).LTE(mysql.Arg(*filter.Until))))
+	}
+
+	return mysql.Select(mods...)
+}

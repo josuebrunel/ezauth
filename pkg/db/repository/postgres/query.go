@@ -463,3 +463,51 @@ func (q *PSQLQuerier) QueryWebauthnChallengeGetBySessionKey(ctx context.Context,
 func (q *PSQLQuerier) QueryWebauthnChallengeDelete(ctx context.Context, id string) bob.Query {
 	return psql.Delete(dm.From(psql.Quote(models.TableWebauthnChallenge)), dm.Where(psql.Quote("id").EQ(psql.Arg(id))))
 }
+
+func (q *PSQLQuerier) QueryAuditLogInsert(ctx context.Context, log *models.AuditLog) bob.Query {
+	if log.ID == "" {
+		log.ID = util.NewID()
+	}
+	if log.CreatedAt.IsZero() {
+		log.CreatedAt = time.Now().UTC()
+	}
+	return psql.Insert(
+		im.Into(psql.Quote(models.TableAuditLog),
+			"id",
+			models.ColumnUserID,
+			models.ColumnEventType,
+			models.ColumnMetadata,
+			models.ColumnCreatedAt,
+		),
+		im.Values(
+			psql.Arg(log.ID),
+			psql.Arg(log.UserID),
+			psql.Arg(log.EventType),
+			psql.Arg(log.Metadata),
+			psql.Arg(log.CreatedAt),
+		),
+		im.Returning("*"),
+	)
+}
+
+func (q *PSQLQuerier) QueryAuditLogListByUserID(ctx context.Context, userID string, filter models.AuditLogFilter, limit, offset int) bob.Query {
+	mods := []bob.Mod[*dialect.SelectQuery]{
+		sm.From(psql.Quote(models.TableAuditLog)),
+		sm.Where(psql.Quote(models.ColumnUserID).EQ(psql.Arg(userID))),
+		sm.OrderBy(psql.Quote(models.ColumnCreatedAt)).Desc(),
+		sm.Limit(limit),
+		sm.Offset(offset),
+	}
+
+	if filter.EventType != "" {
+		mods = append(mods, sm.Where(psql.Quote(models.ColumnEventType).EQ(psql.Arg(filter.EventType))))
+	}
+	if filter.Since != nil {
+		mods = append(mods, sm.Where(psql.Quote(models.ColumnCreatedAt).GTE(psql.Arg(*filter.Since))))
+	}
+	if filter.Until != nil {
+		mods = append(mods, sm.Where(psql.Quote(models.ColumnCreatedAt).LTE(psql.Arg(*filter.Until))))
+	}
+
+	return psql.Select(mods...)
+}

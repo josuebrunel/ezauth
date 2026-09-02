@@ -61,11 +61,17 @@ type WebauthnChallengeQuerier interface {
 	QueryWebauthnChallengeDelete(ctx context.Context, id string) bob.Query
 }
 
+type AuditLogQuerier interface {
+	QueryAuditLogInsert(ctx context.Context, log *models.AuditLog) bob.Query
+	QueryAuditLogListByUserID(ctx context.Context, userID string, filter models.AuditLogFilter, limit, offset int) bob.Query
+}
+
 type Querier interface {
 	UserQuerier
 	TokenQuerier
 	WebauthnCredentialQuerier
 	WebauthnChallengeQuerier
+	AuditLogQuerier
 }
 
 // Opts defines the options for opening a repository connection.
@@ -483,6 +489,43 @@ func (r Repository) WebauthnChallengeDelete(ctx context.Context, id string) erro
 		return err
 	}
 	return nil
+}
+
+// AuditLogCreate persists a security-relevant audit event.
+func (r Repository) AuditLogCreate(ctx context.Context, log *models.AuditLog) (*models.AuditLog, error) {
+	query := r.QueryAuditLogInsert(ctx, log)
+
+	if r.Opts.Dialect == DialectMysql {
+		if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+			xlog.Error("Failed to create audit log", "error", err, "user_id", log.UserID, "event_type", log.EventType)
+			return nil, err
+		}
+		return log, nil
+	}
+
+	created, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.AuditLog]())
+	if err != nil {
+		xlog.Error("Failed to create audit log", "error", err, "user_id", log.UserID, "event_type", log.EventType)
+		return nil, err
+	}
+	return created, nil
+}
+
+// AuditLogListByUserID lists/filters a user's audit log (see
+// models.AuditLogFilter), most recent first. hasMore reports whether more
+// results exist beyond this page, computed by fetching one extra row rather
+// than a separate COUNT(*) query.
+func (r Repository) AuditLogListByUserID(ctx context.Context, userID string, filter models.AuditLogFilter, limit, offset int) (logs []*models.AuditLog, hasMore bool, err error) {
+	query := r.QueryAuditLogListByUserID(ctx, userID, filter, limit+1, offset)
+	logs, err = bob.All(ctx, r.bdb, query, scan.StructMapper[*models.AuditLog]())
+	if err != nil {
+		xlog.Error("Failed to list audit logs", "error", err, "user_id", userID)
+		return nil, false, err
+	}
+	if len(logs) > limit {
+		return logs[:limit], true, nil
+	}
+	return logs, false, nil
 }
 
 func getDialectQuery(dbDialect string) Querier {
