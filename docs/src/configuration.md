@@ -19,6 +19,7 @@
 | `EZAUTH_ACCOUNT_LOCKOUT_ENABLED`      | Count failed logins and auto-lock accounts after too many.        | `true`  |
 | `EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS` | Consecutive failed attempts before locking the account.            | `5`     |
 | `EZAUTH_ACCOUNT_LOCKOUT_DURATION`     | How long a locked account stays locked before auto-unlocking.      | `15m`   |
+| `EZAUTH_AUDIT_LOG_ENABLED`            | Persist security-relevant events (login, password reset, impersonation, lockout, ...) to the audit log. | `true` |
 | `EZAUTH_INVITATION_TTL`               | How long an invitation stays valid before expiring.                | `168h` (7 days) |
 
 ## WebAuthn/Passkey Settings

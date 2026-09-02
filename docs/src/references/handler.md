@@ -96,6 +96,7 @@ The following methods are attached to routes internally by `New`, but are public
 -   `StopImpersonation(w, r)`: End an impersonation session (JSON)
 -   `FormImpersonate(w, r)`: Start impersonating (form; swaps the session cookie)
 -   `FormStopImpersonation(w, r)`: End impersonation (form; restores the admin's own session)
+-   `CurrentImpersonatorID(ctx)`, `CurrentImpersonator(ctx)`: Detect impersonation regardless of transport (checks cookie-mode `IsImpersonating` first, then the Bearer/JWT `act` claim)
 
 ### Multi-Factor Authentication (TOTP)
 -   `MFAEnroll(w, r)`: Generate a TOTP secret + provisioning URI (JSON)
@@ -107,6 +108,10 @@ The following methods are attached to routes internally by `New`, but are public
 ### Trusted Devices
 -   `TrustedDevicesList(w, r)`, `TrustedDeviceRevoke(w, r)`: JSON
 -   `FormTrustedDevicesList(w, r)`, `FormTrustedDeviceRevoke(w, r)`: Form equivalents
+
+### Sessions
+-   `SessionsList(w, r)`, `SessionRevoke(w, r)`, `SessionsRevokeAll(w, r)`: List/revoke active refresh-token sessions (JSON)
+-   `FormSessionsList(w, r)`, `FormSessionRevoke(w, r)`, `FormSessionsRevokeAll(w, r)`: Form equivalents
 
 ### WebAuthn / Passkeys
 -   `WebauthnRegisterBegin(w, r)`, `WebauthnRegisterFinish(w, r)`: Register a new credential (JSON)
@@ -135,7 +140,8 @@ The following methods are attached to routes internally by `New`, but are public
 -   `AdminUsersList(w, r)`: Search/filter/paginate users (JSON)
 -   `AdminUserSuspend(w, r)`, `AdminUserReactivate(w, r)`: Suspend/reactivate an account (JSON)
 -   `AdminUserAuthHistory(w, r)`: View a user's auth history (JSON)
--   `FormAdminUsersList(w, r)`, `FormAdminUserSuspend(w, r)`, `FormAdminUserReactivate(w, r)`, `FormAdminUserAuthHistory(w, r)`: Form equivalents
+-   `AdminUserAuditLogsList(w, r)`: List/filter a user's persisted audit log (JSON)
+-   `FormAdminUsersList(w, r)`, `FormAdminUserSuspend(w, r)`, `FormAdminUserReactivate(w, r)`, `FormAdminUserAuthHistory(w, r)`, `FormAdminUserAuditLogsList(w, r)`: Form equivalents
 
 ### Form Handlers
 These handlers process `application/x-www-form-urlencoded` requests and return HTML redirects.

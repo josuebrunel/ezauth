@@ -393,6 +393,21 @@ err = auth.RevokeTrustedDevice(ctx, user, devices[0].ID)
 
 JSON API clients send the stored device token back via the `X-Device-Token` header on `POST /auth/api/login`. Form/cookie clients get this for free: `FormLogin` reads the trusted-device cookie itself, and `FormMFALoginVerify` sets it (`EZAUTH_TRUSTED_DEVICE_COOKIE_NAME`) when the verification form's `remember_device` field is set.
 
+## Sessions
+
+Every refresh token issued to a user (one per login, across devices/clients) is a session. Let users see and remotely revoke their own active sessions — e.g. a "log out other devices" account-security page.
+
+```go
+sessions, err := auth.Sessions(ctx, user.ID)
+// []service.SessionInfo{ID, CreatedAt, ExpiresAt}, most recent first.
+
+err = auth.RevokeSession(ctx, user, sessions[0].ID)      // log out one device
+err = auth.RevokeAllSessions(ctx, user, currentID)        // log out other devices, keep currentID
+err = auth.RevokeAllSessions(ctx, user, "")                // log out everywhere
+```
+
+For the JSON API: `GET /auth/api/sessions` lists sessions, `DELETE /auth/api/sessions/{id}` revokes one, and `DELETE /auth/api/sessions?except={id}` revokes all but the session named by `except` (omit `except` to log out everywhere). Cookie clients use the same routes under `/auth/sessions[...]`.
+
 ## WebAuthn / Passkeys
 
 `ezauth` supports WebAuthn/FIDO2 passkey registration and login. Login is **discoverable (usernameless)** — the browser's platform UI lets the user pick a passkey, so no prior email/username is required. WebAuthn is disabled unless `EZAUTH_WEBAUTHN_RP_ID` and `EZAUTH_WEBAUTHN_RP_ORIGINS` are both set, and ceremonies always require client-side JavaScript (`navigator.credentials.create()`/`.get()`) regardless of cookie vs. Bearer auth style.
@@ -522,7 +537,16 @@ if isImpersonating {
 }
 ```
 
-These two are backed by different mechanisms (JWT claims vs. session storage) and aren't interchangeable — use whichever matches how your route is authenticated. See the [Impersonation section of the README](https://github.com/josuebrunel/ezauth#impersonation) for the standalone-service (JSON API / form) equivalents.
+These two are backed by different mechanisms (JWT claims vs. session storage), so a route reachable over either transport would otherwise need to branch on which one applies. For that case, use the transport-agnostic pair instead — they check both and return whichever applies:
+
+```go
+adminID, ok := auth.CurrentImpersonatorID(ctx) // (string, bool)
+admin, err := auth.CurrentImpersonator(ctx)     // (*models.User, error)
+```
+
+Safe to call regardless of transport: the session-manager middleware always runs first, even on Bearer-only routes, so the cookie-mode check never panics for lack of loaded session data — it just finds nothing and falls through to the JWT check.
+
+See the [Impersonation section of the README](https://github.com/josuebrunel/ezauth#impersonation) for the standalone-service (JSON API / form) equivalents.
 
 ## Admin User Management
 
@@ -542,7 +566,24 @@ user, err = auth.Service.UserReactivate(ctx, targetUserID)
 history, err := auth.Service.UserAuthHistory(ctx, targetUserID, 50)
 ```
 
-`ListUsersOptions` also supports `CreatedAfter`/`CreatedBefore` and `LastActiveAfter`/`LastActiveBefore` (`*time.Time`) for date-range filtering. `UserStatusActive`/`Locked`/`Suspended` are derived from the existing `IsActive`/lockout columns: locked is a temporary, auto-expiring brute-force lockout (see [Account Lockout](#account-lockout)); suspended is `UserSuspend`'s permanent-until-reactivated deactivation. `UserAuthHistory` is a lightweight proxy built from the Tokens table every other feature writes to, not a full audit log.
+`ListUsersOptions` also supports `CreatedAfter`/`CreatedBefore` and `LastActiveAfter`/`LastActiveBefore` (`*time.Time`) for date-range filtering. `UserStatusActive`/`Locked`/`Suspended` are derived from the existing `IsActive`/lockout columns: locked is a temporary, auto-expiring brute-force lockout (see [Account Lockout](#account-lockout)); suspended is `UserSuspend`'s permanent-until-reactivated deactivation. `UserAuthHistory` is a lightweight proxy built from the Tokens table every other feature writes to — for a real persisted audit trail of named security events, see [Audit Log](#audit-log).
+
+## Audit Log
+
+`ezauth` persists a row to an audit log for security-relevant events — login success/failure, password reset, impersonation start/stop, account lockout, MFA enable/disable, user create/delete — automatically, via a built-in hook that wraps whatever `Hook` you register (see [Hooks](#hooks)) so it keeps working whether or not you set your own. Enabled by default; disable with `EZAUTH_AUDIT_LOG_ENABLED=false`.
+
+```go
+result, err := auth.Service.AuditLogs(ctx, targetUserID, service.ListAuditLogsOptions{
+    EventType: models.AuditEventLoginFailed, // optional, e.g. "login.failed"
+    Since:     &since,                       // optional, RFC3339
+    Limit:     50,
+})
+// result.Events ([]*models.AuditLog: event_type, metadata, created_at), result.HasMore
+```
+
+Event types are the `models.AuditEvent*` constants (e.g. `AuditEventLoginSucceeded`, `AuditEventAccountLocked`). Two events — `AfterLoginFailed` and `AfterAccountLocked` — aren't tied to an existing `Hook` method, so they're added as new ones; embed `DefaultHook` as usual and only override what you need. "Email verification" and "role changes" aren't recorded yet since `ezauth` doesn't have an email-verification-confirm flow or RBAC.
+
+For the JSON API: `GET /auth/api/admin/users/{id}/audit-logs` (query params `event_type`, `since`/`until` as RFC3339 timestamps, `limit`/`offset`; default 50, max 200) — same "no authz check, caller's responsibility" stance as the rest of [Admin User Management](#admin-user-management). Cookie clients use the same route under `/auth/admin/users/{id}/audit-logs`.
 
 ## Hooks
 
@@ -624,6 +665,10 @@ func (h MyHook) AfterUserSignedIn(ctx context.Context, u *models.User) error {
 | `AfterImpersonationEnded`     | After an impersonation session ends        | No (errors are logged) |
 | `AfterMFAEnabled`             | After a user enables TOTP MFA              | No (errors are logged) |
 | `AfterMFADisabled`            | After a user disables TOTP MFA             | No (errors are logged) |
+| `AfterLoginFailed`            | After a failed login attempt (known user)  | No (errors are logged) |
+| `AfterAccountLocked`          | After an account is locked out             | No (errors are logged) |
+
+Every one of these also feeds the built-in [Audit Log](#audit-log) — your own hook and audit persistence both run, regardless of which `Hook` you register.
 
 ### Registering the Hook
 

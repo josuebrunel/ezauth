@@ -171,3 +171,10 @@ func (r Repository) WebauthnChallengeCreate(ctx context.Context, ch *models.Weba
 func (r Repository) WebauthnChallengeGetBySessionKey(ctx context.Context, sessionKey string) (*models.WebauthnChallenge, error)
 func (r Repository) WebauthnChallengeDelete(ctx context.Context, id string) error
 ```
+
+## Audit Log Methods
+
+```go
+func (r Repository) AuditLogCreate(ctx context.Context, log *models.AuditLog) (*models.AuditLog, error)
+func (r Repository) AuditLogListByUserID(ctx context.Context, userID string, filter models.AuditLogFilter, limit, offset int) (logs []*models.AuditLog, hasMore bool, err error)
+```

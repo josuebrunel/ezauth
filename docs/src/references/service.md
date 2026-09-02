@@ -236,6 +236,16 @@ func (a *Auth) TrustedDevices(ctx context.Context, userID string) ([]TrustedDevi
 func (a *Auth) RevokeTrustedDevice(ctx context.Context, user *models.User, deviceID string) error
 ```
 
+## Sessions
+
+Each refresh token issued to a user is a session (one per login/device). `RevokeAllSessions`'s `exceptSessionID` keeps the named session — pass `""` to log out everywhere.
+
+```go
+func (a *Auth) Sessions(ctx context.Context, userID string) ([]SessionInfo, error)
+func (a *Auth) RevokeSession(ctx context.Context, user *models.User, sessionID string) error
+func (a *Auth) RevokeAllSessions(ctx context.Context, user *models.User, exceptSessionID string) error
+```
+
 ## WebAuthn / Passkeys
 
 ### Registration
@@ -332,8 +342,18 @@ func (a *Auth) UserReactivate(ctx context.Context, userID string) (*models.User,
 
 ### `UserAuthHistory`
 
-Returns the user's most recent authentication-related token events, newest first. A lightweight proxy built from the Tokens table, not a full audit log.
+Returns the user's most recent authentication-related token events, newest first. A lightweight proxy built from the Tokens table — see `AuditLogs` below for a real persisted audit trail.
 
 ```go
 func (a *Auth) UserAuthHistory(ctx context.Context, userID string, limit int) ([]AuthHistoryEntry, error)
 ```
+
+## Audit Log
+
+`ezauth` persists a row to an audit log for security-relevant events (login success/failure, password reset, impersonation, account lockout, MFA, user create/delete) automatically, via a built-in hook that wraps whatever `Hook` you register — see [Hooks](../library.md#hooks). Enabled by default; disable with `EZAUTH_AUDIT_LOG_ENABLED=false`.
+
+```go
+func (a *Auth) AuditLogs(ctx context.Context, userID string, opts ListAuditLogsOptions) (*ListAuditLogsResult, error)
+```
+
+`ListAuditLogsOptions` supports `EventType` (a `models.AuditEvent*` constant), `Since`/`Until` (`*time.Time`), and `Limit`/`Offset` (default 50, max 200). `ezauth` enforces no authorization on who may call this — same stance as `UsersList`.

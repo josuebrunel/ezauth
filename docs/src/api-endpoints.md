@@ -79,6 +79,11 @@ POST requests to these endpoints are automatically protected by `filippo.io/csrf
 
 Like `GET /auth/csrf`, these return JSON rather than redirecting — WebAuthn ceremonies always require client-side JavaScript (`navigator.credentials.create()`/`.get()`). The request body for `*/finish` endpoints must be the browser's raw response verbatim.
 
+### Sessions (Form)
+`GET /auth/sessions` (Require a logged-in session)
+`DELETE /auth/sessions/{id}` (Revokes one session; requires a logged-in session)
+`DELETE /auth/sessions?except={id}` (Revokes all sessions except `except`, or everywhere if omitted; requires a logged-in session)
+
 ### Invitations (Form)
 `GET /auth/invitation/accept` (Redirects to `Pages.InvitationAccept`, preserving `?token=...`)
 `POST /auth/invitation/accept` (fields: `token`, `password`, `password_confirm`, plus optional `username`/`first_name`/`last_name`/`locale`/`timezone`; sets auth cookies)
@@ -94,6 +99,7 @@ Like `GET /auth/csrf`, these return JSON rather than redirecting — WebAuthn ce
 `GET /auth/admin/users` (Query params: `search`, `status`, `created_after`/`created_before`, `last_active_after`/`last_active_before`, `limit`/`offset`; requires a logged-in session)
 `POST /auth/admin/users/{id}/suspend`, `POST /auth/admin/users/{id}/reactivate` (Require a logged-in session)
 `GET /auth/admin/users/{id}/history` (Query param: `limit`; requires a logged-in session)
+`GET /auth/admin/users/{id}/audit-logs` (Query params: `event_type`, `since`/`until`, `limit`/`offset`; requires a logged-in session)
 
 ezauth enforces no authorization on who may call these — same stance as impersonation. Protect these routes with your own admin-only check before exposing them.
 
@@ -275,6 +281,11 @@ Completes a step-up login started by Login when the account has MFA enabled. Set
 ### Trusted Devices
 `GET /auth/api/trusted-devices` (Protected) — lists the authenticated user's trusted devices.
 `DELETE /auth/api/trusted-devices/{id}` (Protected) — revokes one by its record ID.
+
+### Sessions
+`GET /auth/api/sessions` (Protected) — lists the authenticated user's active refresh-token sessions (one per logged-in device/client), most recent first.
+`DELETE /auth/api/sessions/{id}` (Protected) — revokes one session by its record ID, logging that device out immediately.
+`DELETE /auth/api/sessions?except={id}` (Protected) — revokes all sessions except the one named by `except` ("log out other devices"); omit `except` to log out everywhere.
 
 ### WebAuthn Login Begin
 `POST /auth/api/webauthn/login/begin`
@@ -586,4 +597,25 @@ Returns the user's most recent authentication-related token events (logins, pass
 [
   {"token_type": "refresh", "created_at": "...", "expires_at": "...", "revoked": false}
 ]
+```
+
+### Admin: Audit Logs
+`GET /auth/api/admin/users/{id}/audit-logs`
+
+Lists/filters the user's persisted audit log — real named security events (login success/failure, password reset, impersonation, account lockout, MFA, user create/delete), not the token-history proxy above. ezauth enforces no authorization on who may call this — same stance as the rest of Admin User Management.
+
+**Query Parameters:**
+| Param | Description |
+| --- | --- |
+| `event_type` | Filter to a single event type, e.g. `login.failed` |
+| `since` / `until` | RFC3339 timestamp, filters by event time |
+| `limit` | Page size (default 50, max 200) |
+| `offset` | Page offset |
+
+**Response Data:**
+```json
+{
+  "events": [{"event_type": "login.failed", "metadata": {"reason": "invalid_password"}, "created_at": "..."}],
+  "has_more": false
+}
 ```
