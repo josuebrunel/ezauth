@@ -21,6 +21,12 @@
 | `EZAUTH_ACCOUNT_LOCKOUT_DURATION`     | How long a locked account stays locked before auto-unlocking.      | `15m`   |
 | `EZAUTH_AUDIT_LOG_ENABLED`            | Persist security-relevant events (login, password reset, impersonation, lockout, ...) to the audit log. | `true` |
 | `EZAUTH_INVITATION_TTL`               | How long an invitation stays valid before expiring.                | `168h` (7 days) |
+| `EZAUTH_JWT_ALGORITHM`                | Access-token signing algorithm: `HS256` (symmetric), `RS256`, or `EdDSA` (asymmetric). | `HS256` |
+| `EZAUTH_JWT_PRIVATE_KEY`              | PEM-encoded (PKCS8) private key; required for `RS256`/`EdDSA`.     |         |
+| `EZAUTH_JWT_PUBLIC_KEY`               | PEM-encoded (PKIX) public key; required for `RS256`/`EdDSA`, published via JWKS. |    |
+| `EZAUTH_JWT_KEY_ID`                   | Explicit `kid` for the signing key; auto-derived from the public key if unset. |     |
+| `EZAUTH_JWT_PREVIOUS_PUBLIC_KEY`      | Outgoing key's public key, kept for verification during rotation. |         |
+| `EZAUTH_JWT_PREVIOUS_KEY_ID`          | Outgoing key's `kid`; auto-derived from `EZAUTH_JWT_PREVIOUS_PUBLIC_KEY` if unset. |  |
 
 ## WebAuthn/Passkey Settings
 

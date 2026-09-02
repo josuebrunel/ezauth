@@ -301,7 +301,17 @@ user, err := auth.Service.UserCreate(ctx, &service.RequestBasicAuth{
 tokens, err := auth.Service.TokenCreate(ctx, user)
 ```
 
+## Asymmetric JWT Signing (JWKS)
 
+By default `ezauth` signs access tokens with symmetric HS256 (`EZAUTH_JWT_SECRET`) — any resource server verifying tokens itself must hold that same secret. Set `EZAUTH_JWT_ALGORITHM=RS256` or `EdDSA` (plus PEM-encoded `EZAUTH_JWT_PRIVATE_KEY`/`EZAUTH_JWT_PUBLIC_KEY`) to sign asymmetrically instead: `ezauth` keeps the private key, and independent resource servers verify tokens against the public key published at `GET /.well-known/jwks.json` — no shared secret required.
+
+```go
+set := auth.JWKS() // service.JWKSet{Keys: []service.JWK} — empty for the default HS256 mode
+```
+
+**Key rotation**: each key gets a `kid`, either explicit (`EZAUTH_JWT_KEY_ID`) or auto-derived from the public key. To rotate without invalidating already-issued tokens, move the outgoing key's public key/kid to `EZAUTH_JWT_PREVIOUS_PUBLIC_KEY`/`EZAUTH_JWT_PREVIOUS_KEY_ID` and point `EZAUTH_JWT_PRIVATE_KEY`/`PUBLIC_KEY`/`KEY_ID` at the new key — new tokens sign under the new key while tokens already signed under the previous one keep verifying (both are published in the JWKS) until they expire naturally (access tokens are short-lived, 1 hour).
+
+See the [Asymmetric JWT Signing section of the README](https://github.com/josuebrunel/ezauth#asymmetric-jwt-signing-jwks) for a full config example.
 
 ## Form Field Reference
 

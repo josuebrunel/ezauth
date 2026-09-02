@@ -50,7 +50,7 @@ func (h *Handler) LoadUserMiddleware(next http.Handler) http.Handler
 
 ### `AuthMiddleware` (Bearer)
 
-Validates the `Authorization: Bearer <token>` header. It parses the JWT, verifies the signature using `EZAUTH_JWT_SECRET`, and sets the user ID in the context.
+Validates the `Authorization: Bearer <token>` header. It parses the JWT, verifies the signature against the configured signing key (`EZAUTH_JWT_SECRET` for the default HS256 mode, or the asymmetric key(s) under `EZAUTH_JWT_*` — see [Asymmetric JWT Signing (JWKS)](../library.md#asymmetric-jwt-signing-jwks)), and sets the user ID in the context.
 
 ```go
 func (h *Handler) AuthMiddleware(next http.Handler) http.Handler

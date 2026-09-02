@@ -14,6 +14,10 @@ All `ezauth` JSON API responses follow a consistent format:
 }
 ```
 
+## Well-Known Endpoints
+
+`GET /.well-known/jwks.json` — served at the domain root, outside both prefixes above, per the well-known-URI convention. Publishes the JSON Web Key Set for the current (and, during a rotation, previous) asymmetric access-token signing key — see [Asymmetric JWT Signing (JWKS)](library.md#asymmetric-jwt-signing-jwks). Returns `{"keys": []}` when signing with the default symmetric HS256 algorithm (no API key required).
+
 ## Form Handlers (Browser)
 
 These endpoints accept `application/x-www-form-urlencoded` and redirect upon success or failure. Authentication tokens are stored in an HTTP-only cookie named `ezauthsess`.

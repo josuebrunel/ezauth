@@ -424,6 +424,24 @@ These endpoints accept `application/json` and return JSON responses.
  - Validates the token signature.
  - Sets the user ID in the context.
 
+## Asymmetric JWT Signing (JWKS)
+
+By default `ezauth` signs access tokens with symmetric **HS256** (`EZAUTH_JWT_SECRET`) — any resource server that verifies tokens itself must hold that same secret. Set `EZAUTH_JWT_ALGORITHM=RS256` or `EZAUTH_JWT_ALGORITHM=EdDSA` to sign asymmetrically instead: `ezauth` keeps the private key, and independent resource servers verify tokens against the **public** key published at `GET /.well-known/jwks.json` — no shared secret required.
+
+```bash
+EZAUTH_JWT_ALGORITHM=RS256
+EZAUTH_JWT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+EZAUTH_JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+```
+
+Both keys are PEM encoded (PKCS8 for the private key, PKIX for the public key — the two files `openssl genpkey`/`openssl pkey` produce by default). `EdDSA` (Ed25519) works the same way. A resource server fetches `GET /.well-known/jwks.json` (served outside `EZAUTH_PATH_PREFIX`, per the well-known-URI convention) and verifies the `RS256`/`EdDSA`-signed token itself — no call back to `ezauth` needed.
+
+**Key rotation**: each key gets a `kid` (key ID) — either an explicit `EZAUTH_JWT_KEY_ID`, or, left unset, a stable hash `ezauth` derives from the public key automatically. To rotate without invalidating tokens already issued under the outgoing key, move its public key/kid to `EZAUTH_JWT_PREVIOUS_PUBLIC_KEY`/`EZAUTH_JWT_PREVIOUS_KEY_ID` and set `EZAUTH_JWT_PRIVATE_KEY`/`PUBLIC_KEY`/`KEY_ID` to the new key: new tokens sign under the new key, while tokens already signed under the previous one keep verifying (and both keys are published in the JWKS) until they naturally expire (access tokens are short-lived — 1 hour). Drop `PREVIOUS_*` once nothing outstanding still needs it.
+
+```go
+set := auth.JWKS() // service.JWKSet{Keys: []service.JWK} — empty for the default HS256 mode
+```
+
 ## Impersonation
 
 `ezauth` supports admin impersonation: an authenticated user can act as another user (e.g. for customer support debugging), then swap back to their own session.

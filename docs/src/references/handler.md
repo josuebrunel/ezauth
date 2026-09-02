@@ -79,6 +79,7 @@ The following methods are attached to routes internally by `New`, but are public
 -   `RefreshToken(w, r)`: Refresh access token
 -   `OAuth2Login(w, r)`: Initiate OAuth2 flow
 -   `OAuth2Callback(w, r)`: OAuth2 callback handler
+-   `JWKS(w, r)`: Serves the JSON Web Key Set at `GET /.well-known/jwks.json` (root-level, outside the path prefix); empty for the default HS256 mode
 
 ### User Management
 -   `UserInfo(w, r)`: Get current user info

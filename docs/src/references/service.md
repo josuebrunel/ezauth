@@ -15,10 +15,10 @@ type Auth struct {
 
 ### `New`
 
-Creates a new `Auth` service.
+Creates a new `Auth` service. Returns an error if `cfg.JWT` (or `cfg.JWTSecret`, for the default HS256 mode) describes invalid JWT signing configuration — e.g. an unsupported algorithm or unparsable PEM key.
 
 ```go
-func New(cfg *config.Config, repo *repository.Repository, pathPrefix string) *Auth
+func New(cfg *config.Config, repo *repository.Repository, pathPrefix string) (*Auth, error)
 ```
 
 ### `NewFromConfig`
@@ -96,6 +96,18 @@ Revokes a refresh token immediately.
 ```go
 func (a *Auth) TokenRevoke(ctx context.Context, refreshToken string) error
 ```
+
+## Asymmetric JWT Signing (JWKS)
+
+Configured via `Cfg.JWT` (`Algorithm`, `PrivateKey`, `PublicKey`, `KeyID`, `PreviousPublicKey`, `PreviousKeyID` — see [Configuration](../configuration.md)); defaults to symmetric HS256 (`Cfg.JWTSecret`) when `Cfg.JWT.Algorithm` is unset.
+
+```go
+func (a *Auth) JWTKeyFunc() jwt.Keyfunc          // resolves the verification key by the token's "kid" — used by AuthMiddleware
+func (a *Auth) JWTSigningMethods() []string      // accepted algorithm(s) for jwt.WithValidMethods
+func (a *Auth) JWKS() JWKSet                     // JSON Web Key Set for GET /.well-known/jwks.json; empty for HS256
+```
+
+`JWKSet`/`JWK` are RFC 7517 types covering RSA and Ed25519 (OKP) public keys.
 
 ## Password Flows
 
