@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/alexedwards/scs/v2"
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	ezmiddleware "github.com/josuebrunel/ezauth/pkg/handler/middleware"
 	"github.com/josuebrunel/ezauth/pkg/util"
@@ -195,4 +196,83 @@ func TestLoadUserMiddleware_WithoutSessionMiddleware(t *testing.T) {
 
 	// This should not panic even without session middleware
 	chain.ServeHTTP(httptest.NewRecorder(), req)
+}
+
+func TestStashSessionContext(t *testing.T) {
+	h := &Handler{Session: scs.New()}
+
+	// Load an (empty) session into the context, as LoadAndSaveMiddleware does.
+	ctx, err := h.Session.Load(context.Background(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.Session.Put(ctx, sessionTokensKey, map[string]string{
+		"access_token":  "at-1",
+		"refresh_token": "rt-1",
+	})
+	h.Session.Put(ctx, sessionImpersonatorIDKey, "admin-1")
+
+	out := h.stashSessionContext(ctx)
+
+	tokens, ok := GetSessionTokens(out)
+	if !ok {
+		t.Fatal("expected session tokens to be stashed into the context")
+	}
+	if tokens["access_token"] != "at-1" || tokens["refresh_token"] != "rt-1" {
+		t.Errorf("unexpected tokens: %v", tokens)
+	}
+
+	id, ok := CurrentImpersonatorID(out)
+	if !ok || id != "admin-1" {
+		t.Errorf("expected stashed impersonator admin-1, got %q ok=%v", id, ok)
+	}
+
+	// Stashing must not disturb the underlying session.
+	if got, ok := h.Session.Get(ctx, sessionImpersonatorIDKey).(string); !ok || got != "admin-1" {
+		t.Errorf("session impersonator id changed: %q ok=%v", got, ok)
+	}
+}
+
+func TestStashSessionContext_EmptySession(t *testing.T) {
+	h := &Handler{Session: scs.New()}
+	ctx, err := h.Session.Load(context.Background(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	out := h.stashSessionContext(ctx)
+
+	if _, ok := GetSessionTokens(out); ok {
+		t.Error("expected no session tokens for an empty session")
+	}
+	if _, ok := CurrentImpersonatorID(out); ok {
+		t.Error("expected no impersonator for an empty session")
+	}
+}
+
+func TestGetSessionTokens_Standalone(t *testing.T) {
+	if tokens, ok := GetSessionTokens(context.Background()); ok {
+		t.Errorf("expected no tokens without SessionMiddleware, got %v", tokens)
+	}
+
+	ctx := context.WithValue(context.Background(), ezmiddleware.SessionTokensContextKey, map[string]string{
+		"access_token": "at-2",
+	})
+	tokens, ok := GetSessionTokens(ctx)
+	if !ok || tokens["access_token"] != "at-2" {
+		t.Errorf("expected stashed access token, got %v ok=%v", tokens, ok)
+	}
+}
+
+func TestCurrentImpersonatorID_JWTFallback(t *testing.T) {
+	// No cookie session stash — falls back to the Bearer/JWT "act" claim.
+	ctx := context.WithValue(context.Background(), ezmiddleware.ImpersonatorContextKey, "admin-2")
+	id, ok := CurrentImpersonatorID(ctx)
+	if !ok || id != "admin-2" {
+		t.Errorf("expected JWT impersonator admin-2, got %q ok=%v", id, ok)
+	}
+
+	if id, ok := CurrentImpersonatorID(context.Background()); ok || id != "" {
+		t.Errorf("expected no impersonator on an empty context, got %q ok=%v", id, ok)
+	}
 }

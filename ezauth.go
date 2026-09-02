@@ -511,6 +511,27 @@ func GetImpersonatorID(ctx context.Context) (string, error) {
 	return handler.GetImpersonatorID(ctx)
 }
 
+// GetSessionTokens retrieves the access/refresh token pair stored in the
+// current request's cookie session, stashed into the context by SessionMiddleware.
+// Requires SessionMiddleware to be mounted on the router. Returns an error if no
+// session tokens are present in the context.
+func GetSessionTokens(ctx context.Context) (map[string]string, error) {
+	tokens, ok := handler.GetSessionTokens(ctx)
+	if !ok {
+		return nil, errors.New("session tokens not found")
+	}
+	return tokens, nil
+}
+
+// CurrentImpersonatorID returns the acting admin's user ID for the current
+// request, regardless of transport (cookie session or Bearer/JWT) — the
+// instance-free counterpart to EzAuth.CurrentImpersonatorID for callers that
+// don't have an EzAuth instance handy (e.g. templates). It requires
+// SessionMiddleware (cookie mode) or AuthMiddleware (Bearer mode) to have run.
+func CurrentImpersonatorID(ctx context.Context) (string, bool) {
+	return handler.CurrentImpersonatorID(ctx)
+}
+
 // CSRFToken returns the current CSRF token string from the request context.
 // This requires the csrf.Protect middleware to have run before this request.
 func CSRFToken(r *http.Request) string {

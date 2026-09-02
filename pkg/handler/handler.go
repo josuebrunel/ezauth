@@ -27,8 +27,14 @@ func (h *Handler) LoadUserMiddleware(next http.Handler) http.Handler {
 
 // SessionMiddleware combines LoadAndSave and LoadUserMiddleware.
 // It ensures session data is loaded/saved and the user is populated in the context.
+// It also stashes the session tokens and cookie-mode impersonator ID into the
+// context so handlers and templates can read them via the package-level
+// helpers (handler.GetSessionTokens / CurrentImpersonatorID) without a Handler.
 func (h *Handler) SessionMiddleware(next http.Handler) http.Handler {
-	return ezmiddleware.SessionMiddleware(h.Session, h.GetSessionUser)(next)
+	base := ezmiddleware.SessionMiddleware(h.Session, h.GetSessionUser)
+	return base(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		next.ServeHTTP(w, r.WithContext(h.stashSessionContext(r.Context())))
+	}))
 }
 
 type LogoutRequest struct {

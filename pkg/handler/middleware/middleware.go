@@ -17,9 +17,11 @@ import (
 type contextKey string
 
 const (
-	UserContextKey         = contextKey("userID")
-	UserObjectContextKey   = contextKey("user")
-	ImpersonatorContextKey = contextKey("impersonatorID")
+	UserContextKey          = contextKey("userID")
+	UserObjectContextKey    = contextKey("user")
+	ImpersonatorContextKey  = contextKey("impersonatorID")
+	SessionTokensContextKey = contextKey("sessionTokens")
+	SessionImpersonatorKey  = contextKey("sessionImpersonatorID")
 )
 
 // UserLoader is a function that loads a user from context.

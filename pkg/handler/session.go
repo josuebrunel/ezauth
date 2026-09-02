@@ -28,6 +28,22 @@ func (h *Handler) GetMFAEnrollment(ctx context.Context) (secret, otpauthURL stri
 	return secret, otpauthURL, ok1 && ok2 && secret != ""
 }
 
+// stashSessionContext copies session-derived values (the tokens map and the
+// cookie-mode impersonator ID) into the request context, so downstream
+// handlers can read them without the Handler instance. It must only be called
+// after the session has been loaded into the context (i.e. from within
+// SessionMiddleware, whose LoadAndSave step runs first) — reading the session
+// before that panics (see scs).
+func (h *Handler) stashSessionContext(ctx context.Context) context.Context {
+	if tokens, ok := h.Session.Get(ctx, sessionTokensKey).(map[string]string); ok && len(tokens) > 0 {
+		ctx = context.WithValue(ctx, ezmiddleware.SessionTokensContextKey, tokens)
+	}
+	if id, ok := h.Session.Get(ctx, sessionImpersonatorIDKey).(string); ok && id != "" {
+		ctx = context.WithValue(ctx, ezmiddleware.SessionImpersonatorKey, id)
+	}
+	return ctx
+}
+
 // setAuthCookies sets the access and refresh tokens in the session.
 func (h *Handler) setAuthCookies(ctx context.Context, tokenResp *service.TokenResponse) {
 	tokens := map[string]string{
@@ -102,6 +118,21 @@ func GetImpersonatorID(ctx context.Context) (string, error) {
 }
 
 // CurrentImpersonatorID returns the acting admin's user ID for the current
+// request, regardless of transport, without needing a Handler instance. It
+// checks the cookie-session impersonator stashed into the context by
+// SessionMiddleware first, then falls back to the Bearer/JWT "act" claim
+// (GetImpersonatorID). Returns ok=false if neither applies.
+func CurrentImpersonatorID(ctx context.Context) (string, bool) {
+	if id, ok := ctx.Value(ezmiddleware.SessionImpersonatorKey).(string); ok && id != "" {
+		return id, true
+	}
+	if id, err := GetImpersonatorID(ctx); err == nil {
+		return id, true
+	}
+	return "", false
+}
+
+// CurrentImpersonatorID returns the acting admin's user ID for the current
 // request, regardless of transport: it checks the cookie-session stash first
 // (IsImpersonating), then falls back to the Bearer/JWT "act" claim
 // (GetImpersonatorID). Returns ok=false if neither applies.
@@ -137,6 +168,15 @@ func (h *Handler) CurrentImpersonator(ctx context.Context) (*models.User, error)
 func (h *Handler) GetSessionTokens(ctx context.Context) (tokens map[string]string, ok bool) {
 	tokens, ok = h.Session.Get(ctx, sessionTokensKey).(map[string]string)
 	return tokens, ok
+}
+
+// GetSessionTokens returns the access/refresh token pair stashed into the
+// request context by SessionMiddleware, without needing a Handler instance.
+// Returns (nil, false) if no session tokens were stashed (e.g. the request
+// didn't go through SessionMiddleware or isn't authenticated via cookies).
+func GetSessionTokens(ctx context.Context) (map[string]string, bool) {
+	tokens, ok := ctx.Value(ezmiddleware.SessionTokensContextKey).(map[string]string)
+	return tokens, ok && len(tokens) > 0
 }
 
 // GetSessionUser returns the user object from the context.
