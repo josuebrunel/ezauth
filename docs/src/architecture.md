@@ -26,7 +26,7 @@ The `service` package (located in `pkg/service/`) contains the core authenticati
 * Multi-Factor Authentication (TOTP), WebAuthn/Passkeys, and SMS OTP.
 * Admin impersonation, invitation-based onboarding, guarded email change, and admin user management.
 * Interaction with the Mailer and, for SMS OTP, the `SMSSender`.
-* Dispatching lifecycle events to the `Hook` interface (see [Hooks](./library.md#hooks)).
+* Dispatching lifecycle events to the `Hook` interface (see [Hooks](./guides/admin-operations.md#hooks)).
 
 ### `Handler` (HTTP Layer)
 The `handler` package (located in `pkg/handler/`) defines the RESTful API. It uses the `service` package to perform actions. It is responsible for:
@@ -54,5 +54,5 @@ The `config` package (located in `pkg/config/`) handles loading configuration fr
 
 * **Mailer**: You can provide your own implementation of the `Mailer` interface if you need to use a service other than SMTP (e.g., SendGrid, Mailgun).
 * **SMSSender**: You can provide your own implementation of the `SMSSender` interface to deliver SMS OTP codes through your provider of choice (e.g., Twilio, SNS).
-* **Hooks**: Implement the `Hook` interface (or embed `service.DefaultHook` and override only what you need) to intercept before/after lifecycle events — user creation/update/deletion, sign-in/sign-out, password reset, OAuth2, MFA enable/disable, and impersonation start/end. See [Hooks](./library.md#hooks) for the full list and usage.
+* **Hooks**: Implement the `Hook` interface (or embed `service.DefaultHook` and override only what you need) to intercept before/after lifecycle events — user creation/update/deletion, sign-in/sign-out, password reset, OAuth2, MFA enable/disable, and impersonation start/end. See [Hooks](./guides/admin-operations.md#hooks) for the full list and usage.
 * **Custom Router**: You can pass your own `chi.Router` to the `Handler` if you want to add global middlewares or customize the routing behavior.

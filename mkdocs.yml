@@ -28,12 +28,16 @@ nav:
   - Getting Started:
       - Installation: installation.md
       - Configuration: configuration.md
-  - Usage:
-      - As a Library: library.md
+      - Architecture: architecture.md
+  - Guides:
+      - Embed as a Library: library.md
       - Standalone Service: standalone.md
+      - Sessions, Middleware and Helpers: guides/sessions-middleware-helpers.md
+      - Sign-in Methods: guides/sign-in-methods.md
+      - Account Security: guides/account-security.md
+      - Admin and Operations: guides/admin-operations.md
   - Reference:
       - API Endpoints: api-endpoints.md
-      - Architecture: architecture.md
       - Handler: references/handler.md
       - Middleware: references/middleware.md
       - Service: references/service.md

@@ -362,7 +362,7 @@ func (a *Auth) UserAuthHistory(ctx context.Context, userID string, limit int) ([
 
 ## Audit Log
 
-`ezauth` persists a row to an audit log for security-relevant events (login success/failure, password reset, impersonation, account lockout, MFA, user create/delete) automatically, via a built-in hook that wraps whatever `Hook` you register — see [Hooks](../library.md#hooks). Enabled by default; disable with `EZAUTH_AUDIT_LOG_ENABLED=false`.
+`ezauth` persists a row to an audit log for security-relevant events (login success/failure, password reset, impersonation, account lockout, MFA, user create/delete) automatically, via a built-in hook that wraps whatever `Hook` you register — see [Hooks](../guides/admin-operations.md#hooks). Enabled by default; disable with `EZAUTH_AUDIT_LOG_ENABLED=false`.
 
 ```go
 func (a *Auth) AuditLogs(ctx context.Context, userID string, opts ListAuditLogsOptions) (*ListAuditLogsResult, error)

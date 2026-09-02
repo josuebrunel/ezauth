@@ -16,7 +16,7 @@ All `ezauth` JSON API responses follow a consistent format:
 
 ## Well-Known Endpoints
 
-`GET /.well-known/jwks.json` — served at the domain root, outside both prefixes above, per the well-known-URI convention. Publishes the JSON Web Key Set for the current (and, during a rotation, previous) asymmetric access-token signing key — see [Asymmetric JWT Signing (JWKS)](library.md#asymmetric-jwt-signing-jwks). Returns `{"keys": []}` when signing with the default symmetric HS256 algorithm (no API key required).
+`GET /.well-known/jwks.json` — served at the domain root, outside both prefixes above, per the well-known-URI convention. Publishes the JSON Web Key Set for the current (and, during a rotation, previous) asymmetric access-token signing key — see [Asymmetric JWT Signing (JWKS)](./guides/account-security.md#asymmetric-jwt-signing-jwks). Returns `{"keys": []}` when signing with the default symmetric HS256 algorithm (no API key required).
 
 ## Form Handlers (Browser)
 
@@ -40,12 +40,18 @@ POST requests to these endpoints are automatically protected by `filippo.io/csrf
 
 **Parameters:**
 *   `email` (required)
-*   `password` (required)
+*   `password` (required, min 8 chars)
 *   `password_confirm` (required, must match password)
 *   `username` (optional)
 *   `first_name` (optional)
 *   `last_name` (optional)
-*   `meta_*` (Optional, any field prefixed with `meta_` will be stored in `UserMetadata`)
+*   `locale` (optional)
+*   `timezone` (optional)
+*   `phone` (optional)
+*   `avatar_url` (optional)
+*   `nickname` (optional)
+*   `roles` (optional, comma-separated)
+*   `meta_*` (Optional, any field prefixed with `meta_` will be stored in `UserMetadata`, e.g. `meta_theme=dark` -> `user_metadata: {"theme": "dark"}`)
 
 ### Login (Form)
 `POST /auth/login`
@@ -178,7 +184,7 @@ Authenticates a user and returns tokens. If the client has a stored trusted-devi
 }
 ```
 
-Returns `401` with a distinct error message (rather than the generic "invalid email or password") if the account is locked from too many failed attempts, or disabled some other way — see [Account Lockout](#account-lockout).
+Returns `401` with a distinct error message (rather than the generic "invalid email or password") if the account is locked from too many failed attempts, or disabled some other way — see [Account Lockout](./guides/account-security.md#account-lockout).
 Exchange `mfa_token` via `POST /auth/api/mfa/login/verify` (see below) to receive real session tokens.
 
 ### Refresh Token
