@@ -64,6 +64,14 @@ Validates the `X-API-Key` header. It checks against the configured Master API Ke
 func (h *Handler) APIKeyMiddleware(next http.Handler) http.Handler
 ```
 
+### `RequireAPIKeyScope`
+
+Requires the API key used to authenticate the request (via `APIKeyMiddleware`, which must run upstream) to include the given scope. An unscoped key — including the master config API key, which has no associated `Token` — has full access. See [Scoped API Keys](../guides/account-security.md#scoped-api-keys).
+
+```go
+func (h *Handler) RequireAPIKeyScope(scope string) func(http.Handler) http.Handler
+```
+
 ## Authorization Middleware (RBAC)
 
 See [Roles & Permissions (RBAC)](../guides/admin-operations.md#roles--permissions-rbac) for the full picture — these check the real RBAC tables, not the legacy `User.Roles` string field.

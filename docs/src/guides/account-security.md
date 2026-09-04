@@ -93,3 +93,24 @@ set := auth.JWKS() // service.JWKSet{Keys: []service.JWK} — empty for the defa
 **Key rotation**: each key gets a `kid`, either explicit (`EZAUTH_JWT_KEY_ID`) or auto-derived from the public key. To rotate without invalidating already-issued tokens, move the outgoing key's public key/kid to `EZAUTH_JWT_PREVIOUS_PUBLIC_KEY`/`EZAUTH_JWT_PREVIOUS_KEY_ID` and point `EZAUTH_JWT_PRIVATE_KEY`/`PUBLIC_KEY`/`KEY_ID` at the new key — new tokens sign under the new key while tokens already signed under the previous one keep verifying (both are published in the JWKS) until they expire naturally (access tokens are short-lived, 1 hour).
 
 See the [Asymmetric JWT Signing section of the README](https://github.com/josuebrunel/ezauth#asymmetric-jwt-signing-jwks) for a full config example.
+
+## Scoped API Keys
+
+By default an API key (via `APIKeyMiddleware`) grants the same access as the full account. `CreateAPIKey` can limit a key to a specific set of scopes, enforced per-route with `RequireAPIKeyScope`, layered on top of `APIKeyMiddleware`'s existing all-or-nothing group-level gate.
+
+```go
+token, err := auth.Service.CreateAPIKey(ctx, user.ID, []string{"posts:write"})
+// token.Token is the raw key value — store/display it now, it can't be recovered later.
+
+keys, err := auth.Service.ListAPIKeys(ctx, user.ID)
+err = auth.Service.RevokeAPIKey(ctx, token.ID)
+```
+
+```go
+r.Use(auth.APIKeyMiddleware) // group-level gate: any valid key gets past this
+r.With(auth.RequireAPIKeyScope("posts:write")).Post("/posts", createPostHandler)
+```
+
+An **unscoped** key — `CreateAPIKey(ctx, userID, nil)`, or any key issued before this feature existed — has full access to every `RequireAPIKeyScope` check; only a key created with a non-empty scopes list is actually restricted. The master `EZAUTH_API_KEY` config key has no associated `Token` at all, so it's always unscoped/full-access too.
+
+See the [Scoped API Keys section of the README](https://github.com/josuebrunel/ezauth#scoped-api-keys) for more.

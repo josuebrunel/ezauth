@@ -97,6 +97,16 @@ Revokes a refresh token immediately.
 func (a *Auth) TokenRevoke(ctx context.Context, refreshToken string) error
 ```
 
+## API Keys
+
+Scopes are stored as a plain string array in the `Token`'s existing `Metadata` column — no separate table. An empty/nil scopes list means unscoped/full access. See [Scoped API Keys](../guides/account-security.md#scoped-api-keys).
+
+```go
+func (a *Auth) CreateAPIKey(ctx context.Context, userID string, scopes []string) (*models.Token, error)
+func (a *Auth) RevokeAPIKey(ctx context.Context, id string) error
+func (a *Auth) ListAPIKeys(ctx context.Context, userID string) ([]*models.Token, error)
+```
+
 ## Asymmetric JWT Signing (JWKS)
 
 Configured via `Cfg.JWT` (`Algorithm`, `PrivateKey`, `PublicKey`, `KeyID`, `PreviousPublicKey`, `PreviousKeyID` — see [Configuration](../configuration.md)); defaults to symmetric HS256 (`Cfg.JWTSecret`) when `Cfg.JWT.Algorithm` is unset.
