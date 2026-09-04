@@ -408,6 +408,43 @@ func (e *EzAuth) RequireAPIKeyScope(scope string) func(http.Handler) http.Handle
 	return e.Handler.RequireAPIKeyScope(scope)
 }
 
+// CreateOrganization creates a new organization.
+func (e *EzAuth) CreateOrganization(ctx context.Context, name string) (*models.Organization, error) {
+	return e.Service.CreateOrganization(ctx, name)
+}
+
+// OrganizationsList lists all organizations.
+func (e *EzAuth) OrganizationsList(ctx context.Context) ([]*models.Organization, error) {
+	return e.Service.OrganizationsList(ctx)
+}
+
+// DeleteOrganization deletes an organization. Matching org_members rows
+// are removed via ON DELETE CASCADE.
+func (e *EzAuth) DeleteOrganization(ctx context.Context, id string) error {
+	return e.Service.DeleteOrganization(ctx, id)
+}
+
+// AddOrgMember grants userID the given role (drawn from the RBAC role
+// catalog, see #114) within orgID. Updates the role if already a member.
+func (e *EzAuth) AddOrgMember(ctx context.Context, orgID, userID, roleName string) error {
+	return e.Service.AddOrgMember(ctx, orgID, userID, roleName)
+}
+
+// RemoveOrgMember removes a user's membership from an organization.
+func (e *EzAuth) RemoveOrgMember(ctx context.Context, orgID, userID string) error {
+	return e.Service.RemoveOrgMember(ctx, orgID, userID)
+}
+
+// OrgMembers lists an organization's members, with each member's role name joined in.
+func (e *EzAuth) OrgMembers(ctx context.Context, orgID string) ([]*models.OrgMember, error) {
+	return e.Service.OrgMembers(ctx, orgID)
+}
+
+// UserOrganizations lists the organizations a user belongs to.
+func (e *EzAuth) UserOrganizations(ctx context.Context, userID string) ([]*models.Organization, error) {
+	return e.Service.UserOrganizations(ctx, userID)
+}
+
 // Impersonate mints a new token pair for targetUserID, acting on behalf of adminUser.
 // ezauth performs no authorization check here: the caller is responsible for verifying
 // that adminUser is allowed to impersonate (e.g. via adminUser.HasRole("admin")) before
