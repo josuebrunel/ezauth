@@ -676,3 +676,93 @@ func (q *SqliteQuerier) QueryPermissionsByUserID(ctx context.Context, userID str
 		sm.Where(sqlite.Quote(models.TableUserRole, models.ColumnUserID).EQ(sqlite.Arg(userID))),
 	)
 }
+
+func (q *SqliteQuerier) QueryOrganizationInsert(ctx context.Context, org *models.Organization) bob.Query {
+	if org.ID == "" {
+		org.ID = util.NewIDStripped()
+	}
+	if org.CreatedAt.IsZero() {
+		org.CreatedAt = time.Now().UTC()
+	}
+	return sqlite.Insert(
+		im.Into(models.TableOrganization,
+			"id",
+			models.ColumnName,
+			models.ColumnCreatedAt,
+		),
+		im.Values(
+			sqlite.Arg(org.ID),
+			sqlite.Arg(org.Name),
+			sqlite.Arg(org.CreatedAt),
+		),
+		im.Returning("*"),
+	)
+}
+
+func (q *SqliteQuerier) QueryOrganizationGetByID(ctx context.Context, id string) bob.Query {
+	return sqlite.Select(sm.From(models.TableOrganization), sm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
+}
+
+func (q *SqliteQuerier) QueryOrganizationsList(ctx context.Context) bob.Query {
+	return sqlite.Select(sm.From(models.TableOrganization), sm.OrderBy(sqlite.Quote(models.ColumnName)))
+}
+
+func (q *SqliteQuerier) QueryOrganizationDelete(ctx context.Context, id string) bob.Query {
+	return sqlite.Delete(dm.From(models.TableOrganization), dm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
+}
+
+// QueryOrgMemberUpsert inserts a (org, user) membership, or updates its
+// role_id if the pair already exists (composite PK on org_id, user_id).
+func (q *SqliteQuerier) QueryOrgMemberUpsert(ctx context.Context, orgID, userID, roleID string) bob.Query {
+	return sqlite.Insert(
+		im.Into(models.TableOrgMember, models.ColumnOrgID, models.ColumnUserID, models.ColumnRoleID),
+		im.Values(sqlite.Arg(orgID), sqlite.Arg(userID), sqlite.Arg(roleID)),
+		im.OnConflict(models.ColumnOrgID, models.ColumnUserID).DoUpdate(
+			im.SetExcluded(models.ColumnRoleID),
+		),
+	)
+}
+
+func (q *SqliteQuerier) QueryOrgMemberRemove(ctx context.Context, orgID, userID string) bob.Query {
+	return sqlite.Delete(
+		dm.From(models.TableOrgMember),
+		dm.Where(sqlite.Quote(models.ColumnOrgID).EQ(sqlite.Arg(orgID))),
+		dm.Where(sqlite.Quote(models.ColumnUserID).EQ(sqlite.Arg(userID))),
+	)
+}
+
+// QueryOrgMembersByOrgID lists an org's members, joined with ezauth_roles for the role name.
+func (q *SqliteQuerier) QueryOrgMembersByOrgID(ctx context.Context, orgID string) bob.Query {
+	return sqlite.Select(
+		sm.Columns(
+			sqlite.Quote(models.TableOrgMember, models.ColumnOrgID),
+			sqlite.Quote(models.TableOrgMember, models.ColumnUserID),
+			sqlite.Quote(models.TableOrgMember, models.ColumnRoleID),
+			sqlite.Quote(models.TableRole, models.ColumnName).As(models.ColumnRoleName),
+			sqlite.Quote(models.TableOrgMember, models.ColumnCreatedAt),
+		),
+		sm.From(models.TableOrgMember),
+		sm.InnerJoin(models.TableRole).OnEQ(
+			sqlite.Quote(models.TableRole, "id"),
+			sqlite.Quote(models.TableOrgMember, models.ColumnRoleID),
+		),
+		sm.Where(sqlite.Quote(models.TableOrgMember, models.ColumnOrgID).EQ(sqlite.Arg(orgID))),
+	)
+}
+
+// QueryOrganizationsByUserID lists the organizations a user belongs to.
+func (q *SqliteQuerier) QueryOrganizationsByUserID(ctx context.Context, userID string) bob.Query {
+	return sqlite.Select(
+		sm.Columns(
+			sqlite.Quote(models.TableOrganization, "id"),
+			sqlite.Quote(models.TableOrganization, models.ColumnName),
+			sqlite.Quote(models.TableOrganization, models.ColumnCreatedAt),
+		),
+		sm.From(models.TableOrganization),
+		sm.InnerJoin(models.TableOrgMember).OnEQ(
+			sqlite.Quote(models.TableOrgMember, models.ColumnOrgID),
+			sqlite.Quote(models.TableOrganization, "id"),
+		),
+		sm.Where(sqlite.Quote(models.TableOrgMember, models.ColumnUserID).EQ(sqlite.Arg(userID))),
+	)
+}

@@ -681,3 +681,93 @@ func (q *PSQLQuerier) QueryPermissionsByUserID(ctx context.Context, userID strin
 		sm.Where(psql.Quote(models.TableUserRole, models.ColumnUserID).EQ(psql.Arg(userID))),
 	)
 }
+
+func (q *PSQLQuerier) QueryOrganizationInsert(ctx context.Context, org *models.Organization) bob.Query {
+	if org.ID == "" {
+		org.ID = util.NewID()
+	}
+	if org.CreatedAt.IsZero() {
+		org.CreatedAt = time.Now().UTC()
+	}
+	return psql.Insert(
+		im.Into(psql.Quote(models.TableOrganization),
+			"id",
+			models.ColumnName,
+			models.ColumnCreatedAt,
+		),
+		im.Values(
+			psql.Arg(org.ID),
+			psql.Arg(org.Name),
+			psql.Arg(org.CreatedAt),
+		),
+		im.Returning("*"),
+	)
+}
+
+func (q *PSQLQuerier) QueryOrganizationGetByID(ctx context.Context, id string) bob.Query {
+	return psql.Select(sm.From(psql.Quote(models.TableOrganization)), sm.Where(psql.Quote("id").EQ(psql.Arg(id))))
+}
+
+func (q *PSQLQuerier) QueryOrganizationsList(ctx context.Context) bob.Query {
+	return psql.Select(sm.From(psql.Quote(models.TableOrganization)), sm.OrderBy(psql.Quote(models.ColumnName)))
+}
+
+func (q *PSQLQuerier) QueryOrganizationDelete(ctx context.Context, id string) bob.Query {
+	return psql.Delete(dm.From(psql.Quote(models.TableOrganization)), dm.Where(psql.Quote("id").EQ(psql.Arg(id))))
+}
+
+// QueryOrgMemberUpsert inserts a (org, user) membership, or updates its
+// role_id if the pair already exists (composite PK on org_id, user_id).
+func (q *PSQLQuerier) QueryOrgMemberUpsert(ctx context.Context, orgID, userID, roleID string) bob.Query {
+	return psql.Insert(
+		im.Into(psql.Quote(models.TableOrgMember), models.ColumnOrgID, models.ColumnUserID, models.ColumnRoleID),
+		im.Values(psql.Arg(orgID), psql.Arg(userID), psql.Arg(roleID)),
+		im.OnConflict(models.ColumnOrgID, models.ColumnUserID).DoUpdate(
+			im.SetExcluded(models.ColumnRoleID),
+		),
+	)
+}
+
+func (q *PSQLQuerier) QueryOrgMemberRemove(ctx context.Context, orgID, userID string) bob.Query {
+	return psql.Delete(
+		dm.From(psql.Quote(models.TableOrgMember)),
+		dm.Where(psql.Quote(models.ColumnOrgID).EQ(psql.Arg(orgID))),
+		dm.Where(psql.Quote(models.ColumnUserID).EQ(psql.Arg(userID))),
+	)
+}
+
+// QueryOrgMembersByOrgID lists an org's members, joined with ezauth_roles for the role name.
+func (q *PSQLQuerier) QueryOrgMembersByOrgID(ctx context.Context, orgID string) bob.Query {
+	return psql.Select(
+		sm.Columns(
+			psql.Quote(models.TableOrgMember, models.ColumnOrgID),
+			psql.Quote(models.TableOrgMember, models.ColumnUserID),
+			psql.Quote(models.TableOrgMember, models.ColumnRoleID),
+			psql.Quote(models.TableRole, models.ColumnName).As(models.ColumnRoleName),
+			psql.Quote(models.TableOrgMember, models.ColumnCreatedAt),
+		),
+		sm.From(psql.Quote(models.TableOrgMember)),
+		sm.InnerJoin(psql.Quote(models.TableRole)).OnEQ(
+			psql.Quote(models.TableRole, "id"),
+			psql.Quote(models.TableOrgMember, models.ColumnRoleID),
+		),
+		sm.Where(psql.Quote(models.TableOrgMember, models.ColumnOrgID).EQ(psql.Arg(orgID))),
+	)
+}
+
+// QueryOrganizationsByUserID lists the organizations a user belongs to.
+func (q *PSQLQuerier) QueryOrganizationsByUserID(ctx context.Context, userID string) bob.Query {
+	return psql.Select(
+		sm.Columns(
+			psql.Quote(models.TableOrganization, "id"),
+			psql.Quote(models.TableOrganization, models.ColumnName),
+			psql.Quote(models.TableOrganization, models.ColumnCreatedAt),
+		),
+		sm.From(psql.Quote(models.TableOrganization)),
+		sm.InnerJoin(psql.Quote(models.TableOrgMember)).OnEQ(
+			psql.Quote(models.TableOrgMember, models.ColumnOrgID),
+			psql.Quote(models.TableOrganization, "id"),
+		),
+		sm.Where(psql.Quote(models.TableOrgMember, models.ColumnUserID).EQ(psql.Arg(userID))),
+	)
+}

@@ -664,3 +664,91 @@ func (q *MysqlQuerier) QueryPermissionsByUserID(ctx context.Context, userID stri
 		sm.Where(mysql.Quote(models.TableUserRole, models.ColumnUserID).EQ(mysql.Arg(userID))),
 	)
 }
+
+func (q *MysqlQuerier) QueryOrganizationInsert(ctx context.Context, org *models.Organization) bob.Query {
+	if org.ID == "" {
+		org.ID = util.NewIDStripped()
+	}
+	if org.CreatedAt.IsZero() {
+		org.CreatedAt = time.Now().UTC()
+	}
+	return mysql.Insert(
+		im.Into(models.TableOrganization,
+			"id",
+			models.ColumnName,
+			models.ColumnCreatedAt,
+		),
+		im.Values(
+			mysql.Arg(org.ID),
+			mysql.Arg(org.Name),
+			mysql.Arg(org.CreatedAt),
+		),
+	)
+}
+
+func (q *MysqlQuerier) QueryOrganizationGetByID(ctx context.Context, id string) bob.Query {
+	return mysql.Select(sm.From(models.TableOrganization), sm.Where(mysql.Quote("id").EQ(mysql.Arg(id))))
+}
+
+func (q *MysqlQuerier) QueryOrganizationsList(ctx context.Context) bob.Query {
+	return mysql.Select(sm.From(models.TableOrganization), sm.OrderBy(mysql.Quote(models.ColumnName)))
+}
+
+func (q *MysqlQuerier) QueryOrganizationDelete(ctx context.Context, id string) bob.Query {
+	return mysql.Delete(dm.From(models.TableOrganization), dm.Where(mysql.Quote("id").EQ(mysql.Arg(id))))
+}
+
+// QueryOrgMemberUpsert inserts a (org, user) membership, or updates its
+// role_id if the pair already exists (composite PK on org_id, user_id).
+// mysql has no ON CONFLICT; ON DUPLICATE KEY UPDATE is the native equivalent.
+func (q *MysqlQuerier) QueryOrgMemberUpsert(ctx context.Context, orgID, userID, roleID string) bob.Query {
+	return mysql.Insert(
+		im.Into(models.TableOrgMember, models.ColumnOrgID, models.ColumnUserID, models.ColumnRoleID),
+		im.Values(mysql.Arg(orgID), mysql.Arg(userID), mysql.Arg(roleID)),
+		im.OnDuplicateKeyUpdate(im.UpdateWithValues(models.ColumnRoleID)),
+	)
+}
+
+func (q *MysqlQuerier) QueryOrgMemberRemove(ctx context.Context, orgID, userID string) bob.Query {
+	return mysql.Delete(
+		dm.From(models.TableOrgMember),
+		dm.Where(mysql.Quote(models.ColumnOrgID).EQ(mysql.Arg(orgID))),
+		dm.Where(mysql.Quote(models.ColumnUserID).EQ(mysql.Arg(userID))),
+	)
+}
+
+// QueryOrgMembersByOrgID lists an org's members, joined with ezauth_roles for the role name.
+func (q *MysqlQuerier) QueryOrgMembersByOrgID(ctx context.Context, orgID string) bob.Query {
+	return mysql.Select(
+		sm.Columns(
+			mysql.Quote(models.TableOrgMember, models.ColumnOrgID),
+			mysql.Quote(models.TableOrgMember, models.ColumnUserID),
+			mysql.Quote(models.TableOrgMember, models.ColumnRoleID),
+			mysql.Quote(models.TableRole, models.ColumnName).As(models.ColumnRoleName),
+			mysql.Quote(models.TableOrgMember, models.ColumnCreatedAt),
+		),
+		sm.From(models.TableOrgMember),
+		sm.InnerJoin(models.TableRole).OnEQ(
+			mysql.Quote(models.TableRole, "id"),
+			mysql.Quote(models.TableOrgMember, models.ColumnRoleID),
+		),
+		sm.Where(mysql.Quote(models.TableOrgMember, models.ColumnOrgID).EQ(mysql.Arg(orgID))),
+	)
+}
+
+// QueryOrganizationsByUserID lists the organizations a user belongs to.
+func (q *MysqlQuerier) QueryOrganizationsByUserID(ctx context.Context, userID string) bob.Query {
+	return mysql.Select(
+		sm.Columns(
+			mysql.Quote(models.TableOrganization, "id"),
+			mysql.Quote(models.TableOrganization, models.ColumnName),
+			mysql.Quote(models.TableOrganization, models.ColumnCreatedAt),
+		),
+		sm.From(models.TableOrganization),
+		sm.InnerJoin(models.TableOrgMember).OnEQ(
+			mysql.Quote(models.TableOrgMember, models.ColumnOrgID),
+			mysql.Quote(models.TableOrganization, "id"),
+		),
+		sm.Where(mysql.Quote(models.TableOrgMember, models.ColumnUserID).EQ(mysql.Arg(userID))),
+	)
+}

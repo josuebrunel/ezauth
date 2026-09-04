@@ -95,6 +95,23 @@ type RBACAssignmentQuerier interface {
 	QueryPermissionsByUserID(ctx context.Context, userID string) bob.Query
 }
 
+type OrganizationQuerier interface {
+	QueryOrganizationInsert(ctx context.Context, org *models.Organization) bob.Query
+	QueryOrganizationGetByID(ctx context.Context, id string) bob.Query
+	QueryOrganizationsList(ctx context.Context) bob.Query
+	QueryOrganizationDelete(ctx context.Context, id string) bob.Query
+}
+
+// OrgMemberQuerier covers the ezauth_org_members join table: upserting/
+// removing a (user, org) membership, and the joined reads that resolve a
+// user's orgs or an org's members (with role name).
+type OrgMemberQuerier interface {
+	QueryOrgMemberUpsert(ctx context.Context, orgID, userID, roleID string) bob.Query
+	QueryOrgMemberRemove(ctx context.Context, orgID, userID string) bob.Query
+	QueryOrgMembersByOrgID(ctx context.Context, orgID string) bob.Query
+	QueryOrganizationsByUserID(ctx context.Context, userID string) bob.Query
+}
+
 type Querier interface {
 	UserQuerier
 	TokenQuerier
@@ -104,6 +121,8 @@ type Querier interface {
 	RoleQuerier
 	PermissionQuerier
 	RBACAssignmentQuerier
+	OrganizationQuerier
+	OrgMemberQuerier
 }
 
 // Opts defines the options for opening a repository connection.
@@ -761,6 +780,102 @@ func (r Repository) PermissionsByUserID(ctx context.Context, userID string) ([]*
 		return nil, err
 	}
 	return permissions, nil
+}
+
+// OrganizationCreate creates a new organization.
+func (r Repository) OrganizationCreate(ctx context.Context, org *models.Organization) (*models.Organization, error) {
+	query := r.QueryOrganizationInsert(ctx, org)
+
+	if r.Opts.Dialect == DialectMysql {
+		if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+			xlog.Error("Failed to create organization", "error", err, "name", org.Name)
+			return nil, err
+		}
+		return r.OrganizationGetByID(ctx, org.ID)
+	}
+
+	created, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.Organization]())
+	if err != nil {
+		xlog.Error("Failed to create organization", "error", err, "name", org.Name)
+		return nil, err
+	}
+	return created, nil
+}
+
+// OrganizationGetByID retrieves an organization by its ID.
+func (r Repository) OrganizationGetByID(ctx context.Context, id string) (*models.Organization, error) {
+	query := r.QueryOrganizationGetByID(ctx, id)
+	org, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.Organization]())
+	if err != nil {
+		xlog.Error("Failed to get organization by id", "error", err, "id", id)
+		return nil, err
+	}
+	return org, nil
+}
+
+// OrganizationsList lists all organizations.
+func (r Repository) OrganizationsList(ctx context.Context) ([]*models.Organization, error) {
+	query := r.QueryOrganizationsList(ctx)
+	orgs, err := bob.All(ctx, r.bdb, query, scan.StructMapper[*models.Organization]())
+	if err != nil {
+		xlog.Error("Failed to list organizations", "error", err)
+		return nil, err
+	}
+	return orgs, nil
+}
+
+// OrganizationDelete deletes an organization. Matching ezauth_org_members
+// rows are removed via ON DELETE CASCADE.
+func (r Repository) OrganizationDelete(ctx context.Context, id string) error {
+	query := r.QueryOrganizationDelete(ctx, id)
+	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+		xlog.Error("Failed to delete organization", "error", err, "id", id)
+		return err
+	}
+	return nil
+}
+
+// OrgMemberUpsert grants a user a role within an organization, or updates
+// their role if the (org, user) membership already exists.
+func (r Repository) OrgMemberUpsert(ctx context.Context, orgID, userID, roleID string) error {
+	query := r.QueryOrgMemberUpsert(ctx, orgID, userID, roleID)
+	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+		xlog.Error("Failed to upsert org member", "error", err, "org_id", orgID, "user_id", userID, "role_id", roleID)
+		return err
+	}
+	return nil
+}
+
+// OrgMemberRemove removes a user's membership from an organization.
+func (r Repository) OrgMemberRemove(ctx context.Context, orgID, userID string) error {
+	query := r.QueryOrgMemberRemove(ctx, orgID, userID)
+	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+		xlog.Error("Failed to remove org member", "error", err, "org_id", orgID, "user_id", userID)
+		return err
+	}
+	return nil
+}
+
+// OrgMembersByOrgID lists an organization's members, with each member's role name joined in.
+func (r Repository) OrgMembersByOrgID(ctx context.Context, orgID string) ([]*models.OrgMember, error) {
+	query := r.QueryOrgMembersByOrgID(ctx, orgID)
+	members, err := bob.All(ctx, r.bdb, query, scan.StructMapper[*models.OrgMember]())
+	if err != nil {
+		xlog.Error("Failed to list org members", "error", err, "org_id", orgID)
+		return nil, err
+	}
+	return members, nil
+}
+
+// OrganizationsByUserID lists the organizations a user belongs to.
+func (r Repository) OrganizationsByUserID(ctx context.Context, userID string) ([]*models.Organization, error) {
+	query := r.QueryOrganizationsByUserID(ctx, userID)
+	orgs, err := bob.All(ctx, r.bdb, query, scan.StructMapper[*models.Organization]())
+	if err != nil {
+		xlog.Error("Failed to list organizations by user", "error", err, "user_id", userID)
+		return nil, err
+	}
+	return orgs, nil
 }
 
 func getDialectQuery(dbDialect string) Querier {

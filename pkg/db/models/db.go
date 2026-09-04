@@ -10,6 +10,8 @@ const (
 	TablePermission           = "ezauth_permissions"
 	TableRolePermission       = "ezauth_role_permissions"
 	TableUserRole             = "ezauth_user_roles"
+	TableOrganization         = "ezauth_organizations"
+	TableOrgMember            = "ezauth_org_members"
 	ColumnEmail               = "email"
 	ColumnUsername            = "username"
 	ColumnPasswordHash        = "password_hash"
@@ -60,4 +62,6 @@ const (
 	ColumnDescription  = "description"
 	ColumnRoleID       = "role_id"
 	ColumnPermissionID = "permission_id"
+	ColumnOrgID        = "org_id"
+	ColumnRoleName     = "role_name"
 )
