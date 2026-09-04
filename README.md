@@ -33,6 +33,7 @@ Simple and easy to use authentication library for Golang.
 - [Admin and Operations](#admin-and-operations)
   - [Impersonation](#impersonation)
   - [Roles & Permissions (RBAC)](#roles--permissions-rbac)
+  - [Organizations](#organizations)
   - [Invitation-Based Onboarding](#invitation-based-onboarding)
   - [Admin User Management](#admin-user-management)
   - [Audit Log](#audit-log)
@@ -841,6 +842,36 @@ router.Handle("/admin/posts", auth.RequirePermission("posts:write")(postsHandler
 ```
 
 `RequireRole`/`RequirePermission` read the authenticated user ID from request context (set by `AuthMiddleware` or `LoadUserMiddleware`/`SessionMiddleware`), so they must run downstream of one of those; a missing user returns 401, a missing role/permission returns 403. Deleting a role or permission cascades: matching `user_roles`/`role_permissions` assignment rows are removed automatically.
+
+### Organizations
+
+Lightweight multi-tenancy: organizations/teams, with each member holding one role per organization — drawn from the same RBAC role catalog `RequireRole` checks against (a role is just an `ezauth_roles` row; org membership is `ezauth_org_members`, mapping `(org, user) → role`). Kept deliberately minimal — no settings/billing/invitations — a consuming app that needs more can extend via its own table FK'd to `ezauth_organizations`.
+
+```go
+org, err := auth.CreateOrganization(ctx, "Acme Inc")
+
+// AddOrgMember upserts: calling it again for the same (org, user) updates the role.
+err = auth.AddOrgMember(ctx, org.ID, user.ID, "editor")
+err = auth.RemoveOrgMember(ctx, org.ID, user.ID)
+
+members, err := auth.OrgMembers(ctx, org.ID)          // []*models.OrgMember, RoleName joined in
+orgs, err := auth.UserOrganizations(ctx, user.ID)      // organizations this user belongs to
+```
+
+**Resolving the "current org" for a request** mirrors how `LoadUserMiddleware`/`GetSessionUser` resolve the current user — `ezauth` doesn't presume how an org is identified (URL param, subdomain, header, etc.), so you supply an `OrgLoader`:
+
+```go
+r.Use(auth.OrgLoaderMiddleware(func(ctx context.Context) (*models.Organization, error) {
+    orgID := chi.URLParam(r, "orgID") // or a subdomain, header, etc. — your choice
+    return auth.OrganizationGetByID(ctx, orgID)
+}))
+```
+
+```go
+org, err := auth.GetSessionOrg(ctx) // *models.Organization, set by OrgLoaderMiddleware
+```
+
+There's no `RequireOrgRole` middleware — compose `OrgLoaderMiddleware` with `RequireRole`/`RequirePermission` if a route needs to enforce the current org member's role.
 
 ### Invitation-Based Onboarding
 

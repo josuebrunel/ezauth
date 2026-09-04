@@ -207,3 +207,20 @@ func (r Repository) PermissionsByRoleID(ctx context.Context, roleID string) ([]*
 // Resolved transitively through every role granted to the user.
 func (r Repository) PermissionsByUserID(ctx context.Context, userID string) ([]*models.Permission, error)
 ```
+
+## Organization Methods
+
+`role_id` on `ezauth_org_members` is a foreign key into `ezauth_roles` — org membership draws from the same role catalog as RBAC. See [Organizations](../guides/admin-operations.md#organizations).
+
+```go
+func (r Repository) OrganizationCreate(ctx context.Context, org *models.Organization) (*models.Organization, error)
+func (r Repository) OrganizationGetByID(ctx context.Context, id string) (*models.Organization, error)
+func (r Repository) OrganizationsList(ctx context.Context) ([]*models.Organization, error)
+func (r Repository) OrganizationDelete(ctx context.Context, id string) error // cascades org_members
+
+// OrgMemberUpsert inserts, or updates role_id if the (org, user) pair already exists.
+func (r Repository) OrgMemberUpsert(ctx context.Context, orgID, userID, roleID string) error
+func (r Repository) OrgMemberRemove(ctx context.Context, orgID, userID string) error
+func (r Repository) OrgMembersByOrgID(ctx context.Context, orgID string) ([]*models.OrgMember, error) // joined with ezauth_roles for RoleName
+func (r Repository) OrganizationsByUserID(ctx context.Context, userID string) ([]*models.Organization, error)
+```

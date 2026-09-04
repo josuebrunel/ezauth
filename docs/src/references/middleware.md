@@ -91,3 +91,14 @@ Same as `RequireRole`, but checks a permission, resolved transitively through ev
 ```go
 func (h *Handler) RequirePermission(permission string) func(http.Handler) http.Handler
 ```
+
+## Organization Middleware
+
+### `OrgLoaderMiddleware`
+
+Resolves the "current organization" for a request via an app-supplied `OrgLoader` (`ezauth` doesn't presume how an org is identified — URL param, subdomain, header, etc.) and loads it into context. Mirrors `LoadUserMiddleware` exactly. See [Organizations](../guides/admin-operations.md#organizations).
+
+```go
+type OrgLoader func(context.Context) (*models.Organization, error)
+func (h *Handler) OrgLoaderMiddleware(loader ezmiddleware.OrgLoader) func(http.Handler) http.Handler
+```

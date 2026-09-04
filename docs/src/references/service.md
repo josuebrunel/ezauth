@@ -404,3 +404,20 @@ func (a *Auth) UserRoles(ctx context.Context, userID string) ([]*models.Role, er
 func (a *Auth) UserHasRole(ctx context.Context, userID, roleName string) (bool, error)
 func (a *Auth) UserHasPermission(ctx context.Context, userID, permissionName string) (bool, error) // resolved transitively through the user's roles
 ```
+
+## Organizations
+
+Lightweight multi-tenancy. Each member's role is drawn from the RBAC role catalog above. See [Organizations](../guides/admin-operations.md#organizations).
+
+```go
+func (a *Auth) CreateOrganization(ctx context.Context, name string) (*models.Organization, error)
+func (a *Auth) OrganizationGetByID(ctx context.Context, id string) (*models.Organization, error)
+func (a *Auth) OrganizationsList(ctx context.Context) ([]*models.Organization, error)
+func (a *Auth) DeleteOrganization(ctx context.Context, id string) error // cascades org_members
+
+// AddOrgMember upserts: calling it again for the same (org, user) updates the role.
+func (a *Auth) AddOrgMember(ctx context.Context, orgID, userID, roleName string) error
+func (a *Auth) RemoveOrgMember(ctx context.Context, orgID, userID string) error
+func (a *Auth) OrgMembers(ctx context.Context, orgID string) ([]*models.OrgMember, error) // RoleName joined in
+func (a *Auth) UserOrganizations(ctx context.Context, userID string) ([]*models.Organization, error)
+```
