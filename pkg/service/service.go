@@ -89,9 +89,12 @@ func (a *Auth) SetHook(hook Hook) {
 // It handles the repository initialization.
 func NewFromConfig(cfg *config.Config, pathPrefix string) (*Auth, error) {
 	repo, err := repository.Open(repository.Opts{
-		Dialect: cfg.DB.Dialect,
-		DSN:     cfg.DB.DSN,
-		Schema:  cfg.DB.Schema,
+		Dialect:         cfg.DB.Dialect,
+		DSN:             cfg.DB.DSN,
+		Schema:          cfg.DB.Schema,
+		MaxOpenConns:    cfg.DB.MaxOpenConns,
+		MaxIdleConns:    cfg.DB.MaxIdleConns,
+		ConnMaxLifetime: cfg.DB.ConnMaxLifetime,
 	})
 	if err != nil {
 		return nil, err

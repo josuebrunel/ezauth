@@ -22,6 +22,14 @@ const (
 	DialectMysql  = "mysql"
 )
 
+// Default connection pool limits, used when Opts.MaxOpenConns/MaxIdleConns/
+// ConnMaxLifetime are left zero-valued.
+const (
+	defaultMaxOpenConns    = 25
+	defaultMaxIdleConns    = 5
+	defaultConnMaxLifetime = 30 * time.Minute
+)
+
 type UserQuerier interface {
 	QueryUserInsert(ctx context.Context, user *models.User) bob.Query
 	QueryUserGetByEmail(ctx context.Context, email string) bob.Query
@@ -132,6 +140,13 @@ type Opts struct {
 	Dialect string
 	DSN     string
 	Schema  string
+
+	// Connection pool limits applied to the opened *sql.DB. Zero-valued
+	// fields fall back to sane defaults (see getDBConnection) rather than
+	// database/sql's own default of unlimited open connections.
+	MaxOpenConns    int
+	MaxIdleConns    int
+	ConnMaxLifetime time.Duration
 }
 
 // Repository handles all database operations.
@@ -991,6 +1006,22 @@ func getDBConnection(opts Opts) (*sql.DB, error) {
 		xlog.Error("failed to ping database", "error", err)
 		return nil, err
 	}
+
+	maxOpenConns := opts.MaxOpenConns
+	if maxOpenConns <= 0 {
+		maxOpenConns = defaultMaxOpenConns
+	}
+	maxIdleConns := opts.MaxIdleConns
+	if maxIdleConns <= 0 {
+		maxIdleConns = defaultMaxIdleConns
+	}
+	connMaxLifetime := opts.ConnMaxLifetime
+	if connMaxLifetime <= 0 {
+		connMaxLifetime = defaultConnMaxLifetime
+	}
+	db.SetMaxOpenConns(maxOpenConns)
+	db.SetMaxIdleConns(maxIdleConns)
+	db.SetConnMaxLifetime(connMaxLifetime)
 
 	return db, nil
 }

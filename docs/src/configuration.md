@@ -63,6 +63,9 @@ WebAuthn support is disabled unless both `EZAUTH_WEBAUTHN_RP_ID` and `EZAUTH_WEB
 | `EZAUTH_DB_DIALECT` | Database dialect (`sqlite3`, `postgres`, or `mysql`). | `sqlite3`   |
 | `EZAUTH_DB_DSN`     | Database connection string.                           | `ezauth.db` |
 | `EZAUTH_DB_SCHEMA`  | Database schema (PostgreSQL only).                    | `public`    |
+| `EZAUTH_DB_MAX_OPEN_CONNS`    | Max open connections in the pool.                    | `25`  |
+| `EZAUTH_DB_MAX_IDLE_CONNS`    | Max idle connections kept in the pool.               | `5`   |
+| `EZAUTH_DB_CONN_MAX_LIFETIME` | Max lifetime of a pooled connection before it's recycled (Go duration, e.g. `30m`). | `30m` |
 
 ## SMTP Settings
 

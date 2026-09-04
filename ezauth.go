@@ -42,8 +42,11 @@ type EzAuth struct {
 // path is the base URL path where the authentication routes will be mounted (e.g., "auth").
 func New(cfg *config.Config, path string) (*EzAuth, error) {
 	repo, err := repository.Open(repository.Opts{
-		Dialect: cfg.DB.Dialect,
-		DSN:     cfg.DB.DSN,
+		Dialect:         cfg.DB.Dialect,
+		DSN:             cfg.DB.DSN,
+		MaxOpenConns:    cfg.DB.MaxOpenConns,
+		MaxIdleConns:    cfg.DB.MaxIdleConns,
+		ConnMaxLifetime: cfg.DB.ConnMaxLifetime,
 	})
 	if err != nil {
 		return nil, err

@@ -16,6 +16,14 @@ type Database struct {
 	Dialect string `json:"dialect" env:"DB_DIALECT" default:"sqlite3"`
 	DSN     string `json:"dsn" env:"DB_DSN" default:"ezauth.db"`
 	Schema  string `json:"schema" env:"DB_SCHEMA"`
+
+	// Connection pool limits, applied to the underlying *sql.DB. Without
+	// these, database/sql defaults to unlimited open connections, which can
+	// exhaust postgres/mysql's max_connections under real concurrent load,
+	// and idle connections are never proactively recycled.
+	MaxOpenConns    int           `json:"max_open_conns" env:"DB_MAX_OPEN_CONNS" default:"25"`
+	MaxIdleConns    int           `json:"max_idle_conns" env:"DB_MAX_IDLE_CONNS" default:"5"`
+	ConnMaxLifetime time.Duration `json:"conn_max_lifetime" env:"DB_CONN_MAX_LIFETIME" default:"30m"`
 }
 
 // OAuth2Google defines the settings for Google OAuth2.
