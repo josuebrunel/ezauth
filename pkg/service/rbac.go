@@ -8,12 +8,12 @@ import (
 	"github.com/josuebrunel/gopkg/xlog"
 )
 
-// CreateRole creates a new RBAC role. Real RBAC (roles/permissions tables +
+// RoleCreate creates a new RBAC role. Real RBAC (roles/permissions tables +
 // RequireRole/RequirePermission middleware) is a fully separate, additive
 // system from the legacy comma-separated User.Roles/HasRole/AddRole helpers
 // on models.User — those keep working unchanged, but RequireRole/
 // RequirePermission consult these tables, not that field.
-func (a *Auth) CreateRole(ctx context.Context, name, description string) (*models.Role, error) {
+func (a *Auth) RoleCreate(ctx context.Context, name, description string) (*models.Role, error) {
 	if name == "" {
 		return nil, errors.New("role name is required")
 	}
@@ -33,14 +33,14 @@ func (a *Auth) RolesList(ctx context.Context) ([]*models.Role, error) {
 	return a.Repo.RolesList(ctx)
 }
 
-// DeleteRole deletes a role. Matching user/role and role/permission
+// RoleDelete deletes a role. Matching user/role and role/permission
 // assignments are removed via ON DELETE CASCADE.
-func (a *Auth) DeleteRole(ctx context.Context, id string) error {
+func (a *Auth) RoleDelete(ctx context.Context, id string) error {
 	return a.Repo.RoleDelete(ctx, id)
 }
 
-// CreatePermission creates a new RBAC permission.
-func (a *Auth) CreatePermission(ctx context.Context, name, description string) (*models.Permission, error) {
+// PermissionCreate creates a new RBAC permission.
+func (a *Auth) PermissionCreate(ctx context.Context, name, description string) (*models.Permission, error) {
 	if name == "" {
 		return nil, errors.New("permission name is required")
 	}
@@ -60,16 +60,16 @@ func (a *Auth) PermissionsList(ctx context.Context) ([]*models.Permission, error
 	return a.Repo.PermissionsList(ctx)
 }
 
-// DeletePermission deletes a permission. Matching role/permission
+// PermissionDelete deletes a permission. Matching role/permission
 // assignments are removed via ON DELETE CASCADE.
-func (a *Auth) DeletePermission(ctx context.Context, id string) error {
+func (a *Auth) PermissionDelete(ctx context.Context, id string) error {
 	return a.Repo.PermissionDelete(ctx, id)
 }
 
-// GrantRole grants a role to a user by role name, and records an audit
+// UserRoleGrant grants a role to a user by role name, and records an audit
 // event. Idempotent at the DB level (see Repo.UserRoleGrant): granting a
 // role the user already holds is a no-op, no audit event fired.
-func (a *Auth) GrantRole(ctx context.Context, userID, roleName string) error {
+func (a *Auth) UserRoleGrant(ctx context.Context, userID, roleName string) error {
 	role, err := a.Repo.RoleGetByName(ctx, roleName)
 	if err != nil {
 		xlog.Debug("grant role failed: role not found", "role", roleName, "err", err)
@@ -88,10 +88,10 @@ func (a *Auth) GrantRole(ctx context.Context, userID, roleName string) error {
 	return nil
 }
 
-// RevokeRole revokes a role from a user by role name, and records an audit
-// event. Idempotent: revoking a role the user doesn't hold is a no-op, no
-// audit event fired.
-func (a *Auth) RevokeRole(ctx context.Context, userID, roleName string) error {
+// UserRoleRevoke revokes a role from a user by role name, and records an
+// audit event. Idempotent: revoking a role the user doesn't hold is a
+// no-op, no audit event fired.
+func (a *Auth) UserRoleRevoke(ctx context.Context, userID, roleName string) error {
 	role, err := a.Repo.RoleGetByName(ctx, roleName)
 	if err != nil {
 		xlog.Debug("revoke role failed: role not found", "role", roleName, "err", err)
@@ -110,9 +110,9 @@ func (a *Auth) RevokeRole(ctx context.Context, userID, roleName string) error {
 	return nil
 }
 
-// GrantPermissionToRole grants a permission to a role, both identified by
+// RolePermissionGrant grants a permission to a role, both identified by
 // name. Idempotent at the DB level (see Repo.RolePermissionGrant).
-func (a *Auth) GrantPermissionToRole(ctx context.Context, roleName, permissionName string) error {
+func (a *Auth) RolePermissionGrant(ctx context.Context, roleName, permissionName string) error {
 	role, err := a.Repo.RoleGetByName(ctx, roleName)
 	if err != nil {
 		return errors.New("role not found")
@@ -129,8 +129,8 @@ func (a *Auth) GrantPermissionToRole(ctx context.Context, roleName, permissionNa
 	return nil
 }
 
-// RevokePermissionFromRole revokes a permission from a role, both identified by name.
-func (a *Auth) RevokePermissionFromRole(ctx context.Context, roleName, permissionName string) error {
+// RolePermissionRevoke revokes a permission from a role, both identified by name.
+func (a *Auth) RolePermissionRevoke(ctx context.Context, roleName, permissionName string) error {
 	role, err := a.Repo.RoleGetByName(ctx, roleName)
 	if err != nil {
 		return errors.New("role not found")
@@ -147,8 +147,8 @@ func (a *Auth) RevokePermissionFromRole(ctx context.Context, roleName, permissio
 	return nil
 }
 
-// UserRoles lists the roles granted to a user.
-func (a *Auth) UserRoles(ctx context.Context, userID string) ([]*models.Role, error) {
+// UserRolesList lists the roles granted to a user.
+func (a *Auth) UserRolesList(ctx context.Context, userID string) ([]*models.Role, error) {
 	return a.Repo.RolesByUserID(ctx, userID)
 }
 

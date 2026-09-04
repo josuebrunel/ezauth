@@ -102,9 +102,9 @@ func (a *Auth) TokenRevoke(ctx context.Context, refreshToken string) error
 Scopes are stored as a plain string array in the `Token`'s existing `Metadata` column — no separate table. An empty/nil scopes list means unscoped/full access. See [Scoped API Keys](../guides/account-security.md#scoped-api-keys).
 
 ```go
-func (a *Auth) CreateAPIKey(ctx context.Context, userID string, scopes []string) (*models.Token, error)
-func (a *Auth) RevokeAPIKey(ctx context.Context, id string) error
-func (a *Auth) ListAPIKeys(ctx context.Context, userID string) ([]*models.Token, error)
+func (a *Auth) APIKeyCreate(ctx context.Context, userID string, scopes []string) (*models.Token, error)
+func (a *Auth) APIKeyRevoke(ctx context.Context, id string) error
+func (a *Auth) APIKeysList(ctx context.Context, userID string) ([]*models.Token, error)
 ```
 
 ## Asymmetric JWT Signing (JWKS)
@@ -385,22 +385,22 @@ func (a *Auth) AuditLogs(ctx context.Context, userID string, opts ListAuditLogsO
 Real RBAC — separate from, and additive to, the legacy `User.Roles` string field and its `HasRole`/`AddRole`/etc. helpers. See [Roles & Permissions (RBAC)](../guides/admin-operations.md#roles--permissions-rbac).
 
 ```go
-func (a *Auth) CreateRole(ctx context.Context, name, description string) (*models.Role, error)
+func (a *Auth) RoleCreate(ctx context.Context, name, description string) (*models.Role, error)
 func (a *Auth) RolesList(ctx context.Context) ([]*models.Role, error)
-func (a *Auth) DeleteRole(ctx context.Context, id string) error
+func (a *Auth) RoleDelete(ctx context.Context, id string) error
 
-func (a *Auth) CreatePermission(ctx context.Context, name, description string) (*models.Permission, error)
+func (a *Auth) PermissionCreate(ctx context.Context, name, description string) (*models.Permission, error)
 func (a *Auth) PermissionsList(ctx context.Context) ([]*models.Permission, error)
-func (a *Auth) DeletePermission(ctx context.Context, id string) error
+func (a *Auth) PermissionDelete(ctx context.Context, id string) error
 
 // Idempotent; each records an AuditEventRoleGranted/AuditEventRoleRevoked audit event.
-func (a *Auth) GrantRole(ctx context.Context, userID, roleName string) error
-func (a *Auth) RevokeRole(ctx context.Context, userID, roleName string) error
+func (a *Auth) UserRoleGrant(ctx context.Context, userID, roleName string) error
+func (a *Auth) UserRoleRevoke(ctx context.Context, userID, roleName string) error
 
-func (a *Auth) GrantPermissionToRole(ctx context.Context, roleName, permissionName string) error
-func (a *Auth) RevokePermissionFromRole(ctx context.Context, roleName, permissionName string) error
+func (a *Auth) RolePermissionGrant(ctx context.Context, roleName, permissionName string) error
+func (a *Auth) RolePermissionRevoke(ctx context.Context, roleName, permissionName string) error
 
-func (a *Auth) UserRoles(ctx context.Context, userID string) ([]*models.Role, error)
+func (a *Auth) UserRolesList(ctx context.Context, userID string) ([]*models.Role, error)
 func (a *Auth) UserHasRole(ctx context.Context, userID, roleName string) (bool, error)
 func (a *Auth) UserHasPermission(ctx context.Context, userID, permissionName string) (bool, error) // resolved transitively through the user's roles
 ```
@@ -410,14 +410,14 @@ func (a *Auth) UserHasPermission(ctx context.Context, userID, permissionName str
 Lightweight multi-tenancy. Each member's role is drawn from the RBAC role catalog above. See [Organizations](../guides/admin-operations.md#organizations).
 
 ```go
-func (a *Auth) CreateOrganization(ctx context.Context, name string) (*models.Organization, error)
+func (a *Auth) OrganizationCreate(ctx context.Context, name string) (*models.Organization, error)
 func (a *Auth) OrganizationGetByID(ctx context.Context, id string) (*models.Organization, error)
 func (a *Auth) OrganizationsList(ctx context.Context) ([]*models.Organization, error)
-func (a *Auth) DeleteOrganization(ctx context.Context, id string) error // cascades org_members
+func (a *Auth) OrganizationDelete(ctx context.Context, id string) error // cascades org_members
 
-// AddOrgMember upserts: calling it again for the same (org, user) updates the role.
-func (a *Auth) AddOrgMember(ctx context.Context, orgID, userID, roleName string) error
-func (a *Auth) RemoveOrgMember(ctx context.Context, orgID, userID string) error
-func (a *Auth) OrgMembers(ctx context.Context, orgID string) ([]*models.OrgMember, error) // RoleName joined in
-func (a *Auth) UserOrganizations(ctx context.Context, userID string) ([]*models.Organization, error)
+// OrgMemberAdd upserts: calling it again for the same (org, user) updates the role.
+func (a *Auth) OrgMemberAdd(ctx context.Context, orgID, userID, roleName string) error
+func (a *Auth) OrgMemberRemove(ctx context.Context, orgID, userID string) error
+func (a *Auth) OrgMembersList(ctx context.Context, orgID string) ([]*models.OrgMember, error) // RoleName joined in
+func (a *Auth) UserOrganizationsList(ctx context.Context, userID string) ([]*models.Organization, error)
 ```

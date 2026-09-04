@@ -96,14 +96,14 @@ See the [Asymmetric JWT Signing section of the README](https://github.com/josueb
 
 ## Scoped API Keys
 
-By default an API key (via `APIKeyMiddleware`) grants the same access as the full account. `CreateAPIKey` can limit a key to a specific set of scopes, enforced per-route with `RequireAPIKeyScope`, layered on top of `APIKeyMiddleware`'s existing all-or-nothing group-level gate.
+By default an API key (via `APIKeyMiddleware`) grants the same access as the full account. `APIKeyCreate` can limit a key to a specific set of scopes, enforced per-route with `RequireAPIKeyScope`, layered on top of `APIKeyMiddleware`'s existing all-or-nothing group-level gate.
 
 ```go
-token, err := auth.Service.CreateAPIKey(ctx, user.ID, []string{"posts:write"})
+token, err := auth.Service.APIKeyCreate(ctx, user.ID, []string{"posts:write"})
 // token.Token is the raw key value — store/display it now, it can't be recovered later.
 
-keys, err := auth.Service.ListAPIKeys(ctx, user.ID)
-err = auth.Service.RevokeAPIKey(ctx, token.ID)
+keys, err := auth.Service.APIKeysList(ctx, user.ID)
+err = auth.Service.APIKeyRevoke(ctx, token.ID)
 ```
 
 ```go
@@ -111,6 +111,6 @@ r.Use(auth.APIKeyMiddleware) // group-level gate: any valid key gets past this
 r.With(auth.RequireAPIKeyScope("posts:write")).Post("/posts", createPostHandler)
 ```
 
-An **unscoped** key — `CreateAPIKey(ctx, userID, nil)`, or any key issued before this feature existed — has full access to every `RequireAPIKeyScope` check; only a key created with a non-empty scopes list is actually restricted. The master `EZAUTH_API_KEY` config key has no associated `Token` at all, so it's always unscoped/full-access too.
+An **unscoped** key — `APIKeyCreate(ctx, userID, nil)`, or any key issued before this feature existed — has full access to every `RequireAPIKeyScope` check; only a key created with a non-empty scopes list is actually restricted. The master `EZAUTH_API_KEY` config key has no associated `Token` at all, so it's always unscoped/full-access too.
 
 See the [Scoped API Keys section of the README](https://github.com/josuebrunel/ezauth#scoped-api-keys) for more.

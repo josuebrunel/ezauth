@@ -21,10 +21,10 @@ func TestAPIKeys(t *testing.T) {
 		t.Fatalf("failed to create test user: %v", err)
 	}
 
-	t.Run("CreateAPIKey_Unscoped", func(t *testing.T) {
-		token, err := auth.CreateAPIKey(ctx, user.ID, nil)
+	t.Run("APIKeyCreate_Unscoped", func(t *testing.T) {
+		token, err := auth.APIKeyCreate(ctx, user.ID, nil)
 		if err != nil {
-			t.Fatalf("CreateAPIKey() unexpected error: %v", err)
+			t.Fatalf("APIKeyCreate() unexpected error: %v", err)
 		}
 		if token.Token == "" {
 			t.Error("expected a non-empty key value")
@@ -48,10 +48,10 @@ func TestAPIKeys(t *testing.T) {
 		}
 	})
 
-	t.Run("CreateAPIKey_Scoped", func(t *testing.T) {
-		token, err := auth.CreateAPIKey(ctx, user.ID, []string{"posts:write"})
+	t.Run("APIKeyCreate_Scoped", func(t *testing.T) {
+		token, err := auth.APIKeyCreate(ctx, user.ID, []string{"posts:write"})
 		if err != nil {
-			t.Fatalf("CreateAPIKey() unexpected error: %v", err)
+			t.Fatalf("APIKeyCreate() unexpected error: %v", err)
 		}
 		if !token.HasScope("posts:write") {
 			t.Error("expected key to have the posts:write scope")
@@ -73,10 +73,10 @@ func TestAPIKeys(t *testing.T) {
 		}
 	})
 
-	t.Run("ListAPIKeys", func(t *testing.T) {
-		keys, err := auth.ListAPIKeys(ctx, user.ID)
+	t.Run("APIKeysList", func(t *testing.T) {
+		keys, err := auth.APIKeysList(ctx, user.ID)
 		if err != nil {
-			t.Fatalf("ListAPIKeys() unexpected error: %v", err)
+			t.Fatalf("APIKeysList() unexpected error: %v", err)
 		}
 		if len(keys) != 2 {
 			t.Fatalf("expected 2 api keys, got %d", len(keys))
@@ -88,14 +88,14 @@ func TestAPIKeys(t *testing.T) {
 		}
 	})
 
-	t.Run("RevokeAPIKey", func(t *testing.T) {
-		token, err := auth.CreateAPIKey(ctx, user.ID, nil)
+	t.Run("APIKeyRevoke", func(t *testing.T) {
+		token, err := auth.APIKeyCreate(ctx, user.ID, nil)
 		if err != nil {
-			t.Fatalf("CreateAPIKey() unexpected error: %v", err)
+			t.Fatalf("APIKeyCreate() unexpected error: %v", err)
 		}
 
-		if err := auth.RevokeAPIKey(ctx, token.ID); err != nil {
-			t.Fatalf("RevokeAPIKey() unexpected error: %v", err)
+		if err := auth.APIKeyRevoke(ctx, token.ID); err != nil {
+			t.Fatalf("APIKeyRevoke() unexpected error: %v", err)
 		}
 
 		stored, err := auth.Repo.TokenGetByToken(ctx, token.Token)

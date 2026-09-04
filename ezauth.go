@@ -321,44 +321,44 @@ func (e *EzAuth) GetSuccessMessage(ctx context.Context) string {
 	return e.Handler.GetSuccessMessage(ctx)
 }
 
-// CreateRole creates a new RBAC role. Real RBAC (this and the methods below)
+// RoleCreate creates a new RBAC role. Real RBAC (this and the methods below)
 // is a fully separate, additive system from the legacy comma-separated
 // User.Roles/HasRole/AddRole helpers — those keep working unchanged, but
 // RequireRole/RequirePermission consult these tables, not that field.
-func (e *EzAuth) CreateRole(ctx context.Context, name, description string) (*models.Role, error) {
-	return e.Service.CreateRole(ctx, name, description)
+func (e *EzAuth) RoleCreate(ctx context.Context, name, description string) (*models.Role, error) {
+	return e.Service.RoleCreate(ctx, name, description)
 }
 
-// CreatePermission creates a new RBAC permission.
-func (e *EzAuth) CreatePermission(ctx context.Context, name, description string) (*models.Permission, error) {
-	return e.Service.CreatePermission(ctx, name, description)
+// PermissionCreate creates a new RBAC permission.
+func (e *EzAuth) PermissionCreate(ctx context.Context, name, description string) (*models.Permission, error) {
+	return e.Service.PermissionCreate(ctx, name, description)
 }
 
-// GrantRole grants a role to a user by role name. Idempotent, and records an
-// audit event (models.AuditEventRoleGranted).
-func (e *EzAuth) GrantRole(ctx context.Context, userID, roleName string) error {
-	return e.Service.GrantRole(ctx, userID, roleName)
+// UserRoleGrant grants a role to a user by role name. Idempotent, and
+// records an audit event (models.AuditEventRoleGranted).
+func (e *EzAuth) UserRoleGrant(ctx context.Context, userID, roleName string) error {
+	return e.Service.UserRoleGrant(ctx, userID, roleName)
 }
 
-// RevokeRole revokes a role from a user by role name. Idempotent, and
+// UserRoleRevoke revokes a role from a user by role name. Idempotent, and
 // records an audit event (models.AuditEventRoleRevoked).
-func (e *EzAuth) RevokeRole(ctx context.Context, userID, roleName string) error {
-	return e.Service.RevokeRole(ctx, userID, roleName)
+func (e *EzAuth) UserRoleRevoke(ctx context.Context, userID, roleName string) error {
+	return e.Service.UserRoleRevoke(ctx, userID, roleName)
 }
 
-// GrantPermissionToRole grants a permission to a role, both identified by name.
-func (e *EzAuth) GrantPermissionToRole(ctx context.Context, roleName, permissionName string) error {
-	return e.Service.GrantPermissionToRole(ctx, roleName, permissionName)
+// RolePermissionGrant grants a permission to a role, both identified by name.
+func (e *EzAuth) RolePermissionGrant(ctx context.Context, roleName, permissionName string) error {
+	return e.Service.RolePermissionGrant(ctx, roleName, permissionName)
 }
 
-// RevokePermissionFromRole revokes a permission from a role, both identified by name.
-func (e *EzAuth) RevokePermissionFromRole(ctx context.Context, roleName, permissionName string) error {
-	return e.Service.RevokePermissionFromRole(ctx, roleName, permissionName)
+// RolePermissionRevoke revokes a permission from a role, both identified by name.
+func (e *EzAuth) RolePermissionRevoke(ctx context.Context, roleName, permissionName string) error {
+	return e.Service.RolePermissionRevoke(ctx, roleName, permissionName)
 }
 
-// UserRoles lists the roles granted to a user.
-func (e *EzAuth) UserRoles(ctx context.Context, userID string) ([]*models.Role, error) {
-	return e.Service.UserRoles(ctx, userID)
+// UserRolesList lists the roles granted to a user.
+func (e *EzAuth) UserRolesList(ctx context.Context, userID string) ([]*models.Role, error) {
+	return e.Service.UserRolesList(ctx, userID)
 }
 
 // UserHasRole reports whether the user holds the given role, checked against
@@ -385,21 +385,21 @@ func (e *EzAuth) RequirePermission(permission string) func(http.Handler) http.Ha
 	return e.Handler.RequirePermission(permission)
 }
 
-// CreateAPIKey mints a new API key for userID, optionally limited to scopes
+// APIKeyCreate mints a new API key for userID, optionally limited to scopes
 // (see RequireAPIKeyScope) — an empty scopes list creates an unscoped,
 // full-access key.
-func (e *EzAuth) CreateAPIKey(ctx context.Context, userID string, scopes []string) (*models.Token, error) {
-	return e.Service.CreateAPIKey(ctx, userID, scopes)
+func (e *EzAuth) APIKeyCreate(ctx context.Context, userID string, scopes []string) (*models.Token, error) {
+	return e.Service.APIKeyCreate(ctx, userID, scopes)
 }
 
-// RevokeAPIKey revokes an API key by its token ID (see ListAPIKeys).
-func (e *EzAuth) RevokeAPIKey(ctx context.Context, id string) error {
-	return e.Service.RevokeAPIKey(ctx, id)
+// APIKeyRevoke revokes an API key by its token ID (see APIKeysList).
+func (e *EzAuth) APIKeyRevoke(ctx context.Context, id string) error {
+	return e.Service.APIKeyRevoke(ctx, id)
 }
 
-// ListAPIKeys lists a user's API keys.
-func (e *EzAuth) ListAPIKeys(ctx context.Context, userID string) ([]*models.Token, error) {
-	return e.Service.ListAPIKeys(ctx, userID)
+// APIKeysList lists a user's API keys.
+func (e *EzAuth) APIKeysList(ctx context.Context, userID string) ([]*models.Token, error) {
+	return e.Service.APIKeysList(ctx, userID)
 }
 
 // RequireAPIKeyScope is a middleware that requires the API key used to
@@ -409,9 +409,9 @@ func (e *EzAuth) RequireAPIKeyScope(scope string) func(http.Handler) http.Handle
 	return e.Handler.RequireAPIKeyScope(scope)
 }
 
-// CreateOrganization creates a new organization.
-func (e *EzAuth) CreateOrganization(ctx context.Context, name string) (*models.Organization, error) {
-	return e.Service.CreateOrganization(ctx, name)
+// OrganizationCreate creates a new organization.
+func (e *EzAuth) OrganizationCreate(ctx context.Context, name string) (*models.Organization, error) {
+	return e.Service.OrganizationCreate(ctx, name)
 }
 
 // OrganizationGetByID retrieves an organization by its ID — typically used
@@ -425,31 +425,31 @@ func (e *EzAuth) OrganizationsList(ctx context.Context) ([]*models.Organization,
 	return e.Service.OrganizationsList(ctx)
 }
 
-// DeleteOrganization deletes an organization. Matching org_members rows
+// OrganizationDelete deletes an organization. Matching org_members rows
 // are removed via ON DELETE CASCADE.
-func (e *EzAuth) DeleteOrganization(ctx context.Context, id string) error {
-	return e.Service.DeleteOrganization(ctx, id)
+func (e *EzAuth) OrganizationDelete(ctx context.Context, id string) error {
+	return e.Service.OrganizationDelete(ctx, id)
 }
 
-// AddOrgMember grants userID the given role (drawn from the RBAC role
+// OrgMemberAdd grants userID the given role (drawn from the RBAC role
 // catalog, see #114) within orgID. Updates the role if already a member.
-func (e *EzAuth) AddOrgMember(ctx context.Context, orgID, userID, roleName string) error {
-	return e.Service.AddOrgMember(ctx, orgID, userID, roleName)
+func (e *EzAuth) OrgMemberAdd(ctx context.Context, orgID, userID, roleName string) error {
+	return e.Service.OrgMemberAdd(ctx, orgID, userID, roleName)
 }
 
-// RemoveOrgMember removes a user's membership from an organization.
-func (e *EzAuth) RemoveOrgMember(ctx context.Context, orgID, userID string) error {
-	return e.Service.RemoveOrgMember(ctx, orgID, userID)
+// OrgMemberRemove removes a user's membership from an organization.
+func (e *EzAuth) OrgMemberRemove(ctx context.Context, orgID, userID string) error {
+	return e.Service.OrgMemberRemove(ctx, orgID, userID)
 }
 
-// OrgMembers lists an organization's members, with each member's role name joined in.
-func (e *EzAuth) OrgMembers(ctx context.Context, orgID string) ([]*models.OrgMember, error) {
-	return e.Service.OrgMembers(ctx, orgID)
+// OrgMembersList lists an organization's members, with each member's role name joined in.
+func (e *EzAuth) OrgMembersList(ctx context.Context, orgID string) ([]*models.OrgMember, error) {
+	return e.Service.OrgMembersList(ctx, orgID)
 }
 
-// UserOrganizations lists the organizations a user belongs to.
-func (e *EzAuth) UserOrganizations(ctx context.Context, userID string) ([]*models.Organization, error) {
-	return e.Service.UserOrganizations(ctx, userID)
+// UserOrganizationsList lists the organizations a user belongs to.
+func (e *EzAuth) UserOrganizationsList(ctx context.Context, userID string) ([]*models.Organization, error) {
+	return e.Service.UserOrganizationsList(ctx, userID)
 }
 
 // OrgLoaderMiddleware is a middleware that resolves the "current organization"

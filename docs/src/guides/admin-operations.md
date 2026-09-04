@@ -57,14 +57,14 @@ See the [Impersonation section of the README](https://github.com/josuebrunel/eza
 
 ```go
 // One-time setup: define roles/permissions and wire them together.
-role, _ := auth.Service.CreateRole(ctx, "editor", "can edit content")
-perm, _ := auth.Service.CreatePermission(ctx, "posts:write", "write posts")
-_ = auth.Service.GrantPermissionToRole(ctx, "editor", "posts:write")
+role, _ := auth.Service.RoleCreate(ctx, "editor", "can edit content")
+perm, _ := auth.Service.PermissionCreate(ctx, "posts:write", "write posts")
+_ = auth.Service.RolePermissionGrant(ctx, "editor", "posts:write")
 
 // Grant/revoke a role on a user — idempotent, and records an
 // AuditEventRoleGranted/AuditEventRoleRevoked audit event (see Audit Log below).
-_ = auth.Service.GrantRole(ctx, user.ID, "editor")
-_ = auth.Service.RevokeRole(ctx, user.ID, "editor")
+_ = auth.Service.UserRoleGrant(ctx, user.ID, "editor")
+_ = auth.Service.UserRoleRevoke(ctx, user.ID, "editor")
 
 // Check directly, or gate a route with the middleware.
 has, _ := auth.Service.UserHasRole(ctx, user.ID, "editor")
@@ -81,14 +81,14 @@ router.Handle("/admin/posts", auth.RequirePermission("posts:write")(postsHandler
 Lightweight multi-tenancy: organizations/teams, with each member holding one role per organization — drawn from the same RBAC role catalog `RequireRole` checks against (a role is just an `ezauth_roles` row; org membership is `ezauth_org_members`, mapping `(org, user) → role`). Kept deliberately minimal — no settings/billing/invitations — a consuming app that needs more can extend via its own table FK'd to `ezauth_organizations`.
 
 ```go
-org, err := auth.Service.CreateOrganization(ctx, "Acme Inc")
+org, err := auth.Service.OrganizationCreate(ctx, "Acme Inc")
 
-// AddOrgMember upserts: calling it again for the same (org, user) updates the role.
-err = auth.Service.AddOrgMember(ctx, org.ID, user.ID, "editor")
-err = auth.Service.RemoveOrgMember(ctx, org.ID, user.ID)
+// OrgMemberAdd upserts: calling it again for the same (org, user) updates the role.
+err = auth.Service.OrgMemberAdd(ctx, org.ID, user.ID, "editor")
+err = auth.Service.OrgMemberRemove(ctx, org.ID, user.ID)
 
-members, err := auth.Service.OrgMembers(ctx, org.ID)          // []*models.OrgMember, RoleName joined in
-orgs, err := auth.Service.UserOrganizations(ctx, user.ID)      // organizations this user belongs to
+members, err := auth.Service.OrgMembersList(ctx, org.ID)          // []*models.OrgMember, RoleName joined in
+orgs, err := auth.Service.UserOrganizationsList(ctx, user.ID)      // organizations this user belongs to
 ```
 
 **Resolving the "current org" for a request** mirrors how `LoadUserMiddleware`/`GetSessionUser` resolve the current user — `ezauth` doesn't presume how an org is identified (URL param, subdomain, header, etc.), so you supply an `OrgLoader`:

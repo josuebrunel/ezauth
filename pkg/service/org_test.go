@@ -21,20 +21,20 @@ func TestOrganizations(t *testing.T) {
 		t.Fatalf("failed to create test user: %v", err)
 	}
 
-	if _, err := auth.CreateRole(ctx, "org-owner", "owns the organization"); err != nil {
-		t.Fatalf("CreateRole(org-owner) unexpected error: %v", err)
+	if _, err := auth.RoleCreate(ctx, "org-owner", "owns the organization"); err != nil {
+		t.Fatalf("RoleCreate(org-owner) unexpected error: %v", err)
 	}
-	if _, err := auth.CreateRole(ctx, "org-member", "regular org member"); err != nil {
-		t.Fatalf("CreateRole(org-member) unexpected error: %v", err)
+	if _, err := auth.RoleCreate(ctx, "org-member", "regular org member"); err != nil {
+		t.Fatalf("RoleCreate(org-member) unexpected error: %v", err)
 	}
 
 	var org *models.Organization
 
-	t.Run("CreateOrganization", func(t *testing.T) {
+	t.Run("OrganizationCreate", func(t *testing.T) {
 		var err error
-		org, err = auth.CreateOrganization(ctx, "Acme Inc")
+		org, err = auth.OrganizationCreate(ctx, "Acme Inc")
 		if err != nil {
-			t.Fatalf("CreateOrganization() unexpected error: %v", err)
+			t.Fatalf("OrganizationCreate() unexpected error: %v", err)
 		}
 		if org.Name != "Acme Inc" {
 			t.Errorf("expected name 'Acme Inc', got %q", org.Name)
@@ -51,14 +51,14 @@ func TestOrganizations(t *testing.T) {
 		}
 	})
 
-	t.Run("AddOrgMember_And_List", func(t *testing.T) {
-		if err := auth.AddOrgMember(ctx, org.ID, user.ID, "org-owner"); err != nil {
-			t.Fatalf("AddOrgMember() unexpected error: %v", err)
+	t.Run("OrgMemberAdd_And_List", func(t *testing.T) {
+		if err := auth.OrgMemberAdd(ctx, org.ID, user.ID, "org-owner"); err != nil {
+			t.Fatalf("OrgMemberAdd() unexpected error: %v", err)
 		}
 
-		members, err := auth.OrgMembers(ctx, org.ID)
+		members, err := auth.OrgMembersList(ctx, org.ID)
 		if err != nil {
-			t.Fatalf("OrgMembers() unexpected error: %v", err)
+			t.Fatalf("OrgMembersList() unexpected error: %v", err)
 		}
 		if len(members) != 1 {
 			t.Fatalf("expected 1 member, got %d", len(members))
@@ -70,23 +70,23 @@ func TestOrganizations(t *testing.T) {
 			t.Errorf("expected joined role name 'org-owner', got %q", members[0].RoleName)
 		}
 
-		orgs, err := auth.UserOrganizations(ctx, user.ID)
+		orgs, err := auth.UserOrganizationsList(ctx, user.ID)
 		if err != nil {
-			t.Fatalf("UserOrganizations() unexpected error: %v", err)
+			t.Fatalf("UserOrganizationsList() unexpected error: %v", err)
 		}
 		if len(orgs) != 1 || orgs[0].ID != org.ID {
 			t.Errorf("expected user to belong to org %s, got %+v", org.ID, orgs)
 		}
 	})
 
-	t.Run("AddOrgMember_UpsertChangesRole", func(t *testing.T) {
-		if err := auth.AddOrgMember(ctx, org.ID, user.ID, "org-member"); err != nil {
-			t.Fatalf("AddOrgMember() (role change) unexpected error: %v", err)
+	t.Run("OrgMemberAdd_UpsertChangesRole", func(t *testing.T) {
+		if err := auth.OrgMemberAdd(ctx, org.ID, user.ID, "org-member"); err != nil {
+			t.Fatalf("OrgMemberAdd() (role change) unexpected error: %v", err)
 		}
 
-		members, err := auth.OrgMembers(ctx, org.ID)
+		members, err := auth.OrgMembersList(ctx, org.ID)
 		if err != nil {
-			t.Fatalf("OrgMembers() unexpected error: %v", err)
+			t.Fatalf("OrgMembersList() unexpected error: %v", err)
 		}
 		if len(members) != 1 {
 			t.Fatalf("expected upsert to keep exactly 1 member row, got %d", len(members))
@@ -96,41 +96,41 @@ func TestOrganizations(t *testing.T) {
 		}
 	})
 
-	t.Run("AddOrgMember_UnknownRole", func(t *testing.T) {
-		if err := auth.AddOrgMember(ctx, org.ID, user.ID, "does-not-exist"); err == nil {
+	t.Run("OrgMemberAdd_UnknownRole", func(t *testing.T) {
+		if err := auth.OrgMemberAdd(ctx, org.ID, user.ID, "does-not-exist"); err == nil {
 			t.Error("expected error when granting an unknown role, got nil")
 		}
 	})
 
-	t.Run("RemoveOrgMember", func(t *testing.T) {
-		if err := auth.RemoveOrgMember(ctx, org.ID, user.ID); err != nil {
-			t.Fatalf("RemoveOrgMember() unexpected error: %v", err)
+	t.Run("OrgMemberRemove", func(t *testing.T) {
+		if err := auth.OrgMemberRemove(ctx, org.ID, user.ID); err != nil {
+			t.Fatalf("OrgMemberRemove() unexpected error: %v", err)
 		}
-		members, err := auth.OrgMembers(ctx, org.ID)
+		members, err := auth.OrgMembersList(ctx, org.ID)
 		if err != nil {
-			t.Fatalf("OrgMembers() unexpected error: %v", err)
+			t.Fatalf("OrgMembersList() unexpected error: %v", err)
 		}
 		if len(members) != 0 {
 			t.Errorf("expected no members after removal, got %d", len(members))
 		}
 	})
 
-	t.Run("DeleteOrganization_CascadesMembers", func(t *testing.T) {
-		tempOrg, err := auth.CreateOrganization(ctx, "Temp Org")
+	t.Run("OrganizationDelete_CascadesMembers", func(t *testing.T) {
+		tempOrg, err := auth.OrganizationCreate(ctx, "Temp Org")
 		if err != nil {
-			t.Fatalf("CreateOrganization() unexpected error: %v", err)
+			t.Fatalf("OrganizationCreate() unexpected error: %v", err)
 		}
-		if err := auth.AddOrgMember(ctx, tempOrg.ID, user.ID, "org-owner"); err != nil {
-			t.Fatalf("AddOrgMember() unexpected error: %v", err)
+		if err := auth.OrgMemberAdd(ctx, tempOrg.ID, user.ID, "org-owner"); err != nil {
+			t.Fatalf("OrgMemberAdd() unexpected error: %v", err)
 		}
 
-		if err := auth.DeleteOrganization(ctx, tempOrg.ID); err != nil {
-			t.Fatalf("DeleteOrganization() unexpected error: %v", err)
+		if err := auth.OrganizationDelete(ctx, tempOrg.ID); err != nil {
+			t.Fatalf("OrganizationDelete() unexpected error: %v", err)
 		}
 
-		orgs, err := auth.UserOrganizations(ctx, user.ID)
+		orgs, err := auth.UserOrganizationsList(ctx, user.ID)
 		if err != nil {
-			t.Fatalf("UserOrganizations() unexpected error: %v", err)
+			t.Fatalf("UserOrganizationsList() unexpected error: %v", err)
 		}
 		for _, o := range orgs {
 			if o.ID == tempOrg.ID {
@@ -139,22 +139,22 @@ func TestOrganizations(t *testing.T) {
 		}
 	})
 
-	t.Run("DeleteRole_CascadesOrgMembers", func(t *testing.T) {
-		role, err := auth.CreateRole(ctx, "temp-org-role", "")
+	t.Run("RoleDelete_CascadesOrgMembers", func(t *testing.T) {
+		role, err := auth.RoleCreate(ctx, "temp-org-role", "")
 		if err != nil {
-			t.Fatalf("CreateRole() unexpected error: %v", err)
+			t.Fatalf("RoleCreate() unexpected error: %v", err)
 		}
-		if err := auth.AddOrgMember(ctx, org.ID, user.ID, "temp-org-role"); err != nil {
-			t.Fatalf("AddOrgMember() unexpected error: %v", err)
+		if err := auth.OrgMemberAdd(ctx, org.ID, user.ID, "temp-org-role"); err != nil {
+			t.Fatalf("OrgMemberAdd() unexpected error: %v", err)
 		}
 
-		if err := auth.DeleteRole(ctx, role.ID); err != nil {
-			t.Fatalf("DeleteRole() unexpected error: %v", err)
+		if err := auth.RoleDelete(ctx, role.ID); err != nil {
+			t.Fatalf("RoleDelete() unexpected error: %v", err)
 		}
 
-		members, err := auth.OrgMembers(ctx, org.ID)
+		members, err := auth.OrgMembersList(ctx, org.ID)
 		if err != nil {
-			t.Fatalf("OrgMembers() unexpected error: %v", err)
+			t.Fatalf("OrgMembersList() unexpected error: %v", err)
 		}
 		for _, m := range members {
 			if m.UserID == user.ID {

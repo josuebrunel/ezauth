@@ -706,14 +706,14 @@ set := auth.JWKS() // service.JWKSet{Keys: []service.JWK} — empty for the defa
 
 ### Scoped API Keys
 
-By default an API key (via `APIKeyMiddleware`) grants the same access as the full account. `CreateAPIKey` can limit a key to a specific set of scopes, enforced per-route with `RequireAPIKeyScope`, layered on top of `APIKeyMiddleware`'s existing all-or-nothing group-level gate.
+By default an API key (via `APIKeyMiddleware`) grants the same access as the full account. `APIKeyCreate` can limit a key to a specific set of scopes, enforced per-route with `RequireAPIKeyScope`, layered on top of `APIKeyMiddleware`'s existing all-or-nothing group-level gate.
 
 ```go
-token, err := auth.CreateAPIKey(ctx, user.ID, []string{"posts:write"})
+token, err := auth.APIKeyCreate(ctx, user.ID, []string{"posts:write"})
 // token.Token is the raw key value — store/display it now, it can't be recovered later.
 
-keys, err := auth.ListAPIKeys(ctx, user.ID)
-err = auth.RevokeAPIKey(ctx, token.ID)
+keys, err := auth.APIKeysList(ctx, user.ID)
+err = auth.APIKeyRevoke(ctx, token.ID)
 ```
 
 ```go
@@ -721,7 +721,7 @@ r.Use(auth.APIKeyMiddleware) // group-level gate: any valid key gets past this
 r.With(auth.RequireAPIKeyScope("posts:write")).Post("/posts", createPostHandler)
 ```
 
-An **unscoped** key — `CreateAPIKey(ctx, userID, nil)`, or any key issued before this feature existed — has full access to every `RequireAPIKeyScope` check; only a key created with a non-empty scopes list is actually restricted. The master `EZAUTH_API_KEY` config key has no associated `Token` at all, so it's always unscoped/full-access too.
+An **unscoped** key — `APIKeyCreate(ctx, userID, nil)`, or any key issued before this feature existed — has full access to every `RequireAPIKeyScope` check; only a key created with a non-empty scopes list is actually restricted. The master `EZAUTH_API_KEY` config key has no associated `Token` at all, so it's always unscoped/full-access too.
 
 ### Guarded Email Change
 
@@ -824,14 +824,14 @@ Safe to call regardless of transport: the session-manager middleware always runs
 
 ```go
 // One-time setup: define roles/permissions and wire them together.
-role, _ := auth.CreateRole(ctx, "editor", "can edit content")
-perm, _ := auth.CreatePermission(ctx, "posts:write", "write posts")
-_ = auth.GrantPermissionToRole(ctx, "editor", "posts:write")
+role, _ := auth.RoleCreate(ctx, "editor", "can edit content")
+perm, _ := auth.PermissionCreate(ctx, "posts:write", "write posts")
+_ = auth.RolePermissionGrant(ctx, "editor", "posts:write")
 
 // Grant/revoke a role on a user — idempotent, and records an
 // AuditEventRoleGranted/AuditEventRoleRevoked audit event (see Audit Log).
-_ = auth.GrantRole(ctx, user.ID, "editor")
-_ = auth.RevokeRole(ctx, user.ID, "editor")
+_ = auth.UserRoleGrant(ctx, user.ID, "editor")
+_ = auth.UserRoleRevoke(ctx, user.ID, "editor")
 
 // Check directly, or gate a route with the middleware.
 has, _ := auth.UserHasRole(ctx, user.ID, "editor")
@@ -848,14 +848,14 @@ router.Handle("/admin/posts", auth.RequirePermission("posts:write")(postsHandler
 Lightweight multi-tenancy: organizations/teams, with each member holding one role per organization — drawn from the same RBAC role catalog `RequireRole` checks against (a role is just an `ezauth_roles` row; org membership is `ezauth_org_members`, mapping `(org, user) → role`). Kept deliberately minimal — no settings/billing/invitations — a consuming app that needs more can extend via its own table FK'd to `ezauth_organizations`.
 
 ```go
-org, err := auth.CreateOrganization(ctx, "Acme Inc")
+org, err := auth.OrganizationCreate(ctx, "Acme Inc")
 
-// AddOrgMember upserts: calling it again for the same (org, user) updates the role.
-err = auth.AddOrgMember(ctx, org.ID, user.ID, "editor")
-err = auth.RemoveOrgMember(ctx, org.ID, user.ID)
+// OrgMemberAdd upserts: calling it again for the same (org, user) updates the role.
+err = auth.OrgMemberAdd(ctx, org.ID, user.ID, "editor")
+err = auth.OrgMemberRemove(ctx, org.ID, user.ID)
 
-members, err := auth.OrgMembers(ctx, org.ID)          // []*models.OrgMember, RoleName joined in
-orgs, err := auth.UserOrganizations(ctx, user.ID)      // organizations this user belongs to
+members, err := auth.OrgMembersList(ctx, org.ID)          // []*models.OrgMember, RoleName joined in
+orgs, err := auth.UserOrganizationsList(ctx, user.ID)      // organizations this user belongs to
 ```
 
 **Resolving the "current org" for a request** mirrors how `LoadUserMiddleware`/`GetSessionUser` resolve the current user — `ezauth` doesn't presume how an org is identified (URL param, subdomain, header, etc.), so you supply an `OrgLoader`:
