@@ -606,10 +606,14 @@ func (q *PSQLQuerier) QueryPermissionDelete(ctx context.Context, id string) bob.
 	return psql.Delete(dm.From(psql.Quote(models.TablePermission)), dm.Where(psql.Quote("id").EQ(psql.Arg(id))))
 }
 
+// QueryUserRoleInsert is idempotent: granting a role the user already
+// holds is a no-op (ON CONFLICT DO NOTHING on the composite PK) rather
+// than a constraint-violation error.
 func (q *PSQLQuerier) QueryUserRoleInsert(ctx context.Context, userID, roleID string) bob.Query {
 	return psql.Insert(
 		im.Into(psql.Quote(models.TableUserRole), models.ColumnUserID, models.ColumnRoleID),
 		im.Values(psql.Arg(userID), psql.Arg(roleID)),
+		im.OnConflict(models.ColumnUserID, models.ColumnRoleID).DoNothing(),
 	)
 }
 
@@ -638,10 +642,14 @@ func (q *PSQLQuerier) QueryRolesByUserID(ctx context.Context, userID string) bob
 	)
 }
 
+// QueryRolePermissionInsert is idempotent: granting a permission the role
+// already has is a no-op (ON CONFLICT DO NOTHING on the composite PK)
+// rather than a constraint-violation error.
 func (q *PSQLQuerier) QueryRolePermissionInsert(ctx context.Context, roleID, permissionID string) bob.Query {
 	return psql.Insert(
 		im.Into(psql.Quote(models.TableRolePermission), models.ColumnRoleID, models.ColumnPermissionID),
 		im.Values(psql.Arg(roleID), psql.Arg(permissionID)),
+		im.OnConflict(models.ColumnRoleID, models.ColumnPermissionID).DoNothing(),
 	)
 }
 

@@ -722,23 +722,40 @@ func (r Repository) PermissionDelete(ctx context.Context, id string) error {
 }
 
 // UserRoleGrant grants a role to a user (inserts into ezauth_user_roles).
-func (r Repository) UserRoleGrant(ctx context.Context, userID, roleID string) error {
+// UserRoleGrant grants a role to a user. Idempotent at the DB level (see
+// QueryUserRoleInsert): granted reports whether this call actually
+// inserted a new row, or whether the user already held the role.
+func (r Repository) UserRoleGrant(ctx context.Context, userID, roleID string) (granted bool, err error) {
 	query := r.QueryUserRoleInsert(ctx, userID, roleID)
-	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+	result, err := bob.Exec(ctx, r.bdb, query)
+	if err != nil {
 		xlog.Error("Failed to grant role to user", "error", err, "user_id", userID, "role_id", roleID)
-		return err
+		return false, err
 	}
-	return nil
+	affected, err := result.RowsAffected()
+	if err != nil {
+		xlog.Error("Failed to read rows affected granting role to user", "error", err, "user_id", userID, "role_id", roleID)
+		return false, err
+	}
+	return affected > 0, nil
 }
 
 // UserRoleRevoke revokes a role from a user (deletes from ezauth_user_roles).
-func (r Repository) UserRoleRevoke(ctx context.Context, userID, roleID string) error {
+// UserRoleRevoke revokes a role from a user. revoked reports whether this
+// call actually deleted a row, or whether the user didn't hold the role.
+func (r Repository) UserRoleRevoke(ctx context.Context, userID, roleID string) (revoked bool, err error) {
 	query := r.QueryUserRoleDelete(ctx, userID, roleID)
-	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+	result, err := bob.Exec(ctx, r.bdb, query)
+	if err != nil {
 		xlog.Error("Failed to revoke role from user", "error", err, "user_id", userID, "role_id", roleID)
-		return err
+		return false, err
 	}
-	return nil
+	affected, err := result.RowsAffected()
+	if err != nil {
+		xlog.Error("Failed to read rows affected revoking role from user", "error", err, "user_id", userID, "role_id", roleID)
+		return false, err
+	}
+	return affected > 0, nil
 }
 
 // RolesByUserID lists the roles granted to a user.
@@ -753,13 +770,22 @@ func (r Repository) RolesByUserID(ctx context.Context, userID string) ([]*models
 }
 
 // RolePermissionGrant grants a permission to a role (inserts into ezauth_role_permissions).
-func (r Repository) RolePermissionGrant(ctx context.Context, roleID, permissionID string) error {
+// RolePermissionGrant grants a permission to a role. Idempotent at the DB
+// level (see QueryRolePermissionInsert): granted reports whether this call
+// actually inserted a new row, or whether the role already had the permission.
+func (r Repository) RolePermissionGrant(ctx context.Context, roleID, permissionID string) (granted bool, err error) {
 	query := r.QueryRolePermissionInsert(ctx, roleID, permissionID)
-	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+	result, err := bob.Exec(ctx, r.bdb, query)
+	if err != nil {
 		xlog.Error("Failed to grant permission to role", "error", err, "role_id", roleID, "permission_id", permissionID)
-		return err
+		return false, err
 	}
-	return nil
+	affected, err := result.RowsAffected()
+	if err != nil {
+		xlog.Error("Failed to read rows affected granting permission to role", "error", err, "role_id", roleID, "permission_id", permissionID)
+		return false, err
+	}
+	return affected > 0, nil
 }
 
 // RolePermissionRevoke revokes a permission from a role (deletes from ezauth_role_permissions).

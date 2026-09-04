@@ -67,23 +67,21 @@ func (a *Auth) DeletePermission(ctx context.Context, id string) error {
 }
 
 // GrantRole grants a role to a user by role name, and records an audit
-// event. Idempotent: granting a role the user already holds is a no-op.
+// event. Idempotent at the DB level (see Repo.UserRoleGrant): granting a
+// role the user already holds is a no-op, no audit event fired.
 func (a *Auth) GrantRole(ctx context.Context, userID, roleName string) error {
-	has, err := a.UserHasRole(ctx, userID, roleName)
-	if err != nil {
-		return err
-	}
-	if has {
-		return nil
-	}
 	role, err := a.Repo.RoleGetByName(ctx, roleName)
 	if err != nil {
 		xlog.Debug("grant role failed: role not found", "role", roleName, "err", err)
 		return errors.New("role not found")
 	}
-	if err := a.Repo.UserRoleGrant(ctx, userID, role.ID); err != nil {
+	granted, err := a.Repo.UserRoleGrant(ctx, userID, role.ID)
+	if err != nil {
 		xlog.Error("failed to grant role", "user_id", userID, "role", roleName, "err", err)
 		return err
+	}
+	if !granted {
+		return nil
 	}
 	a.recordAuditEvent(ctx, userID, models.AuditEventRoleGranted, models.JSONMap{"role": roleName})
 	xlog.Info("role granted", "user_id", userID, "role", roleName)
@@ -91,30 +89,29 @@ func (a *Auth) GrantRole(ctx context.Context, userID, roleName string) error {
 }
 
 // RevokeRole revokes a role from a user by role name, and records an audit
-// event. Idempotent: revoking a role the user doesn't hold is a no-op.
+// event. Idempotent: revoking a role the user doesn't hold is a no-op, no
+// audit event fired.
 func (a *Auth) RevokeRole(ctx context.Context, userID, roleName string) error {
-	has, err := a.UserHasRole(ctx, userID, roleName)
-	if err != nil {
-		return err
-	}
-	if !has {
-		return nil
-	}
 	role, err := a.Repo.RoleGetByName(ctx, roleName)
 	if err != nil {
 		xlog.Debug("revoke role failed: role not found", "role", roleName, "err", err)
 		return errors.New("role not found")
 	}
-	if err := a.Repo.UserRoleRevoke(ctx, userID, role.ID); err != nil {
+	revoked, err := a.Repo.UserRoleRevoke(ctx, userID, role.ID)
+	if err != nil {
 		xlog.Error("failed to revoke role", "user_id", userID, "role", roleName, "err", err)
 		return err
+	}
+	if !revoked {
+		return nil
 	}
 	a.recordAuditEvent(ctx, userID, models.AuditEventRoleRevoked, models.JSONMap{"role": roleName})
 	xlog.Info("role revoked", "user_id", userID, "role", roleName)
 	return nil
 }
 
-// GrantPermissionToRole grants a permission to a role, both identified by name.
+// GrantPermissionToRole grants a permission to a role, both identified by
+// name. Idempotent at the DB level (see Repo.RolePermissionGrant).
 func (a *Auth) GrantPermissionToRole(ctx context.Context, roleName, permissionName string) error {
 	role, err := a.Repo.RoleGetByName(ctx, roleName)
 	if err != nil {
@@ -124,16 +121,7 @@ func (a *Auth) GrantPermissionToRole(ctx context.Context, roleName, permissionNa
 	if err != nil {
 		return errors.New("permission not found")
 	}
-	permissions, err := a.Repo.PermissionsByRoleID(ctx, role.ID)
-	if err != nil {
-		return err
-	}
-	for _, p := range permissions {
-		if p.ID == permission.ID {
-			return nil
-		}
-	}
-	if err := a.Repo.RolePermissionGrant(ctx, role.ID, permission.ID); err != nil {
+	if _, err := a.Repo.RolePermissionGrant(ctx, role.ID, permission.ID); err != nil {
 		xlog.Error("failed to grant permission to role", "role", roleName, "permission", permissionName, "err", err)
 		return err
 	}

@@ -601,10 +601,14 @@ func (q *SqliteQuerier) QueryPermissionDelete(ctx context.Context, id string) bo
 	return sqlite.Delete(dm.From(models.TablePermission), dm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
 }
 
+// QueryUserRoleInsert is idempotent: granting a role the user already
+// holds is a no-op (ON CONFLICT DO NOTHING on the composite PK) rather
+// than a constraint-violation error.
 func (q *SqliteQuerier) QueryUserRoleInsert(ctx context.Context, userID, roleID string) bob.Query {
 	return sqlite.Insert(
 		im.Into(models.TableUserRole, models.ColumnUserID, models.ColumnRoleID),
 		im.Values(sqlite.Arg(userID), sqlite.Arg(roleID)),
+		im.OnConflict(models.ColumnUserID, models.ColumnRoleID).DoNothing(),
 	)
 }
 
@@ -633,10 +637,14 @@ func (q *SqliteQuerier) QueryRolesByUserID(ctx context.Context, userID string) b
 	)
 }
 
+// QueryRolePermissionInsert is idempotent: granting a permission the role
+// already has is a no-op (ON CONFLICT DO NOTHING on the composite PK)
+// rather than a constraint-violation error.
 func (q *SqliteQuerier) QueryRolePermissionInsert(ctx context.Context, roleID, permissionID string) bob.Query {
 	return sqlite.Insert(
 		im.Into(models.TableRolePermission, models.ColumnRoleID, models.ColumnPermissionID),
 		im.Values(sqlite.Arg(roleID), sqlite.Arg(permissionID)),
+		im.OnConflict(models.ColumnRoleID, models.ColumnPermissionID).DoNothing(),
 	)
 }
 

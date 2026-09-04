@@ -589,10 +589,14 @@ func (q *MysqlQuerier) QueryPermissionDelete(ctx context.Context, id string) bob
 	return mysql.Delete(dm.From(models.TablePermission), dm.Where(mysql.Quote("id").EQ(mysql.Arg(id))))
 }
 
+// QueryUserRoleInsert is idempotent: granting a role the user already
+// holds is a no-op (INSERT IGNORE on the composite PK) rather than a
+// constraint-violation error.
 func (q *MysqlQuerier) QueryUserRoleInsert(ctx context.Context, userID, roleID string) bob.Query {
 	return mysql.Insert(
 		im.Into(models.TableUserRole, models.ColumnUserID, models.ColumnRoleID),
 		im.Values(mysql.Arg(userID), mysql.Arg(roleID)),
+		im.Ignore(),
 	)
 }
 
@@ -621,10 +625,14 @@ func (q *MysqlQuerier) QueryRolesByUserID(ctx context.Context, userID string) bo
 	)
 }
 
+// QueryRolePermissionInsert is idempotent: granting a permission the role
+// already has is a no-op (INSERT IGNORE on the composite PK) rather than a
+// constraint-violation error.
 func (q *MysqlQuerier) QueryRolePermissionInsert(ctx context.Context, roleID, permissionID string) bob.Query {
 	return mysql.Insert(
 		im.Into(models.TableRolePermission, models.ColumnRoleID, models.ColumnPermissionID),
 		im.Values(mysql.Arg(roleID), mysql.Arg(permissionID)),
+		im.Ignore(),
 	)
 }
 

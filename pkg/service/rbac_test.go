@@ -10,6 +10,7 @@ import (
 
 func TestRBAC(t *testing.T) {
 	auth := setupTestDB(t)
+	auth.Cfg.AuditLog.Enabled = true
 	ctx := context.Background()
 
 	user, err := auth.Repo.UserCreate(ctx, &models.User{
@@ -51,9 +52,19 @@ func TestRBAC(t *testing.T) {
 		if err := auth.GrantRole(ctx, user.ID, "editor"); err != nil {
 			t.Fatalf("GrantRole() unexpected error: %v", err)
 		}
-		// Granting again must be a no-op, not an error (idempotent).
+		// Granting again must be a no-op, not an error (idempotent) — and must
+		// not fire a second audit event, since it's a DB-level no-op (RowsAffected
+		// == 0), not a fresh grant.
 		if err := auth.GrantRole(ctx, user.ID, "editor"); err != nil {
 			t.Fatalf("GrantRole() (repeat) unexpected error: %v", err)
+		}
+
+		auditResult, err := auth.AuditLogs(ctx, user.ID, ListAuditLogsOptions{EventType: models.AuditEventRoleGranted})
+		if err != nil {
+			t.Fatalf("AuditLogs() unexpected error: %v", err)
+		}
+		if len(auditResult.Events) != 1 {
+			t.Errorf("expected exactly 1 role.granted audit event after granting the same role twice, got %d", len(auditResult.Events))
 		}
 
 		has, err = auth.UserHasRole(ctx, user.ID, "editor")
