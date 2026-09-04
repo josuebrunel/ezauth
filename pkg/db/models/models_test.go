@@ -265,3 +265,59 @@ func TestUserHelpers(t *testing.T) {
 		}
 	})
 }
+
+func TestTokenHelpers(t *testing.T) {
+	t.Run("Scopes_NilMetadata", func(t *testing.T) {
+		token := &Token{}
+		if scopes := token.Scopes(); scopes != nil {
+			t.Errorf("expected nil scopes for nil metadata, got %v", scopes)
+		}
+	})
+
+	t.Run("Scopes_EmptyList", func(t *testing.T) {
+		token := &Token{Metadata: JSONMap{"scopes": []string{}}}
+		if scopes := token.Scopes(); len(scopes) != 0 {
+			t.Errorf("expected empty scopes, got %v", scopes)
+		}
+	})
+
+	t.Run("Scopes_StringSlice", func(t *testing.T) {
+		token := &Token{Metadata: JSONMap{"scopes": []string{"posts:write", "posts:read"}}}
+		scopes := token.Scopes()
+		if len(scopes) != 2 || scopes[0] != "posts:write" || scopes[1] != "posts:read" {
+			t.Errorf("unexpected scopes: %v", scopes)
+		}
+	})
+
+	t.Run("Scopes_AnySlice_PostRoundtrip", func(t *testing.T) {
+		// Metadata holds []any after a JSON marshal/unmarshal round-trip
+		// through the database (see JSONMap.Scan).
+		token := &Token{Metadata: JSONMap{"scopes": []any{"posts:write", "posts:read"}}}
+		scopes := token.Scopes()
+		if len(scopes) != 2 || scopes[0] != "posts:write" || scopes[1] != "posts:read" {
+			t.Errorf("unexpected scopes: %v", scopes)
+		}
+	})
+
+	t.Run("HasScope_Unscoped", func(t *testing.T) {
+		unscoped := &Token{}
+		if !unscoped.HasScope("posts:write") {
+			t.Error("expected an unscoped key to have full access")
+		}
+
+		emptyScopes := &Token{Metadata: JSONMap{"scopes": []string{}}}
+		if !emptyScopes.HasScope("posts:write") {
+			t.Error("expected an empty scopes list to mean full access")
+		}
+	})
+
+	t.Run("HasScope_Scoped", func(t *testing.T) {
+		token := &Token{Metadata: JSONMap{"scopes": []string{"posts:write"}}}
+		if !token.HasScope("posts:write") {
+			t.Error("expected token to have the posts:write scope")
+		}
+		if token.HasScope("posts:delete") {
+			t.Error("expected token to not have the posts:delete scope")
+		}
+	})
+}

@@ -324,3 +324,41 @@ type Token struct {
 	Revoked   bool      `db:"revoked" json:"revoked"`
 	Metadata  JSONMap   `db:"metadata" json:"metadata"`
 }
+
+// Scopes returns an API key's scopes (TokenTypeApiKey only), stored as a
+// JSON string array in Metadata["scopes"]. Returns nil for an unscoped key.
+// Accepts both []string (set directly, e.g. by CreateAPIKey before the
+// first DB round-trip) and []any (what Metadata holds after a JSON
+// marshal/unmarshal round-trip through the database).
+func (t *Token) Scopes() []string {
+	switch v := t.Metadata["scopes"].(type) {
+	case []string:
+		return v
+	case []any:
+		scopes := make([]string, 0, len(v))
+		for _, s := range v {
+			if str, ok := s.(string); ok {
+				scopes = append(scopes, str)
+			}
+		}
+		return scopes
+	default:
+		return nil
+	}
+}
+
+// HasScope reports whether the API key includes the given scope. An
+// unscoped key (no scopes set) has full access, matching the behavior of
+// every API key issued before per-key scoping existed.
+func (t *Token) HasScope(scope string) bool {
+	scopes := t.Scopes()
+	if len(scopes) == 0 {
+		return true
+	}
+	for _, s := range scopes {
+		if s == scope {
+			return true
+		}
+	}
+	return false
+}

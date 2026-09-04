@@ -384,6 +384,23 @@ func (e *EzAuth) RequirePermission(permission string) func(http.Handler) http.Ha
 	return e.Handler.RequirePermission(permission)
 }
 
+// CreateAPIKey mints a new API key for userID, optionally limited to scopes
+// (see RequireAPIKeyScope) — an empty scopes list creates an unscoped,
+// full-access key.
+func (e *EzAuth) CreateAPIKey(ctx context.Context, userID string, scopes []string) (*models.Token, error) {
+	return e.Service.CreateAPIKey(ctx, userID, scopes)
+}
+
+// RevokeAPIKey revokes an API key by its token ID (see ListAPIKeys).
+func (e *EzAuth) RevokeAPIKey(ctx context.Context, id string) error {
+	return e.Service.RevokeAPIKey(ctx, id)
+}
+
+// ListAPIKeys lists a user's API keys.
+func (e *EzAuth) ListAPIKeys(ctx context.Context, userID string) ([]*models.Token, error) {
+	return e.Service.ListAPIKeys(ctx, userID)
+}
+
 // Impersonate mints a new token pair for targetUserID, acting on behalf of adminUser.
 // ezauth performs no authorization check here: the caller is responsible for verifying
 // that adminUser is allowed to impersonate (e.g. via adminUser.HasRole("admin")) before
