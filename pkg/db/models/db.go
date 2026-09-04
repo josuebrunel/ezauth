@@ -6,6 +6,10 @@ const (
 	TableWebauthnCredential   = "ezauth_webauthn_credentials"
 	TableWebauthnChallenge    = "ezauth_webauthn_challenges"
 	TableAuditLog             = "ezauth_audit_logs"
+	TableRole                 = "ezauth_roles"
+	TablePermission           = "ezauth_permissions"
+	TableRolePermission       = "ezauth_role_permissions"
+	TableUserRole             = "ezauth_user_roles"
 	ColumnEmail               = "email"
 	ColumnUsername            = "username"
 	ColumnPasswordHash        = "password_hash"
@@ -52,4 +56,8 @@ const (
 	ColumnChallengeType   = "challenge_type"
 
 	ColumnEventType = "event_type"
+
+	ColumnDescription  = "description"
+	ColumnRoleID       = "role_id"
+	ColumnPermissionID = "permission_id"
 )

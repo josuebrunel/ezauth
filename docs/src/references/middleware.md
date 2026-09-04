@@ -63,3 +63,23 @@ Validates the `X-API-Key` header. It checks against the configured Master API Ke
 ```go
 func (h *Handler) APIKeyMiddleware(next http.Handler) http.Handler
 ```
+
+## Authorization Middleware (RBAC)
+
+See [Roles & Permissions (RBAC)](../guides/admin-operations.md#roles--permissions-rbac) for the full picture — these check the real RBAC tables, not the legacy `User.Roles` string field.
+
+### `RequireRole`
+
+Requires the authenticated user (identified via the request context set by `AuthMiddleware` or `LoadUserMiddleware`/`SessionMiddleware` — must run downstream of one of those) to hold the given role. Returns `401` if no user is in context, `403` if they lack the role.
+
+```go
+func (h *Handler) RequireRole(role string) func(http.Handler) http.Handler
+```
+
+### `RequirePermission`
+
+Same as `RequireRole`, but checks a permission, resolved transitively through every role granted to the user.
+
+```go
+func (h *Handler) RequirePermission(permission string) func(http.Handler) http.Handler
+```

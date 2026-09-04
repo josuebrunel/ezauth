@@ -16,6 +16,19 @@ func (h *Handler) APIKeyMiddleware(next http.Handler) http.Handler {
 	return middleware.APIKeyMiddleware(h.svc.Cfg.ApiKey, h.svc.Repo)(next)
 }
 
+// RequireRole is a middleware that requires the authenticated user to hold
+// the given role, checked against the RBAC roles/permissions tables.
+func (h *Handler) RequireRole(role string) func(http.Handler) http.Handler {
+	return middleware.RequireRole(h.svc, role)
+}
+
+// RequirePermission is a middleware that requires the authenticated user to
+// hold the given permission, checked against the RBAC roles/permissions
+// tables.
+func (h *Handler) RequirePermission(permission string) func(http.Handler) http.Handler {
+	return middleware.RequirePermission(h.svc, permission)
+}
+
 // LoginRequiredMiddleware is a middleware that requires the request to be authenticated.
 // If the user is not authenticated, it redirects to the login page (for browser requests)
 // or returns a 401 Unauthorized error (for API requests).

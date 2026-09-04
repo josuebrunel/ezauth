@@ -178,3 +178,32 @@ func (r Repository) WebauthnChallengeDelete(ctx context.Context, id string) erro
 func (r Repository) AuditLogCreate(ctx context.Context, log *models.AuditLog) (*models.AuditLog, error)
 func (r Repository) AuditLogListByUserID(ctx context.Context, userID string, filter models.AuditLogFilter, limit, offset int) (logs []*models.AuditLog, hasMore bool, err error)
 ```
+
+## RBAC Methods
+
+Real RBAC — roles/permissions tables and their `user_roles`/`role_permissions` join tables — separate from the legacy `User.Roles` string field. See [Roles & Permissions (RBAC)](../guides/admin-operations.md#roles--permissions-rbac).
+
+```go
+func (r Repository) RoleCreate(ctx context.Context, role *models.Role) (*models.Role, error)
+func (r Repository) RoleGetByID(ctx context.Context, id string) (*models.Role, error)
+func (r Repository) RoleGetByName(ctx context.Context, name string) (*models.Role, error)
+func (r Repository) RolesList(ctx context.Context) ([]*models.Role, error)
+func (r Repository) RoleDelete(ctx context.Context, id string) error // cascades user_roles/role_permissions
+
+func (r Repository) PermissionCreate(ctx context.Context, permission *models.Permission) (*models.Permission, error)
+func (r Repository) PermissionGetByID(ctx context.Context, id string) (*models.Permission, error)
+func (r Repository) PermissionGetByName(ctx context.Context, name string) (*models.Permission, error)
+func (r Repository) PermissionsList(ctx context.Context) ([]*models.Permission, error)
+func (r Repository) PermissionDelete(ctx context.Context, id string) error // cascades role_permissions
+
+func (r Repository) UserRoleGrant(ctx context.Context, userID, roleID string) error
+func (r Repository) UserRoleRevoke(ctx context.Context, userID, roleID string) error
+func (r Repository) RolesByUserID(ctx context.Context, userID string) ([]*models.Role, error)
+
+func (r Repository) RolePermissionGrant(ctx context.Context, roleID, permissionID string) error
+func (r Repository) RolePermissionRevoke(ctx context.Context, roleID, permissionID string) error
+func (r Repository) PermissionsByRoleID(ctx context.Context, roleID string) ([]*models.Permission, error)
+
+// Resolved transitively through every role granted to the user.
+func (r Repository) PermissionsByUserID(ctx context.Context, userID string) ([]*models.Permission, error)
+```

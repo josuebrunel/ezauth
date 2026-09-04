@@ -66,12 +66,44 @@ type AuditLogQuerier interface {
 	QueryAuditLogListByUserID(ctx context.Context, userID string, filter models.AuditLogFilter, limit, offset int) bob.Query
 }
 
+type RoleQuerier interface {
+	QueryRoleInsert(ctx context.Context, role *models.Role) bob.Query
+	QueryRoleGetByID(ctx context.Context, id string) bob.Query
+	QueryRoleGetByName(ctx context.Context, name string) bob.Query
+	QueryRolesList(ctx context.Context) bob.Query
+	QueryRoleDelete(ctx context.Context, id string) bob.Query
+}
+
+type PermissionQuerier interface {
+	QueryPermissionInsert(ctx context.Context, permission *models.Permission) bob.Query
+	QueryPermissionGetByID(ctx context.Context, id string) bob.Query
+	QueryPermissionGetByName(ctx context.Context, name string) bob.Query
+	QueryPermissionsList(ctx context.Context) bob.Query
+	QueryPermissionDelete(ctx context.Context, id string) bob.Query
+}
+
+// RBACAssignmentQuerier covers the ezauth_user_roles/ezauth_role_permissions
+// join tables: granting/revoking assignments, and the joined reads that
+// resolve a user's effective roles/permissions.
+type RBACAssignmentQuerier interface {
+	QueryUserRoleInsert(ctx context.Context, userID, roleID string) bob.Query
+	QueryUserRoleDelete(ctx context.Context, userID, roleID string) bob.Query
+	QueryRolesByUserID(ctx context.Context, userID string) bob.Query
+	QueryRolePermissionInsert(ctx context.Context, roleID, permissionID string) bob.Query
+	QueryRolePermissionDelete(ctx context.Context, roleID, permissionID string) bob.Query
+	QueryPermissionsByRoleID(ctx context.Context, roleID string) bob.Query
+	QueryPermissionsByUserID(ctx context.Context, userID string) bob.Query
+}
+
 type Querier interface {
 	UserQuerier
 	TokenQuerier
 	WebauthnCredentialQuerier
 	WebauthnChallengeQuerier
 	AuditLogQuerier
+	RoleQuerier
+	PermissionQuerier
+	RBACAssignmentQuerier
 }
 
 // Opts defines the options for opening a repository connection.
@@ -526,6 +558,209 @@ func (r Repository) AuditLogListByUserID(ctx context.Context, userID string, fil
 		return logs[:limit], true, nil
 	}
 	return logs, false, nil
+}
+
+// RoleCreate creates a new RBAC role.
+func (r Repository) RoleCreate(ctx context.Context, role *models.Role) (*models.Role, error) {
+	query := r.QueryRoleInsert(ctx, role)
+
+	if r.Opts.Dialect == DialectMysql {
+		if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+			xlog.Error("Failed to create role", "error", err, "name", role.Name)
+			return nil, err
+		}
+		return r.RoleGetByID(ctx, role.ID)
+	}
+
+	created, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.Role]())
+	if err != nil {
+		xlog.Error("Failed to create role", "error", err, "name", role.Name)
+		return nil, err
+	}
+	return created, nil
+}
+
+// RoleGetByID retrieves a role by its ID.
+func (r Repository) RoleGetByID(ctx context.Context, id string) (*models.Role, error) {
+	query := r.QueryRoleGetByID(ctx, id)
+	role, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.Role]())
+	if err != nil {
+		xlog.Error("Failed to get role by id", "error", err, "id", id)
+		return nil, err
+	}
+	return role, nil
+}
+
+// RoleGetByName retrieves a role by its unique name.
+func (r Repository) RoleGetByName(ctx context.Context, name string) (*models.Role, error) {
+	query := r.QueryRoleGetByName(ctx, name)
+	role, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.Role]())
+	if err != nil {
+		xlog.Error("Failed to get role by name", "error", err, "name", name)
+		return nil, err
+	}
+	return role, nil
+}
+
+// RolesList lists all RBAC roles.
+func (r Repository) RolesList(ctx context.Context) ([]*models.Role, error) {
+	query := r.QueryRolesList(ctx)
+	roles, err := bob.All(ctx, r.bdb, query, scan.StructMapper[*models.Role]())
+	if err != nil {
+		xlog.Error("Failed to list roles", "error", err)
+		return nil, err
+	}
+	return roles, nil
+}
+
+// RoleDelete deletes a role. Matching ezauth_user_roles/ezauth_role_permissions
+// rows are removed via ON DELETE CASCADE.
+func (r Repository) RoleDelete(ctx context.Context, id string) error {
+	query := r.QueryRoleDelete(ctx, id)
+	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+		xlog.Error("Failed to delete role", "error", err, "id", id)
+		return err
+	}
+	return nil
+}
+
+// PermissionCreate creates a new RBAC permission.
+func (r Repository) PermissionCreate(ctx context.Context, permission *models.Permission) (*models.Permission, error) {
+	query := r.QueryPermissionInsert(ctx, permission)
+
+	if r.Opts.Dialect == DialectMysql {
+		if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+			xlog.Error("Failed to create permission", "error", err, "name", permission.Name)
+			return nil, err
+		}
+		return r.PermissionGetByID(ctx, permission.ID)
+	}
+
+	created, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.Permission]())
+	if err != nil {
+		xlog.Error("Failed to create permission", "error", err, "name", permission.Name)
+		return nil, err
+	}
+	return created, nil
+}
+
+// PermissionGetByID retrieves a permission by its ID.
+func (r Repository) PermissionGetByID(ctx context.Context, id string) (*models.Permission, error) {
+	query := r.QueryPermissionGetByID(ctx, id)
+	permission, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.Permission]())
+	if err != nil {
+		xlog.Error("Failed to get permission by id", "error", err, "id", id)
+		return nil, err
+	}
+	return permission, nil
+}
+
+// PermissionGetByName retrieves a permission by its unique name.
+func (r Repository) PermissionGetByName(ctx context.Context, name string) (*models.Permission, error) {
+	query := r.QueryPermissionGetByName(ctx, name)
+	permission, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.Permission]())
+	if err != nil {
+		xlog.Error("Failed to get permission by name", "error", err, "name", name)
+		return nil, err
+	}
+	return permission, nil
+}
+
+// PermissionsList lists all RBAC permissions.
+func (r Repository) PermissionsList(ctx context.Context) ([]*models.Permission, error) {
+	query := r.QueryPermissionsList(ctx)
+	permissions, err := bob.All(ctx, r.bdb, query, scan.StructMapper[*models.Permission]())
+	if err != nil {
+		xlog.Error("Failed to list permissions", "error", err)
+		return nil, err
+	}
+	return permissions, nil
+}
+
+// PermissionDelete deletes a permission. Matching ezauth_role_permissions
+// rows are removed via ON DELETE CASCADE.
+func (r Repository) PermissionDelete(ctx context.Context, id string) error {
+	query := r.QueryPermissionDelete(ctx, id)
+	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+		xlog.Error("Failed to delete permission", "error", err, "id", id)
+		return err
+	}
+	return nil
+}
+
+// UserRoleGrant grants a role to a user (inserts into ezauth_user_roles).
+func (r Repository) UserRoleGrant(ctx context.Context, userID, roleID string) error {
+	query := r.QueryUserRoleInsert(ctx, userID, roleID)
+	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+		xlog.Error("Failed to grant role to user", "error", err, "user_id", userID, "role_id", roleID)
+		return err
+	}
+	return nil
+}
+
+// UserRoleRevoke revokes a role from a user (deletes from ezauth_user_roles).
+func (r Repository) UserRoleRevoke(ctx context.Context, userID, roleID string) error {
+	query := r.QueryUserRoleDelete(ctx, userID, roleID)
+	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+		xlog.Error("Failed to revoke role from user", "error", err, "user_id", userID, "role_id", roleID)
+		return err
+	}
+	return nil
+}
+
+// RolesByUserID lists the roles granted to a user.
+func (r Repository) RolesByUserID(ctx context.Context, userID string) ([]*models.Role, error) {
+	query := r.QueryRolesByUserID(ctx, userID)
+	roles, err := bob.All(ctx, r.bdb, query, scan.StructMapper[*models.Role]())
+	if err != nil {
+		xlog.Error("Failed to list roles by user", "error", err, "user_id", userID)
+		return nil, err
+	}
+	return roles, nil
+}
+
+// RolePermissionGrant grants a permission to a role (inserts into ezauth_role_permissions).
+func (r Repository) RolePermissionGrant(ctx context.Context, roleID, permissionID string) error {
+	query := r.QueryRolePermissionInsert(ctx, roleID, permissionID)
+	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+		xlog.Error("Failed to grant permission to role", "error", err, "role_id", roleID, "permission_id", permissionID)
+		return err
+	}
+	return nil
+}
+
+// RolePermissionRevoke revokes a permission from a role (deletes from ezauth_role_permissions).
+func (r Repository) RolePermissionRevoke(ctx context.Context, roleID, permissionID string) error {
+	query := r.QueryRolePermissionDelete(ctx, roleID, permissionID)
+	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+		xlog.Error("Failed to revoke permission from role", "error", err, "role_id", roleID, "permission_id", permissionID)
+		return err
+	}
+	return nil
+}
+
+// PermissionsByRoleID lists the permissions granted to a role.
+func (r Repository) PermissionsByRoleID(ctx context.Context, roleID string) ([]*models.Permission, error) {
+	query := r.QueryPermissionsByRoleID(ctx, roleID)
+	permissions, err := bob.All(ctx, r.bdb, query, scan.StructMapper[*models.Permission]())
+	if err != nil {
+		xlog.Error("Failed to list permissions by role", "error", err, "role_id", roleID)
+		return nil, err
+	}
+	return permissions, nil
+}
+
+// PermissionsByUserID lists the permissions a user holds, resolved transitively
+// through every role granted to them (ezauth_user_roles -> ezauth_role_permissions
+// -> ezauth_permissions).
+func (r Repository) PermissionsByUserID(ctx context.Context, userID string) ([]*models.Permission, error) {
+	query := r.QueryPermissionsByUserID(ctx, userID)
+	permissions, err := bob.All(ctx, r.bdb, query, scan.StructMapper[*models.Permission]())
+	if err != nil {
+		xlog.Error("Failed to list permissions by user", "error", err, "user_id", userID)
+		return nil, err
+	}
+	return permissions, nil
 }
 
 func getDialectQuery(dbDialect string) Querier {

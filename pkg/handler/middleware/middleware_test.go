@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,6 +11,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 )
+
+var errCheckerFailed = errors.New("checker failed")
 
 // MockTokenGetter mocks the TokenGetter interface
 type MockTokenGetter struct {
@@ -178,4 +181,118 @@ func TestLoadUserMiddleware(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Errorf("expected 200, got %d", w.Code)
 	}
+}
+
+// MockRoleChecker mocks the RoleChecker interface.
+type MockRoleChecker struct {
+	Has bool
+	Err error
+}
+
+func (m *MockRoleChecker) UserHasRole(ctx context.Context, userID, role string) (bool, error) {
+	return m.Has, m.Err
+}
+
+// MockPermissionChecker mocks the PermissionChecker interface.
+type MockPermissionChecker struct {
+	Has bool
+	Err error
+}
+
+func (m *MockPermissionChecker) UserHasPermission(ctx context.Context, userID, permission string) (bool, error) {
+	return m.Has, m.Err
+}
+
+func TestRequireRole(t *testing.T) {
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	t.Run("NoUserInContext", func(t *testing.T) {
+		mw := RequireRole(&MockRoleChecker{Has: true}, "admin")
+		req := httptest.NewRequest("GET", "/", nil)
+		w := httptest.NewRecorder()
+
+		mw(next).ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("expected 401 with no user in context, got %d", w.Code)
+		}
+	})
+
+	t.Run("HasRole", func(t *testing.T) {
+		mw := RequireRole(&MockRoleChecker{Has: true}, "admin")
+		req := httptest.NewRequest("GET", "/", nil)
+		req = req.WithContext(context.WithValue(req.Context(), UserContextKey, "user1"))
+		w := httptest.NewRecorder()
+
+		mw(next).ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Errorf("expected 200 when user has the role, got %d", w.Code)
+		}
+	})
+
+	t.Run("MissingRole", func(t *testing.T) {
+		mw := RequireRole(&MockRoleChecker{Has: false}, "admin")
+		req := httptest.NewRequest("GET", "/", nil)
+		req = req.WithContext(context.WithValue(req.Context(), UserContextKey, "user1"))
+		w := httptest.NewRecorder()
+
+		mw(next).ServeHTTP(w, req)
+		if w.Code != http.StatusForbidden {
+			t.Errorf("expected 403 when user lacks the role, got %d", w.Code)
+		}
+	})
+
+	t.Run("CheckerError", func(t *testing.T) {
+		mw := RequireRole(&MockRoleChecker{Err: errCheckerFailed}, "admin")
+		req := httptest.NewRequest("GET", "/", nil)
+		req = req.WithContext(context.WithValue(req.Context(), UserContextKey, "user1"))
+		w := httptest.NewRecorder()
+
+		mw(next).ServeHTTP(w, req)
+		if w.Code != http.StatusForbidden {
+			t.Errorf("expected 403 when the checker errors, got %d", w.Code)
+		}
+	})
+}
+
+func TestRequirePermission(t *testing.T) {
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	t.Run("NoUserInContext", func(t *testing.T) {
+		mw := RequirePermission(&MockPermissionChecker{Has: true}, "posts:write")
+		req := httptest.NewRequest("GET", "/", nil)
+		w := httptest.NewRecorder()
+
+		mw(next).ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("expected 401 with no user in context, got %d", w.Code)
+		}
+	})
+
+	t.Run("HasPermission", func(t *testing.T) {
+		mw := RequirePermission(&MockPermissionChecker{Has: true}, "posts:write")
+		req := httptest.NewRequest("GET", "/", nil)
+		req = req.WithContext(context.WithValue(req.Context(), UserContextKey, "user1"))
+		w := httptest.NewRecorder()
+
+		mw(next).ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Errorf("expected 200 when user has the permission, got %d", w.Code)
+		}
+	})
+
+	t.Run("MissingPermission", func(t *testing.T) {
+		mw := RequirePermission(&MockPermissionChecker{Has: false}, "posts:write")
+		req := httptest.NewRequest("GET", "/", nil)
+		req = req.WithContext(context.WithValue(req.Context(), UserContextKey, "user1"))
+		w := httptest.NewRecorder()
+
+		mw(next).ServeHTTP(w, req)
+		if w.Code != http.StatusForbidden {
+			t.Errorf("expected 403 when user lacks the permission, got %d", w.Code)
+		}
+	})
 }

@@ -119,6 +119,62 @@ func APIKeyMiddleware(configApiKey string, tokenRepo TokenGetter) func(http.Hand
 	}
 }
 
+// RoleChecker defines the interface for checking whether a user holds a role,
+// backed by the RBAC roles/permissions tables (not the legacy comma-string
+// User.Roles field).
+type RoleChecker interface {
+	UserHasRole(ctx context.Context, userID, role string) (bool, error)
+}
+
+// PermissionChecker defines the interface for checking whether a user holds
+// a permission, backed by the RBAC roles/permissions tables.
+type PermissionChecker interface {
+	UserHasPermission(ctx context.Context, userID, permission string) (bool, error)
+}
+
+// RequireRole is a middleware that requires the authenticated user (identified
+// via UserContextKey, set by AuthMiddleware or LoadUserMiddleware — this
+// middleware must run downstream of one of those) to hold the given role.
+func RequireRole(checker RoleChecker, role string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			userID, ok := r.Context().Value(UserContextKey).(string)
+			if !ok || userID == "" {
+				WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
+				return
+			}
+			has, err := checker.UserHasRole(r.Context(), userID, role)
+			if err != nil || !has {
+				WriteJSONResponseError(w, http.StatusForbidden, ErrForbidden)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// RequirePermission is a middleware that requires the authenticated user
+// (identified via UserContextKey, set by AuthMiddleware or LoadUserMiddleware
+// — this middleware must run downstream of one of those) to hold the given
+// permission.
+func RequirePermission(checker PermissionChecker, permission string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			userID, ok := r.Context().Value(UserContextKey).(string)
+			if !ok || userID == "" {
+				WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
+				return
+			}
+			has, err := checker.UserHasPermission(r.Context(), userID, permission)
+			if err != nil || !has {
+				WriteJSONResponseError(w, http.StatusForbidden, ErrForbidden)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 // LoginRequiredMiddleware is a middleware that requires the request to be authenticated.
 func LoginRequiredMiddleware(authChecker AuthChecker, loginPath string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {

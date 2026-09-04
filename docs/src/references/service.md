@@ -369,3 +369,28 @@ func (a *Auth) AuditLogs(ctx context.Context, userID string, opts ListAuditLogsO
 ```
 
 `ListAuditLogsOptions` supports `EventType` (a `models.AuditEvent*` constant), `Since`/`Until` (`*time.Time`), and `Limit`/`Offset` (default 50, max 200). `ezauth` enforces no authorization on who may call this — same stance as `UsersList`.
+
+## Roles & Permissions (RBAC)
+
+Real RBAC — separate from, and additive to, the legacy `User.Roles` string field and its `HasRole`/`AddRole`/etc. helpers. See [Roles & Permissions (RBAC)](../guides/admin-operations.md#roles--permissions-rbac).
+
+```go
+func (a *Auth) CreateRole(ctx context.Context, name, description string) (*models.Role, error)
+func (a *Auth) RolesList(ctx context.Context) ([]*models.Role, error)
+func (a *Auth) DeleteRole(ctx context.Context, id string) error
+
+func (a *Auth) CreatePermission(ctx context.Context, name, description string) (*models.Permission, error)
+func (a *Auth) PermissionsList(ctx context.Context) ([]*models.Permission, error)
+func (a *Auth) DeletePermission(ctx context.Context, id string) error
+
+// Idempotent; each records an AuditEventRoleGranted/AuditEventRoleRevoked audit event.
+func (a *Auth) GrantRole(ctx context.Context, userID, roleName string) error
+func (a *Auth) RevokeRole(ctx context.Context, userID, roleName string) error
+
+func (a *Auth) GrantPermissionToRole(ctx context.Context, roleName, permissionName string) error
+func (a *Auth) RevokePermissionFromRole(ctx context.Context, roleName, permissionName string) error
+
+func (a *Auth) UserRoles(ctx context.Context, userID string) ([]*models.Role, error)
+func (a *Auth) UserHasRole(ctx context.Context, userID, roleName string) (bool, error)
+func (a *Auth) UserHasPermission(ctx context.Context, userID, permissionName string) (bool, error) // resolved transitively through the user's roles
+```

@@ -496,3 +496,171 @@ func (q *MysqlQuerier) QueryAuditLogListByUserID(ctx context.Context, userID str
 
 	return mysql.Select(mods...)
 }
+
+func (q *MysqlQuerier) QueryRoleInsert(ctx context.Context, role *models.Role) bob.Query {
+	if role.ID == "" {
+		role.ID = util.NewIDStripped()
+	}
+	if role.CreatedAt.IsZero() {
+		role.CreatedAt = time.Now().UTC()
+	}
+	return mysql.Insert(
+		im.Into(models.TableRole,
+			"id",
+			models.ColumnName,
+			models.ColumnDescription,
+			models.ColumnCreatedAt,
+		),
+		im.Values(
+			mysql.Arg(role.ID),
+			mysql.Arg(role.Name),
+			mysql.Arg(role.Description),
+			mysql.Arg(role.CreatedAt),
+		),
+	)
+}
+
+func (q *MysqlQuerier) QueryRoleGetByID(ctx context.Context, id string) bob.Query {
+	return mysql.Select(sm.From(models.TableRole), sm.Where(mysql.Quote("id").EQ(mysql.Arg(id))))
+}
+
+func (q *MysqlQuerier) QueryRoleGetByName(ctx context.Context, name string) bob.Query {
+	return mysql.Select(sm.From(models.TableRole), sm.Where(mysql.Quote(models.ColumnName).EQ(mysql.Arg(name))))
+}
+
+func (q *MysqlQuerier) QueryRolesList(ctx context.Context) bob.Query {
+	return mysql.Select(sm.From(models.TableRole), sm.OrderBy(mysql.Quote(models.ColumnName)))
+}
+
+func (q *MysqlQuerier) QueryRoleDelete(ctx context.Context, id string) bob.Query {
+	return mysql.Delete(dm.From(models.TableRole), dm.Where(mysql.Quote("id").EQ(mysql.Arg(id))))
+}
+
+func (q *MysqlQuerier) QueryPermissionInsert(ctx context.Context, permission *models.Permission) bob.Query {
+	if permission.ID == "" {
+		permission.ID = util.NewIDStripped()
+	}
+	if permission.CreatedAt.IsZero() {
+		permission.CreatedAt = time.Now().UTC()
+	}
+	return mysql.Insert(
+		im.Into(models.TablePermission,
+			"id",
+			models.ColumnName,
+			models.ColumnDescription,
+			models.ColumnCreatedAt,
+		),
+		im.Values(
+			mysql.Arg(permission.ID),
+			mysql.Arg(permission.Name),
+			mysql.Arg(permission.Description),
+			mysql.Arg(permission.CreatedAt),
+		),
+	)
+}
+
+func (q *MysqlQuerier) QueryPermissionGetByID(ctx context.Context, id string) bob.Query {
+	return mysql.Select(sm.From(models.TablePermission), sm.Where(mysql.Quote("id").EQ(mysql.Arg(id))))
+}
+
+func (q *MysqlQuerier) QueryPermissionGetByName(ctx context.Context, name string) bob.Query {
+	return mysql.Select(sm.From(models.TablePermission), sm.Where(mysql.Quote(models.ColumnName).EQ(mysql.Arg(name))))
+}
+
+func (q *MysqlQuerier) QueryPermissionsList(ctx context.Context) bob.Query {
+	return mysql.Select(sm.From(models.TablePermission), sm.OrderBy(mysql.Quote(models.ColumnName)))
+}
+
+func (q *MysqlQuerier) QueryPermissionDelete(ctx context.Context, id string) bob.Query {
+	return mysql.Delete(dm.From(models.TablePermission), dm.Where(mysql.Quote("id").EQ(mysql.Arg(id))))
+}
+
+func (q *MysqlQuerier) QueryUserRoleInsert(ctx context.Context, userID, roleID string) bob.Query {
+	return mysql.Insert(
+		im.Into(models.TableUserRole, models.ColumnUserID, models.ColumnRoleID),
+		im.Values(mysql.Arg(userID), mysql.Arg(roleID)),
+	)
+}
+
+func (q *MysqlQuerier) QueryUserRoleDelete(ctx context.Context, userID, roleID string) bob.Query {
+	return mysql.Delete(
+		dm.From(models.TableUserRole),
+		dm.Where(mysql.Quote(models.ColumnUserID).EQ(mysql.Arg(userID))),
+		dm.Where(mysql.Quote(models.ColumnRoleID).EQ(mysql.Arg(roleID))),
+	)
+}
+
+func (q *MysqlQuerier) QueryRolesByUserID(ctx context.Context, userID string) bob.Query {
+	return mysql.Select(
+		sm.Columns(
+			mysql.Quote(models.TableRole, "id"),
+			mysql.Quote(models.TableRole, models.ColumnName),
+			mysql.Quote(models.TableRole, models.ColumnDescription),
+			mysql.Quote(models.TableRole, models.ColumnCreatedAt),
+		),
+		sm.From(models.TableRole),
+		sm.InnerJoin(models.TableUserRole).OnEQ(
+			mysql.Quote(models.TableUserRole, models.ColumnRoleID),
+			mysql.Quote(models.TableRole, "id"),
+		),
+		sm.Where(mysql.Quote(models.TableUserRole, models.ColumnUserID).EQ(mysql.Arg(userID))),
+	)
+}
+
+func (q *MysqlQuerier) QueryRolePermissionInsert(ctx context.Context, roleID, permissionID string) bob.Query {
+	return mysql.Insert(
+		im.Into(models.TableRolePermission, models.ColumnRoleID, models.ColumnPermissionID),
+		im.Values(mysql.Arg(roleID), mysql.Arg(permissionID)),
+	)
+}
+
+func (q *MysqlQuerier) QueryRolePermissionDelete(ctx context.Context, roleID, permissionID string) bob.Query {
+	return mysql.Delete(
+		dm.From(models.TableRolePermission),
+		dm.Where(mysql.Quote(models.ColumnRoleID).EQ(mysql.Arg(roleID))),
+		dm.Where(mysql.Quote(models.ColumnPermissionID).EQ(mysql.Arg(permissionID))),
+	)
+}
+
+func (q *MysqlQuerier) QueryPermissionsByRoleID(ctx context.Context, roleID string) bob.Query {
+	return mysql.Select(
+		sm.Columns(
+			mysql.Quote(models.TablePermission, "id"),
+			mysql.Quote(models.TablePermission, models.ColumnName),
+			mysql.Quote(models.TablePermission, models.ColumnDescription),
+			mysql.Quote(models.TablePermission, models.ColumnCreatedAt),
+		),
+		sm.From(models.TablePermission),
+		sm.InnerJoin(models.TableRolePermission).OnEQ(
+			mysql.Quote(models.TableRolePermission, models.ColumnPermissionID),
+			mysql.Quote(models.TablePermission, "id"),
+		),
+		sm.Where(mysql.Quote(models.TableRolePermission, models.ColumnRoleID).EQ(mysql.Arg(roleID))),
+	)
+}
+
+// QueryPermissionsByUserID resolves the permissions a user holds transitively
+// through every role granted to them: ezauth_user_roles -> ezauth_role_permissions
+// -> ezauth_permissions. DISTINCT guards against double-counting a permission
+// granted via more than one of the user's roles.
+func (q *MysqlQuerier) QueryPermissionsByUserID(ctx context.Context, userID string) bob.Query {
+	return mysql.Select(
+		sm.Distinct(),
+		sm.Columns(
+			mysql.Quote(models.TablePermission, "id"),
+			mysql.Quote(models.TablePermission, models.ColumnName),
+			mysql.Quote(models.TablePermission, models.ColumnDescription),
+			mysql.Quote(models.TablePermission, models.ColumnCreatedAt),
+		),
+		sm.From(models.TablePermission),
+		sm.InnerJoin(models.TableRolePermission).OnEQ(
+			mysql.Quote(models.TableRolePermission, models.ColumnPermissionID),
+			mysql.Quote(models.TablePermission, "id"),
+		),
+		sm.InnerJoin(models.TableUserRole).OnEQ(
+			mysql.Quote(models.TableUserRole, models.ColumnRoleID),
+			mysql.Quote(models.TableRolePermission, models.ColumnRoleID),
+		),
+		sm.Where(mysql.Quote(models.TableUserRole, models.ColumnUserID).EQ(mysql.Arg(userID))),
+	)
+}

@@ -11,4 +11,5 @@ var (
 	ErrAPIKeyRequired              = errors.New("x-api-key header required") // Matches original text
 	ErrInvalidAPIKey               = errors.New("invalid api key")
 	ErrUnauthorized                = errors.New("unauthorized")
+	ErrForbidden                   = errors.New("forbidden")
 )

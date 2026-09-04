@@ -511,3 +511,173 @@ func (q *PSQLQuerier) QueryAuditLogListByUserID(ctx context.Context, userID stri
 
 	return psql.Select(mods...)
 }
+
+func (q *PSQLQuerier) QueryRoleInsert(ctx context.Context, role *models.Role) bob.Query {
+	if role.ID == "" {
+		role.ID = util.NewID()
+	}
+	if role.CreatedAt.IsZero() {
+		role.CreatedAt = time.Now().UTC()
+	}
+	return psql.Insert(
+		im.Into(psql.Quote(models.TableRole),
+			"id",
+			models.ColumnName,
+			models.ColumnDescription,
+			models.ColumnCreatedAt,
+		),
+		im.Values(
+			psql.Arg(role.ID),
+			psql.Arg(role.Name),
+			psql.Arg(role.Description),
+			psql.Arg(role.CreatedAt),
+		),
+		im.Returning("*"),
+	)
+}
+
+func (q *PSQLQuerier) QueryRoleGetByID(ctx context.Context, id string) bob.Query {
+	return psql.Select(sm.From(psql.Quote(models.TableRole)), sm.Where(psql.Quote("id").EQ(psql.Arg(id))))
+}
+
+func (q *PSQLQuerier) QueryRoleGetByName(ctx context.Context, name string) bob.Query {
+	return psql.Select(sm.From(psql.Quote(models.TableRole)), sm.Where(psql.Quote(models.ColumnName).EQ(psql.Arg(name))))
+}
+
+func (q *PSQLQuerier) QueryRolesList(ctx context.Context) bob.Query {
+	return psql.Select(sm.From(psql.Quote(models.TableRole)), sm.OrderBy(psql.Quote(models.ColumnName)))
+}
+
+func (q *PSQLQuerier) QueryRoleDelete(ctx context.Context, id string) bob.Query {
+	return psql.Delete(dm.From(psql.Quote(models.TableRole)), dm.Where(psql.Quote("id").EQ(psql.Arg(id))))
+}
+
+func (q *PSQLQuerier) QueryPermissionInsert(ctx context.Context, permission *models.Permission) bob.Query {
+	if permission.ID == "" {
+		permission.ID = util.NewID()
+	}
+	if permission.CreatedAt.IsZero() {
+		permission.CreatedAt = time.Now().UTC()
+	}
+	return psql.Insert(
+		im.Into(psql.Quote(models.TablePermission),
+			"id",
+			models.ColumnName,
+			models.ColumnDescription,
+			models.ColumnCreatedAt,
+		),
+		im.Values(
+			psql.Arg(permission.ID),
+			psql.Arg(permission.Name),
+			psql.Arg(permission.Description),
+			psql.Arg(permission.CreatedAt),
+		),
+		im.Returning("*"),
+	)
+}
+
+func (q *PSQLQuerier) QueryPermissionGetByID(ctx context.Context, id string) bob.Query {
+	return psql.Select(sm.From(psql.Quote(models.TablePermission)), sm.Where(psql.Quote("id").EQ(psql.Arg(id))))
+}
+
+func (q *PSQLQuerier) QueryPermissionGetByName(ctx context.Context, name string) bob.Query {
+	return psql.Select(sm.From(psql.Quote(models.TablePermission)), sm.Where(psql.Quote(models.ColumnName).EQ(psql.Arg(name))))
+}
+
+func (q *PSQLQuerier) QueryPermissionsList(ctx context.Context) bob.Query {
+	return psql.Select(sm.From(psql.Quote(models.TablePermission)), sm.OrderBy(psql.Quote(models.ColumnName)))
+}
+
+func (q *PSQLQuerier) QueryPermissionDelete(ctx context.Context, id string) bob.Query {
+	return psql.Delete(dm.From(psql.Quote(models.TablePermission)), dm.Where(psql.Quote("id").EQ(psql.Arg(id))))
+}
+
+func (q *PSQLQuerier) QueryUserRoleInsert(ctx context.Context, userID, roleID string) bob.Query {
+	return psql.Insert(
+		im.Into(psql.Quote(models.TableUserRole), models.ColumnUserID, models.ColumnRoleID),
+		im.Values(psql.Arg(userID), psql.Arg(roleID)),
+	)
+}
+
+func (q *PSQLQuerier) QueryUserRoleDelete(ctx context.Context, userID, roleID string) bob.Query {
+	return psql.Delete(
+		dm.From(psql.Quote(models.TableUserRole)),
+		dm.Where(psql.Quote(models.ColumnUserID).EQ(psql.Arg(userID))),
+		dm.Where(psql.Quote(models.ColumnRoleID).EQ(psql.Arg(roleID))),
+	)
+}
+
+func (q *PSQLQuerier) QueryRolesByUserID(ctx context.Context, userID string) bob.Query {
+	return psql.Select(
+		sm.Columns(
+			psql.Quote(models.TableRole, "id"),
+			psql.Quote(models.TableRole, models.ColumnName),
+			psql.Quote(models.TableRole, models.ColumnDescription),
+			psql.Quote(models.TableRole, models.ColumnCreatedAt),
+		),
+		sm.From(psql.Quote(models.TableRole)),
+		sm.InnerJoin(psql.Quote(models.TableUserRole)).OnEQ(
+			psql.Quote(models.TableUserRole, models.ColumnRoleID),
+			psql.Quote(models.TableRole, "id"),
+		),
+		sm.Where(psql.Quote(models.TableUserRole, models.ColumnUserID).EQ(psql.Arg(userID))),
+	)
+}
+
+func (q *PSQLQuerier) QueryRolePermissionInsert(ctx context.Context, roleID, permissionID string) bob.Query {
+	return psql.Insert(
+		im.Into(psql.Quote(models.TableRolePermission), models.ColumnRoleID, models.ColumnPermissionID),
+		im.Values(psql.Arg(roleID), psql.Arg(permissionID)),
+	)
+}
+
+func (q *PSQLQuerier) QueryRolePermissionDelete(ctx context.Context, roleID, permissionID string) bob.Query {
+	return psql.Delete(
+		dm.From(psql.Quote(models.TableRolePermission)),
+		dm.Where(psql.Quote(models.ColumnRoleID).EQ(psql.Arg(roleID))),
+		dm.Where(psql.Quote(models.ColumnPermissionID).EQ(psql.Arg(permissionID))),
+	)
+}
+
+func (q *PSQLQuerier) QueryPermissionsByRoleID(ctx context.Context, roleID string) bob.Query {
+	return psql.Select(
+		sm.Columns(
+			psql.Quote(models.TablePermission, "id"),
+			psql.Quote(models.TablePermission, models.ColumnName),
+			psql.Quote(models.TablePermission, models.ColumnDescription),
+			psql.Quote(models.TablePermission, models.ColumnCreatedAt),
+		),
+		sm.From(psql.Quote(models.TablePermission)),
+		sm.InnerJoin(psql.Quote(models.TableRolePermission)).OnEQ(
+			psql.Quote(models.TableRolePermission, models.ColumnPermissionID),
+			psql.Quote(models.TablePermission, "id"),
+		),
+		sm.Where(psql.Quote(models.TableRolePermission, models.ColumnRoleID).EQ(psql.Arg(roleID))),
+	)
+}
+
+// QueryPermissionsByUserID resolves the permissions a user holds transitively
+// through every role granted to them: ezauth_user_roles -> ezauth_role_permissions
+// -> ezauth_permissions. DISTINCT guards against double-counting a permission
+// granted via more than one of the user's roles.
+func (q *PSQLQuerier) QueryPermissionsByUserID(ctx context.Context, userID string) bob.Query {
+	return psql.Select(
+		sm.Distinct(),
+		sm.Columns(
+			psql.Quote(models.TablePermission, "id"),
+			psql.Quote(models.TablePermission, models.ColumnName),
+			psql.Quote(models.TablePermission, models.ColumnDescription),
+			psql.Quote(models.TablePermission, models.ColumnCreatedAt),
+		),
+		sm.From(psql.Quote(models.TablePermission)),
+		sm.InnerJoin(psql.Quote(models.TableRolePermission)).OnEQ(
+			psql.Quote(models.TableRolePermission, models.ColumnPermissionID),
+			psql.Quote(models.TablePermission, "id"),
+		),
+		sm.InnerJoin(psql.Quote(models.TableUserRole)).OnEQ(
+			psql.Quote(models.TableUserRole, models.ColumnRoleID),
+			psql.Quote(models.TableRolePermission, models.ColumnRoleID),
+		),
+		sm.Where(psql.Quote(models.TableUserRole, models.ColumnUserID).EQ(psql.Arg(userID))),
+	)
+}

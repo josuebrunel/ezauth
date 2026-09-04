@@ -506,3 +506,173 @@ func (q *SqliteQuerier) QueryAuditLogListByUserID(ctx context.Context, userID st
 
 	return sqlite.Select(mods...)
 }
+
+func (q *SqliteQuerier) QueryRoleInsert(ctx context.Context, role *models.Role) bob.Query {
+	if role.ID == "" {
+		role.ID = util.NewIDStripped()
+	}
+	if role.CreatedAt.IsZero() {
+		role.CreatedAt = time.Now().UTC()
+	}
+	return sqlite.Insert(
+		im.Into(models.TableRole,
+			"id",
+			models.ColumnName,
+			models.ColumnDescription,
+			models.ColumnCreatedAt,
+		),
+		im.Values(
+			sqlite.Arg(role.ID),
+			sqlite.Arg(role.Name),
+			sqlite.Arg(role.Description),
+			sqlite.Arg(role.CreatedAt),
+		),
+		im.Returning("*"),
+	)
+}
+
+func (q *SqliteQuerier) QueryRoleGetByID(ctx context.Context, id string) bob.Query {
+	return sqlite.Select(sm.From(models.TableRole), sm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
+}
+
+func (q *SqliteQuerier) QueryRoleGetByName(ctx context.Context, name string) bob.Query {
+	return sqlite.Select(sm.From(models.TableRole), sm.Where(sqlite.Quote(models.ColumnName).EQ(sqlite.Arg(name))))
+}
+
+func (q *SqliteQuerier) QueryRolesList(ctx context.Context) bob.Query {
+	return sqlite.Select(sm.From(models.TableRole), sm.OrderBy(sqlite.Quote(models.ColumnName)))
+}
+
+func (q *SqliteQuerier) QueryRoleDelete(ctx context.Context, id string) bob.Query {
+	return sqlite.Delete(dm.From(models.TableRole), dm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
+}
+
+func (q *SqliteQuerier) QueryPermissionInsert(ctx context.Context, permission *models.Permission) bob.Query {
+	if permission.ID == "" {
+		permission.ID = util.NewIDStripped()
+	}
+	if permission.CreatedAt.IsZero() {
+		permission.CreatedAt = time.Now().UTC()
+	}
+	return sqlite.Insert(
+		im.Into(models.TablePermission,
+			"id",
+			models.ColumnName,
+			models.ColumnDescription,
+			models.ColumnCreatedAt,
+		),
+		im.Values(
+			sqlite.Arg(permission.ID),
+			sqlite.Arg(permission.Name),
+			sqlite.Arg(permission.Description),
+			sqlite.Arg(permission.CreatedAt),
+		),
+		im.Returning("*"),
+	)
+}
+
+func (q *SqliteQuerier) QueryPermissionGetByID(ctx context.Context, id string) bob.Query {
+	return sqlite.Select(sm.From(models.TablePermission), sm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
+}
+
+func (q *SqliteQuerier) QueryPermissionGetByName(ctx context.Context, name string) bob.Query {
+	return sqlite.Select(sm.From(models.TablePermission), sm.Where(sqlite.Quote(models.ColumnName).EQ(sqlite.Arg(name))))
+}
+
+func (q *SqliteQuerier) QueryPermissionsList(ctx context.Context) bob.Query {
+	return sqlite.Select(sm.From(models.TablePermission), sm.OrderBy(sqlite.Quote(models.ColumnName)))
+}
+
+func (q *SqliteQuerier) QueryPermissionDelete(ctx context.Context, id string) bob.Query {
+	return sqlite.Delete(dm.From(models.TablePermission), dm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
+}
+
+func (q *SqliteQuerier) QueryUserRoleInsert(ctx context.Context, userID, roleID string) bob.Query {
+	return sqlite.Insert(
+		im.Into(models.TableUserRole, models.ColumnUserID, models.ColumnRoleID),
+		im.Values(sqlite.Arg(userID), sqlite.Arg(roleID)),
+	)
+}
+
+func (q *SqliteQuerier) QueryUserRoleDelete(ctx context.Context, userID, roleID string) bob.Query {
+	return sqlite.Delete(
+		dm.From(models.TableUserRole),
+		dm.Where(sqlite.Quote(models.ColumnUserID).EQ(sqlite.Arg(userID))),
+		dm.Where(sqlite.Quote(models.ColumnRoleID).EQ(sqlite.Arg(roleID))),
+	)
+}
+
+func (q *SqliteQuerier) QueryRolesByUserID(ctx context.Context, userID string) bob.Query {
+	return sqlite.Select(
+		sm.Columns(
+			sqlite.Quote(models.TableRole, "id"),
+			sqlite.Quote(models.TableRole, models.ColumnName),
+			sqlite.Quote(models.TableRole, models.ColumnDescription),
+			sqlite.Quote(models.TableRole, models.ColumnCreatedAt),
+		),
+		sm.From(models.TableRole),
+		sm.InnerJoin(models.TableUserRole).OnEQ(
+			sqlite.Quote(models.TableUserRole, models.ColumnRoleID),
+			sqlite.Quote(models.TableRole, "id"),
+		),
+		sm.Where(sqlite.Quote(models.TableUserRole, models.ColumnUserID).EQ(sqlite.Arg(userID))),
+	)
+}
+
+func (q *SqliteQuerier) QueryRolePermissionInsert(ctx context.Context, roleID, permissionID string) bob.Query {
+	return sqlite.Insert(
+		im.Into(models.TableRolePermission, models.ColumnRoleID, models.ColumnPermissionID),
+		im.Values(sqlite.Arg(roleID), sqlite.Arg(permissionID)),
+	)
+}
+
+func (q *SqliteQuerier) QueryRolePermissionDelete(ctx context.Context, roleID, permissionID string) bob.Query {
+	return sqlite.Delete(
+		dm.From(models.TableRolePermission),
+		dm.Where(sqlite.Quote(models.ColumnRoleID).EQ(sqlite.Arg(roleID))),
+		dm.Where(sqlite.Quote(models.ColumnPermissionID).EQ(sqlite.Arg(permissionID))),
+	)
+}
+
+func (q *SqliteQuerier) QueryPermissionsByRoleID(ctx context.Context, roleID string) bob.Query {
+	return sqlite.Select(
+		sm.Columns(
+			sqlite.Quote(models.TablePermission, "id"),
+			sqlite.Quote(models.TablePermission, models.ColumnName),
+			sqlite.Quote(models.TablePermission, models.ColumnDescription),
+			sqlite.Quote(models.TablePermission, models.ColumnCreatedAt),
+		),
+		sm.From(models.TablePermission),
+		sm.InnerJoin(models.TableRolePermission).OnEQ(
+			sqlite.Quote(models.TableRolePermission, models.ColumnPermissionID),
+			sqlite.Quote(models.TablePermission, "id"),
+		),
+		sm.Where(sqlite.Quote(models.TableRolePermission, models.ColumnRoleID).EQ(sqlite.Arg(roleID))),
+	)
+}
+
+// QueryPermissionsByUserID resolves the permissions a user holds transitively
+// through every role granted to them: ezauth_user_roles -> ezauth_role_permissions
+// -> ezauth_permissions. DISTINCT guards against double-counting a permission
+// granted via more than one of the user's roles.
+func (q *SqliteQuerier) QueryPermissionsByUserID(ctx context.Context, userID string) bob.Query {
+	return sqlite.Select(
+		sm.Distinct(),
+		sm.Columns(
+			sqlite.Quote(models.TablePermission, "id"),
+			sqlite.Quote(models.TablePermission, models.ColumnName),
+			sqlite.Quote(models.TablePermission, models.ColumnDescription),
+			sqlite.Quote(models.TablePermission, models.ColumnCreatedAt),
+		),
+		sm.From(models.TablePermission),
+		sm.InnerJoin(models.TableRolePermission).OnEQ(
+			sqlite.Quote(models.TableRolePermission, models.ColumnPermissionID),
+			sqlite.Quote(models.TablePermission, "id"),
+		),
+		sm.InnerJoin(models.TableUserRole).OnEQ(
+			sqlite.Quote(models.TableUserRole, models.ColumnRoleID),
+			sqlite.Quote(models.TableRolePermission, models.ColumnRoleID),
+		),
+		sm.Where(sqlite.Quote(models.TableUserRole, models.ColumnUserID).EQ(sqlite.Arg(userID))),
+	)
+}

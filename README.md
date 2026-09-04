@@ -31,6 +31,7 @@ Simple and easy to use authentication library for Golang.
   - [Guarded Email Change](#guarded-email-change)
 - [Admin and Operations](#admin-and-operations)
   - [Impersonation](#impersonation)
+  - [Roles & Permissions (RBAC)](#roles--permissions-rbac)
   - [Invitation-Based Onboarding](#invitation-based-onboarding)
   - [Admin User Management](#admin-user-management)
   - [Audit Log](#audit-log)
@@ -796,6 +797,31 @@ admin, err := auth.CurrentImpersonator(ctx)     // (*models.User, error)
 
 Safe to call regardless of transport: the session-manager middleware always runs first (see `SessionMiddleware`), even on Bearer-only routes, so the cookie-mode check never panics for lack of loaded session data — it just finds nothing and falls through to the JWT check.
 
+### Roles & Permissions (RBAC)
+
+`ezauth` also has real RBAC: `roles`/`permissions` tables (many-to-many, via `role_permissions`/`user_roles` join tables) plus `RequireRole`/`RequirePermission` middleware that enforce against them. This is a fully separate, additive system from the legacy comma-separated `User.Roles` field and its `HasRole`/`AddRole`/`RemoveRole`/etc. helpers — those keep working exactly as before, but `RequireRole`/`RequirePermission` consult the RBAC tables, not that field. Use whichever fits: the string field for a quick, ungoverned tag on a user; the tables when you need actual enforcement, an audit trail of grants/revokes, or permissions distinct from roles.
+
+```go
+// One-time setup: define roles/permissions and wire them together.
+role, _ := auth.CreateRole(ctx, "editor", "can edit content")
+perm, _ := auth.CreatePermission(ctx, "posts:write", "write posts")
+_ = auth.GrantPermissionToRole(ctx, "editor", "posts:write")
+
+// Grant/revoke a role on a user — idempotent, and records an
+// AuditEventRoleGranted/AuditEventRoleRevoked audit event (see Audit Log).
+_ = auth.GrantRole(ctx, user.ID, "editor")
+_ = auth.RevokeRole(ctx, user.ID, "editor")
+
+// Check directly, or gate a route with the middleware.
+has, _ := auth.UserHasRole(ctx, user.ID, "editor")
+has, _ = auth.UserHasPermission(ctx, user.ID, "posts:write") // resolved transitively through the user's roles
+
+router.Handle("/admin/posts", auth.RequireRole("editor")(postsHandler))
+router.Handle("/admin/posts", auth.RequirePermission("posts:write")(postsHandler))
+```
+
+`RequireRole`/`RequirePermission` read the authenticated user ID from request context (set by `AuthMiddleware` or `LoadUserMiddleware`/`SessionMiddleware`), so they must run downstream of one of those; a missing user returns 401, a missing role/permission returns 403. Deleting a role or permission cascades: matching `user_roles`/`role_permissions` assignment rows are removed automatically.
+
 ### Invitation-Based Onboarding
 
 An existing user (e.g. a team admin) can invite someone by email; the invitee gets a link that pre-fills registration with their email pre-verified and, optionally, a pre-assigned role. Like `Impersonate`, `ezauth` enforces no authorization on who may invite — check that yourself (e.g. `inviter.HasRole("admin")`) before calling it. `Roles` and `Data` are opaque to `ezauth` beyond being carried through to the created account, so a multi-tenancy/RBAC layer built on top can put an org ID or role name in `Data`/`Roles` without `ezauth` needing to know what they mean.
@@ -892,7 +918,7 @@ result, err := auth.Service.AuditLogs(ctx, targetUserID, service.ListAuditLogsOp
 // result.Events ([]*models.AuditLog: event_type, metadata, created_at), result.HasMore
 ```
 
-Event types are the `models.AuditEvent*` constants (e.g. `AuditEventLoginSucceeded`, `AuditEventAccountLocked`). Two events — `AfterLoginFailed` and `AfterAccountLocked` — aren't tied to an existing `Hook` method, so they're added as new ones; embed `DefaultHook` as usual and only override what you need. "Email verification" and "role changes" aren't recorded yet since ezauth doesn't have an email-verification-confirm flow or RBAC.
+Event types are the `models.AuditEvent*` constants (e.g. `AuditEventLoginSucceeded`, `AuditEventAccountLocked`, `AuditEventRoleGranted`/`AuditEventRoleRevoked`). Two events — `AfterLoginFailed` and `AfterAccountLocked` — aren't tied to an existing `Hook` method, so they're added as new ones; embed `DefaultHook` as usual and only override what you need. "Email verification" isn't recorded yet since ezauth doesn't have an email-verification-confirm flow.
 
 #### Standalone-service Mode
 

@@ -320,6 +320,70 @@ func (e *EzAuth) GetSuccessMessage(ctx context.Context) string {
 	return e.Handler.GetSuccessMessage(ctx)
 }
 
+// CreateRole creates a new RBAC role. Real RBAC (this and the methods below)
+// is a fully separate, additive system from the legacy comma-separated
+// User.Roles/HasRole/AddRole helpers — those keep working unchanged, but
+// RequireRole/RequirePermission consult these tables, not that field.
+func (e *EzAuth) CreateRole(ctx context.Context, name, description string) (*models.Role, error) {
+	return e.Service.CreateRole(ctx, name, description)
+}
+
+// CreatePermission creates a new RBAC permission.
+func (e *EzAuth) CreatePermission(ctx context.Context, name, description string) (*models.Permission, error) {
+	return e.Service.CreatePermission(ctx, name, description)
+}
+
+// GrantRole grants a role to a user by role name. Idempotent, and records an
+// audit event (models.AuditEventRoleGranted).
+func (e *EzAuth) GrantRole(ctx context.Context, userID, roleName string) error {
+	return e.Service.GrantRole(ctx, userID, roleName)
+}
+
+// RevokeRole revokes a role from a user by role name. Idempotent, and
+// records an audit event (models.AuditEventRoleRevoked).
+func (e *EzAuth) RevokeRole(ctx context.Context, userID, roleName string) error {
+	return e.Service.RevokeRole(ctx, userID, roleName)
+}
+
+// GrantPermissionToRole grants a permission to a role, both identified by name.
+func (e *EzAuth) GrantPermissionToRole(ctx context.Context, roleName, permissionName string) error {
+	return e.Service.GrantPermissionToRole(ctx, roleName, permissionName)
+}
+
+// RevokePermissionFromRole revokes a permission from a role, both identified by name.
+func (e *EzAuth) RevokePermissionFromRole(ctx context.Context, roleName, permissionName string) error {
+	return e.Service.RevokePermissionFromRole(ctx, roleName, permissionName)
+}
+
+// UserRoles lists the roles granted to a user.
+func (e *EzAuth) UserRoles(ctx context.Context, userID string) ([]*models.Role, error) {
+	return e.Service.UserRoles(ctx, userID)
+}
+
+// UserHasRole reports whether the user holds the given role, checked against
+// the RBAC tables (not the legacy User.Roles string field).
+func (e *EzAuth) UserHasRole(ctx context.Context, userID, roleName string) (bool, error) {
+	return e.Service.UserHasRole(ctx, userID, roleName)
+}
+
+// UserHasPermission reports whether the user holds the given permission,
+// resolved transitively through every role granted to them.
+func (e *EzAuth) UserHasPermission(ctx context.Context, userID, permissionName string) (bool, error) {
+	return e.Service.UserHasPermission(ctx, userID, permissionName)
+}
+
+// RequireRole is a middleware that requires the authenticated user to hold
+// the given role, checked against the RBAC tables.
+func (e *EzAuth) RequireRole(role string) func(http.Handler) http.Handler {
+	return e.Handler.RequireRole(role)
+}
+
+// RequirePermission is a middleware that requires the authenticated user to
+// hold the given permission, checked against the RBAC tables.
+func (e *EzAuth) RequirePermission(permission string) func(http.Handler) http.Handler {
+	return e.Handler.RequirePermission(permission)
+}
+
 // Impersonate mints a new token pair for targetUserID, acting on behalf of adminUser.
 // ezauth performs no authorization check here: the caller is responsible for verifying
 // that adminUser is allowed to impersonate (e.g. via adminUser.HasRole("admin")) before
