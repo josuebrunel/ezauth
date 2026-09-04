@@ -16,6 +16,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/josuebrunel/ezauth/pkg/config"
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/ezauth/pkg/util"
 	"github.com/josuebrunel/gopkg/xlog"
 	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/bcrypt"
@@ -637,14 +638,20 @@ type TokenResponse struct {
 
 // TokenCreate creates a new pair of access and refresh tokens for the given user.
 func (a *Auth) TokenCreate(ctx context.Context, user *models.User) (*TokenResponse, error) {
-	return a.tokenCreateForActor(ctx, user, "")
+	return a.tokenCreateForActor(ctx, user, "", "")
 }
 
 // tokenCreateForActor creates a new pair of access and refresh tokens for the given user.
 // When actorID is non-empty, the access token carries an "act" claim identifying the
 // acting user (e.g. an admin impersonating user), and the persisted refresh token is
 // tagged in Metadata so it can be recognized and revoked as an impersonation token.
-func (a *Auth) tokenCreateForActor(ctx context.Context, user *models.User, actorID string) (*TokenResponse, error) {
+//
+// familyID identifies the refresh-token's rotation lineage: pass "" to start a new
+// family (fresh login/impersonation), or an existing token's family id to carry it
+// forward across a rotation (see TokenRefresh). It's persisted in Metadata so a replay
+// of an already-rotated-out token can be traced back to, and used to revoke, the rest
+// of its family.
+func (a *Auth) tokenCreateForActor(ctx context.Context, user *models.User, actorID, familyID string) (*TokenResponse, error) {
 	xlog.Debug("creating tokens", "user_id", user.ID, "actor_id", actorID)
 	accessToken, exp, err := a.generateAccessToken(user, actorID)
 	if err != nil {
@@ -658,7 +665,10 @@ func (a *Auth) tokenCreateForActor(ctx context.Context, user *models.User, actor
 		return nil, err
 	}
 
-	metadata := models.JSONMap{}
+	if familyID == "" {
+		familyID = util.NewIDStripped()
+	}
+	metadata := models.JSONMap{"family_id": familyID}
 	if actorID != "" {
 		metadata["impersonation"] = true
 		metadata["actor_id"] = actorID
@@ -720,7 +730,7 @@ func (a *Auth) Impersonate(ctx context.Context, adminUser *models.User, targetUs
 	}
 
 	xlog.Info("impersonation started", "admin_id", adminUser.ID, "target_user_id", target.ID)
-	return a.tokenCreateForActor(ctx, target, adminUser.ID)
+	return a.tokenCreateForActor(ctx, target, adminUser.ID, "")
 }
 
 // StopImpersonating revokes an impersonation refresh token, ending that impersonation
@@ -753,6 +763,10 @@ func (a *Auth) TokenRefresh(ctx context.Context, refreshToken string) (*TokenRes
 
 	if token.Revoked {
 		xlog.Warn("attempt to use revoked token", "token_id", token.ID, "user_id", token.UserID)
+		if familyID, ok := token.Metadata["family_id"].(string); ok && familyID != "" {
+			xlog.Error("refresh token reuse detected, revoking token family", "token_id", token.ID, "user_id", token.UserID, "family_id", familyID)
+			a.revokeTokenFamily(ctx, token.UserID, familyID)
+		}
 		return nil, errors.New("token revoked")
 	}
 
@@ -773,7 +787,26 @@ func (a *Auth) TokenRefresh(ctx context.Context, refreshToken string) (*TokenRes
 	}
 
 	actorID, _ := token.Metadata["actor_id"].(string)
-	return a.tokenCreateForActor(ctx, user, actorID)
+	familyID, _ := token.Metadata["family_id"].(string)
+	return a.tokenCreateForActor(ctx, user, actorID, familyID)
+}
+
+// revokeTokenFamily revokes every other active refresh token in the given rotation
+// family, in response to a detected reuse (replay of an already-rotated-out token) —
+// a strong signal the token was stolen.
+func (a *Auth) revokeTokenFamily(ctx context.Context, userID, familyID string) {
+	tokens, err := a.Repo.TokenListByUserIDAndType(ctx, userID, models.TokenTypeRefresh)
+	if err != nil {
+		xlog.Error("failed to list tokens for family revocation", "user_id", userID, "family_id", familyID, "err", err)
+		return
+	}
+	for _, t := range tokens {
+		if fid, _ := t.Metadata["family_id"].(string); fid == familyID {
+			if err := a.Repo.TokenRevoke(ctx, t.ID); err != nil {
+				xlog.Error("failed to revoke token in reused family", "token_id", t.ID, "family_id", familyID, "err", err)
+			}
+		}
+	}
 }
 
 // TokenRevoke revokes the given refresh token.

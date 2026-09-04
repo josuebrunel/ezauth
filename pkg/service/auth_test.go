@@ -668,6 +668,77 @@ func TestTokenOperations(t *testing.T) {
 		}
 	})
 
+	t.Run("TokenRefresh_ReuseDetection", func(t *testing.T) {
+		reuseUser, err := auth.Repo.UserCreate(ctx, &models.User{
+			Email:        util.UniqueEmail("reuse"),
+			PasswordHash: "some-hash",
+			Provider:     "local",
+		})
+		if err != nil {
+			t.Fatalf("failed to create test user: %v", err)
+		}
+
+		// An unrelated family/user, to prove the cascade doesn't cross families.
+		otherUser, err := auth.Repo.UserCreate(ctx, &models.User{
+			Email:        util.UniqueEmail("reuse-other"),
+			PasswordHash: "some-hash",
+			Provider:     "local",
+		})
+		if err != nil {
+			t.Fatalf("failed to create other test user: %v", err)
+		}
+		otherResp, err := auth.TokenCreate(ctx, otherUser)
+		if err != nil {
+			t.Fatalf("TokenCreate() for other user unexpected error: %v", err)
+		}
+
+		respA, err := auth.TokenCreate(ctx, reuseUser)
+		if err != nil {
+			t.Fatalf("TokenCreate() unexpected error: %v", err)
+		}
+		tokenA := respA.RefreshToken
+
+		respB, err := auth.TokenRefresh(ctx, tokenA)
+		if err != nil {
+			t.Fatalf("TokenRefresh() (A->B) unexpected error: %v", err)
+		}
+		tokenB := respB.RefreshToken
+
+		respC, err := auth.TokenRefresh(ctx, tokenB)
+		if err != nil {
+			t.Fatalf("TokenRefresh() (B->C) unexpected error: %v", err)
+		}
+		tokenC := respC.RefreshToken
+
+		// Replay the already-rotated-out token A: this should be detected as reuse
+		// and cascade-revoke the rest of the family, including the currently-active
+		// token C, even though C itself was never presented here.
+		_, err = auth.TokenRefresh(ctx, tokenA)
+		if err == nil {
+			t.Fatal("expected error when replaying a rotated-out refresh token, got nil")
+		}
+		expectedErr := "token revoked"
+		if err.Error() != expectedErr {
+			t.Errorf("expected error '%s', got '%v'", expectedErr, err)
+		}
+
+		storedC, err := auth.Repo.TokenGetByToken(ctx, tokenC)
+		if err != nil {
+			t.Fatalf("failed to get token C: %v", err)
+		}
+		if !storedC.Revoked {
+			t.Error("expected token C to be revoked by the family reuse cascade")
+		}
+
+		storedOther, err := auth.Repo.TokenGetByToken(ctx, otherResp.RefreshToken)
+		if err != nil {
+			t.Fatalf("failed to get unrelated token: %v", err)
+		}
+		if storedOther.Revoked {
+			t.Error("cascade revoked a token from an unrelated family/user")
+		}
+	})
+
 	t.Run("TokenRevokeAllByUserID", func(t *testing.T) {
 		// Create multiple tokens for the user
 		token1 := &models.Token{
