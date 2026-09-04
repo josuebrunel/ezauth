@@ -41,6 +41,16 @@ func TestOrganizations(t *testing.T) {
 		}
 	})
 
+	t.Run("OrganizationGetByID", func(t *testing.T) {
+		got, err := auth.OrganizationGetByID(ctx, org.ID)
+		if err != nil {
+			t.Fatalf("OrganizationGetByID() unexpected error: %v", err)
+		}
+		if got.Name != "Acme Inc" {
+			t.Errorf("expected name 'Acme Inc', got %q", got.Name)
+		}
+	})
+
 	t.Run("AddOrgMember_And_List", func(t *testing.T) {
 		if err := auth.AddOrgMember(ctx, org.ID, user.ID, "org-owner"); err != nil {
 			t.Fatalf("AddOrgMember() unexpected error: %v", err)

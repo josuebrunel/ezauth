@@ -414,6 +414,12 @@ func (e *EzAuth) CreateOrganization(ctx context.Context, name string) (*models.O
 	return e.Service.CreateOrganization(ctx, name)
 }
 
+// OrganizationGetByID retrieves an organization by its ID — typically used
+// inside an OrgLoader (see OrgLoaderMiddleware) to resolve the "current org".
+func (e *EzAuth) OrganizationGetByID(ctx context.Context, id string) (*models.Organization, error) {
+	return e.Service.OrganizationGetByID(ctx, id)
+}
+
 // OrganizationsList lists all organizations.
 func (e *EzAuth) OrganizationsList(ctx context.Context) ([]*models.Organization, error) {
 	return e.Service.OrganizationsList(ctx)

@@ -21,6 +21,12 @@ func (a *Auth) CreateOrganization(ctx context.Context, name string) (*models.Org
 	return org, nil
 }
 
+// OrganizationGetByID retrieves an organization by its ID — typically used
+// inside an OrgLoader (see OrgLoaderMiddleware) to resolve the "current org".
+func (a *Auth) OrganizationGetByID(ctx context.Context, id string) (*models.Organization, error) {
+	return a.Repo.OrganizationGetByID(ctx, id)
+}
+
 // OrganizationsList lists all organizations.
 func (a *Auth) OrganizationsList(ctx context.Context) ([]*models.Organization, error) {
 	return a.Repo.OrganizationsList(ctx)
