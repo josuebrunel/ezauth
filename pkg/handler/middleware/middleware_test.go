@@ -141,21 +141,29 @@ func TestAPIKeyMiddleware(t *testing.T) {
 		t.Errorf("expected 200 with config key, got %d", w.Code)
 	}
 
-	// Test DB Key (via mock)
+	// Test DB Key (via mock), scoped — confirm the scopes land in context.
 	dbKey := "db-key"
 	mockRepo := &MockTokenGetter{
 		Token: &models.Token{
 			TokenType: models.TokenTypeApiKey,
 			ExpiresAt: time.Now().Add(time.Hour),
+			Metadata:  models.JSONMap{"scopes": []string{"posts:write"}},
 		},
 	}
 	mwDB := APIKeyMiddleware(apiKey, mockRepo)
+	nextCheckScopes := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		scopes, ok := r.Context().Value(APIKeyScopesContextKey).([]string)
+		if !ok || len(scopes) != 1 || scopes[0] != "posts:write" {
+			t.Errorf("expected scopes [posts:write] in context, got %v (ok: %v)", scopes, ok)
+		}
+		w.WriteHeader(http.StatusOK)
+	})
 
 	req = httptest.NewRequest("GET", "/", nil)
 	req.Header.Set("X-API-Key", dbKey)
 	w = httptest.NewRecorder()
 
-	mwDB(next).ServeHTTP(w, req)
+	mwDB(nextCheckScopes).ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
 		t.Errorf("expected 200 with db key, got %d", w.Code)
 	}
@@ -293,6 +301,62 @@ func TestRequirePermission(t *testing.T) {
 		mw(next).ServeHTTP(w, req)
 		if w.Code != http.StatusForbidden {
 			t.Errorf("expected 403 when user lacks the permission, got %d", w.Code)
+		}
+	})
+}
+
+func TestRequireAPIKeyScope(t *testing.T) {
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	t.Run("NoAPIKeyContext_Passthrough", func(t *testing.T) {
+		// Defensive case: in practice APIKeyMiddleware always runs first and
+		// sets this context key for DB-backed keys (the master config key
+		// never has one, and is always full-access).
+		mw := RequireAPIKeyScope("posts:write")
+		req := httptest.NewRequest("GET", "/", nil)
+		w := httptest.NewRecorder()
+
+		mw(next).ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Errorf("expected 200 with no api key scopes in context, got %d", w.Code)
+		}
+	})
+
+	t.Run("Unscoped_Passthrough", func(t *testing.T) {
+		mw := RequireAPIKeyScope("posts:write")
+		req := httptest.NewRequest("GET", "/", nil)
+		req = req.WithContext(context.WithValue(req.Context(), APIKeyScopesContextKey, []string{}))
+		w := httptest.NewRecorder()
+
+		mw(next).ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Errorf("expected 200 for an unscoped key, got %d", w.Code)
+		}
+	})
+
+	t.Run("MatchingScope", func(t *testing.T) {
+		mw := RequireAPIKeyScope("posts:write")
+		req := httptest.NewRequest("GET", "/", nil)
+		req = req.WithContext(context.WithValue(req.Context(), APIKeyScopesContextKey, []string{"posts:write"}))
+		w := httptest.NewRecorder()
+
+		mw(next).ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Errorf("expected 200 when the key has the required scope, got %d", w.Code)
+		}
+	})
+
+	t.Run("MissingScope", func(t *testing.T) {
+		mw := RequireAPIKeyScope("posts:write")
+		req := httptest.NewRequest("GET", "/", nil)
+		req = req.WithContext(context.WithValue(req.Context(), APIKeyScopesContextKey, []string{"posts:read"}))
+		w := httptest.NewRecorder()
+
+		mw(next).ServeHTTP(w, req)
+		if w.Code != http.StatusForbidden {
+			t.Errorf("expected 403 when the key lacks the required scope, got %d", w.Code)
 		}
 	})
 }

@@ -22,6 +22,7 @@ const (
 	ImpersonatorContextKey  = contextKey("impersonatorID")
 	SessionTokensContextKey = contextKey("sessionTokens")
 	SessionImpersonatorKey  = contextKey("sessionImpersonatorID")
+	APIKeyScopesContextKey  = contextKey("apiKeyScopes")
 )
 
 // UserLoader is a function that loads a user from context.
@@ -114,7 +115,33 @@ func APIKeyMiddleware(configApiKey string, tokenRepo TokenGetter) func(http.Hand
 				return
 			}
 
-			next.ServeHTTP(w, r)
+			ctx := context.WithValue(r.Context(), APIKeyScopesContextKey, token.Scopes())
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+// RequireAPIKeyScope is a middleware that requires the API key used to
+// authenticate the request (via APIKeyMiddleware, which must run upstream)
+// to include the given scope. An unscoped key — including the master
+// config API key, which never has an associated Token/scopes — has full
+// access, matching the behavior of every API key issued before per-key
+// scoping existed.
+func RequireAPIKeyScope(scope string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			scopes, ok := r.Context().Value(APIKeyScopesContextKey).([]string)
+			if !ok || len(scopes) == 0 {
+				next.ServeHTTP(w, r)
+				return
+			}
+			for _, s := range scopes {
+				if s == scope {
+					next.ServeHTTP(w, r)
+					return
+				}
+			}
+			WriteJSONResponseError(w, http.StatusForbidden, ErrForbidden)
 		})
 	}
 }

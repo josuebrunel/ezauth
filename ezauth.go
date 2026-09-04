@@ -401,6 +401,13 @@ func (e *EzAuth) ListAPIKeys(ctx context.Context, userID string) ([]*models.Toke
 	return e.Service.ListAPIKeys(ctx, userID)
 }
 
+// RequireAPIKeyScope is a middleware that requires the API key used to
+// authenticate the request (via APIKeyMiddleware, which must run upstream)
+// to include the given scope.
+func (e *EzAuth) RequireAPIKeyScope(scope string) func(http.Handler) http.Handler {
+	return e.Handler.RequireAPIKeyScope(scope)
+}
+
 // Impersonate mints a new token pair for targetUserID, acting on behalf of adminUser.
 // ezauth performs no authorization check here: the caller is responsible for verifying
 // that adminUser is allowed to impersonate (e.g. via adminUser.HasRole("admin")) before

@@ -16,6 +16,13 @@ func (h *Handler) APIKeyMiddleware(next http.Handler) http.Handler {
 	return middleware.APIKeyMiddleware(h.svc.Cfg.ApiKey, h.svc.Repo)(next)
 }
 
+// RequireAPIKeyScope is a middleware that requires the API key used to
+// authenticate the request (via APIKeyMiddleware, which must run upstream)
+// to include the given scope.
+func (h *Handler) RequireAPIKeyScope(scope string) func(http.Handler) http.Handler {
+	return middleware.RequireAPIKeyScope(scope)
+}
+
 // RequireRole is a middleware that requires the authenticated user to hold
 // the given role, checked against the RBAC roles/permissions tables.
 func (h *Handler) RequireRole(role string) func(http.Handler) http.Handler {
