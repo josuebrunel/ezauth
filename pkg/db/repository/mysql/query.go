@@ -361,6 +361,22 @@ func (q *MysqlQuerier) QueryTokenRevokeFamily(ctx context.Context, userID, famil
 	)
 }
 
+// QueryTokenRevokeSessions bulk-revokes every active refresh-token session
+// for a user in one UPDATE, optionally excluding one session (exceptID).
+func (q *MysqlQuerier) QueryTokenRevokeSessions(ctx context.Context, userID, exceptID string) bob.Query {
+	mods := []bob.Mod[*dialect.UpdateQuery]{
+		um.Table(models.TableToken),
+		um.SetCol(models.ColumnRevoked).ToArg(true),
+		um.Where(mysql.Quote(models.ColumnUserID).EQ(mysql.Arg(userID))),
+		um.Where(mysql.Quote(models.ColumnTokenType).EQ(mysql.Arg(models.TokenTypeRefresh))),
+		um.Where(mysql.Quote(models.ColumnRevoked).EQ(mysql.Arg(false))),
+	}
+	if exceptID != "" {
+		mods = append(mods, um.Where(mysql.Quote("id").NE(mysql.Arg(exceptID))))
+	}
+	return mysql.Update(mods...)
+}
+
 func (q *MysqlQuerier) QueryTokenDelete(ctx context.Context, id string) bob.Query {
 	return mysql.Delete(dm.From(models.TableToken), dm.Where(mysql.Quote("id").EQ(mysql.Arg(id))))
 }

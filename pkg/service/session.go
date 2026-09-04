@@ -58,21 +58,12 @@ func (a *Auth) RevokeSession(ctx context.Context, user *models.User, sessionID s
 // RevokeAllSessions revokes all of user's active sessions except, if
 // non-empty, the one whose record ID matches exceptSessionID (e.g. the
 // caller's own current session) — "log out other devices". Pass an empty
-// exceptSessionID to log the user out everywhere.
+// exceptSessionID to log the user out everywhere. A single bulk UPDATE, not
+// a list-then-loop.
 func (a *Auth) RevokeAllSessions(ctx context.Context, user *models.User, exceptSessionID string) error {
-	tokens, err := a.Repo.TokenListByUserIDAndType(ctx, user.ID, models.TokenTypeRefresh)
-	if err != nil {
+	if err := a.Repo.TokenRevokeSessions(ctx, user.ID, exceptSessionID); err != nil {
+		xlog.Error("failed to revoke sessions", "user_id", user.ID, "err", err)
 		return err
-	}
-
-	for _, tok := range tokens {
-		if tok.ID == exceptSessionID {
-			continue
-		}
-		if err := a.Repo.TokenRevoke(ctx, tok.ID); err != nil {
-			xlog.Error("failed to revoke session", "user_id", user.ID, "session_id", tok.ID, "err", err)
-			return err
-		}
 	}
 	xlog.Info("all sessions revoked", "user_id", user.ID, "except_session_id", exceptSessionID)
 	return nil

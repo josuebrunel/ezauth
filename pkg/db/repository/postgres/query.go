@@ -372,6 +372,22 @@ func (q *PSQLQuerier) QueryTokenRevokeFamily(ctx context.Context, userID, family
 	)
 }
 
+// QueryTokenRevokeSessions bulk-revokes every active refresh-token session
+// for a user in one UPDATE, optionally excluding one session (exceptID).
+func (q *PSQLQuerier) QueryTokenRevokeSessions(ctx context.Context, userID, exceptID string) bob.Query {
+	mods := []bob.Mod[*dialect.UpdateQuery]{
+		um.Table(psql.Quote(models.TableToken)),
+		um.SetCol(models.ColumnRevoked).To(true),
+		um.Where(psql.Quote(models.ColumnUserID).EQ(psql.Arg(userID))),
+		um.Where(psql.Quote(models.ColumnTokenType).EQ(psql.Arg(models.TokenTypeRefresh))),
+		um.Where(psql.Quote(models.ColumnRevoked).EQ(psql.Arg(false))),
+	}
+	if exceptID != "" {
+		mods = append(mods, um.Where(psql.Quote("id").NE(psql.Arg(exceptID))))
+	}
+	return psql.Update(mods...)
+}
+
 func (q *PSQLQuerier) QueryTokenDelete(ctx context.Context, id string) bob.Query {
 	return psql.Delete(dm.From(psql.Quote(models.TableToken)), dm.Where(psql.Quote("id").EQ(psql.Arg(id))))
 }

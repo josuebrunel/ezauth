@@ -44,6 +44,7 @@ type TokenQuerier interface {
 	QueryTokenRevoke(ctx context.Context, id string) bob.Query
 	QueryTokenRevokeAllByUserID(ctx context.Context, userID string) bob.Query
 	QueryTokenRevokeFamily(ctx context.Context, userID, familyID string) bob.Query
+	QueryTokenRevokeSessions(ctx context.Context, userID, exceptID string) bob.Query
 	QueryTokenDelete(ctx context.Context, id string) bob.Query
 }
 
@@ -417,6 +418,18 @@ func (r Repository) TokenRevokeFamily(ctx context.Context, userID, familyID stri
 	query := r.QueryTokenRevokeFamily(ctx, userID, familyID)
 	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
 		xlog.Error("Failed to revoke token family", "error", err, "user_id", userID, "family_id", familyID)
+		return err
+	}
+	return nil
+}
+
+// TokenRevokeSessions bulk-revokes every active refresh-token session for a
+// user in one query — "log out everywhere" (exceptID == "") or "log out
+// other devices" (exceptID == the caller's own current session).
+func (r Repository) TokenRevokeSessions(ctx context.Context, userID, exceptID string) error {
+	query := r.QueryTokenRevokeSessions(ctx, userID, exceptID)
+	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+		xlog.Error("Failed to revoke sessions", "error", err, "user_id", userID)
 		return err
 	}
 	return nil

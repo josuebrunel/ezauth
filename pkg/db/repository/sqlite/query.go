@@ -367,6 +367,22 @@ func (q *SqliteQuerier) QueryTokenRevokeFamily(ctx context.Context, userID, fami
 	)
 }
 
+// QueryTokenRevokeSessions bulk-revokes every active refresh-token session
+// for a user in one UPDATE, optionally excluding one session (exceptID).
+func (q *SqliteQuerier) QueryTokenRevokeSessions(ctx context.Context, userID, exceptID string) bob.Query {
+	mods := []bob.Mod[*dialect.UpdateQuery]{
+		um.Table(models.TableToken),
+		um.SetCol(models.ColumnRevoked).ToArg(true),
+		um.Where(sqlite.Quote(models.ColumnUserID).EQ(sqlite.Arg(userID))),
+		um.Where(sqlite.Quote(models.ColumnTokenType).EQ(sqlite.Arg(models.TokenTypeRefresh))),
+		um.Where(sqlite.Quote(models.ColumnRevoked).EQ(sqlite.Arg(false))),
+	}
+	if exceptID != "" {
+		mods = append(mods, um.Where(sqlite.Quote("id").NE(sqlite.Arg(exceptID))))
+	}
+	return sqlite.Update(mods...)
+}
+
 func (q *SqliteQuerier) QueryTokenDelete(ctx context.Context, id string) bob.Query {
 	return sqlite.Delete(dm.From(models.TableToken), dm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
 }
