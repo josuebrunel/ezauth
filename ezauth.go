@@ -420,9 +420,9 @@ func (e *EzAuth) OrganizationGetByID(ctx context.Context, id string) (*models.Or
 	return e.Service.OrganizationGetByID(ctx, id)
 }
 
-// OrganizationsList lists all organizations.
-func (e *EzAuth) OrganizationsList(ctx context.Context) ([]*models.Organization, error) {
-	return e.Service.OrganizationsList(ctx)
+// OrganizationsList lists organizations, paginated (see service.ListOrganizationsOptions).
+func (e *EzAuth) OrganizationsList(ctx context.Context, opts service.ListOrganizationsOptions) (*service.ListOrganizationsResult, error) {
+	return e.Service.OrganizationsList(ctx, opts)
 }
 
 // OrganizationDelete deletes an organization. Matching org_members rows

@@ -730,8 +730,13 @@ func (q *PSQLQuerier) QueryOrganizationGetByID(ctx context.Context, id string) b
 	return psql.Select(sm.From(psql.Quote(models.TableOrganization)), sm.Where(psql.Quote("id").EQ(psql.Arg(id))))
 }
 
-func (q *PSQLQuerier) QueryOrganizationsList(ctx context.Context) bob.Query {
-	return psql.Select(sm.From(psql.Quote(models.TableOrganization)), sm.OrderBy(psql.Quote(models.ColumnName)))
+func (q *PSQLQuerier) QueryOrganizationsList(ctx context.Context, limit, offset int) bob.Query {
+	return psql.Select(
+		sm.From(psql.Quote(models.TableOrganization)),
+		sm.OrderBy(psql.Quote(models.ColumnName)),
+		sm.Limit(limit),
+		sm.Offset(offset),
+	)
 }
 
 func (q *PSQLQuerier) QueryOrganizationDelete(ctx context.Context, id string) bob.Query {

@@ -215,7 +215,7 @@ func (r Repository) PermissionsByUserID(ctx context.Context, userID string) ([]*
 ```go
 func (r Repository) OrganizationCreate(ctx context.Context, org *models.Organization) (*models.Organization, error)
 func (r Repository) OrganizationGetByID(ctx context.Context, id string) (*models.Organization, error)
-func (r Repository) OrganizationsList(ctx context.Context) ([]*models.Organization, error)
+func (r Repository) OrganizationsList(ctx context.Context, limit, offset int) (orgs []*models.Organization, hasMore bool, err error)
 func (r Repository) OrganizationDelete(ctx context.Context, id string) error // cascades org_members
 
 // OrgMemberUpsert inserts, or updates role_id if the (org, user) pair already exists.

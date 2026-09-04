@@ -712,8 +712,13 @@ func (q *MysqlQuerier) QueryOrganizationGetByID(ctx context.Context, id string) 
 	return mysql.Select(sm.From(models.TableOrganization), sm.Where(mysql.Quote("id").EQ(mysql.Arg(id))))
 }
 
-func (q *MysqlQuerier) QueryOrganizationsList(ctx context.Context) bob.Query {
-	return mysql.Select(sm.From(models.TableOrganization), sm.OrderBy(mysql.Quote(models.ColumnName)))
+func (q *MysqlQuerier) QueryOrganizationsList(ctx context.Context, limit, offset int) bob.Query {
+	return mysql.Select(
+		sm.From(models.TableOrganization),
+		sm.OrderBy(mysql.Quote(models.ColumnName)),
+		sm.Limit(int64(limit)),
+		sm.Offset(int64(offset)),
+	)
 }
 
 func (q *MysqlQuerier) QueryOrganizationDelete(ctx context.Context, id string) bob.Query {

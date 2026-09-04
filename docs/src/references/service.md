@@ -412,7 +412,7 @@ Lightweight multi-tenancy. Each member's role is drawn from the RBAC role catalo
 ```go
 func (a *Auth) OrganizationCreate(ctx context.Context, name string) (*models.Organization, error)
 func (a *Auth) OrganizationGetByID(ctx context.Context, id string) (*models.Organization, error)
-func (a *Auth) OrganizationsList(ctx context.Context) ([]*models.Organization, error)
+func (a *Auth) OrganizationsList(ctx context.Context, opts ListOrganizationsOptions) (*ListOrganizationsResult, error) // paginated (Limit default 50, max 200)
 func (a *Auth) OrganizationDelete(ctx context.Context, id string) error // cascades org_members
 
 // OrgMemberAdd upserts: calling it again for the same (org, user) updates the role.

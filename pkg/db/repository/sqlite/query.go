@@ -725,8 +725,13 @@ func (q *SqliteQuerier) QueryOrganizationGetByID(ctx context.Context, id string)
 	return sqlite.Select(sm.From(models.TableOrganization), sm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
 }
 
-func (q *SqliteQuerier) QueryOrganizationsList(ctx context.Context) bob.Query {
-	return sqlite.Select(sm.From(models.TableOrganization), sm.OrderBy(sqlite.Quote(models.ColumnName)))
+func (q *SqliteQuerier) QueryOrganizationsList(ctx context.Context, limit, offset int) bob.Query {
+	return sqlite.Select(
+		sm.From(models.TableOrganization),
+		sm.OrderBy(sqlite.Quote(models.ColumnName)),
+		sm.Limit(limit),
+		sm.Offset(offset),
+	)
 }
 
 func (q *SqliteQuerier) QueryOrganizationDelete(ctx context.Context, id string) bob.Query {

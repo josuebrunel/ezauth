@@ -27,9 +27,43 @@ func (a *Auth) OrganizationGetByID(ctx context.Context, id string) (*models.Orga
 	return a.Repo.OrganizationGetByID(ctx, id)
 }
 
-// OrganizationsList lists all organizations.
-func (a *Auth) OrganizationsList(ctx context.Context) ([]*models.Organization, error) {
-	return a.Repo.OrganizationsList(ctx)
+const (
+	defaultOrganizationsListLimit = 50
+	maxOrganizationsListLimit     = 200
+)
+
+// ListOrganizationsOptions defines the pagination parameters for
+// OrganizationsList. Zero-valued Limit defaults to 50; Limit is capped at 200.
+type ListOrganizationsOptions struct {
+	Limit  int
+	Offset int
+}
+
+// ListOrganizationsResult is the paginated result of OrganizationsList.
+type ListOrganizationsResult struct {
+	Organizations []*models.Organization `json:"organizations"`
+	HasMore       bool                   `json:"has_more"`
+}
+
+// OrganizationsList lists organizations, name-ordered. Real multi-tenant
+// deployments can have many organizations (unlike the RBAC roles/permissions
+// catalogs, which are small and admin-curated, so RolesList/PermissionsList
+// stay unpaginated), so this is paginated like UsersList/AuditLogs.
+func (a *Auth) OrganizationsList(ctx context.Context, opts ListOrganizationsOptions) (*ListOrganizationsResult, error) {
+	limit := opts.Limit
+	if limit <= 0 || limit > maxOrganizationsListLimit {
+		limit = defaultOrganizationsListLimit
+	}
+	offset := opts.Offset
+	if offset < 0 {
+		offset = 0
+	}
+
+	orgs, hasMore, err := a.Repo.OrganizationsList(ctx, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	return &ListOrganizationsResult{Organizations: orgs, HasMore: hasMore}, nil
 }
 
 // OrganizationDelete deletes an organization. Matching org_members rows

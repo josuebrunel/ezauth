@@ -99,7 +99,7 @@ type RBACAssignmentQuerier interface {
 type OrganizationQuerier interface {
 	QueryOrganizationInsert(ctx context.Context, org *models.Organization) bob.Query
 	QueryOrganizationGetByID(ctx context.Context, id string) bob.Query
-	QueryOrganizationsList(ctx context.Context) bob.Query
+	QueryOrganizationsList(ctx context.Context, limit, offset int) bob.Query
 	QueryOrganizationDelete(ctx context.Context, id string) bob.Query
 }
 
@@ -853,15 +853,20 @@ func (r Repository) OrganizationGetByID(ctx context.Context, id string) (*models
 	return org, nil
 }
 
-// OrganizationsList lists all organizations.
-func (r Repository) OrganizationsList(ctx context.Context) ([]*models.Organization, error) {
-	query := r.QueryOrganizationsList(ctx)
-	orgs, err := bob.All(ctx, r.bdb, query, scan.StructMapper[*models.Organization]())
+// OrganizationsList lists organizations, name-ordered. hasMore reports
+// whether more results exist beyond this page, computed by fetching one
+// extra row rather than a separate COUNT(*) query.
+func (r Repository) OrganizationsList(ctx context.Context, limit, offset int) (orgs []*models.Organization, hasMore bool, err error) {
+	query := r.QueryOrganizationsList(ctx, limit+1, offset)
+	orgs, err = bob.All(ctx, r.bdb, query, scan.StructMapper[*models.Organization]())
 	if err != nil {
 		xlog.Error("Failed to list organizations", "error", err)
-		return nil, err
+		return nil, false, err
 	}
-	return orgs, nil
+	if len(orgs) > limit {
+		return orgs[:limit], true, nil
+	}
+	return orgs, false, nil
 }
 
 // OrganizationDelete deletes an organization. Matching ezauth_org_members

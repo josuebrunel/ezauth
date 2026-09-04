@@ -28,7 +28,9 @@ func (a *Auth) RoleCreate(ctx context.Context, name, description string) (*model
 	return role, nil
 }
 
-// RolesList lists all RBAC roles.
+// RolesList lists all RBAC roles. Deliberately unpaginated: roles are a
+// small, admin-curated catalog (unlike e.g. OrganizationsList, which can
+// grow with real multi-tenant usage).
 func (a *Auth) RolesList(ctx context.Context) ([]*models.Role, error) {
 	return a.Repo.RolesList(ctx)
 }
@@ -55,7 +57,8 @@ func (a *Auth) PermissionCreate(ctx context.Context, name, description string) (
 	return permission, nil
 }
 
-// PermissionsList lists all RBAC permissions.
+// PermissionsList lists all RBAC permissions. Deliberately unpaginated,
+// same reasoning as RolesList.
 func (a *Auth) PermissionsList(ctx context.Context) ([]*models.Permission, error) {
 	return a.Repo.PermissionsList(ctx)
 }
