@@ -18,6 +18,7 @@ import (
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/josuebrunel/ezauth/pkg/db/repository"
 	"github.com/josuebrunel/ezauth/pkg/handler"
+	ezmiddleware "github.com/josuebrunel/ezauth/pkg/handler/middleware"
 	"github.com/josuebrunel/ezauth/pkg/service"
 	"github.com/josuebrunel/ezauth/pkg/service/providers"
 	"github.com/josuebrunel/gopkg/xlog"
@@ -445,6 +446,14 @@ func (e *EzAuth) UserOrganizations(ctx context.Context, userID string) ([]*model
 	return e.Service.UserOrganizations(ctx, userID)
 }
 
+// OrgLoaderMiddleware is a middleware that resolves the "current organization"
+// for a request via loader (app-supplied — ezauth doesn't presume how an org
+// is identified) and loads it into the context. Downstream handlers read it
+// via GetSessionOrg(ctx).
+func (e *EzAuth) OrgLoaderMiddleware(loader ezmiddleware.OrgLoader) func(http.Handler) http.Handler {
+	return e.Handler.OrgLoaderMiddleware(loader)
+}
+
 // Impersonate mints a new token pair for targetUserID, acting on behalf of adminUser.
 // ezauth performs no authorization check here: the caller is responsible for verifying
 // that adminUser is allowed to impersonate (e.g. via adminUser.HasRole("admin")) before
@@ -646,6 +655,14 @@ func GetSessionTokens(ctx context.Context) (map[string]string, error) {
 		return nil, errors.New("session tokens not found")
 	}
 	return tokens, nil
+}
+
+// GetSessionOrg returns the "current organization" object from the context,
+// stashed there by OrgLoaderMiddleware. The instance-free counterpart to
+// EzAuth.OrgLoaderMiddleware's downstream reads, for callers that don't have
+// an EzAuth instance handy (e.g. templates).
+func GetSessionOrg(ctx context.Context) (*models.Organization, error) {
+	return handler.GetSessionOrg(ctx)
 }
 
 // CurrentImpersonatorID returns the acting admin's user ID for the current

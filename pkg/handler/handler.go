@@ -25,6 +25,14 @@ func (h *Handler) LoadUserMiddleware(next http.Handler) http.Handler {
 	return ezmiddleware.LoadUserMiddleware(h.GetSessionUser)(next)
 }
 
+// OrgLoaderMiddleware is a middleware that resolves the "current organization"
+// for a request via loader (app-supplied — ezauth doesn't presume how an org
+// is identified) and loads it into the context. Downstream handlers read it
+// via GetSessionOrg(ctx).
+func (h *Handler) OrgLoaderMiddleware(loader ezmiddleware.OrgLoader) func(http.Handler) http.Handler {
+	return ezmiddleware.OrgLoaderMiddleware(loader)
+}
+
 // SessionMiddleware combines LoadAndSave and LoadUserMiddleware.
 // It ensures session data is loaded/saved and the user is populated in the context.
 // It also stashes the session tokens and cookie-mode impersonator ID into the

@@ -189,6 +189,16 @@ func GetSessionUser(ctx context.Context) (*models.User, error) {
 	return user, nil
 }
 
+// GetSessionOrg returns the "current organization" object from the context.
+// This requires it to have been previously set via OrgLoaderMiddleware.
+func GetSessionOrg(ctx context.Context) (*models.Organization, error) {
+	org, ok := ctx.Value(ezmiddleware.OrgObjectContextKey).(*models.Organization)
+	if !ok {
+		return nil, errors.New("organization not found in context")
+	}
+	return org, nil
+}
+
 // GetSessionUser returns the authenticated user.
 // It checks the context first (user object), then the context (userID), then the session cookies.
 func (h *Handler) GetSessionUser(ctx context.Context) (*models.User, error) {

@@ -360,3 +360,55 @@ func TestRequireAPIKeyScope(t *testing.T) {
 		}
 	})
 }
+
+func TestOrgLoaderMiddleware(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		org := &models.Organization{ID: "org1"}
+		loader := OrgLoader(func(ctx context.Context) (*models.Organization, error) {
+			return org, nil
+		})
+		mw := OrgLoaderMiddleware(loader)
+
+		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			o, ok := r.Context().Value(OrgObjectContextKey).(*models.Organization)
+			if !ok || o.ID != "org1" {
+				t.Errorf("expected org in context")
+			}
+			orgID, ok := r.Context().Value(OrgContextKey).(string)
+			if !ok || orgID != "org1" {
+				t.Errorf("expected org id in context")
+			}
+			w.WriteHeader(http.StatusOK)
+		})
+
+		req := httptest.NewRequest("GET", "/", nil)
+		w := httptest.NewRecorder()
+
+		mw(next).ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Errorf("expected 200, got %d", w.Code)
+		}
+	})
+
+	t.Run("LoaderError_NoContextSet", func(t *testing.T) {
+		loader := OrgLoader(func(ctx context.Context) (*models.Organization, error) {
+			return nil, errCheckerFailed
+		})
+		mw := OrgLoaderMiddleware(loader)
+
+		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if _, ok := r.Context().Value(OrgObjectContextKey).(*models.Organization); ok {
+				t.Error("expected no org in context when the loader errors")
+			}
+			w.WriteHeader(http.StatusOK)
+		})
+
+		req := httptest.NewRequest("GET", "/", nil)
+		w := httptest.NewRecorder()
+
+		mw(next).ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Errorf("expected 200 (passthrough), got %d", w.Code)
+		}
+	})
+}

@@ -23,10 +23,18 @@ const (
 	SessionTokensContextKey = contextKey("sessionTokens")
 	SessionImpersonatorKey  = contextKey("sessionImpersonatorID")
 	APIKeyScopesContextKey  = contextKey("apiKeyScopes")
+	OrgContextKey           = contextKey("orgID")
+	OrgObjectContextKey     = contextKey("org")
 )
 
 // UserLoader is a function that loads a user from context.
 type UserLoader func(context.Context) (*models.User, error)
+
+// OrgLoader is a function that resolves the "current organization" for a
+// request. ezauth doesn't presume how an org is identified (URL param,
+// subdomain, header, etc.) — the consuming app supplies this, same as
+// UserLoader doesn't presume how a user is resolved.
+type OrgLoader func(context.Context) (*models.Organization, error)
 
 // AuthMiddleware is a middleware that authenticates requests using a JWT bearer token.
 // keyFunc resolves the verification key for a token (see jwt.Keyfunc — e.g. by its
@@ -230,6 +238,22 @@ func LoadUserMiddleware(loader UserLoader) func(http.Handler) http.Handler {
 			if user, err := loader(ctx); err == nil {
 				ctx = context.WithValue(ctx, UserContextKey, user.ID)
 				ctx = context.WithValue(ctx, UserObjectContextKey, user)
+			}
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+// OrgLoaderMiddleware is a middleware that resolves the "current organization"
+// for a request (via loader) and loads it into the context. Downstream
+// handlers read it with GetSessionOrg. Mirrors LoadUserMiddleware exactly.
+func OrgLoaderMiddleware(loader OrgLoader) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+			if org, err := loader(ctx); err == nil {
+				ctx = context.WithValue(ctx, OrgContextKey, org.ID)
+				ctx = context.WithValue(ctx, OrgObjectContextKey, org)
 			}
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
