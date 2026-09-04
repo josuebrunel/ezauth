@@ -249,6 +249,7 @@ func (a *Auth) mfaGenerateRecoveryCodes(ctx context.Context, user *models.User) 
 	}
 
 	codes := make([]string, 0, mfaRecoveryCodeCount)
+	tokens := make([]*models.Token, 0, mfaRecoveryCodeCount)
 	for i := 0; i < mfaRecoveryCodeCount; i++ {
 		code, err := generateRecoveryCode()
 		if err != nil {
@@ -256,17 +257,17 @@ func (a *Auth) mfaGenerateRecoveryCodes(ctx context.Context, user *models.User) 
 		}
 		codes = append(codes, code)
 
-		token := &models.Token{
+		tokens = append(tokens, &models.Token{
 			UserID:    user.ID,
 			Token:     mfaHashRecoveryCode(user.ID, code),
 			TokenType: models.TokenTypeMFARecovery,
 			ExpiresAt: time.Now().AddDate(10, 0, 0),
 			CreatedAt: time.Now(),
 			Metadata:  models.JSONMap{},
-		}
-		if _, err := a.Repo.TokenCreate(ctx, token); err != nil {
-			return nil, err
-		}
+		})
+	}
+	if err := a.Repo.TokenBatchInsert(ctx, tokens); err != nil {
+		return nil, err
 	}
 	return codes, nil
 }

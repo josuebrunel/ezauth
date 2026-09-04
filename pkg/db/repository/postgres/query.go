@@ -314,6 +314,42 @@ func (q *PSQLQuerier) QueryTokenInsert(ctx context.Context, token *models.Token)
 	)
 }
 
+// QueryTokenBatchInsert creates several tokens in a single multi-row INSERT.
+func (q *PSQLQuerier) QueryTokenBatchInsert(ctx context.Context, tokens []*models.Token) bob.Query {
+	rows := make([][]bob.Expression, len(tokens))
+	for i, token := range tokens {
+		if token.ID == "" {
+			token.ID = util.NewID()
+		}
+		if token.CreatedAt.IsZero() {
+			token.CreatedAt = time.Now().UTC()
+		}
+		rows[i] = []bob.Expression{
+			psql.Arg(token.ID),
+			psql.Arg(token.UserID),
+			psql.Arg(token.Token),
+			psql.Arg(token.TokenType),
+			psql.Arg(token.ExpiresAt),
+			psql.Arg(token.CreatedAt),
+			psql.Arg(token.Revoked),
+			psql.Arg(token.Metadata),
+		}
+	}
+	return psql.Insert(
+		im.Into(psql.Quote(models.TableToken),
+			"id",
+			models.ColumnUserID,
+			models.ColumnToken,
+			models.ColumnTokenType,
+			models.ColumnExpiresAt,
+			models.ColumnCreatedAt,
+			models.ColumnRevoked,
+			models.ColumnMetadata,
+		),
+		im.Rows(rows...),
+	)
+}
+
 func (q *PSQLQuerier) QueryTokenGetByID(ctx context.Context, id string) bob.Query {
 	return psql.Select(sm.From(psql.Quote(models.TableToken)), sm.Where(psql.Quote("id").EQ(psql.Arg(id))))
 }

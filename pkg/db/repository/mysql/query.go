@@ -303,6 +303,42 @@ func (q *MysqlQuerier) QueryTokenInsert(ctx context.Context, token *models.Token
 	)
 }
 
+// QueryTokenBatchInsert creates several tokens in a single multi-row INSERT.
+func (q *MysqlQuerier) QueryTokenBatchInsert(ctx context.Context, tokens []*models.Token) bob.Query {
+	rows := make([][]bob.Expression, len(tokens))
+	for i, token := range tokens {
+		if token.ID == "" {
+			token.ID = util.NewIDStripped()
+		}
+		if token.CreatedAt.IsZero() {
+			token.CreatedAt = time.Now().UTC()
+		}
+		rows[i] = []bob.Expression{
+			mysql.Arg(token.ID),
+			mysql.Arg(token.UserID),
+			mysql.Arg(token.Token),
+			mysql.Arg(token.TokenType),
+			mysql.Arg(token.ExpiresAt),
+			mysql.Arg(token.CreatedAt),
+			mysql.Arg(token.Revoked),
+			mysql.Arg(token.Metadata),
+		}
+	}
+	return mysql.Insert(
+		im.Into(models.TableToken,
+			"id",
+			models.ColumnUserID,
+			models.ColumnToken,
+			models.ColumnTokenType,
+			models.ColumnExpiresAt,
+			models.ColumnCreatedAt,
+			models.ColumnRevoked,
+			models.ColumnMetadata,
+		),
+		im.Rows(rows...),
+	)
+}
+
 func (q *MysqlQuerier) QueryTokenGetByID(ctx context.Context, id string) bob.Query {
 	return mysql.Select(sm.From(models.TableToken), sm.Where(mysql.Quote("id").EQ(mysql.Arg(id))))
 }

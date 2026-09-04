@@ -309,6 +309,42 @@ func (q *SqliteQuerier) QueryTokenInsert(ctx context.Context, token *models.Toke
 	)
 }
 
+// QueryTokenBatchInsert creates several tokens in a single multi-row INSERT.
+func (q *SqliteQuerier) QueryTokenBatchInsert(ctx context.Context, tokens []*models.Token) bob.Query {
+	rows := make([][]bob.Expression, len(tokens))
+	for i, token := range tokens {
+		if token.ID == "" {
+			token.ID = util.NewIDStripped()
+		}
+		if token.CreatedAt.IsZero() {
+			token.CreatedAt = time.Now().UTC()
+		}
+		rows[i] = []bob.Expression{
+			sqlite.Arg(token.ID),
+			sqlite.Arg(token.UserID),
+			sqlite.Arg(token.Token),
+			sqlite.Arg(token.TokenType),
+			sqlite.Arg(token.ExpiresAt),
+			sqlite.Arg(token.CreatedAt),
+			sqlite.Arg(token.Revoked),
+			sqlite.Arg(token.Metadata),
+		}
+	}
+	return sqlite.Insert(
+		im.Into(models.TableToken,
+			"id",
+			models.ColumnUserID,
+			models.ColumnToken,
+			models.ColumnTokenType,
+			models.ColumnExpiresAt,
+			models.ColumnCreatedAt,
+			models.ColumnRevoked,
+			models.ColumnMetadata,
+		),
+		im.Rows(rows...),
+	)
+}
+
 func (q *SqliteQuerier) QueryTokenGetByID(ctx context.Context, id string) bob.Query {
 	return sqlite.Select(sm.From(models.TableToken), sm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
 }

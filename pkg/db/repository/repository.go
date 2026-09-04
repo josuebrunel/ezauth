@@ -45,6 +45,7 @@ type UserQuerier interface {
 
 type TokenQuerier interface {
 	QueryTokenInsert(ctx context.Context, token *models.Token) bob.Query
+	QueryTokenBatchInsert(ctx context.Context, tokens []*models.Token) bob.Query
 	QueryTokenGetByID(ctx context.Context, id string) bob.Query
 	QueryTokenGetByToken(ctx context.Context, token string) bob.Query
 	QueryTokenListByUserIDAndType(ctx context.Context, userID, tokenType string) bob.Query
@@ -357,6 +358,20 @@ func (r Repository) TokenCreate(ctx context.Context, token *models.Token) (*mode
 		return nil, err
 	}
 	return createdToken, nil
+}
+
+// TokenBatchInsert creates several tokens in a single multi-row INSERT
+// (e.g. a user's MFA recovery codes), instead of one INSERT per token.
+func (r Repository) TokenBatchInsert(ctx context.Context, tokens []*models.Token) error {
+	if len(tokens) == 0 {
+		return nil
+	}
+	query := r.QueryTokenBatchInsert(ctx, tokens)
+	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+		xlog.Error("Failed to batch create tokens", "error", err, "count", len(tokens))
+		return err
+	}
+	return nil
 }
 
 // TokenGetByID retrieves a token by its ID.
