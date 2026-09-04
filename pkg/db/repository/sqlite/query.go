@@ -353,6 +353,20 @@ func (q *SqliteQuerier) QueryTokenRevokeAllByUserID(ctx context.Context, userID 
 	)
 }
 
+// QueryTokenRevokeFamily bulk-revokes every active refresh token sharing
+// family_id (stored in the JSON Metadata column, see #118) in one UPDATE,
+// instead of listing tokens and revoking them one at a time.
+func (q *SqliteQuerier) QueryTokenRevokeFamily(ctx context.Context, userID, familyID string) bob.Query {
+	return sqlite.Update(
+		um.Table(models.TableToken),
+		um.SetCol(models.ColumnRevoked).ToArg(true),
+		um.Where(sqlite.Quote(models.ColumnUserID).EQ(sqlite.Arg(userID))),
+		um.Where(sqlite.Quote(models.ColumnTokenType).EQ(sqlite.Arg(models.TokenTypeRefresh))),
+		um.Where(sqlite.Quote(models.ColumnRevoked).EQ(sqlite.Arg(false))),
+		um.Where(sqlite.Raw("json_extract("+models.ColumnMetadata+", '$.family_id') = ?", familyID)),
+	)
+}
+
 func (q *SqliteQuerier) QueryTokenDelete(ctx context.Context, id string) bob.Query {
 	return sqlite.Delete(dm.From(models.TableToken), dm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
 }

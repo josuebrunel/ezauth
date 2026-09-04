@@ -793,19 +793,10 @@ func (a *Auth) TokenRefresh(ctx context.Context, refreshToken string) (*TokenRes
 
 // revokeTokenFamily revokes every other active refresh token in the given rotation
 // family, in response to a detected reuse (replay of an already-rotated-out token) —
-// a strong signal the token was stolen.
+// a strong signal the token was stolen. A single bulk UPDATE, not a list-then-loop.
 func (a *Auth) revokeTokenFamily(ctx context.Context, userID, familyID string) {
-	tokens, err := a.Repo.TokenListByUserIDAndType(ctx, userID, models.TokenTypeRefresh)
-	if err != nil {
-		xlog.Error("failed to list tokens for family revocation", "user_id", userID, "family_id", familyID, "err", err)
-		return
-	}
-	for _, t := range tokens {
-		if fid, _ := t.Metadata["family_id"].(string); fid == familyID {
-			if err := a.Repo.TokenRevoke(ctx, t.ID); err != nil {
-				xlog.Error("failed to revoke token in reused family", "token_id", t.ID, "family_id", familyID, "err", err)
-			}
-		}
+	if err := a.Repo.TokenRevokeFamily(ctx, userID, familyID); err != nil {
+		xlog.Error("failed to revoke token family", "user_id", userID, "family_id", familyID, "err", err)
 	}
 }
 

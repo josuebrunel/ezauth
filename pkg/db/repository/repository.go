@@ -43,6 +43,7 @@ type TokenQuerier interface {
 	QueryTokenListByUserID(ctx context.Context, userID string, limit int) bob.Query
 	QueryTokenRevoke(ctx context.Context, id string) bob.Query
 	QueryTokenRevokeAllByUserID(ctx context.Context, userID string) bob.Query
+	QueryTokenRevokeFamily(ctx context.Context, userID, familyID string) bob.Query
 	QueryTokenDelete(ctx context.Context, id string) bob.Query
 }
 
@@ -403,6 +404,19 @@ func (r Repository) TokenRevokeAllByUserID(ctx context.Context, userID string) e
 	query := r.QueryTokenRevokeAllByUserID(ctx, userID)
 	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
 		xlog.Error("Failed to revoke all tokens for user", "error", err, "user_id", userID)
+		return err
+	}
+	return nil
+}
+
+// TokenRevokeFamily revokes every active refresh token in a rotation
+// family (see the family_id tagged in Token.Metadata by tokenCreateForActor)
+// in a single bulk UPDATE, in response to a detected reuse of an
+// already-rotated-out token.
+func (r Repository) TokenRevokeFamily(ctx context.Context, userID, familyID string) error {
+	query := r.QueryTokenRevokeFamily(ctx, userID, familyID)
+	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+		xlog.Error("Failed to revoke token family", "error", err, "user_id", userID, "family_id", familyID)
 		return err
 	}
 	return nil
