@@ -141,3 +141,32 @@ r.Post("/profile/delete", func(w http.ResponseWriter, r *http.Request) {
     http.Redirect(w, r, "/signin", http.StatusFound)
 })
 ```
+
+### 6. Roles, Organizations, and Scoped API Keys
+
+Beyond session auth, `auth.Service` (or the top-level `auth.*` facade methods) exposes real RBAC, lightweight multi-tenancy, and scoped API keys — see [Roles & Permissions](../guides/admin-operations.md#roles--permissions-rbac), [Organizations](../guides/admin-operations.md#organizations), and [Scoped API Keys](../guides/account-security.md#scoped-api-keys) for the full reference. A one-time setup script for this dashboard app might look like:
+
+```go
+// Define a role once, then gate a route with it.
+role, _ := auth.RoleCreate(ctx, "admin", "full dashboard access")
+_ = auth.UserRoleGrant(ctx, user.ID, "admin")
+
+r.With(auth.RequireRole("admin")).Get("/admin/settings", adminSettingsHandler)
+```
+
+```go
+// Group users into an organization/team, each with a role scoped to that org.
+org, _ := auth.OrganizationCreate(ctx, "Acme Inc")
+_ = auth.OrgMemberAdd(ctx, org.ID, user.ID, "admin")
+```
+
+```go
+// Mint a key limited to one action, for a machine client instead of a browser session.
+key, _ := auth.APIKeyCreate(ctx, user.ID, []string{"reports:read"})
+// key.Token is the raw key value — show it to the user now, it can't be recovered later.
+
+r.Use(auth.APIKeyMiddleware) // group-level gate: any valid key of this user's gets past this
+r.With(auth.RequireAPIKeyScope("reports:read")).Get("/api/reports", reportsHandler)
+```
+
+Refresh-token reuse detection needs no code at all: `TokenRefresh` (used internally by the `/auth/*` login/refresh flow this dashboard already relies on) automatically revokes an entire session family the moment an already-rotated-out refresh token is replayed — a strong signal of token theft.
