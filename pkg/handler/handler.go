@@ -187,6 +187,9 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 			r.Get("/sessions", h.FormSessionsList)
 			r.Delete("/sessions/{id}", h.FormSessionRevoke)
 			r.Delete("/sessions", h.FormSessionsRevokeAll)
+			r.Post("/api-keys", h.FormAPIKeyCreate)
+			r.Get("/api-keys", h.FormAPIKeysList)
+			r.Delete("/api-keys/{id}", h.FormAPIKeyRevoke)
 			r.Get("/invitation/accept", func(w http.ResponseWriter, r *http.Request) {
 				target := h.svc.Cfg.Pages.InvitationAccept
 				if token := r.URL.Query().Get("token"); token != "" {
@@ -267,6 +270,9 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 					r.Get("/sessions", h.SessionsList)
 					r.Delete("/sessions/{id}", h.SessionRevoke)
 					r.Delete("/sessions", h.SessionsRevokeAll)
+					r.Post("/api-keys", h.APIKeyCreate)
+					r.Get("/api-keys", h.APIKeysList)
+					r.Delete("/api-keys/{id}", h.APIKeyRevoke)
 					r.Post("/invitations", h.InvitationCreate)
 					r.Get("/invitations", h.InvitationsList)
 					r.Delete("/invitations/{id}", h.InvitationRevoke)

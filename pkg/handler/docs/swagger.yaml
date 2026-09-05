@@ -36,6 +36,15 @@ definitions:
       error:
         type: string
     type: object
+  handler.ApiResponse-array_models_Token:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.Token'
+        type: array
+      error:
+        type: string
+    type: object
   handler.ApiResponse-array_models_WebauthnCredential:
     properties:
       data:
@@ -141,6 +150,13 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/models.Role'
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-models_Token:
+    properties:
+      data:
+        $ref: '#/definitions/models.Token'
       error:
         type: string
     type: object
@@ -265,6 +281,13 @@ definitions:
         type: string
       user_id:
         type: string
+    type: object
+  handler.createAPIKeyRequest:
+    properties:
+      scopes:
+        items:
+          type: string
+        type: array
     type: object
   handler.createOrganizationRequest:
     properties:
@@ -402,6 +425,26 @@ definitions:
       id:
         type: string
       name:
+        type: string
+    type: object
+  models.Token:
+    properties:
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+      metadata:
+        $ref: '#/definitions/models.JSONMap'
+      revoked:
+        type: boolean
+      token:
+        type: string
+      token_type:
+        description: access, refresh, passwordless
+        type: string
+      user_id:
         type: string
     type: object
   models.User:
@@ -1847,6 +1890,77 @@ paths:
       summary: Suspend a user (admin)
       tags:
       - admin
+  /auth/api/api-keys:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-array_models_Token'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: List API keys
+      tags:
+      - api-keys
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Optional scopes
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.createAPIKeyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-models_Token'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Create an API key
+      tags:
+      - api-keys
+  /auth/api/api-keys/{id}:
+    delete:
+      parameters:
+      - description: API key (token) ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Revoke an API key
+      tags:
+      - api-keys
   /auth/api/email-change/confirm:
     get:
       description: Applies the requested email change and revokes other sessions

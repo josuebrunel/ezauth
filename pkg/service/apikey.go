@@ -2,11 +2,16 @@ package service
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/josuebrunel/gopkg/xlog"
 )
+
+// ErrAPIKeyNotFound is returned when an API key doesn't exist, doesn't
+// belong to the caller, or isn't actually an API key.
+var ErrAPIKeyNotFound = errors.New("api key not found")
 
 // APIKeyCreate mints a new API key for userID. scopes limits the key to
 // those actions (checked via RequireAPIKeyScope middleware); an empty/nil
@@ -51,13 +56,22 @@ func (a *Auth) APIKeyCreate(ctx context.Context, userID string, scopes []string)
 	return created, nil
 }
 
-// APIKeyRevoke revokes an API key by its token ID (see APIKeysList).
-func (a *Auth) APIKeyRevoke(ctx context.Context, id string) error {
+// APIKeyRevoke revokes one of userID's API keys by its token ID (see
+// APIKeysList). Returns ErrAPIKeyNotFound if the key doesn't exist, isn't
+// an API key, or belongs to a different user -- mirrors RevokeSession's
+// ownership check so self-service revocation can't be used to revoke
+// another user's key by guessing its ID.
+func (a *Auth) APIKeyRevoke(ctx context.Context, userID, id string) error {
+	tok, err := a.Repo.TokenGetByID(ctx, id)
+	if err != nil || tok.UserID != userID || tok.TokenType != models.TokenTypeApiKey {
+		return ErrAPIKeyNotFound
+	}
+
 	if err := a.Repo.TokenRevoke(ctx, id); err != nil {
-		xlog.Error("failed to revoke api key", "token_id", id, "err", err)
+		xlog.Error("failed to revoke api key", "user_id", userID, "token_id", id, "err", err)
 		return err
 	}
-	xlog.Info("api key revoked", "token_id", id)
+	xlog.Info("api key revoked", "user_id", userID, "token_id", id)
 	return nil
 }
 

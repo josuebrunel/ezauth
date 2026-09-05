@@ -95,7 +95,7 @@ func TestAPIKeys(t *testing.T) {
 			t.Fatalf("APIKeyCreate() unexpected error: %v", err)
 		}
 
-		if err := auth.APIKeyRevoke(ctx, token.ID); err != nil {
+		if err := auth.APIKeyRevoke(ctx, user.ID, token.ID); err != nil {
 			t.Fatalf("APIKeyRevoke() unexpected error: %v", err)
 		}
 
@@ -105,6 +105,34 @@ func TestAPIKeys(t *testing.T) {
 		}
 		if !stored.Revoked {
 			t.Error("expected api key to be revoked")
+		}
+	})
+
+	t.Run("APIKeyRevoke_WrongOwner", func(t *testing.T) {
+		other, err := auth.Repo.UserCreate(ctx, &models.User{
+			Email:        util.UniqueEmail("apikey-other"),
+			PasswordHash: "some-hash",
+			Provider:     "local",
+		})
+		if err != nil {
+			t.Fatalf("failed to create test user: %v", err)
+		}
+
+		token, err := auth.APIKeyCreate(ctx, user.ID, nil)
+		if err != nil {
+			t.Fatalf("APIKeyCreate() unexpected error: %v", err)
+		}
+
+		if err := auth.APIKeyRevoke(ctx, other.ID, token.ID); err != ErrAPIKeyNotFound {
+			t.Fatalf("expected ErrAPIKeyNotFound revoking another user's key, got %v", err)
+		}
+
+		stored, err := auth.Repo.TokenGetByToken(ctx, token.Token)
+		if err != nil {
+			t.Fatalf("failed to get api key from db: %v", err)
+		}
+		if stored.Revoked {
+			t.Error("expected api key to remain active after a wrong-owner revoke attempt")
 		}
 	})
 }

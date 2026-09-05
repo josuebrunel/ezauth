@@ -396,9 +396,11 @@ func (e *EzAuth) APIKeyCreate(ctx context.Context, userID string, scopes []strin
 	return e.Service.APIKeyCreate(ctx, userID, scopes)
 }
 
-// APIKeyRevoke revokes an API key by its token ID (see APIKeysList).
-func (e *EzAuth) APIKeyRevoke(ctx context.Context, id string) error {
-	return e.Service.APIKeyRevoke(ctx, id)
+// APIKeyRevoke revokes one of userID's API keys by its token ID (see
+// APIKeysList). Returns service.ErrAPIKeyNotFound if the key doesn't exist,
+// isn't an API key, or belongs to a different user.
+func (e *EzAuth) APIKeyRevoke(ctx context.Context, userID, id string) error {
+	return e.Service.APIKeyRevoke(ctx, userID, id)
 }
 
 // APIKeysList lists a user's API keys.
