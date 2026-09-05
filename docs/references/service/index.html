@@ -1033,6 +1033,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#api-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Keys
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#asymmetric-jwt-signing-jwks" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1492,6 +1503,28 @@
     <span class="md-ellipsis">
       
         Audit Log
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#roles-permissions-rbac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roles &amp; Permissions (RBAC)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#organizations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Organizations
       
     </span>
   </a>
@@ -1848,6 +1881,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#api-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Keys
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#asymmetric-jwt-signing-jwks" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2313,6 +2357,28 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#roles-permissions-rbac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roles &amp; Permissions (RBAC)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#organizations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Organizations
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2384,6 +2450,12 @@
 <h3 id="tokenrevoke"><code>TokenRevoke</code></h3>
 <p>Revokes a refresh token immediately.</p>
 <pre><code class="language-go">func (a *Auth) TokenRevoke(ctx context.Context, refreshToken string) error
+</code></pre>
+<h2 id="api-keys">API Keys</h2>
+<p>Scopes are stored as a plain string array in the <code>Token</code>'s existing <code>Metadata</code> column — no separate table. An empty/nil scopes list means unscoped/full access. See <a href="../../guides/account-security/#scoped-api-keys">Scoped API Keys</a>.</p>
+<pre><code class="language-go">func (a *Auth) APIKeyCreate(ctx context.Context, userID string, scopes []string) (*models.Token, error)
+func (a *Auth) APIKeyRevoke(ctx context.Context, id string) error
+func (a *Auth) APIKeysList(ctx context.Context, userID string) ([]*models.Token, error)
 </code></pre>
 <h2 id="asymmetric-jwt-signing-jwks">Asymmetric JWT Signing (JWKS)</h2>
 <p>Configured via <code>Cfg.JWT</code> (<code>Algorithm</code>, <code>PrivateKey</code>, <code>PublicKey</code>, <code>KeyID</code>, <code>PreviousPublicKey</code>, <code>PreviousKeyID</code> — see <a href="../../configuration/">Configuration</a>); defaults to symmetric HS256 (<code>Cfg.JWTSecret</code>) when <code>Cfg.JWT.Algorithm</code> is unset.</p>
@@ -2529,6 +2601,40 @@ func (a *Auth) UserReactivate(ctx context.Context, userID string) (*models.User,
 <pre><code class="language-go">func (a *Auth) AuditLogs(ctx context.Context, userID string, opts ListAuditLogsOptions) (*ListAuditLogsResult, error)
 </code></pre>
 <p><code>ListAuditLogsOptions</code> supports <code>EventType</code> (a <code>models.AuditEvent*</code> constant), <code>Since</code>/<code>Until</code> (<code>*time.Time</code>), and <code>Limit</code>/<code>Offset</code> (default 50, max 200). <code>ezauth</code> enforces no authorization on who may call this — same stance as <code>UsersList</code>.</p>
+<h2 id="roles-permissions-rbac">Roles &amp; Permissions (RBAC)</h2>
+<p>Real RBAC — separate from, and additive to, the legacy <code>User.Roles</code> string field and its <code>HasRole</code>/<code>AddRole</code>/etc. helpers. See <a href="../../guides/admin-operations/#roles--permissions-rbac">Roles &amp; Permissions (RBAC)</a>.</p>
+<pre><code class="language-go">func (a *Auth) RoleCreate(ctx context.Context, name, description string) (*models.Role, error)
+func (a *Auth) RolesList(ctx context.Context) ([]*models.Role, error)
+func (a *Auth) RoleDelete(ctx context.Context, id string) error
+
+func (a *Auth) PermissionCreate(ctx context.Context, name, description string) (*models.Permission, error)
+func (a *Auth) PermissionsList(ctx context.Context) ([]*models.Permission, error)
+func (a *Auth) PermissionDelete(ctx context.Context, id string) error
+
+// Idempotent; each records an AuditEventRoleGranted/AuditEventRoleRevoked audit event.
+func (a *Auth) UserRoleGrant(ctx context.Context, userID, roleName string) error
+func (a *Auth) UserRoleRevoke(ctx context.Context, userID, roleName string) error
+
+func (a *Auth) RolePermissionGrant(ctx context.Context, roleName, permissionName string) error
+func (a *Auth) RolePermissionRevoke(ctx context.Context, roleName, permissionName string) error
+
+func (a *Auth) UserRolesList(ctx context.Context, userID string) ([]*models.Role, error)
+func (a *Auth) UserHasRole(ctx context.Context, userID, roleName string) (bool, error)
+func (a *Auth) UserHasPermission(ctx context.Context, userID, permissionName string) (bool, error) // resolved transitively through the user's roles
+</code></pre>
+<h2 id="organizations">Organizations</h2>
+<p>Lightweight multi-tenancy. Each member's role is drawn from the RBAC role catalog above. See <a href="../../guides/admin-operations/#organizations">Organizations</a>.</p>
+<pre><code class="language-go">func (a *Auth) OrganizationCreate(ctx context.Context, name string) (*models.Organization, error)
+func (a *Auth) OrganizationGetByID(ctx context.Context, id string) (*models.Organization, error)
+func (a *Auth) OrganizationsList(ctx context.Context, opts ListOrganizationsOptions) (*ListOrganizationsResult, error) // paginated (Limit default 50, max 200)
+func (a *Auth) OrganizationDelete(ctx context.Context, id string) error // cascades org_members
+
+// OrgMemberAdd upserts: calling it again for the same (org, user) updates the role.
+func (a *Auth) OrgMemberAdd(ctx context.Context, orgID, userID, roleName string) error
+func (a *Auth) OrgMemberRemove(ctx context.Context, orgID, userID string) error
+func (a *Auth) OrgMembersList(ctx context.Context, orgID string) ([]*models.OrgMember, error) // RoleName joined in
+func (a *Auth) UserOrganizationsList(ctx context.Context, userID string) ([]*models.Organization, error)
+</code></pre>
 
 
 

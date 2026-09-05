@@ -1767,6 +1767,21 @@
 <td>Database schema (PostgreSQL only).</td>
 <td><code>public</code></td>
 </tr>
+<tr>
+<td><code>EZAUTH_DB_MAX_OPEN_CONNS</code></td>
+<td>Max open connections in the pool.</td>
+<td><code>25</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_DB_MAX_IDLE_CONNS</code></td>
+<td>Max idle connections kept in the pool.</td>
+<td><code>5</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_DB_CONN_MAX_LIFETIME</code></td>
+<td>Max lifetime of a pooled connection before it's recycled (Go duration, e.g. <code>30m</code>).</td>
+<td><code>30m</code></td>
+</tr>
 </tbody>
 </table>
 <h2 id="smtp-settings">SMTP Settings</h2>

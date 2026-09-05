@@ -1192,6 +1192,28 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#rbac-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RBAC Methods
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#organization-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Organization Methods
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1645,6 +1667,28 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#rbac-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RBAC Methods
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#organization-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Organization Methods
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1768,6 +1812,44 @@ func (r Repository) WebauthnChallengeDelete(ctx context.Context, id string) erro
 <h2 id="audit-log-methods">Audit Log Methods</h2>
 <pre><code class="language-go">func (r Repository) AuditLogCreate(ctx context.Context, log *models.AuditLog) (*models.AuditLog, error)
 func (r Repository) AuditLogListByUserID(ctx context.Context, userID string, filter models.AuditLogFilter, limit, offset int) (logs []*models.AuditLog, hasMore bool, err error)
+</code></pre>
+<h2 id="rbac-methods">RBAC Methods</h2>
+<p>Real RBAC — roles/permissions tables and their <code>user_roles</code>/<code>role_permissions</code> join tables — separate from the legacy <code>User.Roles</code> string field. See <a href="../../guides/admin-operations/#roles--permissions-rbac">Roles &amp; Permissions (RBAC)</a>.</p>
+<pre><code class="language-go">func (r Repository) RoleCreate(ctx context.Context, role *models.Role) (*models.Role, error)
+func (r Repository) RoleGetByID(ctx context.Context, id string) (*models.Role, error)
+func (r Repository) RoleGetByName(ctx context.Context, name string) (*models.Role, error)
+func (r Repository) RolesList(ctx context.Context) ([]*models.Role, error)
+func (r Repository) RoleDelete(ctx context.Context, id string) error // cascades user_roles/role_permissions
+
+func (r Repository) PermissionCreate(ctx context.Context, permission *models.Permission) (*models.Permission, error)
+func (r Repository) PermissionGetByID(ctx context.Context, id string) (*models.Permission, error)
+func (r Repository) PermissionGetByName(ctx context.Context, name string) (*models.Permission, error)
+func (r Repository) PermissionsList(ctx context.Context) ([]*models.Permission, error)
+func (r Repository) PermissionDelete(ctx context.Context, id string) error // cascades role_permissions
+
+func (r Repository) UserRoleGrant(ctx context.Context, userID, roleID string) error
+func (r Repository) UserRoleRevoke(ctx context.Context, userID, roleID string) error
+func (r Repository) RolesByUserID(ctx context.Context, userID string) ([]*models.Role, error)
+
+func (r Repository) RolePermissionGrant(ctx context.Context, roleID, permissionID string) error
+func (r Repository) RolePermissionRevoke(ctx context.Context, roleID, permissionID string) error
+func (r Repository) PermissionsByRoleID(ctx context.Context, roleID string) ([]*models.Permission, error)
+
+// Resolved transitively through every role granted to the user.
+func (r Repository) PermissionsByUserID(ctx context.Context, userID string) ([]*models.Permission, error)
+</code></pre>
+<h2 id="organization-methods">Organization Methods</h2>
+<p><code>role_id</code> on <code>ezauth_org_members</code> is a foreign key into <code>ezauth_roles</code> — org membership draws from the same role catalog as RBAC. See <a href="../../guides/admin-operations/#organizations">Organizations</a>.</p>
+<pre><code class="language-go">func (r Repository) OrganizationCreate(ctx context.Context, org *models.Organization) (*models.Organization, error)
+func (r Repository) OrganizationGetByID(ctx context.Context, id string) (*models.Organization, error)
+func (r Repository) OrganizationsList(ctx context.Context, limit, offset int) (orgs []*models.Organization, hasMore bool, err error)
+func (r Repository) OrganizationDelete(ctx context.Context, id string) error // cascades org_members
+
+// OrgMemberUpsert inserts, or updates role_id if the (org, user) pair already exists.
+func (r Repository) OrgMemberUpsert(ctx context.Context, orgID, userID, roleID string) error
+func (r Repository) OrgMemberRemove(ctx context.Context, orgID, userID string) error
+func (r Repository) OrgMembersByOrgID(ctx context.Context, orgID string) ([]*models.OrgMember, error) // joined with ezauth_roles for RoleName
+func (r Repository) OrganizationsByUserID(ctx context.Context, userID string) ([]*models.Organization, error)
 </code></pre>
 
 

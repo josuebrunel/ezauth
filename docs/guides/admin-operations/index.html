@@ -703,6 +703,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#roles-permissions-rbac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roles &amp; Permissions (RBAC)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#organizations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Organizations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#invitation-based-onboarding" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1165,6 +1187,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#roles-permissions-rbac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roles &amp; Permissions (RBAC)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#organizations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Organizations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#invitation-based-onboarding" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1308,6 +1352,50 @@ admin, err := auth.CurrentImpersonator(ctx)     // (*models.User, error)
 </code></pre>
 <p>Safe to call regardless of transport: the session-manager middleware always runs first, even on Bearer-only routes, so the cookie-mode check never panics for lack of loaded session data — it just finds nothing and falls through to the JWT check.</p>
 <p>See the <a href="https://github.com/josuebrunel/ezauth#impersonation">Impersonation section of the README</a> for the standalone-service (JSON API / form) equivalents.</p>
+<h2 id="roles-permissions-rbac">Roles &amp; Permissions (RBAC)</h2>
+<blockquote>
+<p>[!WARNING]
+<strong>SQLite deployments only, upgrading from an earlier version</strong>: <code>ezauth</code> now enables SQLite's <code>foreign_keys</code> pragma (it's off by default per-connection in SQLite, unlike postgres/mysql). This is what makes the cascading deletes below actually work — but it also means <strong>every</strong> <code>ON DELETE CASCADE</code> in the schema, not just the new RBAC/organization tables, now really fires: deleting a user really cascades to their tokens/audit logs/webauthn credentials, etc., where before this fix that cascade was a silent no-op on SQLite specifically. If your SQLite database has accumulated rows that would now get cascade-deleted, audit your data before deploying this version. Postgres and MySQL always enforced foreign keys and are unaffected.</p>
+</blockquote>
+<p><code>ezauth</code> also has real RBAC: <code>roles</code>/<code>permissions</code> tables (many-to-many, via <code>role_permissions</code>/<code>user_roles</code> join tables) plus <code>RequireRole</code>/<code>RequirePermission</code> middleware that enforce against them. This is a fully separate, additive system from the legacy comma-separated <code>User.Roles</code> field and its <code>HasRole</code>/<code>AddRole</code>/<code>RemoveRole</code>/etc. helpers — those keep working exactly as before, but <code>RequireRole</code>/<code>RequirePermission</code> consult the RBAC tables, not that field. Use whichever fits: the string field for a quick, ungoverned tag on a user; the tables when you need actual enforcement, an audit trail of grants/revokes, or permissions distinct from roles.</p>
+<pre><code class="language-go">// One-time setup: define roles/permissions and wire them together.
+role, _ := auth.Service.RoleCreate(ctx, &quot;editor&quot;, &quot;can edit content&quot;)
+perm, _ := auth.Service.PermissionCreate(ctx, &quot;posts:write&quot;, &quot;write posts&quot;)
+_ = auth.Service.RolePermissionGrant(ctx, &quot;editor&quot;, &quot;posts:write&quot;)
+
+// Grant/revoke a role on a user — idempotent, and records an
+// AuditEventRoleGranted/AuditEventRoleRevoked audit event (see Audit Log below).
+_ = auth.Service.UserRoleGrant(ctx, user.ID, &quot;editor&quot;)
+_ = auth.Service.UserRoleRevoke(ctx, user.ID, &quot;editor&quot;)
+
+// Check directly, or gate a route with the middleware.
+has, _ := auth.Service.UserHasRole(ctx, user.ID, &quot;editor&quot;)
+has, _ = auth.Service.UserHasPermission(ctx, user.ID, &quot;posts:write&quot;) // resolved transitively through the user's roles
+
+router.Handle(&quot;/admin/posts&quot;, auth.RequireRole(&quot;editor&quot;)(postsHandler))
+router.Handle(&quot;/admin/posts&quot;, auth.RequirePermission(&quot;posts:write&quot;)(postsHandler))
+</code></pre>
+<p><code>RequireRole</code>/<code>RequirePermission</code> read the authenticated user ID from request context (set by <code>AuthMiddleware</code> or <code>LoadUserMiddleware</code>/<code>SessionMiddleware</code>), so they must run downstream of one of those; a missing user returns 401, a missing role/permission returns 403. Deleting a role or permission cascades: matching <code>user_roles</code>/<code>role_permissions</code> assignment rows are removed automatically.</p>
+<h2 id="organizations">Organizations</h2>
+<p>Lightweight multi-tenancy: organizations/teams, with each member holding one role per organization — drawn from the same RBAC role catalog <code>RequireRole</code> checks against (a role is just an <code>ezauth_roles</code> row; org membership is <code>ezauth_org_members</code>, mapping <code>(org, user) → role</code>). Kept deliberately minimal — no settings/billing/invitations — a consuming app that needs more can extend via its own table FK'd to <code>ezauth_organizations</code>. Org membership rows cascade-delete like everything else in the schema — see the SQLite foreign-key note at the top of <a href="#roles--permissions-rbac">Roles &amp; Permissions (RBAC)</a> if you're upgrading an existing SQLite deployment.</p>
+<pre><code class="language-go">org, err := auth.Service.OrganizationCreate(ctx, &quot;Acme Inc&quot;)
+
+// OrgMemberAdd upserts: calling it again for the same (org, user) updates the role.
+err = auth.Service.OrgMemberAdd(ctx, org.ID, user.ID, &quot;editor&quot;)
+err = auth.Service.OrgMemberRemove(ctx, org.ID, user.ID)
+
+members, err := auth.Service.OrgMembersList(ctx, org.ID)          // []*models.OrgMember, RoleName joined in
+orgs, err := auth.Service.UserOrganizationsList(ctx, user.ID)      // organizations this user belongs to
+</code></pre>
+<p><strong>Resolving the "current org" for a request</strong> mirrors how <code>LoadUserMiddleware</code>/<code>GetSessionUser</code> resolve the current user — <code>ezauth</code> doesn't presume how an org is identified (URL param, subdomain, header, etc.), so you supply an <code>OrgLoader</code>:</p>
+<pre><code class="language-go">r.Use(auth.OrgLoaderMiddleware(func(ctx context.Context) (*models.Organization, error) {
+    orgID := chi.URLParam(r, &quot;orgID&quot;) // or a subdomain, header, etc. — your choice
+    return auth.Service.OrganizationGetByID(ctx, orgID)
+}))
+</code></pre>
+<pre><code class="language-go">org, err := auth.GetSessionOrg(ctx) // *models.Organization, set by OrgLoaderMiddleware
+</code></pre>
+<p>There's no <code>RequireOrgRole</code> middleware — compose <code>OrgLoaderMiddleware</code> with <code>RequireRole</code>/<code>RequirePermission</code> if a route needs to enforce the current org member's role.</p>
 <h2 id="invitation-based-onboarding">Invitation-Based Onboarding</h2>
 <p>An existing user invites someone by email; the invitee gets a link that pre-fills registration with their email pre-verified and, optionally, a pre-assigned role. <code>ezauth</code> enforces no authorization on who may invite (same stance as <code>Impersonate</code>) — check that yourself before calling it. <code>Roles</code> and <code>Data</code> are opaque to <code>ezauth</code> beyond being carried through to the created account.</p>
 <pre><code class="language-go">info, err := auth.Service.InvitationCreate(ctx, inviter, service.RequestInvitation{

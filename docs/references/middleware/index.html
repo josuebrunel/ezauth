@@ -927,6 +927,84 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#requireapikeyscope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RequireAPIKeyScope
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#authorization-middleware-rbac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Authorization Middleware (RBAC)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Authorization Middleware (RBAC)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#requirerole" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RequireRole
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#requirepermission" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RequirePermission
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#organization-middleware" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Organization Middleware
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Organization Middleware">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#orgloadermiddleware" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OrgLoaderMiddleware
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1232,6 +1310,84 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#requireapikeyscope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RequireAPIKeyScope
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#authorization-middleware-rbac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Authorization Middleware (RBAC)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Authorization Middleware (RBAC)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#requirerole" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RequireRole
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#requirepermission" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RequirePermission
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#organization-middleware" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Organization Middleware
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Organization Middleware">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#orgloadermiddleware" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OrgLoaderMiddleware
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1293,6 +1449,26 @@
 <h3 id="apikeymiddleware"><code>APIKeyMiddleware</code></h3>
 <p>Validates the <code>X-API-Key</code> header. It checks against the configured Master API Key or looks up an API Key token in the database.</p>
 <pre><code class="language-go">func (h *Handler) APIKeyMiddleware(next http.Handler) http.Handler
+</code></pre>
+<h3 id="requireapikeyscope"><code>RequireAPIKeyScope</code></h3>
+<p>Requires the API key used to authenticate the request (via <code>APIKeyMiddleware</code>, which must run upstream) to include the given scope. An unscoped key — including the master config API key, which has no associated <code>Token</code> — has full access. See <a href="../../guides/account-security/#scoped-api-keys">Scoped API Keys</a>.</p>
+<pre><code class="language-go">func (h *Handler) RequireAPIKeyScope(scope string) func(http.Handler) http.Handler
+</code></pre>
+<h2 id="authorization-middleware-rbac">Authorization Middleware (RBAC)</h2>
+<p>See <a href="../../guides/admin-operations/#roles--permissions-rbac">Roles &amp; Permissions (RBAC)</a> for the full picture — these check the real RBAC tables, not the legacy <code>User.Roles</code> string field.</p>
+<h3 id="requirerole"><code>RequireRole</code></h3>
+<p>Requires the authenticated user (identified via the request context set by <code>AuthMiddleware</code> or <code>LoadUserMiddleware</code>/<code>SessionMiddleware</code> — must run downstream of one of those) to hold the given role. Returns <code>401</code> if no user is in context, <code>403</code> if they lack the role.</p>
+<pre><code class="language-go">func (h *Handler) RequireRole(role string) func(http.Handler) http.Handler
+</code></pre>
+<h3 id="requirepermission"><code>RequirePermission</code></h3>
+<p>Same as <code>RequireRole</code>, but checks a permission, resolved transitively through every role granted to the user.</p>
+<pre><code class="language-go">func (h *Handler) RequirePermission(permission string) func(http.Handler) http.Handler
+</code></pre>
+<h2 id="organization-middleware">Organization Middleware</h2>
+<h3 id="orgloadermiddleware"><code>OrgLoaderMiddleware</code></h3>
+<p>Resolves the "current organization" for a request via an app-supplied <code>OrgLoader</code> (<code>ezauth</code> doesn't presume how an org is identified — URL param, subdomain, header, etc.) and loads it into context. Mirrors <code>LoadUserMiddleware</code> exactly. See <a href="../../guides/admin-operations/#organizations">Organizations</a>.</p>
+<pre><code class="language-go">type OrgLoader func(context.Context) (*models.Organization, error)
+func (h *Handler) OrgLoaderMiddleware(loader ezmiddleware.OrgLoader) func(http.Handler) http.Handler
 </code></pre>
 
 
