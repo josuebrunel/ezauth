@@ -1,5 +1,23 @@
 basePath: /
 definitions:
+  handler.ApiResponse-array_models_Permission:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.Permission'
+        type: array
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-array_models_Role:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.Role'
+        type: array
+      error:
+        type: string
+    type: object
   handler.ApiResponse-array_models_WebauthnCredential:
     properties:
       data:
@@ -84,6 +102,20 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/map_string_string'
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-models_Permission:
+    properties:
+      data:
+        $ref: '#/definitions/models.Permission'
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-models_Role:
+    properties:
+      data:
+        $ref: '#/definitions/models.Role'
       error:
         type: string
     type: object
@@ -195,6 +227,16 @@ definitions:
       refresh_token:
         type: string
     type: object
+  handler.grantPermissionRequest:
+    properties:
+      permission_name:
+        type: string
+    type: object
+  handler.grantRoleRequest:
+    properties:
+      role_name:
+        type: string
+    type: object
   handler.mfaConfirmRequest:
     properties:
       code:
@@ -227,6 +269,13 @@ definitions:
       refresh_token:
         type: string
       token_type:
+        type: string
+    type: object
+  handler.nameDescriptionRequest:
+    properties:
+      description:
+        type: string
+      name:
         type: string
     type: object
   handler.webauthnLoginBeginResponse:
@@ -266,6 +315,28 @@ definitions:
     type: object
   models.JSONMap:
     additionalProperties: {}
+    type: object
+  models.Permission:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  models.Role:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
     type: object
   models.User:
     properties:
@@ -1009,6 +1080,211 @@ paths:
       summary: JSON Web Key Set
       tags:
       - jwt
+  /auth/api/admin/permissions:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-array_models_Permission'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: List permissions (admin)
+      tags:
+      - rbac
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Permission name and description
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.nameDescriptionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-models_Permission'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Create a permission (admin)
+      tags:
+      - rbac
+  /auth/api/admin/permissions/{id}:
+    delete:
+      parameters:
+      - description: Permission ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Delete a permission (admin)
+      tags:
+      - rbac
+  /auth/api/admin/roles:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-array_models_Role'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: List roles (admin)
+      tags:
+      - rbac
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Role name and description
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.nameDescriptionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-models_Role'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Create a role (admin)
+      tags:
+      - rbac
+  /auth/api/admin/roles/{id}:
+    delete:
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Delete a role (admin)
+      tags:
+      - rbac
+  /auth/api/admin/roles/{name}/permissions:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Role name
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: Permission name
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.grantPermissionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Grant a permission to a role (admin)
+      tags:
+      - rbac
+  /auth/api/admin/roles/{name}/permissions/{permission_name}:
+    delete:
+      parameters:
+      - description: Role name
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: Permission name
+        in: path
+        name: permission_name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Revoke a permission from a role (admin)
+      tags:
+      - rbac
   /auth/api/admin/users:
     get:
       parameters:
@@ -1168,6 +1444,93 @@ paths:
       summary: Reactivate a user (admin)
       tags:
       - admin
+  /auth/api/admin/users/{id}/roles:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-array_models_Role'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: List a user's roles (admin)
+      tags:
+      - rbac
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Role name
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.grantRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Grant a role to a user (admin)
+      tags:
+      - rbac
+  /auth/api/admin/users/{id}/roles/{role_name}:
+    delete:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Role name
+        in: path
+        name: role_name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Revoke a role from a user (admin)
+      tags:
+      - rbac
   /auth/api/admin/users/{id}/suspend:
     post:
       parameters:
