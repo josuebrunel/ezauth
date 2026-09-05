@@ -44,6 +44,7 @@ func New(cfg *config.Config, path string) (*EzAuth, error) {
 	repo, err := repository.Open(repository.Opts{
 		Dialect:         cfg.DB.Dialect,
 		DSN:             cfg.DB.DSN,
+		Schema:          cfg.DB.Schema,
 		MaxOpenConns:    cfg.DB.MaxOpenConns,
 		MaxIdleConns:    cfg.DB.MaxIdleConns,
 		ConnMaxLifetime: cfg.DB.ConnMaxLifetime,
