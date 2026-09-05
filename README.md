@@ -46,12 +46,20 @@ Simple and easy to use authentication library for Golang.
 
 ## Features
 
-- Email/Password Authentication (Register, Login)
-- JWT based sessions (Access & Refresh Tokens, Refresh Token Rotation)
+- Email/Password Authentication (Register, Login), with account lockout after repeated failed attempts
+- JWT based sessions (Access & Refresh Tokens, Refresh Token Rotation, automatic reuse/theft detection), plus session listing/revocation ("log out other devices")
 - Configurable Password Hashing: bcrypt or Argon2id
 - Rate Limiting on authentication endpoints
-- OAuth2 Support (Google, GitHub, Facebook) and custom/OIDC provider registration
+- OAuth2 Support (Google, GitHub, Facebook, Discord, GitLab, Slack, LinkedIn, Spotify) and custom/OIDC provider registration
 - Password Reset and Passwordless (Magic Link) authentication
+- SMS OTP (one-time login codes)
+- WebAuthn / Passkeys
+- Multi-Factor Authentication (TOTP) with recovery codes and trusted-device remembering
+- Asymmetric JWT Signing (JWKS) with zero-downtime key rotation
+- Guarded Email Change (verify-before-apply, revokes other sessions on confirm)
+- Real RBAC (roles/permissions tables) and lightweight multi-tenancy (organizations), fully additive alongside the legacy `User.Roles` field
+- Scoped API Keys (limit a key to specific actions)
+- Admin impersonation, invitation-based onboarding, admin user management, a persisted audit log, and extensible hooks
 - Extended User Profiles (Username, First Name, Last Name, Phone, Avatar, Nickname, Locale, Timezone, Roles, etc.)
 - SQLite, PostgreSQL, and MySQL support
 - API Key Protection for endpoints
@@ -670,6 +678,10 @@ err = auth.RevokeAllSessions(ctx, user, "")                // log out everywhere
 ```
 
 For the JSON API: `GET /auth/api/sessions` lists sessions, `DELETE /auth/api/sessions/{id}` revokes one, and `DELETE /auth/api/sessions?except={id}` revokes all but the session named by `except` (omit `except` to log out everywhere). Cookie clients use the same routes under `/auth/sessions[...]`.
+
+#### Refresh Token Reuse Detection
+
+Needs no code or configuration — it's automatic. Every refresh token is tagged with a rotation `family_id`, carried forward across `TokenRefresh` rotations. If an already-rotated-out (revoked) refresh token is ever replayed, that's a strong signal it was stolen and the legitimate client has since rotated past it — so `TokenRefresh` responds by revoking every other active token in that family in one bulk operation, not just rejecting the replayed one. In practice: if an attacker steals a refresh token and uses it after the real client already refreshed past it, both the attacker's and the legitimate client's sessions get logged out, forcing a fresh login.
 
 ### Account Lockout
 

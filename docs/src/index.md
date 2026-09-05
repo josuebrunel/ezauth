@@ -8,16 +8,17 @@
 ## Features
 
 - **Email/Password Authentication**: registration and login, with account lockout after repeated failed attempts.
-- **JWT-based Sessions**: access and refresh tokens with rotation.
+- **JWT-based Sessions**: access and refresh tokens with rotation, plus automatic reuse/theft detection.
 - **Sign-in methods**: OAuth2 (Google, GitHub, Facebook, Discord, GitLab, Slack, LinkedIn, Spotify, and custom/OIDC), magic links, WebAuthn/passkeys, and SMS OTP.
-- **Account security**: TOTP MFA with trusted devices, session revocation ("log out other devices"), guarded email changes.
+- **Account security**: TOTP MFA with trusted devices, session revocation ("log out other devices"), scoped API keys, guarded email changes.
+- **Authorization**: real RBAC (roles/permissions tables) and lightweight multi-tenancy (organizations), fully additive alongside the legacy `User.Roles` field.
 - **Admin & operations**: impersonation, invitation-based onboarding, user management, a persisted audit log, and extensible hooks.
 - **Extended User Profiles**: username, name, locale, timezone, roles, and metadata.
 - **Storage**: SQLite, PostgreSQL, and MySQL.
 - **Integration**: embed as a Go library, or run as a standalone authentication service.
 
 > [!IMPORTANT]
-> `ezauth` performs no built-in authorization. Admin-facing features (impersonation, invitations, admin user management) enforce no role checks themselves — your application is responsible for verifying the caller is allowed (e.g. `caller.HasRole("admin")`) before exposing them.
+> `ezauth` performs no built-in authorization. Admin-facing features (impersonation, invitations, admin user management, RBAC/organization management) enforce no role checks themselves — your application is responsible for verifying the caller is allowed (e.g. `caller.HasRole("admin")`) before exposing them.
 
 ## Choose Your Path
 
@@ -34,8 +35,8 @@ Not sure which to pick? Start with [Installation](./installation.md), then the [
 | ----- | ------ |
 | [Sessions, Middleware and Helpers](./guides/sessions-middleware-helpers.md) | Cookie sessions, retrieving the user, flash messages, CSRF, route-protection middlewares, helper functions. |
 | [Sign-in Methods](./guides/sign-in-methods.md) | OAuth2 / OIDC providers, SMS OTP, WebAuthn / passkeys. |
-| [Account Security](./guides/account-security.md) | MFA (TOTP) & trusted devices, session revocation, account lockout, guarded email changes, asymmetric JWT signing (JWKS). |
-| [Admin and Operations](./guides/admin-operations.md) | Impersonation, invitations, admin user management, audit log, hooks. |
+| [Account Security](./guides/account-security.md) | MFA (TOTP) & trusted devices, session revocation, refresh-token reuse detection, account lockout, guarded email changes, asymmetric JWT signing (JWKS), scoped API keys. |
+| [Admin and Operations](./guides/admin-operations.md) | Impersonation, roles & permissions (RBAC), organizations (multi-tenancy), invitations, admin user management, audit log, hooks. |
 
 ## Reference
 

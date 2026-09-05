@@ -24,7 +24,9 @@ The `service` package (located in `pkg/service/`) contains the core authenticati
 * Token generation and validation (JWT and Refresh Tokens).
 * Password reset and passwordless flows.
 * Multi-Factor Authentication (TOTP), WebAuthn/Passkeys, and SMS OTP.
+* Refresh-token reuse detection: revokes an entire session family when an already-rotated-out token is replayed.
 * Admin impersonation, invitation-based onboarding, guarded email change, and admin user management.
+* RBAC (roles/permissions), organizations (lightweight multi-tenancy), and scoped API keys.
 * Interaction with the Mailer and, for SMS OTP, the `SMSSender`.
 * Dispatching lifecycle events to the `Hook` interface (see [Hooks](./guides/admin-operations.md#hooks)).
 

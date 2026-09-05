@@ -116,6 +116,8 @@ tokens, err := auth.Service.TokenCreate(ctx, user)
 ### Where to Go Next
 
 - [Sessions, Middleware and Helpers](./guides/sessions-middleware-helpers.md): cookie sessions, route protection, CSRF, and the package-level helper functions.
+- [Account Security](./guides/account-security.md): MFA, trusted devices, session revocation, refresh-token reuse detection, scoped API keys.
+- [Admin and Operations](./guides/admin-operations.md): impersonation, roles & permissions (RBAC), organizations (multi-tenancy), invitations, admin user management, audit log, hooks.
 - [Configuration](./configuration.md): every environment variable.
 - [API Endpoints](./api-endpoints.md): the full endpoint reference.
 

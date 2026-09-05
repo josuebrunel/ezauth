@@ -142,6 +142,27 @@ Revokes every active token for a user (e.g. all sessions, after a confirmed emai
 func (r Repository) TokenRevokeAllByUserID(ctx context.Context, userID string) error
 ```
 
+### `TokenRevokeFamily`
+Bulk-revokes every other active refresh token sharing the given rotation `family_id` (stored in `Metadata`), in one query. Used by `TokenRefresh` when it detects a replayed, already-rotated-out refresh token — a strong signal of theft. See [Refresh Token Reuse Detection](../guides/account-security.md#refresh-token-reuse-detection).
+
+```go
+func (r Repository) TokenRevokeFamily(ctx context.Context, userID, familyID string) error
+```
+
+### `TokenRevokeSessions`
+Bulk-revokes all of a user's active refresh-token sessions, optionally excluding one (e.g. "log out other devices, keep this one"). Backs `RevokeAllSessions`.
+
+```go
+func (r Repository) TokenRevokeSessions(ctx context.Context, userID, exceptID string) error
+```
+
+### `TokenBatchInsert`
+Inserts multiple tokens in a single multi-row `INSERT` instead of one per row — used for MFA recovery codes.
+
+```go
+func (r Repository) TokenBatchInsert(ctx context.Context, tokens []*models.Token) error
+```
+
 ### `TokenDelete`
 Permanently deletes a token.
 
@@ -196,11 +217,15 @@ func (r Repository) PermissionGetByName(ctx context.Context, name string) (*mode
 func (r Repository) PermissionsList(ctx context.Context) ([]*models.Permission, error)
 func (r Repository) PermissionDelete(ctx context.Context, id string) error // cascades role_permissions
 
-func (r Repository) UserRoleGrant(ctx context.Context, userID, roleID string) error
-func (r Repository) UserRoleRevoke(ctx context.Context, userID, roleID string) error
+// The bool reports whether a row was actually inserted/deleted -- both are
+// idempotent (ON CONFLICT DO NOTHING / INSERT IGNORE under the hood), so the
+// service layer uses it to decide whether to fire an audit event, without a
+// pre-fetch check.
+func (r Repository) UserRoleGrant(ctx context.Context, userID, roleID string) (granted bool, err error)
+func (r Repository) UserRoleRevoke(ctx context.Context, userID, roleID string) (revoked bool, err error)
 func (r Repository) RolesByUserID(ctx context.Context, userID string) ([]*models.Role, error)
 
-func (r Repository) RolePermissionGrant(ctx context.Context, roleID, permissionID string) error
+func (r Repository) RolePermissionGrant(ctx context.Context, roleID, permissionID string) (granted bool, err error)
 func (r Repository) RolePermissionRevoke(ctx context.Context, roleID, permissionID string) error
 func (r Repository) PermissionsByRoleID(ctx context.Context, roleID string) ([]*models.Permission, error)
 

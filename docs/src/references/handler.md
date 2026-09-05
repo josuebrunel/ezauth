@@ -144,6 +144,28 @@ The following methods are attached to routes internally by `New`, but are public
 -   `AdminUserAuditLogsList(w, r)`: List/filter a user's persisted audit log (JSON)
 -   `FormAdminUsersList(w, r)`, `FormAdminUserSuspend(w, r)`, `FormAdminUserReactivate(w, r)`, `FormAdminUserAuthHistory(w, r)`, `FormAdminUserAuditLogsList(w, r)`: Form equivalents
 
+### Roles & Permissions (RBAC)
+`ezauth` enforces no authorization on who may call these — same stance as impersonation. See [Roles & Permissions (RBAC)](../guides/admin-operations.md#roles--permissions-rbac).
+-   `RoleCreate(w, r)`, `RolesList(w, r)`, `RoleDelete(w, r)`: Manage roles (JSON)
+-   `PermissionCreate(w, r)`, `PermissionsList(w, r)`, `PermissionDelete(w, r)`: Manage permissions (JSON)
+-   `UserRoleGrant(w, r)`, `UserRolesList(w, r)`, `UserRoleRevoke(w, r)`: Grant/list/revoke a user's roles (JSON)
+-   `RolePermissionGrant(w, r)`, `RolePermissionRevoke(w, r)`: Grant/revoke a permission on a role (JSON)
+-   `FormRoleCreate(w, r)`, `FormRolesList(w, r)`, `FormRoleDelete(w, r)`, `FormPermissionCreate(w, r)`, `FormPermissionsList(w, r)`, `FormPermissionDelete(w, r)`, `FormUserRoleGrant(w, r)`, `FormUserRolesList(w, r)`, `FormUserRoleRevoke(w, r)`, `FormRolePermissionGrant(w, r)`, `FormRolePermissionRevoke(w, r)`: Form equivalents
+
+### Organizations
+`ezauth` enforces no authorization on who may call these — same stance as impersonation. See [Organizations](../guides/admin-operations.md#organizations).
+-   `OrganizationCreate(w, r)`, `OrganizationsList(w, r)`, `OrganizationGetByID(w, r)`, `OrganizationDelete(w, r)`: Manage organizations (JSON; `OrganizationsList` paginated via `limit`/`offset`)
+-   `OrgMemberAdd(w, r)`, `OrgMembersList(w, r)`, `OrgMemberRemove(w, r)`: Manage an organization's members (JSON; `OrgMemberAdd` upserts)
+-   `UserOrganizationsList(w, r)`: List the organizations a user belongs to (JSON)
+-   `FormOrganizationCreate(w, r)`, `FormOrganizationsList(w, r)`, `FormOrganizationGetByID(w, r)`, `FormOrganizationDelete(w, r)`, `FormOrgMemberAdd(w, r)`, `FormOrgMembersList(w, r)`, `FormOrgMemberRemove(w, r)`, `FormUserOrganizationsList(w, r)`: Form equivalents
+
+### API Keys
+Self-service — always scoped to the calling user's own account, no admin path. See [Scoped API Keys](../guides/account-security.md#scoped-api-keys).
+-   `APIKeyCreate(w, r)`: Mint a new key, optionally scoped (JSON)
+-   `APIKeysList(w, r)`: List the caller's keys, raw value omitted (JSON)
+-   `APIKeyRevoke(w, r)`: Revoke one of the caller's keys (JSON)
+-   `FormAPIKeyCreate(w, r)`, `FormAPIKeysList(w, r)`, `FormAPIKeyRevoke(w, r)`: Form equivalents
+
 ### Form Handlers
 These handlers process `application/x-www-form-urlencoded` requests and return HTML redirects.
 
