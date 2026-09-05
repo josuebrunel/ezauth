@@ -1060,6 +1060,39 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#roles-permissions-rbac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roles &amp; Permissions (RBAC)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#organizations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Organizations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#api-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#form-handlers" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1564,6 +1597,39 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#roles-permissions-rbac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roles &amp; Permissions (RBAC)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#organizations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Organizations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#api-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#form-handlers" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1721,6 +1787,25 @@
 -   <code>AdminUserAuthHistory(w, r)</code>: View a user's auth history (JSON)
 -   <code>AdminUserAuditLogsList(w, r)</code>: List/filter a user's persisted audit log (JSON)
 -   <code>FormAdminUsersList(w, r)</code>, <code>FormAdminUserSuspend(w, r)</code>, <code>FormAdminUserReactivate(w, r)</code>, <code>FormAdminUserAuthHistory(w, r)</code>, <code>FormAdminUserAuditLogsList(w, r)</code>: Form equivalents</p>
+<h3 id="roles-permissions-rbac">Roles &amp; Permissions (RBAC)</h3>
+<p><code>ezauth</code> enforces no authorization on who may call these — same stance as impersonation. See <a href="../../guides/admin-operations/#roles--permissions-rbac">Roles &amp; Permissions (RBAC)</a>.
+-   <code>RoleCreate(w, r)</code>, <code>RolesList(w, r)</code>, <code>RoleDelete(w, r)</code>: Manage roles (JSON)
+-   <code>PermissionCreate(w, r)</code>, <code>PermissionsList(w, r)</code>, <code>PermissionDelete(w, r)</code>: Manage permissions (JSON)
+-   <code>UserRoleGrant(w, r)</code>, <code>UserRolesList(w, r)</code>, <code>UserRoleRevoke(w, r)</code>: Grant/list/revoke a user's roles (JSON)
+-   <code>RolePermissionGrant(w, r)</code>, <code>RolePermissionRevoke(w, r)</code>: Grant/revoke a permission on a role (JSON)
+-   <code>FormRoleCreate(w, r)</code>, <code>FormRolesList(w, r)</code>, <code>FormRoleDelete(w, r)</code>, <code>FormPermissionCreate(w, r)</code>, <code>FormPermissionsList(w, r)</code>, <code>FormPermissionDelete(w, r)</code>, <code>FormUserRoleGrant(w, r)</code>, <code>FormUserRolesList(w, r)</code>, <code>FormUserRoleRevoke(w, r)</code>, <code>FormRolePermissionGrant(w, r)</code>, <code>FormRolePermissionRevoke(w, r)</code>: Form equivalents</p>
+<h3 id="organizations">Organizations</h3>
+<p><code>ezauth</code> enforces no authorization on who may call these — same stance as impersonation. See <a href="../../guides/admin-operations/#organizations">Organizations</a>.
+-   <code>OrganizationCreate(w, r)</code>, <code>OrganizationsList(w, r)</code>, <code>OrganizationGetByID(w, r)</code>, <code>OrganizationDelete(w, r)</code>: Manage organizations (JSON; <code>OrganizationsList</code> paginated via <code>limit</code>/<code>offset</code>)
+-   <code>OrgMemberAdd(w, r)</code>, <code>OrgMembersList(w, r)</code>, <code>OrgMemberRemove(w, r)</code>: Manage an organization's members (JSON; <code>OrgMemberAdd</code> upserts)
+-   <code>UserOrganizationsList(w, r)</code>: List the organizations a user belongs to (JSON)
+-   <code>FormOrganizationCreate(w, r)</code>, <code>FormOrganizationsList(w, r)</code>, <code>FormOrganizationGetByID(w, r)</code>, <code>FormOrganizationDelete(w, r)</code>, <code>FormOrgMemberAdd(w, r)</code>, <code>FormOrgMembersList(w, r)</code>, <code>FormOrgMemberRemove(w, r)</code>, <code>FormUserOrganizationsList(w, r)</code>: Form equivalents</p>
+<h3 id="api-keys">API Keys</h3>
+<p>Self-service — always scoped to the calling user's own account, no admin path. See <a href="../../guides/account-security/#scoped-api-keys">Scoped API Keys</a>.
+-   <code>APIKeyCreate(w, r)</code>: Mint a new key, optionally scoped (JSON)
+-   <code>APIKeysList(w, r)</code>: List the caller's keys, raw value omitted (JSON)
+-   <code>APIKeyRevoke(w, r)</code>: Revoke one of the caller's keys (JSON)
+-   <code>FormAPIKeyCreate(w, r)</code>, <code>FormAPIKeysList(w, r)</code>, <code>FormAPIKeyRevoke(w, r)</code>: Form equivalents</p>
 <h3 id="form-handlers">Form Handlers</h3>
 <p>These handlers process <code>application/x-www-form-urlencoded</code> requests and return HTML redirects.</p>
 <ul>

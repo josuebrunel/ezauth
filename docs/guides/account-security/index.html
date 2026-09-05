@@ -700,6 +700,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Sessions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#refresh-token-reuse-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Refresh Token Reuse Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1179,6 +1196,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Sessions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#refresh-token-reuse-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Refresh Token Reuse Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1281,6 +1315,8 @@ err = auth.RevokeAllSessions(ctx, user, currentID)        // log out other devic
 err = auth.RevokeAllSessions(ctx, user, &quot;&quot;)                // log out everywhere
 </code></pre>
 <p>For the JSON API: <code>GET /auth/api/sessions</code> lists sessions, <code>DELETE /auth/api/sessions/{id}</code> revokes one, and <code>DELETE /auth/api/sessions?except={id}</code> revokes all but the session named by <code>except</code> (omit <code>except</code> to log out everywhere). Cookie clients use the same routes under <code>/auth/sessions[...]</code>.</p>
+<h3 id="refresh-token-reuse-detection">Refresh Token Reuse Detection</h3>
+<p>Needs no code or configuration — it's automatic. Every refresh token is tagged with a rotation <code>family_id</code>, carried forward across <code>TokenRefresh</code> rotations. If an already-rotated-out (revoked) refresh token is ever replayed, that's a strong signal it was stolen and the legitimate client has since rotated past it — so <code>TokenRefresh</code> responds by revoking every other active token in that family in one bulk operation, not just rejecting the replayed one. In practice: if an attacker steals a refresh token and uses it after the real client already refreshed past it, both the attacker's and the legitimate client's sessions get logged out, forcing a fresh login.</p>
 <h2 id="account-lockout">Account Lockout</h2>
 <p><code>UserAuthenticate</code> enforces <code>IsActive</code> as a login gate and counts consecutive failed attempts, locking the account (clearing <code>IsActive</code>) for <code>EZAUTH_ACCOUNT_LOCKOUT_DURATION</code> after <code>EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS</code> in a row; it auto-unlocks (and resets the counter) on the first login attempt after that window passes. A successful login resets the counter immediately.</p>
 <pre><code class="language-go">_, err := auth.Service.UserAuthenticate(ctx, req)

@@ -1194,9 +1194,10 @@
 <h2 id="features">Features</h2>
 <ul>
 <li><strong>Email/Password Authentication</strong>: registration and login, with account lockout after repeated failed attempts.</li>
-<li><strong>JWT-based Sessions</strong>: access and refresh tokens with rotation.</li>
+<li><strong>JWT-based Sessions</strong>: access and refresh tokens with rotation, plus automatic reuse/theft detection.</li>
 <li><strong>Sign-in methods</strong>: OAuth2 (Google, GitHub, Facebook, Discord, GitLab, Slack, LinkedIn, Spotify, and custom/OIDC), magic links, WebAuthn/passkeys, and SMS OTP.</li>
-<li><strong>Account security</strong>: TOTP MFA with trusted devices, session revocation ("log out other devices"), guarded email changes.</li>
+<li><strong>Account security</strong>: TOTP MFA with trusted devices, session revocation ("log out other devices"), scoped API keys, guarded email changes.</li>
+<li><strong>Authorization</strong>: real RBAC (roles/permissions tables) and lightweight multi-tenancy (organizations), fully additive alongside the legacy <code>User.Roles</code> field.</li>
 <li><strong>Admin &amp; operations</strong>: impersonation, invitation-based onboarding, user management, a persisted audit log, and extensible hooks.</li>
 <li><strong>Extended User Profiles</strong>: username, name, locale, timezone, roles, and metadata.</li>
 <li><strong>Storage</strong>: SQLite, PostgreSQL, and MySQL.</li>
@@ -1204,7 +1205,7 @@
 </ul>
 <blockquote>
 <p>[!IMPORTANT]
-<code>ezauth</code> performs no built-in authorization. Admin-facing features (impersonation, invitations, admin user management) enforce no role checks themselves — your application is responsible for verifying the caller is allowed (e.g. <code>caller.HasRole("admin")</code>) before exposing them.</p>
+<code>ezauth</code> performs no built-in authorization. Admin-facing features (impersonation, invitations, admin user management, RBAC/organization management) enforce no role checks themselves — your application is responsible for verifying the caller is allowed (e.g. <code>caller.HasRole("admin")</code>) before exposing them.</p>
 </blockquote>
 <h2 id="choose-your-path">Choose Your Path</h2>
 <p><code>ezauth</code> can be used in two primary ways:</p>
@@ -1232,11 +1233,11 @@
 </tr>
 <tr>
 <td><a href="guides/account-security/">Account Security</a></td>
-<td>MFA (TOTP) &amp; trusted devices, session revocation, account lockout, guarded email changes, asymmetric JWT signing (JWKS).</td>
+<td>MFA (TOTP) &amp; trusted devices, session revocation, refresh-token reuse detection, account lockout, guarded email changes, asymmetric JWT signing (JWKS), scoped API keys.</td>
 </tr>
 <tr>
 <td><a href="guides/admin-operations/">Admin and Operations</a></td>
-<td>Impersonation, invitations, admin user management, audit log, hooks.</td>
+<td>Impersonation, roles &amp; permissions (RBAC), organizations (multi-tenancy), invitations, admin user management, audit log, hooks.</td>
 </tr>
 </tbody>
 </table>

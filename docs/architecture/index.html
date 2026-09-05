@@ -1286,7 +1286,9 @@
 <li>Token generation and validation (JWT and Refresh Tokens).</li>
 <li>Password reset and passwordless flows.</li>
 <li>Multi-Factor Authentication (TOTP), WebAuthn/Passkeys, and SMS OTP.</li>
+<li>Refresh-token reuse detection: revokes an entire session family when an already-rotated-out token is replayed.</li>
 <li>Admin impersonation, invitation-based onboarding, guarded email change, and admin user management.</li>
+<li>RBAC (roles/permissions), organizations (lightweight multi-tenancy), and scoped API keys.</li>
 <li>Interaction with the Mailer and, for SMS OTP, the <code>SMSSender</code>.</li>
 <li>Dispatching lifecycle events to the <code>Hook</code> interface (see <a href="../guides/admin-operations/#hooks">Hooks</a>).</li>
 </ul>

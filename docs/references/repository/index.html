@@ -1144,6 +1144,39 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#tokenrevokefamily" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TokenRevokeFamily
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tokenrevokesessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TokenRevokeSessions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tokenbatchinsert" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TokenBatchInsert
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#tokendelete" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1619,6 +1652,39 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#tokenrevokefamily" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TokenRevokeFamily
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tokenrevokesessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TokenRevokeSessions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tokenbatchinsert" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TokenBatchInsert
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#tokendelete" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1790,6 +1856,18 @@
 <p>Revokes every active token for a user (e.g. all sessions, after a confirmed email change).</p>
 <pre><code class="language-go">func (r Repository) TokenRevokeAllByUserID(ctx context.Context, userID string) error
 </code></pre>
+<h3 id="tokenrevokefamily"><code>TokenRevokeFamily</code></h3>
+<p>Bulk-revokes every other active refresh token sharing the given rotation <code>family_id</code> (stored in <code>Metadata</code>), in one query. Used by <code>TokenRefresh</code> when it detects a replayed, already-rotated-out refresh token — a strong signal of theft. See <a href="../../guides/account-security/#refresh-token-reuse-detection">Refresh Token Reuse Detection</a>.</p>
+<pre><code class="language-go">func (r Repository) TokenRevokeFamily(ctx context.Context, userID, familyID string) error
+</code></pre>
+<h3 id="tokenrevokesessions"><code>TokenRevokeSessions</code></h3>
+<p>Bulk-revokes all of a user's active refresh-token sessions, optionally excluding one (e.g. "log out other devices, keep this one"). Backs <code>RevokeAllSessions</code>.</p>
+<pre><code class="language-go">func (r Repository) TokenRevokeSessions(ctx context.Context, userID, exceptID string) error
+</code></pre>
+<h3 id="tokenbatchinsert"><code>TokenBatchInsert</code></h3>
+<p>Inserts multiple tokens in a single multi-row <code>INSERT</code> instead of one per row — used for MFA recovery codes.</p>
+<pre><code class="language-go">func (r Repository) TokenBatchInsert(ctx context.Context, tokens []*models.Token) error
+</code></pre>
 <h3 id="tokendelete"><code>TokenDelete</code></h3>
 <p>Permanently deletes a token.</p>
 <pre><code class="language-go">func (r Repository) TokenDelete(ctx context.Context, id string) error
@@ -1827,11 +1905,15 @@ func (r Repository) PermissionGetByName(ctx context.Context, name string) (*mode
 func (r Repository) PermissionsList(ctx context.Context) ([]*models.Permission, error)
 func (r Repository) PermissionDelete(ctx context.Context, id string) error // cascades role_permissions
 
-func (r Repository) UserRoleGrant(ctx context.Context, userID, roleID string) error
-func (r Repository) UserRoleRevoke(ctx context.Context, userID, roleID string) error
+// The bool reports whether a row was actually inserted/deleted -- both are
+// idempotent (ON CONFLICT DO NOTHING / INSERT IGNORE under the hood), so the
+// service layer uses it to decide whether to fire an audit event, without a
+// pre-fetch check.
+func (r Repository) UserRoleGrant(ctx context.Context, userID, roleID string) (granted bool, err error)
+func (r Repository) UserRoleRevoke(ctx context.Context, userID, roleID string) (revoked bool, err error)
 func (r Repository) RolesByUserID(ctx context.Context, userID string) ([]*models.Role, error)
 
-func (r Repository) RolePermissionGrant(ctx context.Context, roleID, permissionID string) error
+func (r Repository) RolePermissionGrant(ctx context.Context, roleID, permissionID string) (granted bool, err error)
 func (r Repository) RolePermissionRevoke(ctx context.Context, roleID, permissionID string) error
 func (r Repository) PermissionsByRoleID(ctx context.Context, roleID string) ([]*models.Permission, error)
 
