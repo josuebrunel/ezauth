@@ -31,7 +31,13 @@ func (a *Auth) APIKeyCreate(ctx context.Context, userID string, scopes []string)
 		UserID:    userID,
 		Token:     key,
 		TokenType: models.TokenTypeApiKey,
-		ExpiresAt: time.Time{}, // API keys don't expire by default
+		// API keys don't expire by default. A zero time.Time would be the
+		// obvious "never" sentinel, but ezauth_tokens.expires_at is
+		// NOT NULL and MySQL's strict mode rejects the zero-date
+		// ('0000-00-00') that a zero time.Time serializes to — so use the
+		// same far-future-date idiom already used for "effectively never
+		// expires" elsewhere (see mfaGenerateRecoveryCodes).
+		ExpiresAt: time.Now().AddDate(10, 0, 0),
 		Revoked:   false,
 		Metadata:  metadata,
 	}

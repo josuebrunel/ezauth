@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/josuebrunel/ezauth/pkg/util"
@@ -43,8 +44,8 @@ func TestAPIKeys(t *testing.T) {
 		if stored.UserID != user.ID {
 			t.Errorf("expected user id %s, got %s", user.ID, stored.UserID)
 		}
-		if !stored.ExpiresAt.IsZero() {
-			t.Errorf("expected api key to never expire, got %v", stored.ExpiresAt)
+		if !stored.ExpiresAt.After(time.Now().AddDate(5, 0, 0)) {
+			t.Errorf("expected api key to expire far in the future (effectively never), got %v", stored.ExpiresAt)
 		}
 	})
 
