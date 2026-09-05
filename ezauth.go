@@ -403,8 +403,10 @@ func (e *EzAuth) APIKeyRevoke(ctx context.Context, userID, id string) error {
 	return e.Service.APIKeyRevoke(ctx, userID, id)
 }
 
-// APIKeysList lists a user's API keys.
-func (e *EzAuth) APIKeysList(ctx context.Context, userID string) ([]*models.Token, error) {
+// APIKeysList lists a user's API keys, most recently created first. Each
+// entry omits the raw key value -- see service.APIKeyInfo -- since it's
+// only ever shown once, at APIKeyCreate time.
+func (e *EzAuth) APIKeysList(ctx context.Context, userID string) ([]service.APIKeyInfo, error) {
 	return e.Service.APIKeysList(ctx, userID)
 }
 

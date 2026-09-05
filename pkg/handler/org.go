@@ -64,14 +64,12 @@ func (h *Handler) FormOrganizationCreate(w http.ResponseWriter, r *http.Request)
 		WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
 		return
 	}
-
-	var req createOrganizationRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := r.ParseForm(); err != nil {
 		WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
 
-	org, err := h.svc.OrganizationCreate(r.Context(), req.Name)
+	org, err := h.svc.OrganizationCreate(r.Context(), r.FormValue("name"))
 	if err != nil {
 		WriteJSONResponseError(w, http.StatusBadRequest, err)
 		return
@@ -231,15 +229,13 @@ func (h *Handler) FormOrgMemberAdd(w http.ResponseWriter, r *http.Request) {
 		WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
 		return
 	}
-
-	id := chi.URLParam(r, "id")
-	var req addOrgMemberRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := r.ParseForm(); err != nil {
 		WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
 
-	if err := h.svc.OrgMemberAdd(r.Context(), id, req.UserID, req.RoleName); err != nil {
+	id := chi.URLParam(r, "id")
+	if err := h.svc.OrgMemberAdd(r.Context(), id, r.FormValue("user_id"), r.FormValue("role_name")); err != nil {
 		WriteJSONResponseError(w, http.StatusBadRequest, err)
 		return
 	}

@@ -1199,7 +1199,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.ApiResponse-array_models_Token"
+                            "$ref": "#/definitions/handler.ApiResponse-array_service_APIKeyInfo"
                         }
                     },
                     "500": {
@@ -3062,20 +3062,6 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.ApiResponse-array_models_Token": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.Token"
-                    }
-                },
-                "error": {
-                    "type": "string"
-                }
-            }
-        },
         "handler.ApiResponse-array_models_WebauthnCredential": {
             "type": "object",
             "properties": {
@@ -3083,6 +3069,20 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/models.WebauthnCredential"
+                    }
+                },
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.ApiResponse-array_service_APIKeyInfo": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/service.APIKeyInfo"
                     }
                 },
                 "error": {
@@ -4301,6 +4301,29 @@ const docTemplate = `{
                 "VerificationDiscouraged"
             ]
         },
+        "service.APIKeyInfo": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "revoked": {
+                    "type": "boolean"
+                },
+                "scopes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "service.AuthHistoryEntry": {
             "type": "object",
             "properties": {
@@ -4650,9 +4673,6 @@ const docTemplate = `{
         "webauthncose.COSEAlgorithmIdentifier": {
             "type": "integer",
             "enum": [
-                -48,
-                -49,
-                -50,
                 -7,
                 -8,
                 -9,
@@ -4668,12 +4688,12 @@ const docTemplate = `{
                 -257,
                 -258,
                 -259,
-                -65535
+                -65535,
+                -48,
+                -49,
+                -50
             ],
             "x-enum-varnames": [
-                "AlgMLDSA44",
-                "AlgMLDSA65",
-                "AlgMLDSA87",
                 "AlgES256",
                 "AlgEdDSA",
                 "AlgESP256",
@@ -4689,7 +4709,10 @@ const docTemplate = `{
                 "AlgRS256",
                 "AlgRS384",
                 "AlgRS512",
-                "AlgRS1"
+                "AlgRS1",
+                "AlgMLDSA44",
+                "AlgMLDSA65",
+                "AlgMLDSA87"
             ]
         }
     },

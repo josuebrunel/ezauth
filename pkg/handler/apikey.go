@@ -58,16 +58,15 @@ func (h *Handler) FormAPIKeyCreate(w http.ResponseWriter, r *http.Request) {
 		WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
 		return
 	}
-
-	var req createAPIKeyRequest
-	if r.ContentLength != 0 {
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
-			return
-		}
+	if err := r.ParseForm(); err != nil {
+		WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
+		return
 	}
 
-	key, err := h.svc.APIKeyCreate(r.Context(), user.ID, req.Scopes)
+	// Repeat the "scopes" field to request more than one, e.g.
+	// scopes=posts:write&scopes=posts:read. Omit it entirely for an
+	// unscoped, full-access key.
+	key, err := h.svc.APIKeyCreate(r.Context(), user.ID, r.Form["scopes"])
 	if err != nil {
 		WriteJSONResponseError(w, http.StatusBadRequest, err)
 		return
@@ -81,7 +80,7 @@ func (h *Handler) FormAPIKeyCreate(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Security BearerAuth
 // @Security ApiKeyAuth
-// @Success 200 {object} ApiResponse[[]models.Token]
+// @Success 200 {object} ApiResponse[[]service.APIKeyInfo]
 // @Failure 500 {object} ApiResponse[string]
 // @Router /auth/api/api-keys [get]
 func (h *Handler) APIKeysList(w http.ResponseWriter, r *http.Request) {

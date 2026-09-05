@@ -62,14 +62,12 @@ func (h *Handler) FormRoleCreate(w http.ResponseWriter, r *http.Request) {
 		WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
 		return
 	}
-
-	var req nameDescriptionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := r.ParseForm(); err != nil {
 		WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
 
-	role, err := h.svc.RoleCreate(r.Context(), req.Name, req.Description)
+	role, err := h.svc.RoleCreate(r.Context(), r.FormValue("name"), r.FormValue("description"))
 	if err != nil {
 		WriteJSONResponseError(w, http.StatusBadRequest, err)
 		return
@@ -186,14 +184,12 @@ func (h *Handler) FormPermissionCreate(w http.ResponseWriter, r *http.Request) {
 		WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
 		return
 	}
-
-	var req nameDescriptionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := r.ParseForm(); err != nil {
 		WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
 
-	permission, err := h.svc.PermissionCreate(r.Context(), req.Name, req.Description)
+	permission, err := h.svc.PermissionCreate(r.Context(), r.FormValue("name"), r.FormValue("description"))
 	if err != nil {
 		WriteJSONResponseError(w, http.StatusBadRequest, err)
 		return
@@ -312,15 +308,13 @@ func (h *Handler) FormUserRoleGrant(w http.ResponseWriter, r *http.Request) {
 		WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
 		return
 	}
-
-	id := chi.URLParam(r, "id")
-	var req grantRoleRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := r.ParseForm(); err != nil {
 		WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
 
-	if err := h.svc.UserRoleGrant(r.Context(), id, req.RoleName); err != nil {
+	id := chi.URLParam(r, "id")
+	if err := h.svc.UserRoleGrant(r.Context(), id, r.FormValue("role_name")); err != nil {
 		WriteJSONResponseError(w, http.StatusBadRequest, err)
 		return
 	}
@@ -443,15 +437,13 @@ func (h *Handler) FormRolePermissionGrant(w http.ResponseWriter, r *http.Request
 		WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
 		return
 	}
-
-	name := chi.URLParam(r, "name")
-	var req grantPermissionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := r.ParseForm(); err != nil {
 		WriteJSONResponseError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
 
-	if err := h.svc.RolePermissionGrant(r.Context(), name, req.PermissionName); err != nil {
+	name := chi.URLParam(r, "name")
+	if err := h.svc.RolePermissionGrant(r.Context(), name, r.FormValue("permission_name")); err != nil {
 		WriteJSONResponseError(w, http.StatusBadRequest, err)
 		return
 	}

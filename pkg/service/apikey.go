@@ -75,7 +75,33 @@ func (a *Auth) APIKeyRevoke(ctx context.Context, userID, id string) error {
 	return nil
 }
 
-// APIKeysList lists a user's API keys.
-func (a *Auth) APIKeysList(ctx context.Context, userID string) ([]*models.Token, error) {
-	return a.Repo.TokenListByUserIDAndType(ctx, userID, models.TokenTypeApiKey)
+// APIKeyInfo describes one of a user's API keys without exposing the raw
+// key value -- mirrors SessionInfo's rationale: the value is shown once,
+// at APIKeyCreate time, and never again.
+type APIKeyInfo struct {
+	ID        string    `json:"id"`
+	Scopes    []string  `json:"scopes,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+	ExpiresAt time.Time `json:"expires_at"`
+	Revoked   bool      `json:"revoked"`
+}
+
+// APIKeysList lists a user's API keys, most recently created first.
+func (a *Auth) APIKeysList(ctx context.Context, userID string) ([]APIKeyInfo, error) {
+	tokens, err := a.Repo.TokenListByUserIDAndType(ctx, userID, models.TokenTypeApiKey)
+	if err != nil {
+		return nil, err
+	}
+
+	keys := make([]APIKeyInfo, 0, len(tokens))
+	for _, tok := range tokens {
+		keys = append(keys, APIKeyInfo{
+			ID:        tok.ID,
+			Scopes:    tok.Scopes(),
+			CreatedAt: tok.CreatedAt,
+			ExpiresAt: tok.ExpiresAt,
+			Revoked:   tok.Revoked,
+		})
+	}
+	return keys, nil
 }

@@ -83,8 +83,8 @@ func TestAPIKeys(t *testing.T) {
 			t.Fatalf("expected 2 api keys, got %d", len(keys))
 		}
 		for _, k := range keys {
-			if k.TokenType != models.TokenTypeApiKey {
-				t.Errorf("expected only api keys, got token type %s", k.TokenType)
+			if k.ID == "" {
+				t.Errorf("expected a non-empty key id")
 			}
 		}
 	})

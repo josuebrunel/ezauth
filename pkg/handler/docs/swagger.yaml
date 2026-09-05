@@ -36,20 +36,20 @@ definitions:
       error:
         type: string
     type: object
-  handler.ApiResponse-array_models_Token:
-    properties:
-      data:
-        items:
-          $ref: '#/definitions/models.Token'
-        type: array
-      error:
-        type: string
-    type: object
   handler.ApiResponse-array_models_WebauthnCredential:
     properties:
       data:
         items:
           $ref: '#/definitions/models.WebauthnCredential'
+        type: array
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-array_service_APIKeyInfo:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/service.APIKeyInfo'
         type: array
       error:
         type: string
@@ -912,6 +912,21 @@ definitions:
     - VerificationRequired
     - VerificationPreferred
     - VerificationDiscouraged
+  service.APIKeyInfo:
+    properties:
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+      revoked:
+        type: boolean
+      scopes:
+        items:
+          type: string
+        type: array
+    type: object
   service.AuthHistoryEntry:
     properties:
       created_at:
@@ -1140,9 +1155,6 @@ definitions:
     type: object
   webauthncose.COSEAlgorithmIdentifier:
     enum:
-    - -48
-    - -49
-    - -50
     - -7
     - -8
     - -9
@@ -1159,11 +1171,11 @@ definitions:
     - -258
     - -259
     - -65535
+    - -48
+    - -49
+    - -50
     type: integer
     x-enum-varnames:
-    - AlgMLDSA44
-    - AlgMLDSA65
-    - AlgMLDSA87
     - AlgES256
     - AlgEdDSA
     - AlgESP256
@@ -1180,6 +1192,9 @@ definitions:
     - AlgRS384
     - AlgRS512
     - AlgRS1
+    - AlgMLDSA44
+    - AlgMLDSA65
+    - AlgMLDSA87
 info:
   contact: {}
   description: Authentication service/library for Go.
@@ -1898,7 +1913,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handler.ApiResponse-array_models_Token'
+            $ref: '#/definitions/handler.ApiResponse-array_service_APIKeyInfo'
         "500":
           description: Internal Server Error
           schema:
