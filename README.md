@@ -712,8 +712,8 @@ By default an API key (via `APIKeyMiddleware`) grants the same access as the ful
 token, err := auth.APIKeyCreate(ctx, user.ID, []string{"posts:write"})
 // token.Token is the raw key value — store/display it now, it can't be recovered later.
 
-keys, err := auth.APIKeysList(ctx, user.ID)
-err = auth.APIKeyRevoke(ctx, token.ID)
+keys, err := auth.APIKeysList(ctx, user.ID) // []service.APIKeyInfo — raw key omitted, shown only once above
+err = auth.APIKeyRevoke(ctx, user.ID, token.ID) // fails with service.ErrAPIKeyNotFound if the key isn't user's
 ```
 
 ```go
@@ -722,6 +722,25 @@ r.With(auth.RequireAPIKeyScope("posts:write")).Post("/posts", createPostHandler)
 ```
 
 An **unscoped** key — `APIKeyCreate(ctx, userID, nil)`, or any key issued before this feature existed — has full access to every `RequireAPIKeyScope` check; only a key created with a non-empty scopes list is actually restricted. The master `EZAUTH_API_KEY` config key has no associated `Token` at all, so it's always unscoped/full-access too.
+
+#### Standalone-service Mode
+
+Self-service, like Sessions: keys are always scoped to the caller's own account, no admin path or `{id}`-for-whose param.
+
+```bash
+# Create a key (requires the user's own Bearer token) — scopes is optional, omit/empty for unscoped:
+curl -X POST https://your-host/auth/api/api-keys -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" -d '{"scopes": ["posts:write"]}'
+# -> the response's "token" field is the raw key value — store/display it now, it can't be recovered later.
+
+# List your own keys:
+curl https://your-host/auth/api/api-keys -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+
+# Revoke one of your own keys:
+curl -X DELETE https://your-host/auth/api/api-keys/<key-id> -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+```
+
+For form-based (cookie) clients, the same three operations are available at the same paths against the logged-in session user.
 
 ### Guarded Email Change
 
@@ -846,6 +865,34 @@ router.Handle("/admin/posts", auth.RequirePermission("posts:write")(postsHandler
 
 `RequireRole`/`RequirePermission` read the authenticated user ID from request context (set by `AuthMiddleware` or `LoadUserMiddleware`/`SessionMiddleware`), so they must run downstream of one of those; a missing user returns 401, a missing role/permission returns 403. Deleting a role or permission cascades: matching `user_roles`/`role_permissions` assignment rows are removed automatically.
 
+#### Standalone-service Mode
+
+Admin-style, like Admin User Management — `ezauth` adds no role check of its own; gate these routes behind your own admin authorization (e.g. `RequireRole("admin")` in front of them).
+
+```bash
+# All require the caller's own Bearer token; ezauth adds no role check.
+curl -X POST https://your-host/auth/api/admin/roles -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" -d '{"name": "editor", "description": "can edit content"}'
+curl https://your-host/auth/api/admin/roles -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+curl -X DELETE https://your-host/auth/api/admin/roles/<role-id> -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+
+curl -X POST https://your-host/auth/api/admin/permissions -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" -d '{"name": "posts:write", "description": "write posts"}'
+curl https://your-host/auth/api/admin/permissions -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+curl -X DELETE https://your-host/auth/api/admin/permissions/<permission-id> -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+
+curl -X POST https://your-host/auth/api/admin/users/<user-id>/roles -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" -d '{"role_name": "editor"}'
+curl https://your-host/auth/api/admin/users/<user-id>/roles -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+curl -X DELETE https://your-host/auth/api/admin/users/<user-id>/roles/editor -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+
+curl -X POST https://your-host/auth/api/admin/roles/editor/permissions -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" -d '{"permission_name": "posts:write"}'
+curl -X DELETE https://your-host/auth/api/admin/roles/editor/permissions/posts:write -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+```
+
+Each of the above has a form-based (cookie) equivalent at the same path. `UserHasRole`/`UserHasPermission` stay Go-only — they're boolean checks your own authz code calls, not something you'd hit over HTTP.
+
 ### Organizations
 
 Lightweight multi-tenancy: organizations/teams, with each member holding one role per organization — drawn from the same RBAC role catalog `RequireRole` checks against (a role is just an `ezauth_roles` row; org membership is `ezauth_org_members`, mapping `(org, user) → role`). Kept deliberately minimal — no settings/billing/invitations — a consuming app that needs more can extend via its own table FK'd to `ezauth_organizations`. Org membership rows cascade-delete like everything else in the schema — see the SQLite foreign-key note at the top of [Roles & Permissions (RBAC)](#roles--permissions-rbac) if you're upgrading an existing SQLite deployment.
@@ -875,6 +922,29 @@ org, err := auth.GetSessionOrg(ctx) // *models.Organization, set by OrgLoaderMid
 ```
 
 There's no `RequireOrgRole` middleware — compose `OrgLoaderMiddleware` with `RequireRole`/`RequirePermission` if a route needs to enforce the current org member's role.
+
+#### Standalone-service Mode
+
+Admin-style, like Admin User Management — `ezauth` adds no role check of its own; gate these routes behind your own admin authorization.
+
+```bash
+# All require the caller's own Bearer token; ezauth adds no role check.
+curl -X POST https://your-host/auth/api/admin/organizations -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" -d '{"name": "Acme Inc"}'
+curl "https://your-host/auth/api/admin/organizations?limit=50&offset=0" -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+curl https://your-host/auth/api/admin/organizations/<org-id> -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+curl -X DELETE https://your-host/auth/api/admin/organizations/<org-id> -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+
+# Add/update a member — same call re-adds with a new role:
+curl -X POST https://your-host/auth/api/admin/organizations/<org-id>/members -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" -d '{"user_id": "<user-id>", "role_name": "editor"}'
+curl https://your-host/auth/api/admin/organizations/<org-id>/members -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+curl -X DELETE https://your-host/auth/api/admin/organizations/<org-id>/members/<user-id> -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+
+curl https://your-host/auth/api/admin/users/<user-id>/organizations -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
+```
+
+Each of the above has a form-based (cookie) equivalent at the same path; `OrganizationsList`'s `limit`/`offset` query params work the same way there too.
 
 ### Invitation-Based Onboarding
 

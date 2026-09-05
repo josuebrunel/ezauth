@@ -102,8 +102,8 @@ By default an API key (via `APIKeyMiddleware`) grants the same access as the ful
 token, err := auth.Service.APIKeyCreate(ctx, user.ID, []string{"posts:write"})
 // token.Token is the raw key value — store/display it now, it can't be recovered later.
 
-keys, err := auth.Service.APIKeysList(ctx, user.ID)
-err = auth.Service.APIKeyRevoke(ctx, token.ID)
+keys, err := auth.Service.APIKeysList(ctx, user.ID) // []service.APIKeyInfo — raw key omitted, shown only once above
+err = auth.Service.APIKeyRevoke(ctx, user.ID, token.ID) // fails with service.ErrAPIKeyNotFound if the key isn't user's
 ```
 
 ```go

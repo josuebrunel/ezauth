@@ -103,8 +103,8 @@ Scopes are stored as a plain string array in the `Token`'s existing `Metadata` c
 
 ```go
 func (a *Auth) APIKeyCreate(ctx context.Context, userID string, scopes []string) (*models.Token, error)
-func (a *Auth) APIKeyRevoke(ctx context.Context, id string) error
-func (a *Auth) APIKeysList(ctx context.Context, userID string) ([]*models.Token, error)
+func (a *Auth) APIKeyRevoke(ctx context.Context, userID, id string) error // ErrAPIKeyNotFound if id isn't userID's
+func (a *Auth) APIKeysList(ctx context.Context, userID string) ([]APIKeyInfo, error) // raw key omitted, see APIKeyCreate
 ```
 
 ## Asymmetric JWT Signing (JWKS)

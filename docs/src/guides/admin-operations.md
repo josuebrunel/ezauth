@@ -79,6 +79,8 @@ router.Handle("/admin/posts", auth.RequirePermission("posts:write")(postsHandler
 
 `RequireRole`/`RequirePermission` read the authenticated user ID from request context (set by `AuthMiddleware` or `LoadUserMiddleware`/`SessionMiddleware`), so they must run downstream of one of those; a missing user returns 401, a missing role/permission returns 403. Deleting a role or permission cascades: matching `user_roles`/`role_permissions` assignment rows are removed automatically.
 
+See the [Roles & Permissions section of the README](https://github.com/josuebrunel/ezauth#roles--permissions-rbac) for the standalone-service (JSON API / form) equivalents.
+
 ## Organizations
 
 Lightweight multi-tenancy: organizations/teams, with each member holding one role per organization — drawn from the same RBAC role catalog `RequireRole` checks against (a role is just an `ezauth_roles` row; org membership is `ezauth_org_members`, mapping `(org, user) → role`). Kept deliberately minimal — no settings/billing/invitations — a consuming app that needs more can extend via its own table FK'd to `ezauth_organizations`. Org membership rows cascade-delete like everything else in the schema — see the SQLite foreign-key note at the top of [Roles & Permissions (RBAC)](#roles--permissions-rbac) if you're upgrading an existing SQLite deployment.
@@ -108,6 +110,8 @@ org, err := auth.GetSessionOrg(ctx) // *models.Organization, set by OrgLoaderMid
 ```
 
 There's no `RequireOrgRole` middleware — compose `OrgLoaderMiddleware` with `RequireRole`/`RequirePermission` if a route needs to enforce the current org member's role.
+
+See the [Organizations section of the README](https://github.com/josuebrunel/ezauth#organizations) for the standalone-service (JSON API / form) equivalents.
 
 ## Invitation-Based Onboarding
 

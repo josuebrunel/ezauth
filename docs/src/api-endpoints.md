@@ -94,6 +94,11 @@ Like `GET /auth/csrf`, these return JSON rather than redirecting — WebAuthn ce
 `DELETE /auth/sessions/{id}` (Revokes one session; requires a logged-in session)
 `DELETE /auth/sessions?except={id}` (Revokes all sessions except `except`, or everywhere if omitted; requires a logged-in session)
 
+### API Keys (Form)
+`POST /auth/api-keys` (field: `scopes`, optional, repeat the field for more than one, e.g. `scopes=posts:write&scopes=posts:read`; omit entirely for an unscoped key; requires a logged-in session)
+`GET /auth/api-keys` (Require a logged-in session)
+`DELETE /auth/api-keys/{id}` (Requires a logged-in session; fails unless the key belongs to the session user)
+
 ### Invitations (Form)
 `GET /auth/invitation/accept` (Redirects to `Pages.InvitationAccept`, preserving `?token=...`)
 `POST /auth/invitation/accept` (fields: `token`, `password`, `password_confirm`, plus optional `username`/`first_name`/`last_name`/`locale`/`timezone`; sets auth cookies)
@@ -110,6 +115,28 @@ Like `GET /auth/csrf`, these return JSON rather than redirecting — WebAuthn ce
 `POST /auth/admin/users/{id}/suspend`, `POST /auth/admin/users/{id}/reactivate` (Require a logged-in session)
 `GET /auth/admin/users/{id}/history` (Query param: `limit`; requires a logged-in session)
 `GET /auth/admin/users/{id}/audit-logs` (Query params: `event_type`, `since`/`until`, `limit`/`offset`; requires a logged-in session)
+
+ezauth enforces no authorization on who may call these — same stance as impersonation. Protect these routes with your own admin-only check before exposing them.
+
+### Roles & Permissions (Form)
+`POST /auth/admin/roles` (fields: `name`, `description`; requires a logged-in session)
+`GET /auth/admin/roles`, `DELETE /auth/admin/roles/{id}` (Require a logged-in session)
+`POST /auth/admin/permissions` (fields: `name`, `description`; requires a logged-in session)
+`GET /auth/admin/permissions`, `DELETE /auth/admin/permissions/{id}` (Require a logged-in session)
+`POST /auth/admin/users/{id}/roles` (field: `role_name`; requires a logged-in session)
+`GET /auth/admin/users/{id}/roles`, `DELETE /auth/admin/users/{id}/roles/{role_name}` (Require a logged-in session)
+`POST /auth/admin/roles/{name}/permissions` (field: `permission_name`; requires a logged-in session)
+`DELETE /auth/admin/roles/{name}/permissions/{permission_name}` (Requires a logged-in session)
+
+ezauth enforces no authorization on who may call these — same stance as impersonation. Protect these routes with your own admin-only check before exposing them.
+
+### Organizations (Form)
+`POST /auth/admin/organizations` (field: `name`; requires a logged-in session)
+`GET /auth/admin/organizations` (Query params: `limit`/`offset`; requires a logged-in session)
+`GET /auth/admin/organizations/{id}`, `DELETE /auth/admin/organizations/{id}` (Require a logged-in session)
+`POST /auth/admin/organizations/{id}/members` (fields: `user_id`, `role_name`; upserts — re-adding an existing member updates their role; requires a logged-in session)
+`GET /auth/admin/organizations/{id}/members`, `DELETE /auth/admin/organizations/{id}/members/{user_id}` (Require a logged-in session)
+`GET /auth/admin/users/{id}/organizations` (Requires a logged-in session)
 
 ezauth enforces no authorization on who may call these — same stance as impersonation. Protect these routes with your own admin-only check before exposing them.
 
@@ -296,6 +323,43 @@ Completes a step-up login started by Login when the account has MFA enabled. Set
 `GET /auth/api/sessions` (Protected) — lists the authenticated user's active refresh-token sessions (one per logged-in device/client), most recent first.
 `DELETE /auth/api/sessions/{id}` (Protected) — revokes one session by its record ID, logging that device out immediately.
 `DELETE /auth/api/sessions?except={id}` (Protected) — revokes all sessions except the one named by `except` ("log out other devices"); omit `except` to log out everywhere.
+
+### API Keys
+`POST /auth/api/api-keys` (Protected) — creates a new API key for the authenticated user. The raw key value is only ever returned here; it can't be recovered later, only revoked.
+
+**Request Body:**
+```json
+{
+  "scopes": ["posts:write"]
+}
+```
+Omit or send an empty `scopes` array for an unscoped, full-access key — the same access an API key had before per-key scoping existed.
+
+**Response Data:** the created token record, including the raw key in `token`:
+```json
+{
+  "id": "...",
+  "user_id": "...",
+  "token": "<raw key value>",
+  "token_type": "apikey",
+  "expires_at": "...",
+  "revoked": false,
+  "metadata": {"scopes": ["posts:write"]}
+}
+```
+
+`GET /auth/api/api-keys` (Protected) — lists the authenticated user's API keys. Unlike the create response above, the raw key value is never included here — it's shown exactly once, at creation.
+
+**Response Data:**
+```json
+[
+  {"id": "...", "scopes": ["posts:write"], "created_at": "...", "expires_at": "...", "revoked": false}
+]
+```
+
+`DELETE /auth/api/api-keys/{id}` (Protected) — revokes one of the authenticated user's API keys by its record ID. Fails the same way whether the ID doesn't exist or belongs to another user, so the endpoint can't be used to probe for other users' key IDs.
+
+Enforce scopes on a per-route basis with `RequireAPIKeyScope` — see [Scoped API Keys](./guides/account-security.md#scoped-api-keys).
 
 ### WebAuthn Login Begin
 `POST /auth/api/webauthn/login/begin`
