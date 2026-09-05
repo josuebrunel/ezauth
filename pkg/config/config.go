@@ -28,7 +28,6 @@ type Database struct {
 
 // OAuth2Google defines the settings for Google OAuth2.
 type OAuth2Google struct {
-	Name         string `json:"name" env:"OAUTH2_GOOGLE_NAME" default:"google"`
 	ClientID     string `json:"client_id" env:"OAUTH2_GOOGLE_CLIENT_ID"`
 	ClientSecret string `json:"client_secret" env:"OAUTH2_GOOGLE_CLIENT_SECRET"`
 	RedirectURL  string `json:"redirect_url" env:"OAUTH2_GOOGLE_REDIRECT_URL"`
@@ -37,7 +36,6 @@ type OAuth2Google struct {
 
 // OAuth2Github defines the settings for GitHub OAuth2.
 type OAuth2Github struct {
-	Name         string `json:"name" env:"OAUTH2_GITHUB_NAME" default:"github"`
 	ClientID     string `json:"client_id" env:"OAUTH2_GITHUB_CLIENT_ID"`
 	ClientSecret string `json:"client_secret" env:"OAUTH2_GITHUB_CLIENT_SECRET"`
 	RedirectURL  string `json:"redirect_url" env:"OAUTH2_GITHUB_REDIRECT_URL"`
@@ -46,7 +44,6 @@ type OAuth2Github struct {
 
 // OAuth2Facebook defines the settings for Facebook OAuth2.
 type OAuth2Facebook struct {
-	Name         string `json:"name" env:"OAUTH2_FACEBOOK_NAME" default:"facebook"`
 	ClientID     string `json:"client_id" env:"OAUTH2_FACEBOOK_CLIENT_ID"`
 	ClientSecret string `json:"client_secret" env:"OAUTH2_FACEBOOK_CLIENT_SECRET"`
 	RedirectURL  string `json:"redirect_url" env:"OAUTH2_FACEBOOK_REDIRECT_URL"`
@@ -55,7 +52,6 @@ type OAuth2Facebook struct {
 
 // OAuth2Discord defines the settings for Discord OAuth2.
 type OAuth2Discord struct {
-	Name         string `json:"name" env:"OAUTH2_DISCORD_NAME" default:"discord"`
 	ClientID     string `json:"client_id" env:"OAUTH2_DISCORD_CLIENT_ID"`
 	ClientSecret string `json:"client_secret" env:"OAUTH2_DISCORD_CLIENT_SECRET"`
 	RedirectURL  string `json:"redirect_url" env:"OAUTH2_DISCORD_REDIRECT_URL"`
@@ -64,7 +60,6 @@ type OAuth2Discord struct {
 
 // OAuth2GitLab defines the settings for GitLab OAuth2.
 type OAuth2GitLab struct {
-	Name         string `json:"name" env:"OAUTH2_GITLAB_NAME" default:"gitlab"`
 	ClientID     string `json:"client_id" env:"OAUTH2_GITLAB_CLIENT_ID"`
 	ClientSecret string `json:"client_secret" env:"OAUTH2_GITLAB_CLIENT_SECRET"`
 	RedirectURL  string `json:"redirect_url" env:"OAUTH2_GITLAB_REDIRECT_URL"`
@@ -73,7 +68,6 @@ type OAuth2GitLab struct {
 
 // OAuth2Slack defines the settings for Slack OAuth2.
 type OAuth2Slack struct {
-	Name         string `json:"name" env:"OAUTH2_SLACK_NAME" default:"slack"`
 	ClientID     string `json:"client_id" env:"OAUTH2_SLACK_CLIENT_ID"`
 	ClientSecret string `json:"client_secret" env:"OAUTH2_SLACK_CLIENT_SECRET"`
 	RedirectURL  string `json:"redirect_url" env:"OAUTH2_SLACK_REDIRECT_URL"`
@@ -82,7 +76,6 @@ type OAuth2Slack struct {
 
 // OAuth2LinkedIn defines the settings for LinkedIn OAuth2.
 type OAuth2LinkedIn struct {
-	Name         string `json:"name" env:"OAUTH2_LINKEDIN_NAME" default:"linkedin"`
 	ClientID     string `json:"client_id" env:"OAUTH2_LINKEDIN_CLIENT_ID"`
 	ClientSecret string `json:"client_secret" env:"OAUTH2_LINKEDIN_CLIENT_SECRET"`
 	RedirectURL  string `json:"redirect_url" env:"OAUTH2_LINKEDIN_REDIRECT_URL"`
@@ -91,7 +84,6 @@ type OAuth2LinkedIn struct {
 
 // OAuth2Spotify defines the settings for Spotify OAuth2.
 type OAuth2Spotify struct {
-	Name         string `json:"name" env:"OAUTH2_SPOTIFY_NAME" default:"spotify"`
 	ClientID     string `json:"client_id" env:"OAUTH2_SPOTIFY_CLIENT_ID"`
 	ClientSecret string `json:"client_secret" env:"OAUTH2_SPOTIFY_CLIENT_SECRET"`
 	RedirectURL  string `json:"redirect_url" env:"OAUTH2_SPOTIFY_REDIRECT_URL"`
@@ -180,7 +172,7 @@ type Hashing struct {
 	// BcryptCost is the bcrypt work factor (4-31). Lower is faster but weaker; 14 is a
 	// strong modern default for production. Tests should use a low value (e.g. 4, the
 	// minimum) since correctness doesn't depend on bcrypt actually being slow.
-	BcryptCost        int    `json:"bcrypt_cost" env:"HASHING_BCRYPT_COST" default:"14"`
+	BcryptCost        int `json:"bcrypt_cost" env:"HASHING_BCRYPT_COST" default:"14"`
 	Argon2Memory      int `json:"argon2_memory" env:"HASHING_ARGON2_MEMORY" default:"65536"`
 	Argon2Iterations  int `json:"argon2_iterations" env:"HASHING_ARGON2_ITERATIONS" default:"3"`
 	Argon2Parallelism int `json:"argon2_parallelism" env:"HASHING_ARGON2_PARALLELISM" default:"4"`
