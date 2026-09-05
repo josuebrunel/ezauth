@@ -40,22 +40,26 @@ release:
   header: |
     ## Highlights
 
-    The released `ezauthapi` binary can now fully bootstrap itself — no
-    second binary, no building from source just to run a migration:
+    A review pass turned up five issues, the most serious being a
+    password-hashing crash; all are fixed:
 
-    - **`ezauthapi migrate <up|down|revert>`** — run migrations as their
-      own step, separate from starting the server. `revert` is new: rolls
-      back only the single most recently applied migration, instead of
-      `down`'s full reset to an empty schema. Optional `-dialect`/`-dsn`/
-      `-schema` flags override the `EZAUTH_DB_*` env vars for one
-      invocation, e.g. to target a different database.
-    - **`ezauthapi create-admin -email=... -password=...`** — bootstraps
-      an admin-capable user: creates the account if needed, grants it an
-      RBAC role (`-role`, defaults to `admin`) so it actually passes
-      `RequireRole`-gated routes. Idempotent — safe to run on every
-      container boot.
-    - **Removed `cmd/migrate`** — it was never part of a release archive
-      to begin with; `ezauthapi migrate` fully replaces it.
+    - **Fix: argon2id panicked when configured via environment** — the
+      vendored env loader never populated the `uint32`/`uint8` argon2
+      parameter fields, so `EZAUTH_HASHING_ALGORITHM=argon2id` panicked on
+      the very first password hash. The fields are now `int`, validated
+      before hashing, and return an error instead of crashing.
+    - **Fix: session/API-key listings were unordered** — `Sessions()` and
+      `APIKeysList()` were documented as "most recent first" but the
+      underlying query had no `ORDER BY`; now consistently ordered by
+      `created_at DESC` across sqlite/postgres/mysql.
+    - **Removed dead `EZAUTH_OAUTH2_<PROVIDER>_NAME` config fields** —
+      built-in providers are registered under hard-coded names, so these
+      env vars never had any effect.
+    - **Docs: standalone `pkg/handler/middleware` package** —
+      `RateLimiter`, `Chain`, and the standalone middleware constructors
+      now have a reference section; they're usable independently of
+      `Handler`.
+    - Cleanup: fixed a stale comment and removed an unused exported type.
 
 checksum:
   name_template: 'checksums.txt'
