@@ -181,11 +181,11 @@ type Hashing struct {
 	// strong modern default for production. Tests should use a low value (e.g. 4, the
 	// minimum) since correctness doesn't depend on bcrypt actually being slow.
 	BcryptCost        int    `json:"bcrypt_cost" env:"HASHING_BCRYPT_COST" default:"14"`
-	Argon2Memory      uint32 `json:"argon2_memory" env:"HASHING_ARGON2_MEMORY" default:"65536"`
-	Argon2Iterations  uint32 `json:"argon2_iterations" env:"HASHING_ARGON2_ITERATIONS" default:"3"`
-	Argon2Parallelism uint8  `json:"argon2_parallelism" env:"HASHING_ARGON2_PARALLELISM" default:"4"`
-	Argon2SaltLength  uint32 `json:"argon2_salt_length" env:"HASHING_ARGON2_SALT_LENGTH" default:"16"`
-	Argon2KeyLength   uint32 `json:"argon2_key_length" env:"HASHING_ARGON2_KEY_LENGTH" default:"32"`
+	Argon2Memory      int `json:"argon2_memory" env:"HASHING_ARGON2_MEMORY" default:"65536"`
+	Argon2Iterations  int `json:"argon2_iterations" env:"HASHING_ARGON2_ITERATIONS" default:"3"`
+	Argon2Parallelism int `json:"argon2_parallelism" env:"HASHING_ARGON2_PARALLELISM" default:"4"`
+	Argon2SaltLength  int `json:"argon2_salt_length" env:"HASHING_ARGON2_SALT_LENGTH" default:"16"`
+	Argon2KeyLength   int `json:"argon2_key_length" env:"HASHING_ARGON2_KEY_LENGTH" default:"32"`
 }
 
 // WebAuthn defines the Relying Party settings for WebAuthn/passkey support.

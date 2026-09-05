@@ -150,11 +150,29 @@ func verifyPassword(password, encodedHash string) bool {
 }
 
 func argon2idHash(password string, cfg config.Hashing) (string, error) {
+	// argon2.IDKey panics on out-of-range parameters (e.g. time=0), and a zero-value
+	// config here means LoadConfig never populated these fields, so validate up front.
+	if cfg.Argon2Iterations < 1 {
+		return "", fmt.Errorf("argon2: iterations must be at least 1, got %d", cfg.Argon2Iterations)
+	}
+	if cfg.Argon2Memory < 8*cfg.Argon2Parallelism {
+		return "", fmt.Errorf("argon2: memory must be at least 8*parallelism (%d), got %d", 8*cfg.Argon2Parallelism, cfg.Argon2Memory)
+	}
+	if cfg.Argon2Parallelism < 1 {
+		return "", fmt.Errorf("argon2: parallelism must be at least 1, got %d", cfg.Argon2Parallelism)
+	}
+	if cfg.Argon2SaltLength < 1 {
+		return "", fmt.Errorf("argon2: salt length must be at least 1, got %d", cfg.Argon2SaltLength)
+	}
+	if cfg.Argon2KeyLength < 1 {
+		return "", fmt.Errorf("argon2: key length must be at least 1, got %d", cfg.Argon2KeyLength)
+	}
+
 	salt := make([]byte, cfg.Argon2SaltLength)
 	if _, err := rand.Read(salt); err != nil {
 		return "", err
 	}
-	hash := argon2.IDKey([]byte(password), salt, cfg.Argon2Iterations, cfg.Argon2Memory, cfg.Argon2Parallelism, cfg.Argon2KeyLength)
+	hash := argon2.IDKey([]byte(password), salt, uint32(cfg.Argon2Iterations), uint32(cfg.Argon2Memory), uint8(cfg.Argon2Parallelism), uint32(cfg.Argon2KeyLength))
 	b64Salt := base64.RawStdEncoding.EncodeToString(salt)
 	b64Hash := base64.RawStdEncoding.EncodeToString(hash)
 	return fmt.Sprintf("$argon2id$v=19$m=%d,t=%d,p=%d$%s$%s", cfg.Argon2Memory, cfg.Argon2Iterations, cfg.Argon2Parallelism, b64Salt, b64Hash), nil

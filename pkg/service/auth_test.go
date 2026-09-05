@@ -937,3 +937,38 @@ func TestImpersonation(t *testing.T) {
 		}
 	})
 }
+
+func TestArgon2idHashing(t *testing.T) {
+	t.Run("hashes and verifies with valid parameters", func(t *testing.T) {
+		auth := &Auth{Cfg: &config.Config{Hashing: config.Hashing{
+			Algorithm:         "argon2id",
+			Argon2Memory:      65536,
+			Argon2Iterations:  3,
+			Argon2Parallelism: 4,
+			Argon2SaltLength:  16,
+			Argon2KeyLength:   32,
+		}}}
+
+		hash, err := auth.UserHashPassword("s3cret-password")
+		if err != nil {
+			t.Fatalf("UserHashPassword() unexpected error: %v", err)
+		}
+		if !strings.HasPrefix(hash, "$argon2id$") {
+			t.Fatalf("expected an argon2id hash, got %q", hash)
+		}
+		if !verifyPassword("s3cret-password", hash) {
+			t.Error("expected verifyPassword() to succeed with the correct password")
+		}
+		if verifyPassword("wrong-password", hash) {
+			t.Error("expected verifyPassword() to fail with the wrong password")
+		}
+	})
+
+	t.Run("returns an error instead of panicking on a zero-value config", func(t *testing.T) {
+		auth := &Auth{Cfg: &config.Config{Hashing: config.Hashing{Algorithm: "argon2id"}}}
+
+		if _, err := auth.UserHashPassword("s3cret-password"); err == nil {
+			t.Fatal("expected UserHashPassword() to return an error for an unconfigured argon2 config, got nil")
+		}
+	})
+}
