@@ -36,6 +36,28 @@ archives:
     - goos: windows
       format: zip
 
+release:
+  header: |
+    ## Highlights
+
+    This release adds real authorization and multi-tenancy to ezauth,
+    plus a security and performance hardening pass:
+
+    - **Refresh-token reuse detection** — replaying an already-rotated-out
+      refresh token now revokes its entire token family, a strong signal
+      of theft.
+    - **Real RBAC** — `ezauth_roles`/`ezauth_permissions` tables and
+      `RequireRole`/`RequirePermission` middleware, fully additive
+      alongside the existing `User.Roles` string field.
+    - **Scoped API keys** — limit a key to specific actions via
+      `RequireAPIKeyScope`, instead of full-account access.
+    - **Multi-tenancy (Organizations)** — lightweight orgs/teams with
+      per-(org, user) roles drawn from the same RBAC catalog.
+    - **Hardening** — SQLite foreign-key enforcement (cascades now
+      actually fire), bulk session/token-family revocation instead of
+      N+1 loops, a new composite token index, configurable DB
+      connection-pool limits, and batched MFA recovery-code inserts.
+
 checksum:
   name_template: 'checksums.txt'
 
