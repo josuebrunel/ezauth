@@ -1170,15 +1170,23 @@
 </li>
 <li>
 <p><strong>Run Migrations</strong>:
-    <code>ezauth</code> can automatically run migrations on startup when used as a library, but for the standalone service, you can run them manually or ensure they are run by the binary.
+    The <code>ezauthapi</code> binary itself runs migrations — no separate tool or building from source needed. <code>ezauthapi</code> (no arguments, see step 5) already does this automatically on every startup, but you can also run it as its own step, e.g. as a distinct stage in a deploy pipeline:
     <code>bash
-    go build -o migrate ./cmd/migrate
-    ./migrate up</code></p>
+    ./ezauthapi migrate up</code>
+    <code>./ezauthapi migrate down</code> rolls back every migration (back to an empty schema); <code>./ezauthapi migrate revert</code> rolls back only the single most recently applied one.</p>
+<p><code>-dialect</code>/<code>-dsn</code>/<code>-schema</code> flags (placed after the action) override the corresponding <code>EZAUTH_DB_*</code> env vars for that one invocation — useful for targeting a different database without changing your environment, e.g. <code>./ezauthapi migrate up -dsn="postgres://.../other_db"</code>.</p>
 </li>
 <li>
 <p><strong>Start the Service</strong>:
     <code>bash
     ./ezauthapi</code></p>
+</li>
+<li>
+<p><strong>Create an Admin User</strong> (optional):
+    Bootstraps a user (creating it if it doesn't already exist) and grants it an RBAC role — by default <code>admin</code> — so it passes <code>RequireRole("admin")</code>-gated routes. Safe to run more than once; re-running with the same email just ensures the role is granted.
+    <code>bash
+    ./ezauthapi create-admin -email=admin@example.com -password=&lt;a-strong-password&gt;</code>
+    Use <code>-role=&lt;name&gt;</code> to grant a different role instead of the default <code>admin</code>.</p>
 </li>
 </ol>
 <h2 id="using-docker">Using Docker</h2>
