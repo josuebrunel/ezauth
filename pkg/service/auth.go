@@ -426,11 +426,6 @@ type RequestPasswordless struct {
 	Email string `json:"email"`
 }
 
-// RequestPasswordlessLogin defines the parameters for logging in with a magic link.
-type RequestPasswordlessLogin struct {
-	Token string `json:"token"`
-}
-
 // PasswordlessRequest initiates the passwordless (magic link) login flow.
 func (a *Auth) PasswordlessRequest(ctx context.Context, req RequestPasswordless) error {
 	xlog.Debug("passwordless login requested", "email", req.Email)

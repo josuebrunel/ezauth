@@ -4,9 +4,9 @@ import "time"
 
 // Audit log event types, stored on AuditLog.EventType. Fired by the
 // built-in audit hook (see service.Hook) for the lifecycle events ezauth
-// already observes, plus RBAC role grant/revoke (see service.GrantRole/
-// RevokeRole); "email verification" isn't included since ezauth doesn't yet
-// have an email-verification-confirm flow.
+// already observes, plus RBAC role grant/revoke (see
+// service.UserRoleGrant/UserRoleRevoke); "email verification" isn't
+// included since ezauth doesn't yet have an email-verification-confirm flow.
 const (
 	AuditEventUserCreated            = "user.created"
 	AuditEventUserDeleted            = "user.deleted"
