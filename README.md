@@ -1389,3 +1389,7 @@ Check out the `_example` directory for ready-to-use examples:
 
 *   [`go-server`](_example/go-server): A complete, plug-and-play example showing how to integrate `ezauth` with a Go web server.
 *   [`javascript-client`](_example/javascript-client): An example JavaScript client interacting with the `ezauth` API.
+
+For a fuller, runnable showcase — authentication, profile updates, scoped API keys, sessions,
+impersonation, and admin/RBAC management, wired into Echo v5 + Templ + HTMX + SQLite — see
+[**ezauth-example**](https://github.com/josuebrunel/ezauth-example).
