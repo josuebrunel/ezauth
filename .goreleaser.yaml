@@ -40,23 +40,26 @@ release:
   header: |
     ## Highlights
 
-    This release adds real authorization and multi-tenancy to ezauth,
-    plus a security and performance hardening pass:
+    RBAC, Organizations, and API Keys (v0.20.0) were previously Go-only —
+    this release completes the HTTP layer for all three, plus two bug
+    fixes caught while verifying it and a log-level propagation fix:
 
-    - **Refresh-token reuse detection** — replaying an already-rotated-out
-      refresh token now revokes its entire token family, a strong signal
-      of theft.
-    - **Real RBAC** — `ezauth_roles`/`ezauth_permissions` tables and
-      `RequireRole`/`RequirePermission` middleware, fully additive
-      alongside the existing `User.Roles` string field.
-    - **Scoped API keys** — limit a key to specific actions via
-      `RequireAPIKeyScope`, instead of full-account access.
-    - **Multi-tenancy (Organizations)** — lightweight orgs/teams with
-      per-(org, user) roles drawn from the same RBAC catalog.
-    - **Hardening** — SQLite foreign-key enforcement (cascades now
-      actually fire), bulk session/token-family revocation instead of
-      N+1 loops, a new composite token index, configurable DB
-      connection-pool limits, and batched MFA recovery-code inserts.
+    - **Standalone-service endpoints** — `/auth/api/admin/roles`,
+      `/permissions`, `/organizations`, and self-service `/auth/api/api-keys`
+      now exist in both JSON and form-based (cookie) modes, matching every
+      other admin-style feature.
+    - **Fix: Form-mode body parsing** — the new Form handlers were
+      JSON-decoding request bodies instead of parsing
+      `application/x-www-form-urlencoded` like every other Form handler;
+      a real browser `<form>` submit would have 400'd every time.
+    - **Fix: API key list exposure** — listing API keys returned the raw
+      key value on every call, not just at creation; it's now redacted
+      the same way session listing already redacts refresh tokens.
+    - **Fix: log-level propagation** — `NewWithDB` (embedding with an
+      existing `*sql.DB`) never applied `cfg.Debug` to the logger; it now
+      does, matching `New`.
+    - **Docs** — the RBAC/organizations/API-key/reuse-detection docs
+      catch-up that follows from actually finishing the feature.
 
 checksum:
   name_template: 'checksums.txt'
