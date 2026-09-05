@@ -366,6 +366,7 @@ func (q *PSQLQuerier) QueryTokenListByUserIDAndType(ctx context.Context, userID,
 				And(psql.Quote(models.ColumnTokenType).EQ(psql.Arg(tokenType))).
 				And(psql.Quote(models.ColumnRevoked).EQ(psql.Arg(false))),
 		),
+		sm.OrderBy(psql.Quote(models.ColumnCreatedAt)).Desc(),
 	)
 }
 

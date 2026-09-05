@@ -361,6 +361,7 @@ func (q *SqliteQuerier) QueryTokenListByUserIDAndType(ctx context.Context, userI
 				And(sqlite.Quote(models.ColumnTokenType).EQ(sqlite.Arg(tokenType))).
 				And(sqlite.Quote(models.ColumnRevoked).EQ(sqlite.Arg(false))),
 		),
+		sm.OrderBy(sqlite.Quote(models.ColumnCreatedAt)).Desc(),
 	)
 }
 

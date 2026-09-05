@@ -210,6 +210,17 @@ func TestMysqlQuerier_TokenOperations(t *testing.T) {
 		}
 	})
 
+	t.Run("ListByUserIDAndType orders most-recent-first", func(t *testing.T) {
+		q := querier.QueryTokenListByUserIDAndType(ctx, token.UserID, token.TokenType)
+		sql, _, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("failed to build query: %v", err)
+		}
+
+		if !strings.Contains(sql, "ORDER BY") || !strings.Contains(sql, "created_at") || !strings.Contains(sql, "DESC") {
+			t.Errorf("expected ORDER BY created_at DESC, got %s", sql)
+		}
+	})
 }
 
 func TestMysqlQuerier_WebauthnCredentialOperations(t *testing.T) {

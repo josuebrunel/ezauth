@@ -355,6 +355,7 @@ func (q *MysqlQuerier) QueryTokenListByUserIDAndType(ctx context.Context, userID
 				And(mysql.Quote(models.ColumnTokenType).EQ(mysql.Arg(tokenType))).
 				And(mysql.Quote(models.ColumnRevoked).EQ(mysql.Arg(false))),
 		),
+		sm.OrderBy(mysql.Quote(models.ColumnCreatedAt)).Desc(),
 	)
 }
 
