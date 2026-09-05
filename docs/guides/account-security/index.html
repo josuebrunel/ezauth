@@ -1313,8 +1313,8 @@ updated, err := auth.Service.EmailChangeConfirm(ctx, tokenFromLink)
 <pre><code class="language-go">token, err := auth.Service.APIKeyCreate(ctx, user.ID, []string{&quot;posts:write&quot;})
 // token.Token is the raw key value — store/display it now, it can't be recovered later.
 
-keys, err := auth.Service.APIKeysList(ctx, user.ID)
-err = auth.Service.APIKeyRevoke(ctx, token.ID)
+keys, err := auth.Service.APIKeysList(ctx, user.ID) // []service.APIKeyInfo — raw key omitted, shown only once above
+err = auth.Service.APIKeyRevoke(ctx, user.ID, token.ID) // fails with service.ErrAPIKeyNotFound if the key isn't user's
 </code></pre>
 <pre><code class="language-go">r.Use(auth.APIKeyMiddleware) // group-level gate: any valid key gets past this
 r.With(auth.RequireAPIKeyScope(&quot;posts:write&quot;)).Post(&quot;/posts&quot;, createPostHandler)

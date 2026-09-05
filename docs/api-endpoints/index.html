@@ -921,6 +921,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#api-keys-form" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Keys (Form)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#invitations-form" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -947,6 +958,28 @@
     <span class="md-ellipsis">
       
         Admin User Management (Form)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#roles-permissions-form" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roles &amp; Permissions (Form)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#organizations-form" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Organizations (Form)
       
     </span>
   </a>
@@ -1118,6 +1151,17 @@
     <span class="md-ellipsis">
       
         Sessions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#api-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Keys
       
     </span>
   </a>
@@ -1838,6 +1882,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#api-keys-form" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Keys (Form)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#invitations-form" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1864,6 +1919,28 @@
     <span class="md-ellipsis">
       
         Admin User Management (Form)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#roles-permissions-form" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roles &amp; Permissions (Form)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#organizations-form" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Organizations (Form)
       
     </span>
   </a>
@@ -2035,6 +2112,17 @@
     <span class="md-ellipsis">
       
         Sessions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#api-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Keys
       
     </span>
   </a>
@@ -2440,6 +2528,10 @@
 <p><code>GET /auth/sessions</code> (Require a logged-in session)
 <code>DELETE /auth/sessions/{id}</code> (Revokes one session; requires a logged-in session)
 <code>DELETE /auth/sessions?except={id}</code> (Revokes all sessions except <code>except</code>, or everywhere if omitted; requires a logged-in session)</p>
+<h3 id="api-keys-form">API Keys (Form)</h3>
+<p><code>POST /auth/api-keys</code> (field: <code>scopes</code>, optional, repeat the field for more than one, e.g. <code>scopes=posts:write&amp;scopes=posts:read</code>; omit entirely for an unscoped key; requires a logged-in session)
+<code>GET /auth/api-keys</code> (Require a logged-in session)
+<code>DELETE /auth/api-keys/{id}</code> (Requires a logged-in session; fails unless the key belongs to the session user)</p>
 <h3 id="invitations-form">Invitations (Form)</h3>
 <p><code>GET /auth/invitation/accept</code> (Redirects to <code>Pages.InvitationAccept</code>, preserving <code>?token=...</code>)
 <code>POST /auth/invitation/accept</code> (fields: <code>token</code>, <code>password</code>, <code>password_confirm</code>, plus optional <code>username</code>/<code>first_name</code>/<code>last_name</code>/<code>locale</code>/<code>timezone</code>; sets auth cookies)
@@ -2454,6 +2546,24 @@
 <code>POST /auth/admin/users/{id}/suspend</code>, <code>POST /auth/admin/users/{id}/reactivate</code> (Require a logged-in session)
 <code>GET /auth/admin/users/{id}/history</code> (Query param: <code>limit</code>; requires a logged-in session)
 <code>GET /auth/admin/users/{id}/audit-logs</code> (Query params: <code>event_type</code>, <code>since</code>/<code>until</code>, <code>limit</code>/<code>offset</code>; requires a logged-in session)</p>
+<p>ezauth enforces no authorization on who may call these — same stance as impersonation. Protect these routes with your own admin-only check before exposing them.</p>
+<h3 id="roles-permissions-form">Roles &amp; Permissions (Form)</h3>
+<p><code>POST /auth/admin/roles</code> (fields: <code>name</code>, <code>description</code>; requires a logged-in session)
+<code>GET /auth/admin/roles</code>, <code>DELETE /auth/admin/roles/{id}</code> (Require a logged-in session)
+<code>POST /auth/admin/permissions</code> (fields: <code>name</code>, <code>description</code>; requires a logged-in session)
+<code>GET /auth/admin/permissions</code>, <code>DELETE /auth/admin/permissions/{id}</code> (Require a logged-in session)
+<code>POST /auth/admin/users/{id}/roles</code> (field: <code>role_name</code>; requires a logged-in session)
+<code>GET /auth/admin/users/{id}/roles</code>, <code>DELETE /auth/admin/users/{id}/roles/{role_name}</code> (Require a logged-in session)
+<code>POST /auth/admin/roles/{name}/permissions</code> (field: <code>permission_name</code>; requires a logged-in session)
+<code>DELETE /auth/admin/roles/{name}/permissions/{permission_name}</code> (Requires a logged-in session)</p>
+<p>ezauth enforces no authorization on who may call these — same stance as impersonation. Protect these routes with your own admin-only check before exposing them.</p>
+<h3 id="organizations-form">Organizations (Form)</h3>
+<p><code>POST /auth/admin/organizations</code> (field: <code>name</code>; requires a logged-in session)
+<code>GET /auth/admin/organizations</code> (Query params: <code>limit</code>/<code>offset</code>; requires a logged-in session)
+<code>GET /auth/admin/organizations/{id}</code>, <code>DELETE /auth/admin/organizations/{id}</code> (Require a logged-in session)
+<code>POST /auth/admin/organizations/{id}/members</code> (fields: <code>user_id</code>, <code>role_name</code>; upserts — re-adding an existing member updates their role; requires a logged-in session)
+<code>GET /auth/admin/organizations/{id}/members</code>, <code>DELETE /auth/admin/organizations/{id}/members/{user_id}</code> (Require a logged-in session)
+<code>GET /auth/admin/users/{id}/organizations</code> (Requires a logged-in session)</p>
 <p>ezauth enforces no authorization on who may call these — same stance as impersonation. Protect these routes with your own admin-only check before exposing them.</p>
 <h3 id="impersonation-form">Impersonation (Form)</h3>
 <p><code>POST /auth/impersonate</code> (field: <code>target_user_id</code>; requires a logged-in session; swaps the session cookie over to the target user, stashing the admin's own tokens)
@@ -2583,6 +2693,33 @@ Exchange <code>mfa_token</code> via <code>POST /auth/api/mfa/login/verify</code>
 <p><code>GET /auth/api/sessions</code> (Protected) — lists the authenticated user's active refresh-token sessions (one per logged-in device/client), most recent first.
 <code>DELETE /auth/api/sessions/{id}</code> (Protected) — revokes one session by its record ID, logging that device out immediately.
 <code>DELETE /auth/api/sessions?except={id}</code> (Protected) — revokes all sessions except the one named by <code>except</code> ("log out other devices"); omit <code>except</code> to log out everywhere.</p>
+<h3 id="api-keys">API Keys</h3>
+<p><code>POST /auth/api/api-keys</code> (Protected) — creates a new API key for the authenticated user. The raw key value is only ever returned here; it can't be recovered later, only revoked.</p>
+<p><strong>Request Body:</strong></p>
+<pre><code class="language-json">{
+  &quot;scopes&quot;: [&quot;posts:write&quot;]
+}
+</code></pre>
+<p>Omit or send an empty <code>scopes</code> array for an unscoped, full-access key — the same access an API key had before per-key scoping existed.</p>
+<p><strong>Response Data:</strong> the created token record, including the raw key in <code>token</code>:</p>
+<pre><code class="language-json">{
+  &quot;id&quot;: &quot;...&quot;,
+  &quot;user_id&quot;: &quot;...&quot;,
+  &quot;token&quot;: &quot;&lt;raw key value&gt;&quot;,
+  &quot;token_type&quot;: &quot;apikey&quot;,
+  &quot;expires_at&quot;: &quot;...&quot;,
+  &quot;revoked&quot;: false,
+  &quot;metadata&quot;: {&quot;scopes&quot;: [&quot;posts:write&quot;]}
+}
+</code></pre>
+<p><code>GET /auth/api/api-keys</code> (Protected) — lists the authenticated user's API keys. Unlike the create response above, the raw key value is never included here — it's shown exactly once, at creation.</p>
+<p><strong>Response Data:</strong></p>
+<pre><code class="language-json">[
+  {&quot;id&quot;: &quot;...&quot;, &quot;scopes&quot;: [&quot;posts:write&quot;], &quot;created_at&quot;: &quot;...&quot;, &quot;expires_at&quot;: &quot;...&quot;, &quot;revoked&quot;: false}
+]
+</code></pre>
+<p><code>DELETE /auth/api/api-keys/{id}</code> (Protected) — revokes one of the authenticated user's API keys by its record ID. Fails the same way whether the ID doesn't exist or belongs to another user, so the endpoint can't be used to probe for other users' key IDs.</p>
+<p>Enforce scopes on a per-route basis with <code>RequireAPIKeyScope</code> — see <a href="../guides/account-security/#scoped-api-keys">Scoped API Keys</a>.</p>
 <h3 id="webauthn-login-begin">WebAuthn Login Begin</h3>
 <p><code>POST /auth/api/webauthn/login/begin</code></p>
 <p>Begins a discoverable (usernameless) WebAuthn login ceremony. No request body needed.</p>

@@ -2454,8 +2454,8 @@
 <h2 id="api-keys">API Keys</h2>
 <p>Scopes are stored as a plain string array in the <code>Token</code>'s existing <code>Metadata</code> column — no separate table. An empty/nil scopes list means unscoped/full access. See <a href="../../guides/account-security/#scoped-api-keys">Scoped API Keys</a>.</p>
 <pre><code class="language-go">func (a *Auth) APIKeyCreate(ctx context.Context, userID string, scopes []string) (*models.Token, error)
-func (a *Auth) APIKeyRevoke(ctx context.Context, id string) error
-func (a *Auth) APIKeysList(ctx context.Context, userID string) ([]*models.Token, error)
+func (a *Auth) APIKeyRevoke(ctx context.Context, userID, id string) error // ErrAPIKeyNotFound if id isn't userID's
+func (a *Auth) APIKeysList(ctx context.Context, userID string) ([]APIKeyInfo, error) // raw key omitted, see APIKeyCreate
 </code></pre>
 <h2 id="asymmetric-jwt-signing-jwks">Asymmetric JWT Signing (JWKS)</h2>
 <p>Configured via <code>Cfg.JWT</code> (<code>Algorithm</code>, <code>PrivateKey</code>, <code>PublicKey</code>, <code>KeyID</code>, <code>PreviousPublicKey</code>, <code>PreviousKeyID</code> — see <a href="../../configuration/">Configuration</a>); defaults to symmetric HS256 (<code>Cfg.JWTSecret</code>) when <code>Cfg.JWT.Algorithm</code> is unset.</p>

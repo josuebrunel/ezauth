@@ -1376,6 +1376,7 @@ router.Handle(&quot;/admin/posts&quot;, auth.RequireRole(&quot;editor&quot;)(pos
 router.Handle(&quot;/admin/posts&quot;, auth.RequirePermission(&quot;posts:write&quot;)(postsHandler))
 </code></pre>
 <p><code>RequireRole</code>/<code>RequirePermission</code> read the authenticated user ID from request context (set by <code>AuthMiddleware</code> or <code>LoadUserMiddleware</code>/<code>SessionMiddleware</code>), so they must run downstream of one of those; a missing user returns 401, a missing role/permission returns 403. Deleting a role or permission cascades: matching <code>user_roles</code>/<code>role_permissions</code> assignment rows are removed automatically.</p>
+<p>See the <a href="https://github.com/josuebrunel/ezauth#roles--permissions-rbac">Roles &amp; Permissions section of the README</a> for the standalone-service (JSON API / form) equivalents.</p>
 <h2 id="organizations">Organizations</h2>
 <p>Lightweight multi-tenancy: organizations/teams, with each member holding one role per organization — drawn from the same RBAC role catalog <code>RequireRole</code> checks against (a role is just an <code>ezauth_roles</code> row; org membership is <code>ezauth_org_members</code>, mapping <code>(org, user) → role</code>). Kept deliberately minimal — no settings/billing/invitations — a consuming app that needs more can extend via its own table FK'd to <code>ezauth_organizations</code>. Org membership rows cascade-delete like everything else in the schema — see the SQLite foreign-key note at the top of <a href="#roles--permissions-rbac">Roles &amp; Permissions (RBAC)</a> if you're upgrading an existing SQLite deployment.</p>
 <pre><code class="language-go">org, err := auth.Service.OrganizationCreate(ctx, &quot;Acme Inc&quot;)
@@ -1396,6 +1397,7 @@ orgs, err := auth.Service.UserOrganizationsList(ctx, user.ID)      // organizati
 <pre><code class="language-go">org, err := auth.GetSessionOrg(ctx) // *models.Organization, set by OrgLoaderMiddleware
 </code></pre>
 <p>There's no <code>RequireOrgRole</code> middleware — compose <code>OrgLoaderMiddleware</code> with <code>RequireRole</code>/<code>RequirePermission</code> if a route needs to enforce the current org member's role.</p>
+<p>See the <a href="https://github.com/josuebrunel/ezauth#organizations">Organizations section of the README</a> for the standalone-service (JSON API / form) equivalents.</p>
 <h2 id="invitation-based-onboarding">Invitation-Based Onboarding</h2>
 <p>An existing user invites someone by email; the invitee gets a link that pre-fills registration with their email pre-verified and, optionally, a pre-assigned role. <code>ezauth</code> enforces no authorization on who may invite (same stance as <code>Impersonate</code>) — check that yourself before calling it. <code>Roles</code> and <code>Data</code> are opaque to <code>ezauth</code> beyond being carried through to the created account.</p>
 <pre><code class="language-go">info, err := auth.Service.InvitationCreate(ctx, inviter, service.RequestInvitation{
