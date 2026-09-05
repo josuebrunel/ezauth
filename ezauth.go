@@ -7,7 +7,6 @@ import (
 	"database/sql"
 	"errors"
 	"html/template"
-	"log/slog"
 	"net/http"
 	"strings"
 
@@ -37,10 +36,22 @@ type EzAuth struct {
 	Handler *handler.Handler
 }
 
+// applyLogLevel configures xlog's level from cfg.Debug. Called at the top
+// of every constructor, before any component that might log is built.
+func applyLogLevel(cfg *config.Config) {
+	if cfg.Debug {
+		xlog.Setup(xlog.Config{Level: "DEBUG"})
+	} else {
+		xlog.Setup(xlog.Config{Level: "INFO"})
+	}
+}
+
 // New creates a new EzAuth instance from a config.
 // It handles database connection based on the provided configuration.
 // path is the base URL path where the authentication routes will be mounted (e.g., "auth").
 func New(cfg *config.Config, path string) (*EzAuth, error) {
+	applyLogLevel(cfg)
+
 	repo, err := repository.Open(repository.Opts{
 		Dialect:         cfg.DB.Dialect,
 		DSN:             cfg.DB.DSN,
@@ -58,12 +69,6 @@ func New(cfg *config.Config, path string) (*EzAuth, error) {
 		return nil, err
 	}
 	h := handler.New(svc, path)
-
-	if cfg.Debug {
-		xlog.Setup(xlog.Config{Level: "DEBUG"})
-	} else {
-		xlog.Setup(xlog.Config{Level: "INFO"})
-	}
 
 	auth := &EzAuth{
 		Config:  cfg,
@@ -86,6 +91,8 @@ func New(cfg *config.Config, path string) (*EzAuth, error) {
 // NewWithDB creates a new EzAuth instance using an existing database connection.
 // path is the base URL path where the authentication routes will be mounted (e.g., "auth").
 func NewWithDB(cfg *config.Config, db *sql.DB, path string) (*EzAuth, error) {
+	applyLogLevel(cfg)
+
 	repo := repository.New(db, cfg.DB.Dialect)
 	svc, err := service.New(cfg, repo, path)
 	if err != nil {
@@ -236,7 +243,7 @@ func (e *EzAuth) registerCustomProviders(ctx context.Context) error {
 		if cp.IssuerURL != "" {
 			p, err = providers.OIDC(oidcCtx, cp.IssuerURL, cp.ClientID, cp.ClientSecret, cp.RedirectURL, cp.Scopes)
 			if err != nil {
-				slog.Warn("skipping custom OIDC provider: discovery failed", "name", cp.Name, "err", err)
+				xlog.Warn("skipping custom OIDC provider: discovery failed", "name", cp.Name, "err", err)
 				continue
 			}
 		} else {
