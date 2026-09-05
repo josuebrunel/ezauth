@@ -5,6 +5,7 @@ BIN=./bin/${NAME}
 # Default database target
 DB ?= sqlite
 MIGRATION_DIR=pkg/db/migrations
+ACTION ?= up
 
 # Database configurations
 ifeq ($(DB),postgres)
@@ -43,9 +44,9 @@ migration-create:
 	@read -p "Enter migration name: " name; \
 		goose -dir $(DIR) $(DRIVER) $(DSN) create $$name sql
 
+# ACTION is one of up|down|revert, e.g. `make migrate ACTION=revert`.
 migrate:
-	go build -o bin/migrate cmd/migrate/main.go
-	./bin/migrate --dialect $(DB) --dsn $(DSN)
+	EZAUTH_API_KEY=dev-cli EZAUTH_JWT_SECRET=dev-cli EZAUTH_DB_DIALECT=$(DRIVER) EZAUTH_DB_DSN=$(DSN) go run ./cmd/ezauthapi migrate $(ACTION)
 
 test:
 	go test -failfast ./... -v -p=1 -count=1 -coverprofile .coverage.txt

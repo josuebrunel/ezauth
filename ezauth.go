@@ -276,6 +276,16 @@ func (e *EzAuth) Migrate() error {
 	return migrations.MigrateUpWithDBConn(e.Repo.DB(), e.Repo.Opts.Dialect)
 }
 
+// MigrateDown rolls back every migration, resetting the schema to version 0.
+func (e *EzAuth) MigrateDown() error {
+	return migrations.MigrateDownWithDBConn(e.Repo.DB(), e.Repo.Opts.Dialect)
+}
+
+// MigrateRevert rolls back only the single most recently applied migration.
+func (e *EzAuth) MigrateRevert() error {
+	return migrations.MigrateRevertWithDBConn(e.Repo.DB(), e.Repo.Opts.Dialect)
+}
+
 // AuthMiddleware returns the authentication middleware.
 func (e *EzAuth) AuthMiddleware(next http.Handler) http.Handler {
 	return e.Handler.AuthMiddleware(next)

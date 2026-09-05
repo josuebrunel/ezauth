@@ -237,9 +237,11 @@ You can run `ezauth` as a separate service that handles authentication for your 
    ```bash
    go build -o ezauthapi ./cmd/ezauthapi
    ```
-   Then, run the compiled binary:
+   Then, run the compiled binary — this one binary handles migrations, admin bootstrapping, and serving:
    ```bash
-   ./ezauthapi
+   ./ezauthapi                 # migrates, then serves (the default)
+   ./ezauthapi migrate up      # or run migrations as their own step; also `down` (roll back everything) / `revert` (roll back one)
+   ./ezauthapi create-admin -email=admin@example.com -password=<a-strong-password>   # bootstrap an admin user (idempotent, -role defaults to "admin")
    ```
 
 ## Sessions, Middleware and Helpers

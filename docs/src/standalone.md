@@ -23,16 +23,25 @@ Running `ezauth` as a standalone service allows you to offload authentication lo
     ```
 
 4.  **Run Migrations**:
-    `ezauth` can automatically run migrations on startup when used as a library, but for the standalone service, you can run them manually or ensure they are run by the binary.
+    The `ezauthapi` binary itself runs migrations — no separate tool or building from source needed. `ezauthapi` (no arguments, see step 5) already does this automatically on every startup, but you can also run it as its own step, e.g. as a distinct stage in a deploy pipeline:
     ```bash
-    go build -o migrate ./cmd/migrate
-    ./migrate up
+    ./ezauthapi migrate up
     ```
+    `./ezauthapi migrate down` rolls back every migration (back to an empty schema); `./ezauthapi migrate revert` rolls back only the single most recently applied one.
+
+    `-dialect`/`-dsn`/`-schema` flags (placed after the action) override the corresponding `EZAUTH_DB_*` env vars for that one invocation — useful for targeting a different database without changing your environment, e.g. `./ezauthapi migrate up -dsn="postgres://.../other_db"`.
 
 5.  **Start the Service**:
     ```bash
     ./ezauthapi
     ```
+
+6.  **Create an Admin User** (optional):
+    Bootstraps a user (creating it if it doesn't already exist) and grants it an RBAC role — by default `admin` — so it passes `RequireRole("admin")`-gated routes. Safe to run more than once; re-running with the same email just ensures the role is granted.
+    ```bash
+    ./ezauthapi create-admin -email=admin@example.com -password=<a-strong-password>
+    ```
+    Use `-role=<name>` to grant a different role instead of the default `admin`.
 
 ## Using Docker
 

@@ -32,6 +32,12 @@ func MigrateDown(dsn, dialect, schema string) error {
 	return runMigration(dsn, dialect, schema, "down")
 }
 
+// MigrateRevert rolls back only the single most recently applied migration,
+// unlike MigrateDown which resets everything to version 0.
+func MigrateRevert(dsn, dialect, schema string) error {
+	return runMigration(dsn, dialect, schema, "revert")
+}
+
 func MigrateUpWithDBConn(db *sql.DB, dialect string) error {
 	// For existing DB connection, we assume schema setup is already done or not needed
 	return execGooseMigration(db, dialect, "up")
@@ -39,6 +45,12 @@ func MigrateUpWithDBConn(db *sql.DB, dialect string) error {
 
 func MigrateDownWithDBConn(db *sql.DB, dialect string) error {
 	return execGooseMigration(db, dialect, "down")
+}
+
+// MigrateRevertWithDBConn rolls back only the single most recently applied
+// migration, unlike MigrateDownWithDBConn which resets everything to version 0.
+func MigrateRevertWithDBConn(db *sql.DB, dialect string) error {
+	return execGooseMigration(db, dialect, "revert")
 }
 
 func getMigrationSubDir(dialect string) (string, error) {
@@ -142,6 +154,12 @@ func execGooseMigration(db *sql.DB, dialect string, action string) error {
 		results, err = provider.Up(context.Background())
 	} else if action == "down" {
 		results, err = provider.DownTo(context.Background(), 0)
+	} else if action == "revert" {
+		var result *goose.MigrationResult
+		result, err = provider.Down(context.Background())
+		if result != nil {
+			results = []*goose.MigrationResult{result}
+		}
 	} else {
 		return fmt.Errorf("unknown action: %s", action)
 	}
