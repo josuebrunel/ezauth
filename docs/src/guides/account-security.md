@@ -111,7 +111,7 @@ err = auth.Service.APIKeyRevoke(ctx, user.ID, token.ID) // fails with service.Er
 ```
 
 ```go
-r.Use(auth.APIKeyMiddleware) // group-level gate: any valid key gets past this
+r.Use(auth.Handler.APIKeyMiddleware) // group-level gate: any valid key gets past this
 r.With(auth.RequireAPIKeyScope("posts:write")).Post("/posts", createPostHandler)
 ```
 

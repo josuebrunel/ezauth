@@ -1694,6 +1694,11 @@
 <td><code>bcrypt</code></td>
 </tr>
 <tr>
+<td><code>EZAUTH_HASHING_BCRYPT_COST</code></td>
+<td>bcrypt work factor (4-31); only used when the algorithm is <code>bcrypt</code>.</td>
+<td><code>14</code></td>
+</tr>
+<tr>
 <td><code>EZAUTH_HASHING_ARGON2_MEMORY</code></td>
 <td>Argon2 memory cost in KB (used when algorithm is <code>argon2id</code>).</td>
 <td><code>65536</code></td>
@@ -1707,6 +1712,16 @@
 <td><code>EZAUTH_HASHING_ARGON2_PARALLELISM</code></td>
 <td>Argon2 parallelism (thread count).</td>
 <td><code>4</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_HASHING_ARGON2_SALT_LENGTH</code></td>
+<td>Argon2 salt length in bytes.</td>
+<td><code>16</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_HASHING_ARGON2_KEY_LENGTH</code></td>
+<td>Argon2 derived key length in bytes.</td>
+<td><code>32</code></td>
 </tr>
 </tbody>
 </table>
@@ -1764,8 +1779,8 @@
 </tr>
 <tr>
 <td><code>EZAUTH_DB_SCHEMA</code></td>
-<td>Database schema (PostgreSQL only).</td>
-<td><code>public</code></td>
+<td>Database schema (PostgreSQL only). Empty uses the schema on the connection's <code>search_path</code> (typically <code>public</code>).</td>
+<td>(empty)</td>
 </tr>
 <tr>
 <td><code>EZAUTH_DB_MAX_OPEN_CONNS</code></td>
@@ -1817,8 +1832,8 @@
 </tr>
 <tr>
 <td><code>EZAUTH_SMTP_FROM</code></td>
-<td>The email address to send from.</td>
-<td><code>noreply@example.com</code></td>
+<td>The email address to send from. No default — leave unset and mail is sent with an empty sender, which most servers reject.</td>
+<td>(empty)</td>
 </tr>
 </tbody>
 </table>

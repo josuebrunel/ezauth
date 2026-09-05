@@ -53,10 +53,10 @@ docker-compose up -d
 
 ## Integrating with your Application
 
-**Important**: All requests to the `ezauth` API (except OAuth2 callbacks) must include the `X-API-Key` header with the configured API key.
+**Important**: Requests to the JSON API under `/auth/api/*` must include the `X-API-Key` header with the configured API key (endpoints that act on a specific user additionally require `Authorization: Bearer <access_token>`). The cookie-based form endpoints under `/auth/*` (login, register, passwordless, OAuth2 callbacks, ...) don't take an API key — they're authenticated via the session cookie and CSRF token.
 
 Once `ezauth` is running, your application can:
 
-1.  **Direct Users to Login/Register**: Your frontend can send `POST` requests to `ezauth`'s `/auth/login` or `/auth/register` endpoints.
+1.  **Direct Users to Login/Register**: Your frontend can send `POST` requests to `ezauth`'s `/auth/login` or `/auth/register` form endpoints (cookie-based, CSRF-protected), or use the JSON endpoints `/auth/api/login`/`/auth/api/register`.
 2.  **Secure Your Routes**: Your main application should verify the JWT access tokens issued by `ezauth`. Since `ezauth` uses standard JWTs, you can use any JWT library to verify the signature (using `EZAUTH_JWT_SECRET`).
-3.  **Retrieve User Info**: Send a `GET` request to `/auth/userinfo` with the `Authorization: Bearer <access_token>` header.
+3.  **Retrieve User Info**: Send a `GET` request to `/auth/api/userinfo` with the `Authorization: Bearer <access_token>` header.

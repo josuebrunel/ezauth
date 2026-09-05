@@ -43,9 +43,12 @@ WebAuthn support is disabled unless both `EZAUTH_WEBAUTHN_RP_ID` and `EZAUTH_WEB
 | Variable                               | Description                                                                      | Default |
 | -------------------------------------- | -------------------------------------------------------------------------------- | ------- |
 | `EZAUTH_HASHING_ALGORITHM`             | Password hashing algorithm (`bcrypt` or `argon2id`).                             | `bcrypt`|
+| `EZAUTH_HASHING_BCRYPT_COST`           | bcrypt work factor (4-31); only used when the algorithm is `bcrypt`.             | `14`    |
 | `EZAUTH_HASHING_ARGON2_MEMORY`         | Argon2 memory cost in KB (used when algorithm is `argon2id`).                    | `65536` |
 | `EZAUTH_HASHING_ARGON2_ITERATIONS`     | Argon2 time cost (iterations).                                                   | `3`     |
 | `EZAUTH_HASHING_ARGON2_PARALLELISM`    | Argon2 parallelism (thread count).                                               | `4`     |
+| `EZAUTH_HASHING_ARGON2_SALT_LENGTH`    | Argon2 salt length in bytes.                                                     | `16`    |
+| `EZAUTH_HASHING_ARGON2_KEY_LENGTH`     | Argon2 derived key length in bytes.                                              | `32`    |
 
 ## Rate Limit Settings
 
@@ -62,7 +65,7 @@ WebAuthn support is disabled unless both `EZAUTH_WEBAUTHN_RP_ID` and `EZAUTH_WEB
 | ------------------- | ----------------------------------------------------- | ----------- |
 | `EZAUTH_DB_DIALECT` | Database dialect (`sqlite3`, `postgres`, or `mysql`). | `sqlite3`   |
 | `EZAUTH_DB_DSN`     | Database connection string.                           | `ezauth.db` |
-| `EZAUTH_DB_SCHEMA`  | Database schema (PostgreSQL only).                    | `public`    |
+| `EZAUTH_DB_SCHEMA`  | Database schema (PostgreSQL only). Empty uses the schema on the connection's `search_path` (typically `public`). | (empty) |
 | `EZAUTH_DB_MAX_OPEN_CONNS`    | Max open connections in the pool.                    | `25`  |
 | `EZAUTH_DB_MAX_IDLE_CONNS`    | Max idle connections kept in the pool.               | `5`   |
 | `EZAUTH_DB_CONN_MAX_LIFETIME` | Max lifetime of a pooled connection before it's recycled (Go duration, e.g. `30m`). | `30m` |
@@ -77,7 +80,7 @@ Used for sending password reset and magic link emails.
 | `EZAUTH_SMTP_PORT`     | SMTP server port.               | `587`                 |
 | `EZAUTH_SMTP_USER`     | SMTP username.                  |                       |
 | `EZAUTH_SMTP_PASSWORD` | SMTP password.                  |                       |
-| `EZAUTH_SMTP_FROM`     | The email address to send from. | `noreply@example.com` |
+| `EZAUTH_SMTP_FROM`     | The email address to send from. No default — leave unset and mail is sent with an empty sender, which most servers reject. | (empty) |
 
 ## Email Templates
 

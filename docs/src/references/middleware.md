@@ -74,7 +74,7 @@ func (h *Handler) RequireAPIKeyScope(scope string) func(http.Handler) http.Handl
 
 ## Authorization Middleware (RBAC)
 
-See [Roles & Permissions (RBAC)](../guides/admin-operations.md#roles--permissions-rbac) for the full picture — these check the real RBAC tables, not the legacy `User.Roles` string field.
+See [Roles & Permissions (RBAC)](../guides/admin-operations.md#roles-permissions-rbac) for the full picture — these check the real RBAC tables, not the legacy `User.Roles` string field.
 
 ### `RequireRole`
 

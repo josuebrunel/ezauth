@@ -1317,6 +1317,10 @@ func main() {
     http.ListenAndServe(&quot;:3000&quot;, r)
 }
 </code></pre>
+<blockquote>
+<p>[!TIP]
+Besides <code>auth.Migrate()</code>, the <code>EzAuth</code> instance also exposes two rollback helpers for library users: <code>auth.MigrateDown()</code> rolls back every migration (empty schema), and <code>auth.MigrateRevert()</code> rolls back only the single most recently applied one.</p>
+</blockquote>
 <h2 id="core-components">Core Components</h2>
 <p>When you initialize <code>ezauth</code>, you get access to several key components through the <code>EzAuth</code> struct:</p>
 <h3 id="ezauth-struct"><code>EzAuth</code> Struct</h3>

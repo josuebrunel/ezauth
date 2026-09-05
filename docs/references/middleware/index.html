@@ -1455,7 +1455,7 @@
 <pre><code class="language-go">func (h *Handler) RequireAPIKeyScope(scope string) func(http.Handler) http.Handler
 </code></pre>
 <h2 id="authorization-middleware-rbac">Authorization Middleware (RBAC)</h2>
-<p>See <a href="../../guides/admin-operations/#roles--permissions-rbac">Roles &amp; Permissions (RBAC)</a> for the full picture — these check the real RBAC tables, not the legacy <code>User.Roles</code> string field.</p>
+<p>See <a href="../../guides/admin-operations/#roles-permissions-rbac">Roles &amp; Permissions (RBAC)</a> for the full picture — these check the real RBAC tables, not the legacy <code>User.Roles</code> string field.</p>
 <h3 id="requirerole"><code>RequireRole</code></h3>
 <p>Requires the authenticated user (identified via the request context set by <code>AuthMiddleware</code> or <code>LoadUserMiddleware</code>/<code>SessionMiddleware</code> — must run downstream of one of those) to hold the given role. Returns <code>401</code> if no user is in context, <code>403</code> if they lack the role.</p>
 <pre><code class="language-go">func (h *Handler) RequireRole(role string) func(http.Handler) http.Handler

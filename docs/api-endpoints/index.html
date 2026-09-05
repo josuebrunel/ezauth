@@ -1471,6 +1471,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#admin-roles-permissions-rbac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Admin: Roles &amp; Permissions (RBAC)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#admin-organizations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Admin: Organizations
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2432,6 +2454,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#admin-roles-permissions-rbac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Admin: Roles &amp; Permissions (RBAC)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#admin-organizations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Admin: Organizations
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2495,7 +2539,6 @@
 *   <code>phone</code> (optional)
 *   <code>avatar_url</code> (optional)
 *   <code>nickname</code> (optional)
-*   <code>roles</code> (optional, comma-separated)
 *   <code>meta_*</code> (Optional, any field prefixed with <code>meta_</code> will be stored in <code>UserMetadata</code>, e.g. <code>meta_theme=dark</code> -&gt; <code>user_metadata: {"theme": "dark"}</code>)</p>
 <h3 id="login-form">Login (Form)</h3>
 <p><code>POST /auth/login</code>
@@ -2588,7 +2631,6 @@
   &quot;last_name&quot;: &quot;Doe&quot;,
   &quot;locale&quot;: &quot;en-US&quot;,
   &quot;timezone&quot;: &quot;UTC&quot;,
-  &quot;roles&quot;: &quot;user,admin&quot;,
   &quot;data&quot;: {
     &quot;key&quot;: &quot;value&quot;
   }
@@ -2937,7 +2979,7 @@ Exchange <code>mfa_token</code> via <code>POST /auth/api/mfa/login/verify</code>
 </code></pre>
 <h3 id="admin-audit-logs">Admin: Audit Logs</h3>
 <p><code>GET /auth/api/admin/users/{id}/audit-logs</code></p>
-<p>Lists/filters the user's persisted audit log — real named security events (login success/failure, password reset, impersonation, account lockout, MFA, user create/delete), not the token-history proxy above. ezauth enforces no authorization on who may call this — same stance as the rest of Admin User Management.</p>
+<p>Lists/filters the user's persisted audit log — real named security events (login success/failure, password reset, impersonation, account lockout, MFA, user create/delete, role granted/revoked), not the token-history proxy above. ezauth enforces no authorization on who may call this — same stance as the rest of Admin User Management.</p>
 <p><strong>Query Parameters:</strong>
 | Param | Description |
 | --- | --- |
@@ -2951,6 +2993,29 @@ Exchange <code>mfa_token</code> via <code>POST /auth/api/mfa/login/verify</code>
   &quot;has_more&quot;: false
 }
 </code></pre>
+<h3 id="admin-roles-permissions-rbac">Admin: Roles &amp; Permissions (RBAC)</h3>
+<p>ezauth enforces no authorization on who may call these — same stance as impersonation. Protect them with your own admin-only check (e.g. <code>RequireRole("admin")</code>) before exposing them. Roles and permissions are identified by <strong>ID</strong> for deletes but by <strong>name</strong> for grant/revoke wiring.</p>
+<p><code>POST /auth/api/admin/roles</code> — creates a role. <strong>Body:</strong> <code>{"name": "editor", "description": "can edit content"}</code>. Returns the created role.
+<code>GET /auth/api/admin/roles</code> — lists all roles.
+<code>DELETE /auth/api/admin/roles/{id}</code> — deletes a role; matching <code>user_roles</code>/<code>role_permissions</code> assignments cascade away. Returns a confirmation message.</p>
+<p><code>POST /auth/api/admin/permissions</code> — creates a permission. <strong>Body:</strong> <code>{"name": "posts:write", "description": "write posts"}</code>. Returns the created permission.
+<code>GET /auth/api/admin/permissions</code> — lists all permissions.
+<code>DELETE /auth/api/admin/permissions/{id}</code> — deletes a permission (assignments cascade). Returns a confirmation message.</p>
+<p><code>POST /auth/api/admin/users/{id}/roles</code> — grants the user a role. <strong>Body:</strong> <code>{"role_name": "editor"}</code>. Idempotent; records a <code>role.granted</code> audit event.
+<code>GET /auth/api/admin/users/{id}/roles</code> — lists the user's roles.
+<code>DELETE /auth/api/admin/users/{id}/roles/{role_name}</code> — revokes the role (records a <code>role.revoked</code> audit event).</p>
+<p><code>POST /auth/api/admin/roles/{name}/permissions</code> — grants a permission to a role. <strong>Body:</strong> <code>{"permission_name": "posts:write"}</code>. Idempotent.
+<code>DELETE /auth/api/admin/roles/{name}/permissions/{permission_name}</code> — revokes a permission from a role.</p>
+<h3 id="admin-organizations">Admin: Organizations</h3>
+<p>Lightweight multi-tenancy; each member's role is drawn from the RBAC role catalog above (an org membership is an <code>ezauth_org_members</code> row mapping <code>(org, user) → role</code>). ezauth enforces no authorization on who may call these — same stance as impersonation. Protect them with your own admin-only check.</p>
+<p><code>POST /auth/api/admin/organizations</code> — creates an organization. <strong>Body:</strong> <code>{"name": "Acme Inc"}</code>. Returns the created organization.
+<code>GET /auth/api/admin/organizations</code> — lists organizations. <strong>Query params:</strong> <code>limit</code> (default 50, max 200), <code>offset</code>.
+<code>GET /auth/api/admin/organizations/{id}</code> — fetches one organization by ID.
+<code>DELETE /auth/api/admin/organizations/{id}</code> — deletes an organization (membership rows cascade). Returns a confirmation message.</p>
+<p><code>POST /auth/api/admin/organizations/{id}/members</code> — adds/updates a member. <strong>Body:</strong> <code>{"user_id": "...", "role_name": "editor"}</code>. Upserts: re-adding an existing member updates their role.
+<code>GET /auth/api/admin/organizations/{id}/members</code> — lists members, each with its role name joined in.
+<code>DELETE /auth/api/admin/organizations/{id}/members/{user_id}</code> — removes a member from the organization.</p>
+<p><code>GET /auth/api/admin/users/{id}/organizations</code> — lists the organizations a user belongs to.</p>
 
 
 

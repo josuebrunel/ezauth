@@ -52,7 +52,7 @@ type StopImpersonationRequest struct {
 // @Success 200 {object} ApiResponse[ImpersonateResponse]
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 401 {object} ApiResponse[string]
-// @Router /auth/impersonate [post]
+// @Router /auth/api/impersonate [post]
 func (h *Handler) Impersonate(w http.ResponseWriter, r *http.Request) {
 	var req ImpersonateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -121,7 +121,7 @@ func (h *Handler) Impersonate(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Success 200 {object} ApiResponse[map[string]string]
 // @Failure 400 {object} ApiResponse[string]
-// @Router /auth/impersonate/stop [post]
+// @Router /auth/api/impersonate/stop [post]
 func (h *Handler) StopImpersonation(w http.ResponseWriter, r *http.Request) {
 	var req StopImpersonationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

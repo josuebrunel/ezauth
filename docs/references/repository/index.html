@@ -1892,7 +1892,7 @@ func (r Repository) WebauthnChallengeDelete(ctx context.Context, id string) erro
 func (r Repository) AuditLogListByUserID(ctx context.Context, userID string, filter models.AuditLogFilter, limit, offset int) (logs []*models.AuditLog, hasMore bool, err error)
 </code></pre>
 <h2 id="rbac-methods">RBAC Methods</h2>
-<p>Real RBAC — roles/permissions tables and their <code>user_roles</code>/<code>role_permissions</code> join tables — separate from the legacy <code>User.Roles</code> string field. See <a href="../../guides/admin-operations/#roles--permissions-rbac">Roles &amp; Permissions (RBAC)</a>.</p>
+<p>Real RBAC — roles/permissions tables and their <code>user_roles</code>/<code>role_permissions</code> join tables — separate from the legacy <code>User.Roles</code> string field. See <a href="../../guides/admin-operations/#roles-permissions-rbac">Roles &amp; Permissions (RBAC)</a>.</p>
 <pre><code class="language-go">func (r Repository) RoleCreate(ctx context.Context, role *models.Role) (*models.Role, error)
 func (r Repository) RoleGetByID(ctx context.Context, id string) (*models.Role, error)
 func (r Repository) RoleGetByName(ctx context.Context, name string) (*models.Role, error)

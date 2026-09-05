@@ -43,7 +43,7 @@ func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 // @Success 201 {object} ApiResponse[service.TokenResponse]
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 500 {object} ApiResponse[string]
-// @Router /auth/register [post]
+// @Router /auth/api/register [post]
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestBasicAuth
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -102,7 +102,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 401 {object} ApiResponse[string]
 // @Failure 500 {object} ApiResponse[string]
-// @Router /auth/login [post]
+// @Router /auth/api/login [post]
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestBasicAuth
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -146,7 +146,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} ApiResponse[service.TokenResponse]
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 401 {object} ApiResponse[string]
-// @Router /auth/token/refresh [post]
+// @Router /auth/api/token/refresh [post]
 func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	var req RefreshTokenRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -177,7 +177,7 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Success 200 {object} ApiResponse[models.User]
 // @Failure 500 {object} ApiResponse[string]
-// @Router /auth/userinfo [get]
+// @Router /auth/api/userinfo [get]
 func (h *Handler) UserInfo(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(ezmiddleware.UserContextKey).(string)
 	if !ok {
@@ -207,7 +207,7 @@ func (h *Handler) UserInfo(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} ApiResponse[map[string]string]
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 500 {object} ApiResponse[string]
-// @Router /auth/logout [post]
+// @Router /auth/api/logout [post]
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	var req LogoutRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -247,7 +247,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Success 200 {object} ApiResponse[map[string]string]
 // @Failure 500 {object} ApiResponse[string]
-// @Router /auth/user [delete]
+// @Router /auth/api/user [delete]
 func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(ezmiddleware.UserContextKey).(string)
 	if !ok {
@@ -289,7 +289,7 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} ApiResponse[map[string]string]
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 500 {object} ApiResponse[string]
-// @Router /auth/password-reset/request [post]
+// @Router /auth/api/password-reset/request [post]
 func (h *Handler) PasswordResetRequest(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestPasswordReset
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -322,7 +322,7 @@ func (h *Handler) PasswordResetRequest(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Success 200 {object} ApiResponse[map[string]string]
 // @Failure 400 {object} ApiResponse[string]
-// @Router /auth/password-reset/confirm [post]
+// @Router /auth/api/password-reset/confirm [post]
 func (h *Handler) PasswordResetConfirm(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestPasswordResetConfirm
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -358,7 +358,7 @@ func (h *Handler) PasswordResetConfirm(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} ApiResponse[map[string]string]
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 500 {object} ApiResponse[string]
-// @Router /auth/passwordless/request [post]
+// @Router /auth/api/passwordless/request [post]
 func (h *Handler) PasswordlessRequest(w http.ResponseWriter, r *http.Request) {
 	var req service.RequestPasswordless
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -384,7 +384,7 @@ func (h *Handler) PasswordlessRequest(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} ApiResponse[service.TokenResponse]
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 401 {object} ApiResponse[string]
-// @Router /auth/passwordless/login [get]
+// @Router /auth/api/passwordless/login [get]
 func (h *Handler) PasswordlessLogin(w http.ResponseWriter, r *http.Request) {
 	token := r.URL.Query().Get("token")
 	if token == "" {

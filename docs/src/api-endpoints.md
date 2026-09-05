@@ -50,7 +50,6 @@ POST requests to these endpoints are automatically protected by `filippo.io/csrf
 *   `phone` (optional)
 *   `avatar_url` (optional)
 *   `nickname` (optional)
-*   `roles` (optional, comma-separated)
 *   `meta_*` (Optional, any field prefixed with `meta_` will be stored in `UserMetadata`, e.g. `meta_theme=dark` -> `user_metadata: {"theme": "dark"}`)
 
 ### Login (Form)
@@ -173,7 +172,6 @@ Creates a new user and returns authentication tokens.
   "last_name": "Doe",
   "locale": "en-US",
   "timezone": "UTC",
-  "roles": "user,admin",
   "data": {
     "key": "value"
   }
@@ -676,7 +674,7 @@ Returns the user's most recent authentication-related token events (logins, pass
 ### Admin: Audit Logs
 `GET /auth/api/admin/users/{id}/audit-logs`
 
-Lists/filters the user's persisted audit log — real named security events (login success/failure, password reset, impersonation, account lockout, MFA, user create/delete), not the token-history proxy above. ezauth enforces no authorization on who may call this — same stance as the rest of Admin User Management.
+Lists/filters the user's persisted audit log — real named security events (login success/failure, password reset, impersonation, account lockout, MFA, user create/delete, role granted/revoked), not the token-history proxy above. ezauth enforces no authorization on who may call this — same stance as the rest of Admin User Management.
 
 **Query Parameters:**
 | Param | Description |
@@ -693,3 +691,37 @@ Lists/filters the user's persisted audit log — real named security events (log
   "has_more": false
 }
 ```
+
+### Admin: Roles & Permissions (RBAC)
+
+ezauth enforces no authorization on who may call these — same stance as impersonation. Protect them with your own admin-only check (e.g. `RequireRole("admin")`) before exposing them. Roles and permissions are identified by **ID** for deletes but by **name** for grant/revoke wiring.
+
+`POST /auth/api/admin/roles` — creates a role. **Body:** `{"name": "editor", "description": "can edit content"}`. Returns the created role.
+`GET /auth/api/admin/roles` — lists all roles.
+`DELETE /auth/api/admin/roles/{id}` — deletes a role; matching `user_roles`/`role_permissions` assignments cascade away. Returns a confirmation message.
+
+`POST /auth/api/admin/permissions` — creates a permission. **Body:** `{"name": "posts:write", "description": "write posts"}`. Returns the created permission.
+`GET /auth/api/admin/permissions` — lists all permissions.
+`DELETE /auth/api/admin/permissions/{id}` — deletes a permission (assignments cascade). Returns a confirmation message.
+
+`POST /auth/api/admin/users/{id}/roles` — grants the user a role. **Body:** `{"role_name": "editor"}`. Idempotent; records a `role.granted` audit event.
+`GET /auth/api/admin/users/{id}/roles` — lists the user's roles.
+`DELETE /auth/api/admin/users/{id}/roles/{role_name}` — revokes the role (records a `role.revoked` audit event).
+
+`POST /auth/api/admin/roles/{name}/permissions` — grants a permission to a role. **Body:** `{"permission_name": "posts:write"}`. Idempotent.
+`DELETE /auth/api/admin/roles/{name}/permissions/{permission_name}` — revokes a permission from a role.
+
+### Admin: Organizations
+
+Lightweight multi-tenancy; each member's role is drawn from the RBAC role catalog above (an org membership is an `ezauth_org_members` row mapping `(org, user) → role`). ezauth enforces no authorization on who may call these — same stance as impersonation. Protect them with your own admin-only check.
+
+`POST /auth/api/admin/organizations` — creates an organization. **Body:** `{"name": "Acme Inc"}`. Returns the created organization.
+`GET /auth/api/admin/organizations` — lists organizations. **Query params:** `limit` (default 50, max 200), `offset`.
+`GET /auth/api/admin/organizations/{id}` — fetches one organization by ID.
+`DELETE /auth/api/admin/organizations/{id}` — deletes an organization (membership rows cascade). Returns a confirmation message.
+
+`POST /auth/api/admin/organizations/{id}/members` — adds/updates a member. **Body:** `{"user_id": "...", "role_name": "editor"}`. Upserts: re-adding an existing member updates their role.
+`GET /auth/api/admin/organizations/{id}/members` — lists members, each with its role name joined in.
+`DELETE /auth/api/admin/organizations/{id}/members/{user_id}` — removes a member from the organization.
+
+`GET /auth/api/admin/users/{id}/organizations` — lists the organizations a user belongs to.

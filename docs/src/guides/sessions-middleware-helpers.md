@@ -64,7 +64,7 @@ r.Get("/login", func(w http.ResponseWriter, r *http.Request) {
 
 ### CSRF Protection
 
-When using the form-based handlers (e.g., `POST /auth/login`), `ezauth` automatically enforces Cross-Site Request Forgery (CSRF) protection using `filippo.io/csrf/gorilla`. The protection uses your configured `EZAUTH_JWT_SECRET` as the key.
+When using the form-based handlers (e.g., `POST /auth/login`), `ezauth` automatically enforces Cross-Site Request Forgery (CSRF) protection using `filippo.io/csrf/gorilla`. The key is your configured `EZAUTH_CSRF_SECRET`; if that's unset it falls back to `EZAUTH_JWT_SECRET` (with a startup warning), so it's strongly recommended to set a dedicated `EZAUTH_CSRF_SECRET` to keep the two keys separate.
 
 **Note on Tokens vs Headers:** 
 This library relies entirely on modern browser **Fetch Metadata headers** (e.g. `Sec-Fetch-Site`, `Origin`) to enforce same-origin requests dynamically, mirroring the upcoming Go 1.25 standard library CSRF protections.

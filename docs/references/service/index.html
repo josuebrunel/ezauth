@@ -2424,19 +2424,19 @@
 </code></pre>
 <h3 id="userauthenticate"><code>UserAuthenticate</code></h3>
 <p>Authenticates a user by email and password.</p>
-<pre><code class="language-go">func (a Auth) UserAuthenticate(ctx context.Context, req RequestBasicAuth) (*models.User, error)
+<pre><code class="language-go">func (a *Auth) UserAuthenticate(ctx context.Context, req RequestBasicAuth) (*models.User, error)
 </code></pre>
 <h3 id="userupdatepassword"><code>UserUpdatePassword</code></h3>
 <p>Updates a user's password. Enforces password validation rules.</p>
-<pre><code class="language-go">func (a Auth) UserUpdatePassword(ctx context.Context, user *models.User, password string) (*models.User, error)
+<pre><code class="language-go">func (a *Auth) UserUpdatePassword(ctx context.Context, user *models.User, password string) (*models.User, error)
 </code></pre>
 <h3 id="userupdate"><code>UserUpdate</code></h3>
 <p>Updates user profile information.</p>
-<pre><code class="language-go">func (a Auth) UserUpdate(ctx context.Context, user *models.User) (*models.User, error)
+<pre><code class="language-go">func (a *Auth) UserUpdate(ctx context.Context, user *models.User) (*models.User, error)
 </code></pre>
 <h3 id="userdelete"><code>UserDelete</code></h3>
 <p>Deletes a user by their ID.</p>
-<pre><code class="language-go">func (a Auth) UserDelete(ctx context.Context, id string) error
+<pre><code class="language-go">func (a *Auth) UserDelete(ctx context.Context, id string) error
 </code></pre>
 <h2 id="token-operations">Token Operations</h2>
 <h3 id="tokencreate"><code>TokenCreate</code></h3>
@@ -2602,7 +2602,7 @@ func (a *Auth) UserReactivate(ctx context.Context, userID string) (*models.User,
 </code></pre>
 <p><code>ListAuditLogsOptions</code> supports <code>EventType</code> (a <code>models.AuditEvent*</code> constant), <code>Since</code>/<code>Until</code> (<code>*time.Time</code>), and <code>Limit</code>/<code>Offset</code> (default 50, max 200). <code>ezauth</code> enforces no authorization on who may call this — same stance as <code>UsersList</code>.</p>
 <h2 id="roles-permissions-rbac">Roles &amp; Permissions (RBAC)</h2>
-<p>Real RBAC — separate from, and additive to, the legacy <code>User.Roles</code> string field and its <code>HasRole</code>/<code>AddRole</code>/etc. helpers. See <a href="../../guides/admin-operations/#roles--permissions-rbac">Roles &amp; Permissions (RBAC)</a>.</p>
+<p>Real RBAC — separate from, and additive to, the legacy <code>User.Roles</code> string field and its <code>HasRole</code>/<code>AddRole</code>/etc. helpers. See <a href="../../guides/admin-operations/#roles-permissions-rbac">Roles &amp; Permissions (RBAC)</a>.</p>
 <pre><code class="language-go">func (a *Auth) RoleCreate(ctx context.Context, name, description string) (*models.Role, error)
 func (a *Auth) RolesList(ctx context.Context) ([]*models.Role, error)
 func (a *Auth) RoleDelete(ctx context.Context, id string) error

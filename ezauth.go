@@ -1,5 +1,14 @@
-// Package ezauth provides a library and service for easy authentication in Go.
-// It supports Email/Password, JWT sessions, and OAuth2 (Google, GitHub, Facebook).
+// Package ezauth provides a library and standalone service for authentication
+// in Go. It supports email/password (bcrypt or argon2id) with account lockout,
+// JWT sessions with refresh-token rotation and reuse detection, and OAuth2/OIDC
+// for nine built-in providers plus arbitrary custom ones. Beyond basic login it
+// ships passwordless magic links, SMS OTP, WebAuthn/passkeys, TOTP MFA with
+// recovery codes and trusted devices, session listing/revocation, scoped API
+// keys, admin impersonation, real RBAC (roles/permissions), lightweight
+// multi-tenancy (organizations), invitation onboarding, guarded email change,
+// admin user management, a persisted audit log, and a Hook system. It embeds
+// into any net/http router (see New / NewWithDB and the SessionMiddleware /
+// AuthMiddleware helpers) or runs standalone via cmd/ezauthapi.
 package ezauth
 
 import (

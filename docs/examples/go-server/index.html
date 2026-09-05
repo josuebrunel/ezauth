@@ -1334,7 +1334,7 @@ r.Use(middleware.Logger)
 r.Use(middleware.Recoverer)
 
 // IMPORTANT: Session middleware
-r.Use(auth.Handler.Session.LoadAndSave)
+r.Use(auth.SessionMiddleware)
 </code></pre>
 <h3 id="3-mounting-routes">3. Mounting Routes</h3>
 <p>Mount the <code>ezauth</code> handler to handle all authentication routes (<code>/auth/*</code>).</p>
@@ -1404,7 +1404,7 @@ r.Post(&quot;/profile/delete&quot;, func(w http.ResponseWriter, r *http.Request)
 })
 </code></pre>
 <h3 id="6-roles-organizations-and-scoped-api-keys">6. Roles, Organizations, and Scoped API Keys</h3>
-<p>Beyond session auth, <code>auth.Service</code> (or the top-level <code>auth.*</code> facade methods) exposes real RBAC, lightweight multi-tenancy, and scoped API keys — see <a href="../../guides/admin-operations/#roles--permissions-rbac">Roles &amp; Permissions</a>, <a href="../../guides/admin-operations/#organizations">Organizations</a>, and <a href="../../guides/account-security/#scoped-api-keys">Scoped API Keys</a> for the full reference. A one-time setup script for this dashboard app might look like:</p>
+<p>Beyond session auth, <code>auth.Service</code> (or the top-level <code>auth.*</code> facade methods) exposes real RBAC, lightweight multi-tenancy, and scoped API keys — see <a href="../../guides/admin-operations/#roles-permissions-rbac">Roles &amp; Permissions</a>, <a href="../../guides/admin-operations/#organizations">Organizations</a>, and <a href="../../guides/account-security/#scoped-api-keys">Scoped API Keys</a> for the full reference. A one-time setup script for this dashboard app might look like:</p>
 <pre><code class="language-go">// Define a role once, then gate a route with it.
 role, _ := auth.RoleCreate(ctx, &quot;admin&quot;, &quot;full dashboard access&quot;)
 _ = auth.UserRoleGrant(ctx, user.ID, &quot;admin&quot;)
@@ -1419,7 +1419,7 @@ _ = auth.OrgMemberAdd(ctx, org.ID, user.ID, &quot;admin&quot;)
 key, _ := auth.APIKeyCreate(ctx, user.ID, []string{&quot;reports:read&quot;})
 // key.Token is the raw key value — show it to the user now, it can't be recovered later.
 
-r.Use(auth.APIKeyMiddleware) // group-level gate: any valid key of this user's gets past this
+r.Use(auth.Handler.APIKeyMiddleware) // group-level gate: any valid key gets past this
 r.With(auth.RequireAPIKeyScope(&quot;reports:read&quot;)).Get(&quot;/api/reports&quot;, reportsHandler)
 </code></pre>
 <p>Refresh-token reuse detection needs no code at all: <code>TokenRefresh</code> (used internally by the <code>/auth/*</code> login/refresh flow this dashboard already relies on) automatically revokes an entire session family the moment an already-rotated-out refresh token is replayed — a strong signal of token theft.</p>

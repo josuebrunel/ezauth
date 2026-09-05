@@ -83,7 +83,7 @@ See the [Roles & Permissions section of the README](https://github.com/josuebrun
 
 ## Organizations
 
-Lightweight multi-tenancy: organizations/teams, with each member holding one role per organization — drawn from the same RBAC role catalog `RequireRole` checks against (a role is just an `ezauth_roles` row; org membership is `ezauth_org_members`, mapping `(org, user) → role`). Kept deliberately minimal — no settings/billing/invitations — a consuming app that needs more can extend via its own table FK'd to `ezauth_organizations`. Org membership rows cascade-delete like everything else in the schema — see the SQLite foreign-key note at the top of [Roles & Permissions (RBAC)](#roles--permissions-rbac) if you're upgrading an existing SQLite deployment.
+Lightweight multi-tenancy: organizations/teams, with each member holding one role per organization — drawn from the same RBAC role catalog `RequireRole` checks against (a role is just an `ezauth_roles` row; org membership is `ezauth_org_members`, mapping `(org, user) → role`). Kept deliberately minimal — no settings/billing/invitations — a consuming app that needs more can extend via its own table FK'd to `ezauth_organizations`. Org membership rows cascade-delete like everything else in the schema — see the SQLite foreign-key note at the top of [Roles & Permissions (RBAC)](#roles-permissions-rbac) if you're upgrading an existing SQLite deployment.
 
 ```go
 org, err := auth.Service.OrganizationCreate(ctx, "Acme Inc")
@@ -106,7 +106,9 @@ r.Use(auth.OrgLoaderMiddleware(func(ctx context.Context) (*models.Organization, 
 ```
 
 ```go
-org, err := auth.GetSessionOrg(ctx) // *models.Organization, set by OrgLoaderMiddleware
+// *models.Organization, set by OrgLoaderMiddleware. This is the package-level
+// helper — ezauth.GetSessionOrg(ctx) — not a method on the *EzAuth instance.
+org, err := ezauth.GetSessionOrg(ctx)
 ```
 
 There's no `RequireOrgRole` middleware — compose `OrgLoaderMiddleware` with `RequireRole`/`RequirePermission` if a route needs to enforce the current org member's role.
@@ -169,7 +171,7 @@ result, err := auth.Service.AuditLogs(ctx, targetUserID, service.ListAuditLogsOp
 // result.Events ([]*models.AuditLog: event_type, metadata, created_at), result.HasMore
 ```
 
-Event types are the `models.AuditEvent*` constants (e.g. `AuditEventLoginSucceeded`, `AuditEventAccountLocked`). Two events — `AfterLoginFailed` and `AfterAccountLocked` — aren't tied to an existing `Hook` method, so they're added as new ones; embed `DefaultHook` as usual and only override what you need. "Email verification" and "role changes" aren't recorded yet since `ezauth` doesn't have an email-verification-confirm flow or RBAC.
+Event types are the `models.AuditEvent*` constants (e.g. `AuditEventLoginSucceeded`, `AuditEventAccountLocked`). Login failures and account lockouts each get their own hook method — `AfterLoginFailed` and `AfterAccountLocked` — so you can react to them; embed `DefaultHook` as usual and only override what you need. Role grants/revokes are recorded too (`AuditEventRoleGranted`/`AuditEventRoleRevoked`, fired by `UserRoleGrant`/`UserRoleRevoke`). "Email verification" isn't recorded yet since `ezauth` doesn't have an email-verification-confirm flow.
 
 For the JSON API: `GET /auth/api/admin/users/{id}/audit-logs` (query params `event_type`, `since`/`until` as RFC3339 timestamps, `limit`/`offset`; default 50, max 200) — same "no authz check, caller's responsibility" stance as the rest of [Admin User Management](#admin-user-management). Cookie clients use the same route under `/auth/admin/users/{id}/audit-logs`.
 
@@ -256,7 +258,7 @@ func (h MyHook) AfterUserSignedIn(ctx context.Context, u *models.User) error {
 | `AfterLoginFailed`            | After a failed login attempt (known user)  | No (errors are logged) |
 | `AfterAccountLocked`          | After an account is locked out             | No (errors are logged) |
 
-Every one of these also feeds the built-in [Audit Log](#audit-log) — your own hook and audit persistence both run, regardless of which `Hook` you register.
+Every `After*`/outcome hook above (except `AfterUserUpdated`) also feeds the built-in [Audit Log](#audit-log) — your own hook and audit persistence both run, regardless of which `Hook` you register. The `Before*` hooks and `AfterUserUpdated` only run your code; they don't persist an audit row on their own (role grants/revokes are audited separately by `UserRoleGrant`/`UserRoleRevoke`).
 
 ### Registering the Hook
 
@@ -266,5 +268,7 @@ auth.SetHook(MyHook{
     log: slog.Default(),
 })
 ```
+
+It's safe to call `SetHook` at any point — including after the server is running. Use `auth.Hook()` to read back the currently registered `Hook`.
 
 It's safe to call `SetHook` at any point — including after the server is running.

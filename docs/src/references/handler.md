@@ -145,7 +145,7 @@ The following methods are attached to routes internally by `New`, but are public
 -   `FormAdminUsersList(w, r)`, `FormAdminUserSuspend(w, r)`, `FormAdminUserReactivate(w, r)`, `FormAdminUserAuthHistory(w, r)`, `FormAdminUserAuditLogsList(w, r)`: Form equivalents
 
 ### Roles & Permissions (RBAC)
-`ezauth` enforces no authorization on who may call these — same stance as impersonation. See [Roles & Permissions (RBAC)](../guides/admin-operations.md#roles--permissions-rbac).
+`ezauth` enforces no authorization on who may call these — same stance as impersonation. See [Roles & Permissions (RBAC)](../guides/admin-operations.md#roles-permissions-rbac).
 -   `RoleCreate(w, r)`, `RolesList(w, r)`, `RoleDelete(w, r)`: Manage roles (JSON)
 -   `PermissionCreate(w, r)`, `PermissionsList(w, r)`, `PermissionDelete(w, r)`: Manage permissions (JSON)
 -   `UserRoleGrant(w, r)`, `UserRolesList(w, r)`, `UserRoleRevoke(w, r)`: Grant/list/revoke a user's roles (JSON)

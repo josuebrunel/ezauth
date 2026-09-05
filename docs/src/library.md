@@ -76,6 +76,9 @@ func main() {
 }
 ```
 
+> [!TIP]
+> Besides `auth.Migrate()`, the `EzAuth` instance also exposes two rollback helpers for library users: `auth.MigrateDown()` rolls back every migration (empty schema), and `auth.MigrateRevert()` rolls back only the single most recently applied one.
+
 ## Core Components
 
 When you initialize `ezauth`, you get access to several key components through the `EzAuth` struct:

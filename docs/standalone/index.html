@@ -1194,12 +1194,12 @@
 <pre><code class="language-bash">docker-compose up -d
 </code></pre>
 <h2 id="integrating-with-your-application">Integrating with your Application</h2>
-<p><strong>Important</strong>: All requests to the <code>ezauth</code> API (except OAuth2 callbacks) must include the <code>X-API-Key</code> header with the configured API key.</p>
+<p><strong>Important</strong>: Requests to the JSON API under <code>/auth/api/*</code> must include the <code>X-API-Key</code> header with the configured API key (endpoints that act on a specific user additionally require <code>Authorization: Bearer &lt;access_token&gt;</code>). The cookie-based form endpoints under <code>/auth/*</code> (login, register, passwordless, OAuth2 callbacks, ...) don't take an API key — they're authenticated via the session cookie and CSRF token.</p>
 <p>Once <code>ezauth</code> is running, your application can:</p>
 <ol>
-<li><strong>Direct Users to Login/Register</strong>: Your frontend can send <code>POST</code> requests to <code>ezauth</code>'s <code>/auth/login</code> or <code>/auth/register</code> endpoints.</li>
+<li><strong>Direct Users to Login/Register</strong>: Your frontend can send <code>POST</code> requests to <code>ezauth</code>'s <code>/auth/login</code> or <code>/auth/register</code> form endpoints (cookie-based, CSRF-protected), or use the JSON endpoints <code>/auth/api/login</code>/<code>/auth/api/register</code>.</li>
 <li><strong>Secure Your Routes</strong>: Your main application should verify the JWT access tokens issued by <code>ezauth</code>. Since <code>ezauth</code> uses standard JWTs, you can use any JWT library to verify the signature (using <code>EZAUTH_JWT_SECRET</code>).</li>
-<li><strong>Retrieve User Info</strong>: Send a <code>GET</code> request to <code>/auth/userinfo</code> with the <code>Authorization: Bearer &lt;access_token&gt;</code> header.</li>
+<li><strong>Retrieve User Info</strong>: Send a <code>GET</code> request to <code>/auth/api/userinfo</code> with the <code>Authorization: Bearer &lt;access_token&gt;</code> header.</li>
 </ol>
 
 

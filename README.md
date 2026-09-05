@@ -115,6 +115,8 @@ func main() {
     if err := auth.Migrate(); err != nil {
         log.Fatalf("Failed to migrate: %v", err)
     }
+    // Library-mode rollbacks: auth.MigrateDown() reverts every migration
+    // (empty schema); auth.MigrateRevert() rolls back just the latest one.
 
     r := chi.NewRouter()
     r.Use(middleware.Logger)
@@ -413,6 +415,9 @@ func MyHandler(w http.ResponseWriter, r *http.Request) {
     if adminID, ok := ezauth.CurrentImpersonatorID(r.Context()); ok {
         // acting as another user on behalf of adminID
     }
+
+    // Get the "current organization" resolved by OrgLoaderMiddleware
+    org, err := ezauth.GetSessionOrg(r.Context())
 }
 ```
 
@@ -490,6 +495,9 @@ auth.RegisterOAuth2Provider("discord", discordProvider)
 
 > [!IMPORTANT]
 > SMS sending requires a Twilio-compatible provider — set `EZAUTH_SMS_TWILIO_ACCOUNT_SID`, `EZAUTH_SMS_TWILIO_AUTH_TOKEN`, and `EZAUTH_SMS_TWILIO_FROM`. Without them, `ezauth` logs a warning and uses a mock sender that doesn't actually send anything (useful for local development/tests). Phone numbers are enforced unique across accounts at the database level (a partial/filtered unique index; empty phones are exempt).
+
+> [!NOTE]
+> Verifying a code flips the account's contact flag: a successful `SMSOTPVerify` marks the phone verified, and a successful first magic-link (passwordless) login marks the email verified — so the temporary, unverified account created on first contact becomes verified on first successful login.
 
 ```go
 err := auth.Service.SMSOTPRequest(ctx, service.RequestSMSOTP{Phone: "+15551234567"})
@@ -605,10 +613,12 @@ recoveryCodes, err := auth.MFAConfirm(ctx, user, code)
 #### Step-up Login
 
 ```go
-loginResp, err := auth.CompleteBasicLogin(ctx, user) // user already password-checked
+// user is already password-checked. Pass a trusted-device token if the client
+// supports "remember this device" (see below), or "" otherwise.
+loginResp, err := auth.CompleteBasicLogin(ctx, user, deviceToken)
 if loginResp.MFARequired {
     // Prompt for a TOTP/recovery code, then:
-    user, tokens, err := auth.MFALoginVerify(ctx, loginResp.MFAToken, code)
+    user, tokens, deviceToken, err := auth.MFALoginVerify(ctx, loginResp.MFAToken, code, rememberDevice)
     // tokens.AccessToken / tokens.RefreshToken authenticate the user.
 } else {
     // loginResp.TokenResponse is already a full session — no MFA configured.
@@ -660,6 +670,8 @@ devices, err := auth.TrustedDevices(ctx, user.ID)
 err = auth.RevokeTrustedDevice(ctx, user, devices[0].ID)
 ```
 
+Under the hood these build on the `TrustDevice`/`IsTrustedDevice` primitives, which `MFALoginVerify` and `CompleteBasicLogin` call for you. You can also call `auth.TrustDevice(ctx, user, name)` directly to mint a trusted-device token for a device out-of-band.
+
 For the JSON API, a client sends its stored device token back via the `X-Device-Token` request header on `POST /auth/api/login`, and `POST /auth/api/mfa/login/verify` accepts `"remember_device": true` in its body, returning a `device_token` field to store. For form-based (cookie) clients, this is fully automatic: `FormLogin` reads the trusted-device cookie itself, and checking a `remember_device` field on the MFA verification form makes `FormMFALoginVerify` set that cookie (`EZAUTH_TRUSTED_DEVICE_COOKIE_NAME`, default `ezauth_device`) directly — no extra wiring needed.
 
 List/revoke trusted devices via `GET`/`DELETE /auth/api/trusted-devices[/{id}]` (Bearer) or `GET`/`DELETE /auth/trusted-devices[/{id}]` (cookie session).
@@ -710,7 +722,7 @@ EZAUTH_JWT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY--
 EZAUTH_JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
 ```
 
-Both keys are PEM encoded (PKCS8 for the private key, PKIX for the public key — the two files `openssl genpkey`/`openssl pkey` produce by default). `EdDSA` (Ed25519) works the same way. A resource server fetches `GET /.well-known/jwks.json` (served outside `EZAUTH_PATH_PREFIX`, per the well-known-URI convention) and verifies the `RS256`/`EdDSA`-signed token itself — no call back to `ezauth` needed.
+Both keys are PEM encoded (PKCS8 for the private key, PKIX for the public key — the two files `openssl genpkey`/`openssl pkey` produce by default). `EdDSA` (Ed25519) works the same way. A resource server fetches the JWKS and verifies the `RS256`/`EdDSA`-signed token itself — no call back to `ezauth` needed. The JWKS route is mounted on the `ezauth` handler's router root (it's not inside the `/auth` route group): in standalone mode that's the conventional `GET /.well-known/jwks.json` at your server root; in library mode it sits under wherever you mounted the handler — e.g. `GET /auth/.well-known/jwks.json` if you `r.Mount("/auth", auth.Handler)`.
 
 **Key rotation**: each key gets a `kid` (key ID) — either an explicit `EZAUTH_JWT_KEY_ID`, or, left unset, a stable hash `ezauth` derives from the public key automatically. To rotate without invalidating tokens already issued under the outgoing key, move its public key/kid to `EZAUTH_JWT_PREVIOUS_PUBLIC_KEY`/`EZAUTH_JWT_PREVIOUS_KEY_ID` and set `EZAUTH_JWT_PRIVATE_KEY`/`PUBLIC_KEY`/`KEY_ID` to the new key: new tokens sign under the new key, while tokens already signed under the previous one keep verifying (and both keys are published in the JWKS) until they naturally expire (access tokens are short-lived — 1 hour). Drop `PREVIOUS_*` once nothing outstanding still needs it.
 
@@ -731,7 +743,7 @@ err = auth.APIKeyRevoke(ctx, user.ID, token.ID) // fails with service.ErrAPIKeyN
 ```
 
 ```go
-r.Use(auth.APIKeyMiddleware) // group-level gate: any valid key gets past this
+r.Use(auth.Handler.APIKeyMiddleware) // group-level gate: any valid key gets past this
 r.With(auth.RequireAPIKeyScope("posts:write")).Post("/posts", createPostHandler)
 ```
 
@@ -754,7 +766,7 @@ curl https://your-host/auth/api/api-keys -H "Authorization: Bearer <access-token
 curl -X DELETE https://your-host/auth/api/api-keys/<key-id> -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
 ```
 
-For form-based (cookie) clients, the same three operations are available at the same paths against the logged-in session user.
+For form-based (cookie) clients, the same three operations are available against the logged-in session user at `POST`/`GET /auth/api-keys` and `DELETE /auth/api-keys/{id}` (note: no `/api` segment — those are the form routes, under the same CSRF-protected group as login).
 
 ### Guarded Email Change
 
@@ -905,7 +917,7 @@ curl -X POST https://your-host/auth/api/admin/roles/editor/permissions -H "Autho
 curl -X DELETE https://your-host/auth/api/admin/roles/editor/permissions/posts:write -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
 ```
 
-Each of the above has a form-based (cookie) equivalent at the same path. `UserHasRole`/`UserHasPermission` stay Go-only — they're boolean checks your own authz code calls, not something you'd hit over HTTP.
+Each of the above has a form-based (cookie) equivalent at the same path minus the `/api` segment (e.g. `POST /auth/admin/roles`, `DELETE /auth/admin/users/{id}/roles/{role_name}`). `UserHasRole`/`UserHasPermission` stay Go-only — they're boolean checks your own authz code calls, not something you'd hit over HTTP.
 
 ### Organizations
 
@@ -932,7 +944,9 @@ r.Use(auth.OrgLoaderMiddleware(func(ctx context.Context) (*models.Organization, 
 ```
 
 ```go
-org, err := auth.GetSessionOrg(ctx) // *models.Organization, set by OrgLoaderMiddleware
+// *models.Organization, set by OrgLoaderMiddleware. This is the package-level
+// helper — ezauth.GetSessionOrg(ctx) — not a method on the *EzAuth instance.
+org, err := ezauth.GetSessionOrg(ctx)
 ```
 
 There's no `RequireOrgRole` middleware — compose `OrgLoaderMiddleware` with `RequireRole`/`RequirePermission` if a route needs to enforce the current org member's role.
@@ -958,7 +972,7 @@ curl -X DELETE https://your-host/auth/api/admin/organizations/<org-id>/members/<
 curl https://your-host/auth/api/admin/users/<user-id>/organizations -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key"
 ```
 
-Each of the above has a form-based (cookie) equivalent at the same path; `OrganizationsList`'s `limit`/`offset` query params work the same way there too.
+Each of the above has a form-based (cookie) equivalent at the same path minus the `/api` segment (e.g. `POST /auth/admin/organizations`, `DELETE /auth/admin/organizations/{id}/members/{user_id}`); `OrganizationsList`'s `limit`/`offset` query params work the same way there too.
 
 ### Invitation-Based Onboarding
 
@@ -1056,7 +1070,7 @@ result, err := auth.Service.AuditLogs(ctx, targetUserID, service.ListAuditLogsOp
 // result.Events ([]*models.AuditLog: event_type, metadata, created_at), result.HasMore
 ```
 
-Event types are the `models.AuditEvent*` constants (e.g. `AuditEventLoginSucceeded`, `AuditEventAccountLocked`, `AuditEventRoleGranted`/`AuditEventRoleRevoked`). Two events — `AfterLoginFailed` and `AfterAccountLocked` — aren't tied to an existing `Hook` method, so they're added as new ones; embed `DefaultHook` as usual and only override what you need. "Email verification" isn't recorded yet since ezauth doesn't have an email-verification-confirm flow.
+Event types are the `models.AuditEvent*` constants (e.g. `AuditEventLoginSucceeded`, `AuditEventAccountLocked`, `AuditEventRoleGranted`/`AuditEventRoleRevoked`). Login failures and account lockouts each get their own hook method — `AfterLoginFailed` and `AfterAccountLocked` (they're part of the `Hook` interface, so embed `DefaultHook` and override only what you need to react to them). "Email verification" isn't recorded yet since ezauth doesn't have an email-verification-confirm flow.
 
 #### Standalone-service Mode
 
@@ -1150,7 +1164,7 @@ func (h MyHook) AfterUserSignedIn(ctx context.Context, u *models.User) error {
 | `AfterLoginFailed`            | After a failed login attempt (known user)  | No (errors are logged) |
 | `AfterAccountLocked`          | After an account is locked out             | No (errors are logged) |
 
-Every one of these also feeds the built-in [Audit Log](#audit-log) — your own hook and audit persistence both run, regardless of which `Hook` you register.
+Every `After*`/outcome hook above (except `AfterUserUpdated`) also feeds the built-in [Audit Log](#audit-log) — your own hook and audit persistence both run, regardless of which `Hook` you register. The `Before*` hooks and `AfterUserUpdated` only run your code; they don't persist an audit row on their own (role grants/revokes are audited separately by `UserRoleGrant`/`UserRoleRevoke`).
 
 #### Registering the Hook
 
@@ -1161,7 +1175,7 @@ auth.SetHook(MyHook{
 })
 ```
 
-It's safe to call `SetHook` at any point — including after the server is running.
+It's safe to call `SetHook` at any point — including after the server is running. Use `auth.Hook()` to read back the currently registered `Hook`.
 
 ## API Reference
 
@@ -1171,12 +1185,15 @@ Every HTTP endpoint, form field, and helper, in one place.
 
 #### Form-based Handlers (Cookies & Redirects)
 
-These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, and redirect.
+These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, and redirect. (`GET /auth/register`, `GET /auth/login`, and `GET /auth/csrf` are lightweight exceptions: the first two redirect to the configured page URLs, and `/auth/csrf` returns a JSON CSRF token for legacy clients.)
 
 | Method | Endpoint                           | Description                                                                 |
 | ------ | ---------------------------------- | --------------------------------------------------------------------------- |
+| GET    | `/auth/register`                   | Redirect to the configured Register Page (`EZAUTH_REGISTER_PAGE_URL`)       |
 | POST   | `/auth/register`                   | Register a new user                                                         |
+| GET    | `/auth/login`                      | Redirect to the configured Login Page (`EZAUTH_LOGIN_PAGE_URL`)             |
 | POST   | `/auth/login`                      | Login and set cookies                                                       |
+| GET    | `/auth/csrf`                       | Return a JSON CSRF token (`{"csrf_token": "..."}`) for legacy clients       |
 | POST   | `/auth/logout`                     | Clear cookies and logout                                                    |
 | POST   | `/auth/impersonate`                | Start impersonating a user (see [Impersonation](#impersonation))            |
 | POST   | `/auth/impersonate/stop`           | Stop impersonating and restore the admin's session                          |
@@ -1195,6 +1212,12 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 | POST   | `/auth/mfa/disable`                | Disable MFA                                                                 |
 | GET    | `/auth/trusted-devices`            | List the logged-in session user's trusted devices (see [Remember This Device](#remember-this-device-trusted-devices)) |
 | DELETE | `/auth/trusted-devices/{id}`       | Revoke one of the logged-in session user's trusted devices                 |
+| GET    | `/auth/sessions`                   | List the logged-in session user's active sessions (see [Sessions](#sessions)) |
+| DELETE | `/auth/sessions/{id}`              | Revoke one session by its ID ("log out one device")                        |
+| DELETE | `/auth/sessions`                   | Revoke all sessions; pass `?except={id}` to keep one ("log out other devices") |
+| POST   | `/auth/api-keys`                   | Create an API key for the logged-in session user (see [Scoped API Keys](#scoped-api-keys)) |
+| GET    | `/auth/api-keys`                   | List the logged-in session user's API keys                                 |
+| DELETE | `/auth/api-keys/{id}`              | Revoke one of the logged-in session user's API keys                        |
 | POST   | `/auth/webauthn/login/begin`       | Begin a discoverable WebAuthn login ceremony (see [WebAuthn / Passkeys](#webauthn--passkeys)) |
 | POST   | `/auth/webauthn/login/finish`      | Complete a WebAuthn login and set auth cookies                             |
 | POST   | `/auth/webauthn/register/begin`    | Begin passkey registration for the logged-in session user                  |
@@ -1213,12 +1236,37 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 | POST   | `/auth/admin/users/{id}/suspend`   | Suspend a user's account                                                    |
 | POST   | `/auth/admin/users/{id}/reactivate`| Reactivate a user's account                                                 |
 | GET    | `/auth/admin/users/{id}/history`   | View a user's auth history                                                  |
+| GET    | `/auth/admin/users/{id}/audit-logs`| View a user's persisted audit log (see [Audit Log](#audit-log))            |
+
+RBAC and organization endpoints for the logged-in session user (same paths as the JSON API below minus the `/api` segment):
+
+| Method | Endpoint                           | Description                                                                 |
+| ------ | ---------------------------------- | --------------------------------------------------------------------------- |
+| POST   | `/auth/admin/roles`                | Create a role (see [Roles & Permissions (RBAC)](#roles--permissions-rbac))  |
+| GET    | `/auth/admin/roles`                | List roles                                                                  |
+| DELETE | `/auth/admin/roles/{id}`           | Delete a role (assignments cascade)                                         |
+| POST   | `/auth/admin/permissions`          | Create a permission                                                         |
+| GET    | `/auth/admin/permissions`          | List permissions                                                            |
+| DELETE | `/auth/admin/permissions/{id}`     | Delete a permission (assignments cascade)                                   |
+| POST   | `/auth/admin/users/{id}/roles`     | Grant a role to a user (field `role_name`)                                  |
+| GET    | `/auth/admin/users/{id}/roles`     | List a user's roles                                                         |
+| DELETE | `/auth/admin/users/{id}/roles/{role_name}` | Revoke a role from a user                                            |
+| POST   | `/auth/admin/roles/{name}/permissions` | Grant a permission to a role (field `permission_name`)                    |
+| DELETE | `/auth/admin/roles/{name}/permissions/{permission_name}` | Revoke a permission from a role                     |
+| POST   | `/auth/admin/organizations`        | Create an organization (see [Organizations](#organizations))                |
+| GET    | `/auth/admin/organizations`        | List organizations (`limit`/`offset`)                                       |
+| GET    | `/auth/admin/organizations/{id}`   | Fetch one organization                                                      |
+| DELETE | `/auth/admin/organizations/{id}`   | Delete an organization (membership rows cascade)                            |
+| POST   | `/auth/admin/organizations/{id}/members` | Add/update a member (fields `user_id`, `role_name`; upserts)            |
+| GET    | `/auth/admin/organizations/{id}/members` | List an organization's members (role name joined in)                    |
+| DELETE | `/auth/admin/organizations/{id}/members/{user_id}` | Remove a member from an organization                    |
+| GET    | `/auth/admin/users/{id}/organizations` | List the organizations a user belongs to                                 |
 
 ##### Form Field Reference
 
 | Endpoint                       | Required Fields                         | Optional Fields                                                                                                   |
 | :----------------------------- | :-------------------------------------- | :---------------------------------------------------------------------------------------------------------------- |
-| `/auth/register`               | `email`, `password`, `password_confirm` | `username`, `first_name`, `last_name`, `locale`, `timezone`, `phone`, `avatar_url`, `nickname`, `roles`, `meta_*` |
+| `/auth/register`               | `email`, `password`, `password_confirm` | `username`, `first_name`, `last_name`, `locale`, `timezone`, `phone`, `avatar_url`, `nickname`, `meta_*` |
 | `/auth/login`                  | `email`, `password`                     |                                                                                                                   |
 | `/auth/impersonate`            | `target_user_id`                        |                                                                                                                   |
 | `/auth/password-reset/request` | `email`                                 |                                                                                                                   |
@@ -1240,7 +1288,7 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 
 #### API Handlers (JSON)
 
-These endpoints accept `application/json` and return JSON responses.
+These endpoints accept `application/json` and return JSON responses. Endpoints marked **(Protected)** require an `Authorization: Bearer <access_token>` header; everything else under `/auth/api` requires only the master `X-API-Key`.
 
 | Method | Endpoint                           | Description                       |
 | ------ | ---------------------------------- | --------------------------------- |
@@ -1264,6 +1312,12 @@ These endpoints accept `application/json` and return JSON responses.
 | POST   | `/auth/api/mfa/disable`            | Disable MFA (Protected)           |
 | GET    | `/auth/api/trusted-devices`        | List the authenticated user's trusted devices (Protected, see [Remember This Device](#remember-this-device-trusted-devices)) |
 | DELETE | `/auth/api/trusted-devices/{id}`   | Revoke one of the authenticated user's trusted devices (Protected) |
+| GET    | `/auth/api/sessions`               | List the authenticated user's active sessions (Protected, see [Sessions](#sessions)) |
+| DELETE | `/auth/api/sessions/{id}`          | Revoke one session by its ID (Protected) |
+| DELETE | `/auth/api/sessions`               | Revoke all sessions; pass `?except={id}` to keep one (Protected) |
+| POST   | `/auth/api/api-keys`               | Create an API key for the authenticated user (Protected, see [Scoped API Keys](#scoped-api-keys)) |
+| GET    | `/auth/api/api-keys`               | List the authenticated user's API keys (Protected) |
+| DELETE | `/auth/api/api-keys/{id}`          | Revoke one of the authenticated user's API keys (Protected) |
 | POST   | `/auth/api/webauthn/login/begin`   | Begin a discoverable WebAuthn login ceremony (see [WebAuthn / Passkeys](#webauthn--passkeys)) |
 | POST   | `/auth/api/webauthn/login/finish`  | Complete a WebAuthn login and receive tokens |
 | POST   | `/auth/api/webauthn/register/begin`  | Begin passkey registration (Protected) |
@@ -1281,6 +1335,41 @@ These endpoints accept `application/json` and return JSON responses.
 | POST   | `/auth/api/admin/users/{id}/suspend` | Suspend a user's account (Protected) |
 | POST   | `/auth/api/admin/users/{id}/reactivate` | Reactivate a user's account (Protected) |
 | GET    | `/auth/api/admin/users/{id}/history` | View a user's auth history (Protected) |
+| GET    | `/auth/api/admin/users/{id}/audit-logs` | View a user's persisted audit log (Protected, see [Audit Log](#audit-log)) |
+
+RBAC and organization endpoints (all Protected; see [Roles & Permissions (RBAC)](#roles--permissions-rbac) and [Organizations](#organizations)):
+
+| Method | Endpoint                           | Description                       |
+| ------ | ---------------------------------- | --------------------------------- |
+| POST   | `/auth/api/admin/roles`            | Create a role                     |
+| GET    | `/auth/api/admin/roles`            | List roles                        |
+| DELETE | `/auth/api/admin/roles/{id}`       | Delete a role (assignments cascade) |
+| POST   | `/auth/api/admin/permissions`      | Create a permission               |
+| GET    | `/auth/api/admin/permissions`      | List permissions                  |
+| DELETE | `/auth/api/admin/permissions/{id}` | Delete a permission (assignments cascade) |
+| POST   | `/auth/api/admin/users/{id}/roles` | Grant a role to a user (body `role_name`) |
+| GET    | `/auth/api/admin/users/{id}/roles` | List a user's roles               |
+| DELETE | `/auth/api/admin/users/{id}/roles/{role_name}` | Revoke a role from a user |
+| POST   | `/auth/api/admin/roles/{name}/permissions` | Grant a permission to a role (body `permission_name`) |
+| DELETE | `/auth/api/admin/roles/{name}/permissions/{permission_name}` | Revoke a permission from a role |
+| POST   | `/auth/api/admin/organizations`    | Create an organization (body `name`) |
+| GET    | `/auth/api/admin/organizations`    | List organizations (`limit`/`offset`) |
+| GET    | `/auth/api/admin/organizations/{id}` | Fetch one organization          |
+| DELETE | `/auth/api/admin/organizations/{id}` | Delete an organization (membership rows cascade) |
+| POST   | `/auth/api/admin/organizations/{id}/members` | Add/update a member (body `user_id`, `role_name`; upserts) |
+| GET    | `/auth/api/admin/organizations/{id}/members` | List members (role name joined in) |
+| DELETE | `/auth/api/admin/organizations/{id}/members/{user_id}` | Remove a member |
+| GET    | `/auth/api/admin/users/{id}/organizations` | List the organizations a user belongs to |
+
+##### Un-prefixed Routes
+
+Mounted outside the `/auth` prefix on the ezauth handler's router root:
+
+| Method | Endpoint                  | Description                                                  |
+| ------ | ------------------------- | ------------------------------------------------------------ |
+| GET    | `/ping`                   | Health/liveness check                                        |
+| GET    | `/swagger/*`              | Swagger UI (see [Swagger Documentation](#swagger-documentation)) |
+| GET    | `/.well-known/jwks.json`  | JWKS endpoint for asymmetric JWT signing (see [Asymmetric JWT Signing (JWKS)](#asymmetric-jwt-signing-jwks)) |
 
 ## Appendix
 

@@ -1155,6 +1155,9 @@ definitions:
     type: object
   webauthncose.COSEAlgorithmIdentifier:
     enum:
+    - -48
+    - -49
+    - -50
     - -7
     - -8
     - -9
@@ -1171,11 +1174,11 @@ definitions:
     - -258
     - -259
     - -65535
-    - -48
-    - -49
-    - -50
     type: integer
     x-enum-varnames:
+    - AlgMLDSA44
+    - AlgMLDSA65
+    - AlgMLDSA87
     - AlgES256
     - AlgEdDSA
     - AlgESP256
@@ -1192,9 +1195,6 @@ definitions:
     - AlgRS384
     - AlgRS512
     - AlgRS1
-    - AlgMLDSA44
-    - AlgMLDSA65
-    - AlgMLDSA87
 info:
   contact: {}
   description: Authentication service/library for Go.
@@ -2031,6 +2031,68 @@ paths:
       summary: Request an email change
       tags:
       - user
+  /auth/api/impersonate:
+    post:
+      consumes:
+      - application/json
+      description: Mint tokens for a target user on behalf of the authenticated admin
+      parameters:
+      - description: Impersonate Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ImpersonateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-handler_ImpersonateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Start impersonating a user
+      tags:
+      - impersonation
+  /auth/api/impersonate/stop:
+    post:
+      consumes:
+      - application/json
+      description: Revoke an impersonation refresh token
+      parameters:
+      - description: Stop Impersonation Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.StopImpersonationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Stop impersonating a user
+      tags:
+      - impersonation
   /auth/api/invitations:
     get:
       produces:
@@ -2156,6 +2218,75 @@ paths:
       summary: Preview an invitation
       tags:
       - invitation
+  /auth/api/login:
+    post:
+      consumes:
+      - application/json
+      description: Login with email and password
+      parameters:
+      - description: Login Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestBasicAuth'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Login user
+      tags:
+      - auth
+  /auth/api/logout:
+    post:
+      consumes:
+      - application/json
+      description: Revoke the user's refresh token
+      parameters:
+      - description: Logout Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.LogoutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Logout user
+      tags:
+      - auth
   /auth/api/mfa/confirm:
     post:
       consumes:
@@ -2279,6 +2410,159 @@ paths:
       summary: Complete MFA step-up login
       tags:
       - mfa
+  /auth/api/password-reset/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Reset password using the token sent via email
+      parameters:
+      - description: Password Reset Confirmation
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestPasswordResetConfirm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Confirm password reset
+      tags:
+      - auth
+  /auth/api/password-reset/request:
+    post:
+      consumes:
+      - application/json
+      description: Send a password reset link to the user's email
+      parameters:
+      - description: Password Reset Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestPasswordReset'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Request password reset
+      tags:
+      - auth
+  /auth/api/passwordless/login:
+    get:
+      description: Authenticate using the token from the magic link
+      parameters:
+      - description: Magic Link Token
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Magic link login
+      tags:
+      - auth
+  /auth/api/passwordless/request:
+    post:
+      consumes:
+      - application/json
+      description: Send a magic login link to the user's email
+      parameters:
+      - description: Passwordless Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestPasswordless'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Request magic link
+      tags:
+      - auth
+  /auth/api/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with basic authentication
+      parameters:
+      - description: Registration Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestBasicAuth'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Register a new user
+      tags:
+      - auth
   /auth/api/sessions:
     delete:
       parameters:
@@ -2410,6 +2694,38 @@ paths:
       summary: Verify SMS OTP
       tags:
       - auth
+  /auth/api/token/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Get a new access token using a refresh token
+      parameters:
+      - description: Refresh Token Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Refresh access token
+      tags:
+      - auth
   /auth/api/trusted-devices:
     get:
       produces:
@@ -2454,6 +2770,46 @@ paths:
       summary: Revoke a trusted device
       tags:
       - mfa
+  /auth/api/user:
+    delete:
+      description: Delete the authenticated user's account
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Delete user
+      tags:
+      - user
+  /auth/api/userinfo:
+    get:
+      description: Retrieve information about the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-models_User'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Get user info
+      tags:
+      - user
   /auth/api/webauthn/credentials:
     get:
       produces:
@@ -2603,137 +2959,6 @@ paths:
       summary: Finish WebAuthn registration
       tags:
       - webauthn
-  /auth/impersonate:
-    post:
-      consumes:
-      - application/json
-      description: Mint tokens for a target user on behalf of the authenticated admin
-      parameters:
-      - description: Impersonate Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/handler.ImpersonateRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-handler_ImpersonateResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-      security:
-      - BearerAuth: []
-      - ApiKeyAuth: []
-      summary: Start impersonating a user
-      tags:
-      - impersonation
-  /auth/impersonate/stop:
-    post:
-      consumes:
-      - application/json
-      description: Revoke an impersonation refresh token
-      parameters:
-      - description: Stop Impersonation Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/handler.StopImpersonationRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-map_string_string'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-      security:
-      - BearerAuth: []
-      - ApiKeyAuth: []
-      summary: Stop impersonating a user
-      tags:
-      - impersonation
-  /auth/login:
-    post:
-      consumes:
-      - application/json
-      description: Login with email and password
-      parameters:
-      - description: Login Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/service.RequestBasicAuth'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-service_LoginResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-      security:
-      - ApiKeyAuth: []
-      summary: Login user
-      tags:
-      - auth
-  /auth/logout:
-    post:
-      consumes:
-      - application/json
-      description: Revoke the user's refresh token
-      parameters:
-      - description: Logout Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/handler.LogoutRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-map_string_string'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-      security:
-      - BearerAuth: []
-      - ApiKeyAuth: []
-      summary: Logout user
-      tags:
-      - auth
   /auth/oauth2/{provider}/callback:
     get:
       description: Handle the callback from the OAuth2 provider
@@ -2794,231 +3019,6 @@ paths:
       summary: OAuth2 Login
       tags:
       - oauth2
-  /auth/password-reset/confirm:
-    post:
-      consumes:
-      - application/json
-      description: Reset password using the token sent via email
-      parameters:
-      - description: Password Reset Confirmation
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/service.RequestPasswordResetConfirm'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-map_string_string'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-      security:
-      - ApiKeyAuth: []
-      summary: Confirm password reset
-      tags:
-      - auth
-  /auth/password-reset/request:
-    post:
-      consumes:
-      - application/json
-      description: Send a password reset link to the user's email
-      parameters:
-      - description: Password Reset Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/service.RequestPasswordReset'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-map_string_string'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-      security:
-      - ApiKeyAuth: []
-      summary: Request password reset
-      tags:
-      - auth
-  /auth/passwordless/login:
-    get:
-      description: Authenticate using the token from the magic link
-      parameters:
-      - description: Magic Link Token
-        in: query
-        name: token
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-      security:
-      - ApiKeyAuth: []
-      summary: Magic link login
-      tags:
-      - auth
-  /auth/passwordless/request:
-    post:
-      consumes:
-      - application/json
-      description: Send a magic login link to the user's email
-      parameters:
-      - description: Passwordless Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/service.RequestPasswordless'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-map_string_string'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-      security:
-      - ApiKeyAuth: []
-      summary: Request magic link
-      tags:
-      - auth
-  /auth/register:
-    post:
-      consumes:
-      - application/json
-      description: Register a new user with basic authentication
-      parameters:
-      - description: Registration Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/service.RequestBasicAuth'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-      security:
-      - ApiKeyAuth: []
-      summary: Register a new user
-      tags:
-      - auth
-  /auth/token/refresh:
-    post:
-      consumes:
-      - application/json
-      description: Get a new access token using a refresh token
-      parameters:
-      - description: Refresh Token Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/handler.RefreshTokenRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-      security:
-      - ApiKeyAuth: []
-      summary: Refresh access token
-      tags:
-      - auth
-  /auth/user:
-    delete:
-      description: Delete the authenticated user's account
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-map_string_string'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-      security:
-      - BearerAuth: []
-      - ApiKeyAuth: []
-      summary: Delete user
-      tags:
-      - user
-  /auth/userinfo:
-    get:
-      description: Retrieve information about the authenticated user
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-models_User'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-      security:
-      - BearerAuth: []
-      - ApiKeyAuth: []
-      summary: Get user info
-      tags:
-      - user
   /ping:
     get:
       description: Checks if the server is running

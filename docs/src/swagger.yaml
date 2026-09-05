@@ -1,28 +1,264 @@
 basePath: /
 definitions:
+  handler.ApiResponse-array_models_OrgMember:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.OrgMember'
+        type: array
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-array_models_Organization:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.Organization'
+        type: array
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-array_models_Permission:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.Permission'
+        type: array
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-array_models_Role:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.Role'
+        type: array
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-array_models_WebauthnCredential:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.WebauthnCredential'
+        type: array
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-array_service_APIKeyInfo:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/service.APIKeyInfo'
+        type: array
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-array_service_AuthHistoryEntry:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/service.AuthHistoryEntry'
+        type: array
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-array_service_InvitationInfo:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/service.InvitationInfo'
+        type: array
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-array_service_SessionInfo:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/service.SessionInfo'
+        type: array
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-array_service_TrustedDeviceInfo:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/service.TrustedDeviceInfo'
+        type: array
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-handler_ImpersonateResponse:
+    properties:
+      data:
+        $ref: '#/definitions/handler.ImpersonateResponse'
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-handler_mfaConfirmResponse:
+    properties:
+      data:
+        $ref: '#/definitions/handler.mfaConfirmResponse'
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-handler_mfaLoginVerifyResponse:
+    properties:
+      data:
+        $ref: '#/definitions/handler.mfaLoginVerifyResponse'
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-handler_webauthnLoginBeginResponse:
+    properties:
+      data:
+        $ref: '#/definitions/handler.webauthnLoginBeginResponse'
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-handler_webauthnRegisterBeginResponse:
+    properties:
+      data:
+        $ref: '#/definitions/handler.webauthnRegisterBeginResponse'
+      error:
+        type: string
+    type: object
   handler.ApiResponse-map_string_string:
     properties:
       data:
         $ref: '#/definitions/map_string_string'
-      error: {}
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-models_Organization:
+    properties:
+      data:
+        $ref: '#/definitions/models.Organization'
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-models_Permission:
+    properties:
+      data:
+        $ref: '#/definitions/models.Permission'
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-models_Role:
+    properties:
+      data:
+        $ref: '#/definitions/models.Role'
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-models_Token:
+    properties:
+      data:
+        $ref: '#/definitions/models.Token'
+      error:
+        type: string
     type: object
   handler.ApiResponse-models_User:
     properties:
       data:
         $ref: '#/definitions/models.User'
-      error: {}
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-models_WebauthnCredential:
+    properties:
+      data:
+        $ref: '#/definitions/models.WebauthnCredential'
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-service_InvitationInfo:
+    properties:
+      data:
+        $ref: '#/definitions/service.InvitationInfo'
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-service_ListAuditLogsResult:
+    properties:
+      data:
+        $ref: '#/definitions/service.ListAuditLogsResult'
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-service_ListOrganizationsResult:
+    properties:
+      data:
+        $ref: '#/definitions/service.ListOrganizationsResult'
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-service_ListUsersResult:
+    properties:
+      data:
+        $ref: '#/definitions/service.ListUsersResult'
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-service_LoginResponse:
+    properties:
+      data:
+        $ref: '#/definitions/service.LoginResponse'
+      error:
+        type: string
+    type: object
+  handler.ApiResponse-service_MFAEnrollResponse:
+    properties:
+      data:
+        $ref: '#/definitions/service.MFAEnrollResponse'
+      error:
+        type: string
     type: object
   handler.ApiResponse-service_TokenResponse:
     properties:
       data:
         $ref: '#/definitions/service.TokenResponse'
-      error: {}
+      error:
+        type: string
     type: object
   handler.ApiResponse-string:
     properties:
       data:
         type: string
-      error: {}
+      error:
+        type: string
+    type: object
+  handler.ImpersonateRequest:
+    properties:
+      refresh_token:
+        description: |-
+          RefreshToken is the caller's own current refresh token. It is echoed back
+          unchanged as OriginalRefreshToken so the client can restore its own session
+          later via StopImpersonation, since the JSON API is stateless.
+        type: string
+      target_user_id:
+        type: string
+    type: object
+  handler.ImpersonateResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      impersonator_id:
+        type: string
+      original_access_token:
+        type: string
+      original_refresh_token:
+        type: string
+      refresh_token:
+        type: string
+      target_user_id:
+        type: string
+      token_type:
+        type: string
     type: object
   handler.LogoutRequest:
     properties:
@@ -34,17 +270,189 @@ definitions:
       refresh_token:
         type: string
     type: object
+  handler.StopImpersonationRequest:
+    properties:
+      refresh_token:
+        type: string
+    type: object
+  handler.addOrgMemberRequest:
+    properties:
+      role_name:
+        type: string
+      user_id:
+        type: string
+    type: object
+  handler.createAPIKeyRequest:
+    properties:
+      scopes:
+        items:
+          type: string
+        type: array
+    type: object
+  handler.createOrganizationRequest:
+    properties:
+      name:
+        type: string
+    type: object
+  handler.grantPermissionRequest:
+    properties:
+      permission_name:
+        type: string
+    type: object
+  handler.grantRoleRequest:
+    properties:
+      role_name:
+        type: string
+    type: object
+  handler.mfaConfirmRequest:
+    properties:
+      code:
+        type: string
+    type: object
+  handler.mfaConfirmResponse:
+    properties:
+      recovery_codes:
+        items:
+          type: string
+        type: array
+    type: object
+  handler.mfaLoginVerifyRequest:
+    properties:
+      code:
+        type: string
+      mfa_token:
+        type: string
+      remember_device:
+        type: boolean
+    type: object
+  handler.mfaLoginVerifyResponse:
+    properties:
+      access_token:
+        type: string
+      device_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+    type: object
+  handler.nameDescriptionRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  handler.webauthnLoginBeginResponse:
+    properties:
+      mediation:
+        $ref: '#/definitions/protocol.CredentialMediationRequirement'
+      publicKey:
+        $ref: '#/definitions/protocol.PublicKeyCredentialRequestOptions'
+      session_key:
+        type: string
+    type: object
+  handler.webauthnRegisterBeginResponse:
+    properties:
+      mediation:
+        $ref: '#/definitions/protocol.CredentialMediationRequirement'
+      publicKey:
+        $ref: '#/definitions/protocol.PublicKeyCredentialCreationOptions'
+      session_key:
+        type: string
+    type: object
   map_string_string:
     additionalProperties:
       type: string
     type: object
+  models.AuditLog:
+    properties:
+      created_at:
+        type: string
+      event_type:
+        type: string
+      id:
+        type: string
+      metadata:
+        $ref: '#/definitions/models.JSONMap'
+      user_id:
+        type: string
+    type: object
   models.JSONMap:
     additionalProperties: {}
+    type: object
+  models.OrgMember:
+    properties:
+      created_at:
+        type: string
+      org_id:
+        type: string
+      role_id:
+        type: string
+      role_name:
+        type: string
+      user_id:
+        type: string
+    type: object
+  models.Organization:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  models.Permission:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  models.Role:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  models.Token:
+    properties:
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+      metadata:
+        $ref: '#/definitions/models.JSONMap'
+      revoked:
+        type: boolean
+      token:
+        type: string
+      token_type:
+        description: access, refresh, passwordless
+        type: string
+      user_id:
+        type: string
     type: object
   models.User:
     properties:
       app_metadata:
         $ref: '#/definitions/models.JSONMap'
+      avatar_url:
+        type: string
       created_at:
         type: string
       email:
@@ -57,12 +465,24 @@ definitions:
         type: string
       id:
         type: string
+      is_active:
+        type: boolean
       last_active_at:
+        type: string
+      last_login_at:
         type: string
       last_name:
         type: string
       locale:
         type: string
+      mfa_enabled:
+        type: boolean
+      nickname:
+        type: string
+      phone:
+        type: string
+      phone_verified:
+        type: boolean
       provider:
         type: string
       provider_id:
@@ -75,9 +495,546 @@ definitions:
         type: string
       user_metadata:
         $ref: '#/definitions/models.JSONMap'
+      username:
+        type: string
+    type: object
+  models.WebauthnCredential:
+    properties:
+      attestation_type:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      last_used_at:
+        type: string
+      name:
+        type: string
+      sign_count:
+        type: integer
+      transports:
+        type: string
+      user_id:
+        type: string
+    type: object
+  protocol.AttestationFormat:
+    enum:
+    - packed
+    - tpm
+    - android-key
+    - android-safetynet
+    - fido-u2f
+    - apple
+    - compound
+    - none
+    type: string
+    x-enum-varnames:
+    - AttestationFormatPacked
+    - AttestationFormatTPM
+    - AttestationFormatAndroidKey
+    - AttestationFormatAndroidSafetyNet
+    - AttestationFormatFIDOUniversalSecondFactor
+    - AttestationFormatApple
+    - AttestationFormatCompound
+    - AttestationFormatNone
+  protocol.AuthenticationExtensions:
+    properties:
+      appid:
+        description: AppID is the FIDO AppID Extension input. Authentication only.
+        type: string
+      appidExclude:
+        description: AppIDExclude is the FIDO AppID Exclusion Extension input. Registration
+          only.
+        type: string
+      credBlob:
+        description: CredBlob is the blob to store with the credential. Registration
+          only.
+        items:
+          type: integer
+        type: array
+      credProps:
+        description: CredProps requests the Credential Properties Extension. Registration
+          only.
+        type: boolean
+      credentialProtectionPolicy:
+        allOf:
+        - $ref: '#/definitions/protocol.CredentialProtectionPolicy'
+        description: CredentialProtectionPolicy is the CTAP credProtect policy. Registration
+          only.
+      enforceCredentialProtectionPolicy:
+        description: EnforceCredentialProtectionPolicy requires the credProtect policy
+          is honoured. Registration only.
+        type: boolean
+      getCredBlob:
+        description: GetCredBlob requests the blob stored with the credential. Authentication
+          only.
+        type: boolean
+      hmacCreateSecret:
+        description: HMACCreateSecret requests provisioning of the CTAP hmac-secret.
+          Registration only.
+        type: boolean
+      hmacGetSecret:
+        allOf:
+        - $ref: '#/definitions/protocol.HMACGetSecretInputs'
+        description: HMACGetSecret requests evaluation of the CTAP hmac-secret. Authentication
+          only.
+      largeBlob:
+        allOf:
+        - $ref: '#/definitions/protocol.LargeBlobInputs'
+        description: LargeBlob is the Large blob storage Extension input.
+      minPinLength:
+        description: MinPinLength requests the authenticator minimum PIN length. Registration
+          only.
+        type: boolean
+      prf:
+        allOf:
+        - $ref: '#/definitions/protocol.PRFInputs'
+        description: |-
+          PRF is the Pseudo-random function Extension input. It is a pointer because an empty dictionary is a
+          meaningful input for this extension and only this extension: a Relying Party sends "prf":{} at registration
+          to ask whether the pseudo-random function is available for the credential being created, and the client
+          answers with the 'enabled' output. A value type combined with omitzero cannot express the difference between
+          an absent member and a member present but empty, so a non-nil pointer to a zero value is what carries the
+          bare availability probe.
+      remoteClientDataJSON:
+        description: |-
+          RemoteClientDataJSON is the Remote Client Data JSON Extension input. This member is set by a remote desktop
+          web client and a Relying Party should not normally set it. See [ExtensionRemoteClientDataJSON], which records
+          that this extension is not yet ratified.
+        type: string
+      uvm:
+        description: UVM requests the user verification methods used for the operation.
+        type: boolean
+    type: object
+  protocol.AuthenticatorAttachment:
+    enum:
+    - platform
+    - cross-platform
+    type: string
+    x-enum-varnames:
+    - Platform
+    - CrossPlatform
+  protocol.AuthenticatorSelection:
+    properties:
+      authenticatorAttachment:
+        allOf:
+        - $ref: '#/definitions/protocol.AuthenticatorAttachment'
+        description: |-
+          AuthenticatorAttachment If this member is present, eligible authenticators are filtered to only
+          authenticators attached with the specified AuthenticatorAttachment enum.
+      requireResidentKey:
+        description: |-
+          RequireResidentKey this member describes the Relying Party's requirements regarding resident
+          credentials. If the parameter is set to true, the authenticator MUST create a client-side-resident
+          public key credential source when creating a public key credential.
+        type: boolean
+      residentKey:
+        allOf:
+        - $ref: '#/definitions/protocol.ResidentKeyRequirement'
+        description: |-
+          ResidentKey this member describes the Relying Party's requirements regarding resident
+          credentials per Webauthn Level 2.
+      userVerification:
+        allOf:
+        - $ref: '#/definitions/protocol.UserVerificationRequirement'
+        description: |-
+          UserVerification This member describes the Relying Party's requirements regarding user verification for
+          the create() operation. Eligible authenticators are filtered to only those capable of satisfying this
+          requirement.
+    type: object
+  protocol.AuthenticatorTransport:
+    enum:
+    - usb
+    - nfc
+    - ble
+    - smart-card
+    - hybrid
+    - internal
+    type: string
+    x-enum-varnames:
+    - USB
+    - NFC
+    - BLE
+    - SmartCard
+    - Hybrid
+    - Internal
+  protocol.ConveyancePreference:
+    enum:
+    - none
+    - indirect
+    - direct
+    - enterprise
+    type: string
+    x-enum-varnames:
+    - PreferNoAttestation
+    - PreferIndirectAttestation
+    - PreferDirectAttestation
+    - PreferEnterpriseAttestation
+  protocol.CredentialDescriptor:
+    properties:
+      id:
+        description: CredentialID The ID of a credential to allow/disallow.
+        items:
+          type: integer
+        type: array
+      transports:
+        description: The authenticator transports that can be used.
+        items:
+          $ref: '#/definitions/protocol.AuthenticatorTransport'
+        type: array
+      type:
+        allOf:
+        - $ref: '#/definitions/protocol.CredentialType'
+        description: The valid credential types.
+    type: object
+  protocol.CredentialMediationRequirement:
+    enum:
+    - ""
+    - silent
+    - optional
+    - conditional
+    - required
+    type: string
+    x-enum-varnames:
+    - MediationDefault
+    - MediationSilent
+    - MediationOptional
+    - MediationConditional
+    - MediationRequired
+  protocol.CredentialParameter:
+    properties:
+      alg:
+        $ref: '#/definitions/webauthncose.COSEAlgorithmIdentifier'
+      type:
+        $ref: '#/definitions/protocol.CredentialType'
+    type: object
+  protocol.CredentialProtectionPolicy:
+    enum:
+    - userVerificationOptional
+    - userVerificationOptionalWithCredentialIDList
+    - userVerificationRequired
+    type: string
+    x-enum-varnames:
+    - CredentialProtectionPolicyUserVerificationOptional
+    - CredentialProtectionPolicyUserVerificationOptionalWithCredentialIDList
+    - CredentialProtectionPolicyUserVerificationRequired
+  protocol.CredentialType:
+    enum:
+    - public-key
+    type: string
+    x-enum-varnames:
+    - PublicKeyCredentialType
+  protocol.HMACGetSecretInputs:
+    properties:
+      salt1:
+        items:
+          type: integer
+        type: array
+      salt2:
+        items:
+          type: integer
+        type: array
+    type: object
+  protocol.LargeBlobInputs:
+    properties:
+      read:
+        type: boolean
+      support:
+        $ref: '#/definitions/protocol.LargeBlobSupport'
+      write:
+        items:
+          type: integer
+        type: array
+    type: object
+  protocol.LargeBlobSupport:
+    enum:
+    - required
+    - preferred
+    type: string
+    x-enum-varnames:
+    - LargeBlobSupportRequired
+    - LargeBlobSupportPreferred
+  protocol.PRFInputs:
+    properties:
+      eval:
+        $ref: '#/definitions/protocol.PRFValues'
+      evalByCredential:
+        additionalProperties:
+          $ref: '#/definitions/protocol.PRFValues'
+        type: object
+    type: object
+  protocol.PRFValues:
+    properties:
+      first:
+        items:
+          type: integer
+        type: array
+      second:
+        items:
+          type: integer
+        type: array
+    type: object
+  protocol.PublicKeyCredentialCreationOptions:
+    properties:
+      attestation:
+        $ref: '#/definitions/protocol.ConveyancePreference'
+      attestationFormats:
+        items:
+          $ref: '#/definitions/protocol.AttestationFormat'
+        type: array
+      authenticatorSelection:
+        $ref: '#/definitions/protocol.AuthenticatorSelection'
+      challenge:
+        items:
+          type: integer
+        type: array
+      excludeCredentials:
+        items:
+          $ref: '#/definitions/protocol.CredentialDescriptor'
+        type: array
+      extensions:
+        $ref: '#/definitions/protocol.AuthenticationExtensions'
+      hints:
+        items:
+          $ref: '#/definitions/protocol.PublicKeyCredentialHints'
+        type: array
+      pubKeyCredParams:
+        items:
+          $ref: '#/definitions/protocol.CredentialParameter'
+        type: array
+      rp:
+        $ref: '#/definitions/protocol.RelyingPartyEntity'
+      timeout:
+        type: integer
+      user:
+        $ref: '#/definitions/protocol.UserEntity'
+    type: object
+  protocol.PublicKeyCredentialHints:
+    enum:
+    - security-key
+    - client-device
+    - hybrid
+    type: string
+    x-enum-varnames:
+    - PublicKeyCredentialHintSecurityKey
+    - PublicKeyCredentialHintClientDevice
+    - PublicKeyCredentialHintHybrid
+  protocol.PublicKeyCredentialRequestOptions:
+    properties:
+      allowCredentials:
+        items:
+          $ref: '#/definitions/protocol.CredentialDescriptor'
+        type: array
+      challenge:
+        items:
+          type: integer
+        type: array
+      extensions:
+        $ref: '#/definitions/protocol.AuthenticationExtensions'
+      hints:
+        items:
+          $ref: '#/definitions/protocol.PublicKeyCredentialHints'
+        type: array
+      rpId:
+        type: string
+      timeout:
+        type: integer
+      userVerification:
+        $ref: '#/definitions/protocol.UserVerificationRequirement'
+    type: object
+  protocol.RelyingPartyEntity:
+    properties:
+      id:
+        description: A unique identifier for the Relying Party entity, which sets
+          the RP ID.
+        type: string
+      name:
+        description: |-
+          A human-palatable name for the entity. Its function depends on what the PublicKeyCredentialEntity represents:
+
+          When inherited by PublicKeyCredentialRpEntity it is a human-palatable identifier for the Relying Party,
+          intended only for display. For example, "ACME Corporation", "Wonderful Widgets, Inc." or "ОАО Примертех".
+
+          When inherited by PublicKeyCredentialUserEntity, it is a human-palatable identifier for a user account. It is
+          intended only for display, i.e., aiding the user in determining the difference between user accounts with similar
+          displayNames. For example, "alexm", "alex.p.mueller@example.com" or "+14255551234".
+        type: string
+    type: object
+  protocol.ResidentKeyRequirement:
+    enum:
+    - discouraged
+    - preferred
+    - required
+    type: string
+    x-enum-varnames:
+    - ResidentKeyRequirementDiscouraged
+    - ResidentKeyRequirementPreferred
+    - ResidentKeyRequirementRequired
+  protocol.UserEntity:
+    properties:
+      displayName:
+        description: |-
+          A human-palatable name for the user account, intended only for display.
+          For example, "Alex P. Müller" or "田中 倫". The Relying Party SHOULD let
+          the user choose this, and SHOULD NOT restrict the choice more than necessary.
+        type: string
+      id:
+        description: |-
+          ID is the user handle of the user account entity. To ensure secure operation,
+          authentication and authorization decisions MUST be made on the basis of this id
+          member, not the displayName nor name members. See Section 6.1 of
+          [RFC8266](https://www.w3.org/TR/webauthn/#biblio-rfc8266).
+      name:
+        description: |-
+          A human-palatable name for the entity. Its function depends on what the PublicKeyCredentialEntity represents:
+
+          When inherited by PublicKeyCredentialRpEntity it is a human-palatable identifier for the Relying Party,
+          intended only for display. For example, "ACME Corporation", "Wonderful Widgets, Inc." or "ОАО Примертех".
+
+          When inherited by PublicKeyCredentialUserEntity, it is a human-palatable identifier for a user account. It is
+          intended only for display, i.e., aiding the user in determining the difference between user accounts with similar
+          displayNames. For example, "alexm", "alex.p.mueller@example.com" or "+14255551234".
+        type: string
+    type: object
+  protocol.UserVerificationRequirement:
+    enum:
+    - required
+    - preferred
+    - discouraged
+    type: string
+    x-enum-comments:
+      VerificationPreferred: This is the default.
+    x-enum-descriptions:
+    - ""
+    - This is the default.
+    - ""
+    x-enum-varnames:
+    - VerificationRequired
+    - VerificationPreferred
+    - VerificationDiscouraged
+  service.APIKeyInfo:
+    properties:
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+      revoked:
+        type: boolean
+      scopes:
+        items:
+          type: string
+        type: array
+    type: object
+  service.AuthHistoryEntry:
+    properties:
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      revoked:
+        type: boolean
+      token_type:
+        type: string
+    type: object
+  service.InvitationInfo:
+    properties:
+      created_at:
+        type: string
+      data:
+        additionalProperties: {}
+        type: object
+      email:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+      roles:
+        type: string
+    type: object
+  service.JWK:
+    properties:
+      alg:
+        type: string
+      crv:
+        description: OKP (Ed25519)
+        type: string
+      e:
+        type: string
+      kid:
+        type: string
+      kty:
+        type: string
+      "n":
+        description: RSA
+        type: string
+      use:
+        type: string
+      x:
+        type: string
+    type: object
+  service.JWKSet:
+    properties:
+      keys:
+        items:
+          $ref: '#/definitions/service.JWK'
+        type: array
+    type: object
+  service.ListAuditLogsResult:
+    properties:
+      events:
+        items:
+          $ref: '#/definitions/models.AuditLog'
+        type: array
+      has_more:
+        type: boolean
+    type: object
+  service.ListOrganizationsResult:
+    properties:
+      has_more:
+        type: boolean
+      organizations:
+        items:
+          $ref: '#/definitions/models.Organization'
+        type: array
+    type: object
+  service.ListUsersResult:
+    properties:
+      has_more:
+        type: boolean
+      users:
+        items:
+          $ref: '#/definitions/models.User'
+        type: array
+    type: object
+  service.LoginResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      mfa_required:
+        type: boolean
+      mfa_token:
+        type: string
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+    type: object
+  service.MFAEnrollResponse:
+    properties:
+      otpauth_url:
+        type: string
+      secret:
+        type: string
     type: object
   service.RequestBasicAuth:
     properties:
+      avatar_url:
+        type: string
       data:
         additionalProperties: {}
         type: object
@@ -89,11 +1046,51 @@ definitions:
         type: string
       locale:
         type: string
+      nickname:
+        type: string
       password:
         type: string
-      roles:
+      phone:
         type: string
       timezone:
+        type: string
+      username:
+        type: string
+    type: object
+  service.RequestEmailChange:
+    properties:
+      current_password:
+        type: string
+      new_email:
+        type: string
+    type: object
+  service.RequestInvitation:
+    properties:
+      data:
+        additionalProperties: {}
+        description: optional, caller-defined (e.g. org id) opaque to ezauth
+        type: object
+      email:
+        type: string
+      roles:
+        description: optional, comma-separated
+        type: string
+    type: object
+  service.RequestInvitationAccept:
+    properties:
+      first_name:
+        type: string
+      last_name:
+        type: string
+      locale:
+        type: string
+      password:
+        type: string
+      timezone:
+        type: string
+      token:
+        type: string
+      username:
         type: string
     type: object
   service.RequestPasswordReset:
@@ -113,6 +1110,27 @@ definitions:
       email:
         type: string
     type: object
+  service.RequestSMSOTP:
+    properties:
+      phone:
+        type: string
+    type: object
+  service.RequestSMSOTPVerify:
+    properties:
+      code:
+        type: string
+      phone:
+        type: string
+    type: object
+  service.SessionInfo:
+    properties:
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+    type: object
   service.TokenResponse:
     properties:
       access_token:
@@ -124,13 +1142,1083 @@ definitions:
       token_type:
         type: string
     type: object
+  service.TrustedDeviceInfo:
+    properties:
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  webauthncose.COSEAlgorithmIdentifier:
+    enum:
+    - -48
+    - -49
+    - -50
+    - -7
+    - -8
+    - -9
+    - -19
+    - -35
+    - -36
+    - -37
+    - -38
+    - -39
+    - -47
+    - -51
+    - -52
+    - -257
+    - -258
+    - -259
+    - -65535
+    type: integer
+    x-enum-varnames:
+    - AlgMLDSA44
+    - AlgMLDSA65
+    - AlgMLDSA87
+    - AlgES256
+    - AlgEdDSA
+    - AlgESP256
+    - AlgEd25519
+    - AlgES384
+    - AlgES512
+    - AlgPS256
+    - AlgPS384
+    - AlgPS512
+    - AlgES256K
+    - AlgESP384
+    - AlgESP512
+    - AlgRS256
+    - AlgRS384
+    - AlgRS512
+    - AlgRS1
 info:
   contact: {}
   description: Authentication service/library for Go.
   title: EzAuth API
   version: "1.0"
 paths:
-  /auth/login:
+  /.well-known/jwks.json:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.JWKSet'
+      summary: JSON Web Key Set
+      tags:
+      - jwt
+  /auth/api/admin/organizations:
+    get:
+      parameters:
+      - description: Page size (default 50, max 200)
+        in: query
+        name: limit
+        type: integer
+      - description: Page offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_ListOrganizationsResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: List organizations (admin)
+      tags:
+      - organizations
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Organization name
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.createOrganizationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-models_Organization'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Create an organization (admin)
+      tags:
+      - organizations
+  /auth/api/admin/organizations/{id}:
+    delete:
+      parameters:
+      - description: Organization ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Delete an organization (admin)
+      tags:
+      - organizations
+    get:
+      parameters:
+      - description: Organization ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-models_Organization'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Get an organization (admin)
+      tags:
+      - organizations
+  /auth/api/admin/organizations/{id}/members:
+    get:
+      parameters:
+      - description: Organization ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-array_models_OrgMember'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: List an organization's members (admin)
+      tags:
+      - organizations
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Organization ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: User ID and role name
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.addOrgMemberRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Add/update an organization member (admin)
+      tags:
+      - organizations
+  /auth/api/admin/organizations/{id}/members/{user_id}:
+    delete:
+      parameters:
+      - description: Organization ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Remove an organization member (admin)
+      tags:
+      - organizations
+  /auth/api/admin/permissions:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-array_models_Permission'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: List permissions (admin)
+      tags:
+      - rbac
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Permission name and description
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.nameDescriptionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-models_Permission'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Create a permission (admin)
+      tags:
+      - rbac
+  /auth/api/admin/permissions/{id}:
+    delete:
+      parameters:
+      - description: Permission ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Delete a permission (admin)
+      tags:
+      - rbac
+  /auth/api/admin/roles:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-array_models_Role'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: List roles (admin)
+      tags:
+      - rbac
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Role name and description
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.nameDescriptionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-models_Role'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Create a role (admin)
+      tags:
+      - rbac
+  /auth/api/admin/roles/{id}:
+    delete:
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Delete a role (admin)
+      tags:
+      - rbac
+  /auth/api/admin/roles/{name}/permissions:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Role name
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: Permission name
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.grantPermissionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Grant a permission to a role (admin)
+      tags:
+      - rbac
+  /auth/api/admin/roles/{name}/permissions/{permission_name}:
+    delete:
+      parameters:
+      - description: Role name
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: Permission name
+        in: path
+        name: permission_name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Revoke a permission from a role (admin)
+      tags:
+      - rbac
+  /auth/api/admin/users:
+    get:
+      parameters:
+      - description: Filter by email/username substring
+        in: query
+        name: search
+        type: string
+      - description: 'Filter by status: active, locked, or suspended'
+        in: query
+        name: status
+        type: string
+      - description: RFC3339 timestamp
+        in: query
+        name: created_after
+        type: string
+      - description: RFC3339 timestamp
+        in: query
+        name: created_before
+        type: string
+      - description: RFC3339 timestamp
+        in: query
+        name: last_active_after
+        type: string
+      - description: RFC3339 timestamp
+        in: query
+        name: last_active_before
+        type: string
+      - description: Page size (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Page offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_ListUsersResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: List/search users (admin)
+      tags:
+      - admin
+  /auth/api/admin/users/{id}/audit-logs:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Filter by event type, e.g. login.failed
+        in: query
+        name: event_type
+        type: string
+      - description: RFC3339 timestamp
+        in: query
+        name: since
+        type: string
+      - description: RFC3339 timestamp
+        in: query
+        name: until
+        type: string
+      - description: Page size (default 50, max 200)
+        in: query
+        name: limit
+        type: integer
+      - description: Page offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_ListAuditLogsResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: List a user's audit log (admin)
+      tags:
+      - admin
+  /auth/api/admin/users/{id}/history:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Max entries (default 50, max 200)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-array_service_AuthHistoryEntry'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: View a user's auth history (admin)
+      tags:
+      - admin
+  /auth/api/admin/users/{id}/organizations:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-array_models_Organization'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: List a user's organizations (admin)
+      tags:
+      - organizations
+  /auth/api/admin/users/{id}/reactivate:
+    post:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-models_User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Reactivate a user (admin)
+      tags:
+      - admin
+  /auth/api/admin/users/{id}/roles:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-array_models_Role'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: List a user's roles (admin)
+      tags:
+      - rbac
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Role name
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.grantRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Grant a role to a user (admin)
+      tags:
+      - rbac
+  /auth/api/admin/users/{id}/roles/{role_name}:
+    delete:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Role name
+        in: path
+        name: role_name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Revoke a role from a user (admin)
+      tags:
+      - rbac
+  /auth/api/admin/users/{id}/suspend:
+    post:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-models_User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Suspend a user (admin)
+      tags:
+      - admin
+  /auth/api/api-keys:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-array_service_APIKeyInfo'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: List API keys
+      tags:
+      - api-keys
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Optional scopes
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.createAPIKeyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-models_Token'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Create an API key
+      tags:
+      - api-keys
+  /auth/api/api-keys/{id}:
+    delete:
+      parameters:
+      - description: API key (token) ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Revoke an API key
+      tags:
+      - api-keys
+  /auth/api/email-change/confirm:
+    get:
+      description: Applies the requested email change and revokes other sessions
+      parameters:
+      - description: Email change token
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-models_User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Confirm an email change
+      tags:
+      - user
+  /auth/api/email-change/request:
+    post:
+      consumes:
+      - application/json
+      description: Verifies the current password, then emails a confirmation link
+        to the new address
+      parameters:
+      - description: Email Change Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestEmailChange'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Request an email change
+      tags:
+      - user
+  /auth/api/impersonate:
+    post:
+      consumes:
+      - application/json
+      description: Mint tokens for a target user on behalf of the authenticated admin
+      parameters:
+      - description: Impersonate Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ImpersonateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-handler_ImpersonateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Start impersonating a user
+      tags:
+      - impersonation
+  /auth/api/impersonate/stop:
+    post:
+      consumes:
+      - application/json
+      description: Revoke an impersonation refresh token
+      parameters:
+      - description: Stop Impersonation Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.StopImpersonationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Stop impersonating a user
+      tags:
+      - impersonation
+  /auth/api/invitations:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-array_service_InvitationInfo'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: List invitations
+      tags:
+      - invitation
+    post:
+      consumes:
+      - application/json
+      description: Emails an invitee a link to accept an invitation and complete registration
+      parameters:
+      - description: Invitation Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestInvitation'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_InvitationInfo'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Create an invitation
+      tags:
+      - invitation
+  /auth/api/invitations/{id}:
+    delete:
+      parameters:
+      - description: Invitation record ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Revoke an invitation
+      tags:
+      - invitation
+  /auth/api/invitations/accept:
+    post:
+      consumes:
+      - application/json
+      description: Creates the invitee's account with the invitation's pre-verified
+        email and roles, and returns session tokens
+      parameters:
+      - description: Invitation Accept Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestInvitationAccept'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Accept an invitation
+      tags:
+      - invitation
+  /auth/api/invitations/preview:
+    get:
+      parameters:
+      - description: Invitation token
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_InvitationInfo'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Preview an invitation
+      tags:
+      - invitation
+  /auth/api/login:
     post:
       consumes:
       - application/json
@@ -148,7 +2236,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
+            $ref: '#/definitions/handler.ApiResponse-service_LoginResponse'
         "400":
           description: Bad Request
           schema:
@@ -166,7 +2254,7 @@ paths:
       summary: Login user
       tags:
       - auth
-  /auth/logout:
+  /auth/api/logout:
     post:
       consumes:
       - application/json
@@ -199,11 +2287,684 @@ paths:
       summary: Logout user
       tags:
       - auth
+  /auth/api/mfa/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Validates a TOTP code and enables MFA, returning one-time recovery
+        codes
+      parameters:
+      - description: MFA Confirm Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.mfaConfirmRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-handler_mfaConfirmResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Confirm TOTP MFA enrollment
+      tags:
+      - mfa
+  /auth/api/mfa/disable:
+    post:
+      consumes:
+      - application/json
+      description: Validates a TOTP or recovery code and disables MFA
+      parameters:
+      - description: MFA Disable Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.mfaConfirmRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Disable TOTP MFA
+      tags:
+      - mfa
+  /auth/api/mfa/enroll:
+    post:
+      description: Generates a new TOTP secret for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_MFAEnrollResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Begin TOTP MFA enrollment
+      tags:
+      - mfa
+  /auth/api/mfa/login/verify:
+    post:
+      consumes:
+      - application/json
+      description: Exchanges an mfa_token and TOTP/recovery code for session tokens
+      parameters:
+      - description: MFA Login Verify Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.mfaLoginVerifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-handler_mfaLoginVerifyResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Complete MFA step-up login
+      tags:
+      - mfa
+  /auth/api/password-reset/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Reset password using the token sent via email
+      parameters:
+      - description: Password Reset Confirmation
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestPasswordResetConfirm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Confirm password reset
+      tags:
+      - auth
+  /auth/api/password-reset/request:
+    post:
+      consumes:
+      - application/json
+      description: Send a password reset link to the user's email
+      parameters:
+      - description: Password Reset Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestPasswordReset'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Request password reset
+      tags:
+      - auth
+  /auth/api/passwordless/login:
+    get:
+      description: Authenticate using the token from the magic link
+      parameters:
+      - description: Magic Link Token
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Magic link login
+      tags:
+      - auth
+  /auth/api/passwordless/request:
+    post:
+      consumes:
+      - application/json
+      description: Send a magic login link to the user's email
+      parameters:
+      - description: Passwordless Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestPasswordless'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Request magic link
+      tags:
+      - auth
+  /auth/api/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with basic authentication
+      parameters:
+      - description: Registration Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestBasicAuth'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Register a new user
+      tags:
+      - auth
+  /auth/api/sessions:
+    delete:
+      parameters:
+      - description: Session record ID to keep (e.g. the caller's current session)
+        in: query
+        name: except
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Revoke all other sessions
+      tags:
+      - sessions
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-array_service_SessionInfo'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: List active sessions
+      tags:
+      - sessions
+  /auth/api/sessions/{id}:
+    delete:
+      parameters:
+      - description: Session record ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Revoke a session
+      tags:
+      - sessions
+  /auth/api/sms-otp/request:
+    post:
+      consumes:
+      - application/json
+      description: Send a one-time login code to the user's phone number
+      parameters:
+      - description: SMS OTP Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestSMSOTP'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Request SMS OTP
+      tags:
+      - auth
+  /auth/api/sms-otp/verify:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate using the one-time code sent via SMS
+      parameters:
+      - description: SMS OTP Verify Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RequestSMSOTPVerify'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Verify SMS OTP
+      tags:
+      - auth
+  /auth/api/token/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Get a new access token using a refresh token
+      parameters:
+      - description: Refresh Token Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Refresh access token
+      tags:
+      - auth
+  /auth/api/trusted-devices:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-array_service_TrustedDeviceInfo'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: List trusted devices
+      tags:
+      - mfa
+  /auth/api/trusted-devices/{id}:
+    delete:
+      parameters:
+      - description: Trusted device record ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Revoke a trusted device
+      tags:
+      - mfa
+  /auth/api/user:
+    delete:
+      description: Delete the authenticated user's account
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Delete user
+      tags:
+      - user
+  /auth/api/userinfo:
+    get:
+      description: Retrieve information about the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-models_User'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Get user info
+      tags:
+      - user
+  /auth/api/webauthn/credentials:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-array_models_WebauthnCredential'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: List WebAuthn credentials
+      tags:
+      - webauthn
+  /auth/api/webauthn/credentials/{id}:
+    delete:
+      parameters:
+      - description: Credential record ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-map_string_string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Delete a WebAuthn credential
+      tags:
+      - webauthn
+  /auth/api/webauthn/login/begin:
+    post:
+      description: Generates WebAuthn credential request options for a discoverable
+        (passkey) login
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-handler_webauthnLoginBeginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Begin WebAuthn login
+      tags:
+      - webauthn
+  /auth/api/webauthn/login/finish:
+    post:
+      consumes:
+      - application/json
+      description: Verifies the browser's assertion response and returns session tokens
+      parameters:
+      - description: Session key returned by the begin step
+        in: query
+        name: session_key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - ApiKeyAuth: []
+      summary: Finish WebAuthn login
+      tags:
+      - webauthn
+  /auth/api/webauthn/register/begin:
+    post:
+      description: Generates WebAuthn credential creation options for the authenticated
+        user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-handler_webauthnRegisterBeginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Begin WebAuthn registration
+      tags:
+      - webauthn
+  /auth/api/webauthn/register/finish:
+    post:
+      consumes:
+      - application/json
+      description: Verifies the browser's attestation response and persists the new
+        credential
+      parameters:
+      - description: Session key returned by the begin step
+        in: query
+        name: session_key
+        required: true
+        type: string
+      - description: Optional label for the credential
+        in: query
+        name: name
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-models_WebauthnCredential'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ApiResponse-string'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Finish WebAuthn registration
+      tags:
+      - webauthn
   /auth/oauth2/{provider}/callback:
     get:
       description: Handle the callback from the OAuth2 provider
       parameters:
-      - description: OAuth2 Provider (google, github, facebook)
+      - description: OAuth2 Provider (google, github, facebook, discord, gitlab, slack,
+          linkedin, spotify, or any registered custom provider)
         in: path
         name: provider
         required: true
@@ -240,7 +3001,8 @@ paths:
     get:
       description: Redirect to the OAuth2 provider login page
       parameters:
-      - description: OAuth2 Provider (google, github, facebook)
+      - description: OAuth2 Provider (google, github, facebook, discord, gitlab, slack,
+          linkedin, spotify, or any registered custom provider)
         in: path
         name: provider
         required: true
@@ -257,231 +3019,6 @@ paths:
       summary: OAuth2 Login
       tags:
       - oauth2
-  /auth/password-reset/confirm:
-    post:
-      consumes:
-      - application/json
-      description: Reset password using the token sent via email
-      parameters:
-      - description: Password Reset Confirmation
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/service.RequestPasswordResetConfirm'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-map_string_string'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-      security:
-      - ApiKeyAuth: []
-      summary: Confirm password reset
-      tags:
-      - auth
-  /auth/password-reset/request:
-    post:
-      consumes:
-      - application/json
-      description: Send a password reset link to the user's email
-      parameters:
-      - description: Password Reset Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/service.RequestPasswordReset'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-map_string_string'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-      security:
-      - ApiKeyAuth: []
-      summary: Request password reset
-      tags:
-      - auth
-  /auth/passwordless/login:
-    get:
-      description: Authenticate using the token from the magic link
-      parameters:
-      - description: Magic Link Token
-        in: query
-        name: token
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-      security:
-      - ApiKeyAuth: []
-      summary: Magic link login
-      tags:
-      - auth
-  /auth/passwordless/request:
-    post:
-      consumes:
-      - application/json
-      description: Send a magic login link to the user's email
-      parameters:
-      - description: Passwordless Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/service.RequestPasswordless'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-map_string_string'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-      security:
-      - ApiKeyAuth: []
-      summary: Request magic link
-      tags:
-      - auth
-  /auth/register:
-    post:
-      consumes:
-      - application/json
-      description: Register a new user with basic authentication
-      parameters:
-      - description: Registration Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/service.RequestBasicAuth'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-      security:
-      - ApiKeyAuth: []
-      summary: Register a new user
-      tags:
-      - auth
-  /auth/token/refresh:
-    post:
-      consumes:
-      - application/json
-      description: Get a new access token using a refresh token
-      parameters:
-      - description: Refresh Token Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/handler.RefreshTokenRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-service_TokenResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-      security:
-      - ApiKeyAuth: []
-      summary: Refresh access token
-      tags:
-      - auth
-  /auth/user:
-    delete:
-      description: Delete the authenticated user's account
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-map_string_string'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-      security:
-      - BearerAuth: []
-      - ApiKeyAuth: []
-      summary: Delete user
-      tags:
-      - user
-  /auth/userinfo:
-    get:
-      description: Retrieve information about the authenticated user
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-models_User'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handler.ApiResponse-string'
-      security:
-      - BearerAuth: []
-      - ApiKeyAuth: []
-      summary: Get user info
-      tags:
-      - user
   /ping:
     get:
       description: Checks if the server is running

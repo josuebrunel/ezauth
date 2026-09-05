@@ -287,6 +287,8 @@
       
         
       
+        
+      
     
     
     
@@ -385,6 +387,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -400,6 +430,14 @@
   
     
     
+      
+        
+      
+        
+      
+        
+      
+        
       
         
       
@@ -425,7 +463,7 @@
   <span class="md-ellipsis">
     
   
-    Usage
+    Guides
   
 
     
@@ -441,7 +479,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Usage
+    Guides
   
 
           </label>
@@ -461,7 +499,7 @@
   <span class="md-ellipsis">
     
   
-    As a Library
+    Embed as a Library
   
 
     
@@ -503,6 +541,118 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/sessions-middleware-helpers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sessions, Middleware and Helpers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/sign-in-methods/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sign-in Methods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/account-security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Account Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/admin-operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Admin and Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -520,8 +670,6 @@
   
     
     
-      
-        
       
         
       
@@ -588,34 +736,6 @@
     
   
     API Endpoints
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../architecture/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Architecture
   
 
     
@@ -913,6 +1033,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#api-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Keys
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#asymmetric-jwt-signing-jwks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Asymmetric JWT Signing (JWKS)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#password-flows" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -970,6 +1112,422 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#oauth2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuth2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OAuth2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#registeroauth2provider" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RegisterOAuth2Provider
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oauth2getconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuth2GetConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oauth2getuserinfo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuth2GetUserInfo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oauth2authenticate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuth2Authenticate
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#impersonation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Impersonation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Impersonation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#impersonate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Impersonate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stopimpersonating" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        StopImpersonating
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multi-factor-authentication-totp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-Factor Authentication (TOTP)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Multi-Factor Authentication (TOTP)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mfaenroll" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MFAEnroll
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mfaconfirm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MFAConfirm
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mfadisable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MFADisable
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#completebasiclogin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CompleteBasicLogin
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mfaloginverify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MFALoginVerify
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trusted-devices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trusted Devices
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sessions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#webauthn-passkeys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WebAuthn / Passkeys
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="WebAuthn / Passkeys">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#registration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Registration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#login" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Login
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#managing-credentials" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Managing Credentials
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sms-otp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SMS OTP
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="SMS OTP">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#smsotprequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SMSOTPRequest
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#smsotpverify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SMSOTPVerify
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#invitation-based-onboarding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Invitation-Based Onboarding
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#guarded-email-change" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Guarded Email Change
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Guarded Email Change">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#emailchangerequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EmailChangeRequest
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#emailchangeconfirm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EmailChangeConfirm
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#admin-user-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Admin User Management
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Admin User Management">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#userslist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UsersList
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usersuspend-userreactivate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UserSuspend / UserReactivate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#userauthhistory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UserAuthHistory
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#audit-log" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit Log
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#roles-permissions-rbac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roles &amp; Permissions (RBAC)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#organizations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Organizations
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1323,6 +1881,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#api-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Keys
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#asymmetric-jwt-signing-jwks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Asymmetric JWT Signing (JWKS)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#password-flows" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1383,6 +1963,422 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#oauth2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuth2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OAuth2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#registeroauth2provider" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RegisterOAuth2Provider
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oauth2getconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuth2GetConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oauth2getuserinfo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuth2GetUserInfo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oauth2authenticate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuth2Authenticate
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#impersonation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Impersonation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Impersonation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#impersonate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Impersonate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stopimpersonating" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        StopImpersonating
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multi-factor-authentication-totp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-Factor Authentication (TOTP)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Multi-Factor Authentication (TOTP)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mfaenroll" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MFAEnroll
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mfaconfirm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MFAConfirm
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mfadisable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MFADisable
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#completebasiclogin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CompleteBasicLogin
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mfaloginverify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MFALoginVerify
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trusted-devices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trusted Devices
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sessions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#webauthn-passkeys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WebAuthn / Passkeys
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="WebAuthn / Passkeys">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#registration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Registration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#login" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Login
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#managing-credentials" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Managing Credentials
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sms-otp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SMS OTP
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="SMS OTP">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#smsotprequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SMSOTPRequest
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#smsotpverify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SMSOTPVerify
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#invitation-based-onboarding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Invitation-Based Onboarding
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#guarded-email-change" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Guarded Email Change
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Guarded Email Change">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#emailchangerequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EmailChangeRequest
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#emailchangeconfirm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EmailChangeConfirm
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#admin-user-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Admin User Management
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Admin User Management">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#userslist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UsersList
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usersuspend-userreactivate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UserSuspend / UserReactivate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#userauthhistory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UserAuthHistory
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#audit-log" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit Log
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#roles-permissions-rbac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roles &amp; Permissions (RBAC)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#organizations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Organizations
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1414,8 +2410,8 @@
 </code></pre>
 <h2 id="constructor">Constructor</h2>
 <h3 id="new"><code>New</code></h3>
-<p>Creates a new <code>Auth</code> service.</p>
-<pre><code class="language-go">func New(cfg *config.Config, repo *repository.Repository, pathPrefix string) *Auth
+<p>Creates a new <code>Auth</code> service. Returns an error if <code>cfg.JWT</code> (or <code>cfg.JWTSecret</code>, for the default HS256 mode) describes invalid JWT signing configuration — e.g. an unsupported algorithm or unparsable PEM key.</p>
+<pre><code class="language-go">func New(cfg *config.Config, repo *repository.Repository, pathPrefix string) (*Auth, error)
 </code></pre>
 <h3 id="newfromconfig"><code>NewFromConfig</code></h3>
 <p>Creates a new <code>Auth</code> service and initializes the repository connection based on the config.</p>
@@ -1428,19 +2424,19 @@
 </code></pre>
 <h3 id="userauthenticate"><code>UserAuthenticate</code></h3>
 <p>Authenticates a user by email and password.</p>
-<pre><code class="language-go">func (a Auth) UserAuthenticate(ctx context.Context, req RequestBasicAuth) (*models.User, error)
+<pre><code class="language-go">func (a *Auth) UserAuthenticate(ctx context.Context, req RequestBasicAuth) (*models.User, error)
 </code></pre>
 <h3 id="userupdatepassword"><code>UserUpdatePassword</code></h3>
 <p>Updates a user's password. Enforces password validation rules.</p>
-<pre><code class="language-go">func (a Auth) UserUpdatePassword(ctx context.Context, user *models.User, password string) (*models.User, error)
+<pre><code class="language-go">func (a *Auth) UserUpdatePassword(ctx context.Context, user *models.User, password string) (*models.User, error)
 </code></pre>
 <h3 id="userupdate"><code>UserUpdate</code></h3>
 <p>Updates user profile information.</p>
-<pre><code class="language-go">func (a Auth) UserUpdate(ctx context.Context, user *models.User) (*models.User, error)
+<pre><code class="language-go">func (a *Auth) UserUpdate(ctx context.Context, user *models.User) (*models.User, error)
 </code></pre>
 <h3 id="userdelete"><code>UserDelete</code></h3>
 <p>Deletes a user by their ID.</p>
-<pre><code class="language-go">func (a Auth) UserDelete(ctx context.Context, id string) error
+<pre><code class="language-go">func (a *Auth) UserDelete(ctx context.Context, id string) error
 </code></pre>
 <h2 id="token-operations">Token Operations</h2>
 <h3 id="tokencreate"><code>TokenCreate</code></h3>
@@ -1455,6 +2451,19 @@
 <p>Revokes a refresh token immediately.</p>
 <pre><code class="language-go">func (a *Auth) TokenRevoke(ctx context.Context, refreshToken string) error
 </code></pre>
+<h2 id="api-keys">API Keys</h2>
+<p>Scopes are stored as a plain string array in the <code>Token</code>'s existing <code>Metadata</code> column — no separate table. An empty/nil scopes list means unscoped/full access. See <a href="../../guides/account-security/#scoped-api-keys">Scoped API Keys</a>.</p>
+<pre><code class="language-go">func (a *Auth) APIKeyCreate(ctx context.Context, userID string, scopes []string) (*models.Token, error)
+func (a *Auth) APIKeyRevoke(ctx context.Context, userID, id string) error // ErrAPIKeyNotFound if id isn't userID's
+func (a *Auth) APIKeysList(ctx context.Context, userID string) ([]APIKeyInfo, error) // raw key omitted, see APIKeyCreate
+</code></pre>
+<h2 id="asymmetric-jwt-signing-jwks">Asymmetric JWT Signing (JWKS)</h2>
+<p>Configured via <code>Cfg.JWT</code> (<code>Algorithm</code>, <code>PrivateKey</code>, <code>PublicKey</code>, <code>KeyID</code>, <code>PreviousPublicKey</code>, <code>PreviousKeyID</code> — see <a href="../../configuration/">Configuration</a>); defaults to symmetric HS256 (<code>Cfg.JWTSecret</code>) when <code>Cfg.JWT.Algorithm</code> is unset.</p>
+<pre><code class="language-go">func (a *Auth) JWTKeyFunc() jwt.Keyfunc          // resolves the verification key by the token's &quot;kid&quot; — used by AuthMiddleware
+func (a *Auth) JWTSigningMethods() []string      // accepted algorithm(s) for jwt.WithValidMethods
+func (a *Auth) JWKS() JWKSet                     // JSON Web Key Set for GET /.well-known/jwks.json; empty for HS256
+</code></pre>
+<p><code>JWKSet</code>/<code>JWK</code> are RFC 7517 types covering RSA and Ed25519 (OKP) public keys.</p>
 <h2 id="password-flows">Password Flows</h2>
 <h3 id="passwordresetrequest"><code>PasswordResetRequest</code></h3>
 <p>Generates a reset token and sends it via email.</p>
@@ -1471,6 +2480,160 @@
 <h3 id="passwordlesslogin"><code>PasswordlessLogin</code></h3>
 <p>Verifies the magic link token and issues authentication tokens.</p>
 <pre><code class="language-go">func (a *Auth) PasswordlessLogin(ctx context.Context, token string) (*TokenResponse, error)
+</code></pre>
+<h2 id="oauth2">OAuth2</h2>
+<h3 id="registeroauth2provider"><code>RegisterOAuth2Provider</code></h3>
+<p>Registers a custom or preset OAuth2/OIDC provider at runtime (see <code>pkg/service/providers</code> for presets and OIDC discovery).</p>
+<pre><code class="language-go">func (a *Auth) RegisterOAuth2Provider(name string, p OAuth2Provider)
+</code></pre>
+<h3 id="oauth2getconfig"><code>OAuth2GetConfig</code></h3>
+<p>Returns the <code>*oauth2.Config</code> for a registered provider.</p>
+<pre><code class="language-go">func (a *Auth) OAuth2GetConfig(provider string) (*oauth2.Config, error)
+</code></pre>
+<h3 id="oauth2getuserinfo"><code>OAuth2GetUserInfo</code></h3>
+<p>Exchanges a provider token for the provider's user info.</p>
+<pre><code class="language-go">func (a *Auth) OAuth2GetUserInfo(ctx context.Context, provider string, token *oauth2.Token) (*OAuth2UserInfo, error)
+</code></pre>
+<h3 id="oauth2authenticate"><code>OAuth2Authenticate</code></h3>
+<p>Finds or creates a local user from OAuth2 user info, auto-linking to an existing account only when the provider confirms <code>email_verified: true</code>.</p>
+<pre><code class="language-go">func (a *Auth) OAuth2Authenticate(ctx context.Context, provider string, userInfo *OAuth2UserInfo) (*models.User, error)
+</code></pre>
+<h2 id="impersonation">Impersonation</h2>
+<p><code>ezauth</code> enforces no authorization on who may impersonate — the caller is responsible for checking that the admin is allowed to (e.g. <code>adminUser.HasRole("admin")</code>) before calling <code>Impersonate</code>.</p>
+<h3 id="impersonate"><code>Impersonate</code></h3>
+<p>Mints a new token pair for a target user on behalf of the admin. The resulting access token carries an <code>act</code> claim identifying the admin.</p>
+<pre><code class="language-go">func (a *Auth) Impersonate(ctx context.Context, adminUser *models.User, targetUserID string) (*TokenResponse, error)
+</code></pre>
+<h3 id="stopimpersonating"><code>StopImpersonating</code></h3>
+<p>Revokes an impersonation refresh token, ending that session.</p>
+<pre><code class="language-go">func (a *Auth) StopImpersonating(ctx context.Context, impersonationRefreshToken string) error
+</code></pre>
+<h2 id="multi-factor-authentication-totp">Multi-Factor Authentication (TOTP)</h2>
+<h3 id="mfaenroll"><code>MFAEnroll</code></h3>
+<p>Generates a new TOTP secret and provisioning URI for a user; the secret is not persisted until <code>MFAConfirm</code> verifies a code.</p>
+<pre><code class="language-go">func (a *Auth) MFAEnroll(ctx context.Context, user *models.User) (*MFAEnrollResponse, error)
+</code></pre>
+<h3 id="mfaconfirm"><code>MFAConfirm</code></h3>
+<p>Verifies the enrollment code and enables MFA, returning a set of one-time recovery codes.</p>
+<pre><code class="language-go">func (a *Auth) MFAConfirm(ctx context.Context, user *models.User, code string) ([]string, error)
+</code></pre>
+<h3 id="mfadisable"><code>MFADisable</code></h3>
+<p>Disables MFA after verifying a current TOTP or recovery code.</p>
+<pre><code class="language-go">func (a *Auth) MFADisable(ctx context.Context, user *models.User, code string) error
+</code></pre>
+<h3 id="completebasiclogin"><code>CompleteBasicLogin</code></h3>
+<p>Called after password/OAuth2 authentication succeeds; returns tokens directly if MFA is not enabled or the device is trusted, otherwise returns a pending <code>mfa_token</code> for step-up verification.</p>
+<pre><code class="language-go">func (a *Auth) CompleteBasicLogin(ctx context.Context, user *models.User, deviceToken string) (*LoginResponse, error)
+</code></pre>
+<h3 id="mfaloginverify"><code>MFALoginVerify</code></h3>
+<p>Completes a step-up login by verifying a TOTP/recovery code against a pending <code>mfa_token</code>; optionally issues a trusted-device token.</p>
+<pre><code class="language-go">func (a *Auth) MFALoginVerify(ctx context.Context, mfaToken, code string, rememberDevice bool) (user *models.User, tokens *TokenResponse, deviceToken string, err error)
+</code></pre>
+<h3 id="trusted-devices">Trusted Devices</h3>
+<pre><code class="language-go">func (a *Auth) TrustDevice(ctx context.Context, user *models.User, name string) (string, error)
+func (a *Auth) IsTrustedDevice(ctx context.Context, user *models.User, deviceToken string) bool
+func (a *Auth) TrustedDevices(ctx context.Context, userID string) ([]TrustedDeviceInfo, error)
+func (a *Auth) RevokeTrustedDevice(ctx context.Context, user *models.User, deviceID string) error
+</code></pre>
+<h2 id="sessions">Sessions</h2>
+<p>Each refresh token issued to a user is a session (one per login/device). <code>RevokeAllSessions</code>'s <code>exceptSessionID</code> keeps the named session — pass <code>""</code> to log out everywhere.</p>
+<pre><code class="language-go">func (a *Auth) Sessions(ctx context.Context, userID string) ([]SessionInfo, error)
+func (a *Auth) RevokeSession(ctx context.Context, user *models.User, sessionID string) error
+func (a *Auth) RevokeAllSessions(ctx context.Context, user *models.User, exceptSessionID string) error
+</code></pre>
+<h2 id="webauthn-passkeys">WebAuthn / Passkeys</h2>
+<h3 id="registration">Registration</h3>
+<pre><code class="language-go">func (a *Auth) WebauthnBeginRegistration(ctx context.Context, user *models.User) (*protocol.CredentialCreation, string, error)
+func (a *Auth) WebauthnFinishRegistration(ctx context.Context, user *models.User, sessionKey string, r *http.Request, name string) (*models.WebauthnCredential, error)
+</code></pre>
+<h3 id="login">Login</h3>
+<p>Discoverable (usernameless) login: no user is known until the authenticator's response is verified, which is why the in-flight challenge is stored in a dedicated <code>ezauth_webauthn_challenges</code> table rather than the Tokens table.</p>
+<pre><code class="language-go">func (a *Auth) WebauthnBeginLogin(ctx context.Context) (*protocol.CredentialAssertion, string, error)
+func (a *Auth) WebauthnFinishLogin(ctx context.Context, sessionKey string, r *http.Request) (*models.User, *TokenResponse, error)
+</code></pre>
+<h3 id="managing-credentials">Managing Credentials</h3>
+<pre><code class="language-go">func (a *Auth) WebauthnCredentials(ctx context.Context, userID string) ([]*models.WebauthnCredential, error)
+func (a *Auth) WebauthnDeleteCredential(ctx context.Context, user *models.User, credentialRecordID string) error
+</code></pre>
+<h2 id="sms-otp">SMS OTP</h2>
+<h3 id="smsotprequest"><code>SMSOTPRequest</code></h3>
+<p>Generates and sends an OTP code via the configured <code>SMSSender</code>. Creates a placeholder user (with a synthetic <code>phone+"@phone.invalid"</code> email) on first use by a new phone number.</p>
+<pre><code class="language-go">func (a *Auth) SMSOTPRequest(ctx context.Context, req RequestSMSOTP) error
+</code></pre>
+<h3 id="smsotpverify"><code>SMSOTPVerify</code></h3>
+<p>Verifies the code and issues authentication tokens.</p>
+<pre><code class="language-go">func (a *Auth) SMSOTPVerify(ctx context.Context, req RequestSMSOTPVerify) (*TokenResponse, error)
+</code></pre>
+<h2 id="invitation-based-onboarding">Invitation-Based Onboarding</h2>
+<p><code>ezauth</code> enforces no authorization on who may invite — same stance as <code>Impersonate</code>.</p>
+<pre><code class="language-go">func (a *Auth) InvitationCreate(ctx context.Context, inviter *models.User, req RequestInvitation) (*InvitationInfo, error)
+func (a *Auth) InvitationPreview(ctx context.Context, tokenValue string) (*InvitationInfo, error)
+func (a *Auth) InvitationAccept(ctx context.Context, req RequestInvitationAccept) (*models.User, *TokenResponse, error)
+func (a *Auth) Invitations(ctx context.Context, inviterID string) ([]InvitationInfo, error)
+func (a *Auth) InvitationRevoke(ctx context.Context, inviter *models.User, invitationID string) error
+</code></pre>
+<h2 id="guarded-email-change">Guarded Email Change</h2>
+<h3 id="emailchangerequest"><code>EmailChangeRequest</code></h3>
+<p>Requires the current password; sends a confirmation link to the new address and a notice to the old one.</p>
+<pre><code class="language-go">func (a *Auth) EmailChangeRequest(ctx context.Context, user *models.User, req RequestEmailChange) error
+</code></pre>
+<h3 id="emailchangeconfirm"><code>EmailChangeConfirm</code></h3>
+<p>Applies the change and revokes every other session.</p>
+<pre><code class="language-go">func (a *Auth) EmailChangeConfirm(ctx context.Context, tokenValue string) (*models.User, error)
+</code></pre>
+<h2 id="admin-user-management">Admin User Management</h2>
+<p><code>ezauth</code> enforces no authorization on who may call these — same stance as <code>Impersonate</code>.</p>
+<h3 id="userslist"><code>UsersList</code></h3>
+<p>Search/filter/paginate users. Supports <code>Search</code> (email/username substring, case-insensitive across all 3 dialects), <code>Status</code> (<code>UserStatusActive</code>/<code>Locked</code>/<code>Suspended</code>), <code>CreatedAfter</code>/<code>CreatedBefore</code>, <code>LastActiveAfter</code>/<code>LastActiveBefore</code>, <code>Limit</code>/<code>Offset</code>. Returned users have <code>PasswordHash</code> stripped.</p>
+<pre><code class="language-go">func (a *Auth) UsersList(ctx context.Context, opts ListUsersOptions) (*ListUsersResult, error)
+</code></pre>
+<h3 id="usersuspend-userreactivate"><code>UserSuspend</code> / <code>UserReactivate</code></h3>
+<p>Suspend deactivates a user's account with no auto-expiry (distinct from a brute-force lockout); reactivate re-enables a suspended or locked-out account.</p>
+<pre><code class="language-go">func (a *Auth) UserSuspend(ctx context.Context, userID string) (*models.User, error)
+func (a *Auth) UserReactivate(ctx context.Context, userID string) (*models.User, error)
+</code></pre>
+<h3 id="userauthhistory"><code>UserAuthHistory</code></h3>
+<p>Returns the user's most recent authentication-related token events, newest first. A lightweight proxy built from the Tokens table — see <code>AuditLogs</code> below for a real persisted audit trail.</p>
+<pre><code class="language-go">func (a *Auth) UserAuthHistory(ctx context.Context, userID string, limit int) ([]AuthHistoryEntry, error)
+</code></pre>
+<h2 id="audit-log">Audit Log</h2>
+<p><code>ezauth</code> persists a row to an audit log for security-relevant events (login success/failure, password reset, impersonation, account lockout, MFA, user create/delete) automatically, via a built-in hook that wraps whatever <code>Hook</code> you register — see <a href="../../guides/admin-operations/#hooks">Hooks</a>. Enabled by default; disable with <code>EZAUTH_AUDIT_LOG_ENABLED=false</code>.</p>
+<pre><code class="language-go">func (a *Auth) AuditLogs(ctx context.Context, userID string, opts ListAuditLogsOptions) (*ListAuditLogsResult, error)
+</code></pre>
+<p><code>ListAuditLogsOptions</code> supports <code>EventType</code> (a <code>models.AuditEvent*</code> constant), <code>Since</code>/<code>Until</code> (<code>*time.Time</code>), and <code>Limit</code>/<code>Offset</code> (default 50, max 200). <code>ezauth</code> enforces no authorization on who may call this — same stance as <code>UsersList</code>.</p>
+<h2 id="roles-permissions-rbac">Roles &amp; Permissions (RBAC)</h2>
+<p>Real RBAC — separate from, and additive to, the legacy <code>User.Roles</code> string field and its <code>HasRole</code>/<code>AddRole</code>/etc. helpers. See <a href="../../guides/admin-operations/#roles-permissions-rbac">Roles &amp; Permissions (RBAC)</a>.</p>
+<pre><code class="language-go">func (a *Auth) RoleCreate(ctx context.Context, name, description string) (*models.Role, error)
+func (a *Auth) RolesList(ctx context.Context) ([]*models.Role, error)
+func (a *Auth) RoleDelete(ctx context.Context, id string) error
+
+func (a *Auth) PermissionCreate(ctx context.Context, name, description string) (*models.Permission, error)
+func (a *Auth) PermissionsList(ctx context.Context) ([]*models.Permission, error)
+func (a *Auth) PermissionDelete(ctx context.Context, id string) error
+
+// Idempotent; each records an AuditEventRoleGranted/AuditEventRoleRevoked audit event.
+func (a *Auth) UserRoleGrant(ctx context.Context, userID, roleName string) error
+func (a *Auth) UserRoleRevoke(ctx context.Context, userID, roleName string) error
+
+func (a *Auth) RolePermissionGrant(ctx context.Context, roleName, permissionName string) error
+func (a *Auth) RolePermissionRevoke(ctx context.Context, roleName, permissionName string) error
+
+func (a *Auth) UserRolesList(ctx context.Context, userID string) ([]*models.Role, error)
+func (a *Auth) UserHasRole(ctx context.Context, userID, roleName string) (bool, error)
+func (a *Auth) UserHasPermission(ctx context.Context, userID, permissionName string) (bool, error) // resolved transitively through the user's roles
+</code></pre>
+<h2 id="organizations">Organizations</h2>
+<p>Lightweight multi-tenancy. Each member's role is drawn from the RBAC role catalog above. See <a href="../../guides/admin-operations/#organizations">Organizations</a>.</p>
+<pre><code class="language-go">func (a *Auth) OrganizationCreate(ctx context.Context, name string) (*models.Organization, error)
+func (a *Auth) OrganizationGetByID(ctx context.Context, id string) (*models.Organization, error)
+func (a *Auth) OrganizationsList(ctx context.Context, opts ListOrganizationsOptions) (*ListOrganizationsResult, error) // paginated (Limit default 50, max 200)
+func (a *Auth) OrganizationDelete(ctx context.Context, id string) error // cascades org_members
+
+// OrgMemberAdd upserts: calling it again for the same (org, user) updates the role.
+func (a *Auth) OrgMemberAdd(ctx context.Context, orgID, userID, roleName string) error
+func (a *Auth) OrgMemberRemove(ctx context.Context, orgID, userID string) error
+func (a *Auth) OrgMembersList(ctx context.Context, orgID string) ([]*models.OrgMember, error) // RoleName joined in
+func (a *Auth) UserOrganizationsList(ctx context.Context, userID string) ([]*models.Organization, error)
 </code></pre>
 
 

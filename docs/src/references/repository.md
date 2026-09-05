@@ -202,7 +202,7 @@ func (r Repository) AuditLogListByUserID(ctx context.Context, userID string, fil
 
 ## RBAC Methods
 
-Real RBAC — roles/permissions tables and their `user_roles`/`role_permissions` join tables — separate from the legacy `User.Roles` string field. See [Roles & Permissions (RBAC)](../guides/admin-operations.md#roles--permissions-rbac).
+Real RBAC — roles/permissions tables and their `user_roles`/`role_permissions` join tables — separate from the legacy `User.Roles` string field. See [Roles & Permissions (RBAC)](../guides/admin-operations.md#roles-permissions-rbac).
 
 ```go
 func (r Repository) RoleCreate(ctx context.Context, role *models.Role) (*models.Role, error)

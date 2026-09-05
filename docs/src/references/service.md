@@ -44,7 +44,7 @@ func (a *Auth) UserCreate(ctx context.Context, req *RequestBasicAuth) (*models.U
 Authenticates a user by email and password.
 
 ```go
-func (a Auth) UserAuthenticate(ctx context.Context, req RequestBasicAuth) (*models.User, error)
+func (a *Auth) UserAuthenticate(ctx context.Context, req RequestBasicAuth) (*models.User, error)
 ```
 
 ### `UserUpdatePassword`
@@ -52,7 +52,7 @@ func (a Auth) UserAuthenticate(ctx context.Context, req RequestBasicAuth) (*mode
 Updates a user's password. Enforces password validation rules.
 
 ```go
-func (a Auth) UserUpdatePassword(ctx context.Context, user *models.User, password string) (*models.User, error)
+func (a *Auth) UserUpdatePassword(ctx context.Context, user *models.User, password string) (*models.User, error)
 ```
 
 ### `UserUpdate`
@@ -60,7 +60,7 @@ func (a Auth) UserUpdatePassword(ctx context.Context, user *models.User, passwor
 Updates user profile information.
 
 ```go
-func (a Auth) UserUpdate(ctx context.Context, user *models.User) (*models.User, error)
+func (a *Auth) UserUpdate(ctx context.Context, user *models.User) (*models.User, error)
 ```
 
 ### `UserDelete`
@@ -68,7 +68,7 @@ func (a Auth) UserUpdate(ctx context.Context, user *models.User) (*models.User, 
 Deletes a user by their ID.
 
 ```go
-func (a Auth) UserDelete(ctx context.Context, id string) error
+func (a *Auth) UserDelete(ctx context.Context, id string) error
 ```
 
 ## Token Operations
@@ -382,7 +382,7 @@ func (a *Auth) AuditLogs(ctx context.Context, userID string, opts ListAuditLogsO
 
 ## Roles & Permissions (RBAC)
 
-Real RBAC — separate from, and additive to, the legacy `User.Roles` string field and its `HasRole`/`AddRole`/etc. helpers. See [Roles & Permissions (RBAC)](../guides/admin-operations.md#roles--permissions-rbac).
+Real RBAC — separate from, and additive to, the legacy `User.Roles` string field and its `HasRole`/`AddRole`/etc. helpers. See [Roles & Permissions (RBAC)](../guides/admin-operations.md#roles-permissions-rbac).
 
 ```go
 func (a *Auth) RoleCreate(ctx context.Context, name, description string) (*models.Role, error)

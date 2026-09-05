@@ -60,7 +60,7 @@ r.Use(middleware.Logger)
 r.Use(middleware.Recoverer)
 
 // IMPORTANT: Session middleware
-r.Use(auth.Handler.Session.LoadAndSave)
+r.Use(auth.SessionMiddleware)
 ```
 
 ### 3. Mounting Routes
@@ -144,7 +144,7 @@ r.Post("/profile/delete", func(w http.ResponseWriter, r *http.Request) {
 
 ### 6. Roles, Organizations, and Scoped API Keys
 
-Beyond session auth, `auth.Service` (or the top-level `auth.*` facade methods) exposes real RBAC, lightweight multi-tenancy, and scoped API keys — see [Roles & Permissions](../guides/admin-operations.md#roles--permissions-rbac), [Organizations](../guides/admin-operations.md#organizations), and [Scoped API Keys](../guides/account-security.md#scoped-api-keys) for the full reference. A one-time setup script for this dashboard app might look like:
+Beyond session auth, `auth.Service` (or the top-level `auth.*` facade methods) exposes real RBAC, lightweight multi-tenancy, and scoped API keys — see [Roles & Permissions](../guides/admin-operations.md#roles-permissions-rbac), [Organizations](../guides/admin-operations.md#organizations), and [Scoped API Keys](../guides/account-security.md#scoped-api-keys) for the full reference. A one-time setup script for this dashboard app might look like:
 
 ```go
 // Define a role once, then gate a route with it.
@@ -165,7 +165,7 @@ _ = auth.OrgMemberAdd(ctx, org.ID, user.ID, "admin")
 key, _ := auth.APIKeyCreate(ctx, user.ID, []string{"reports:read"})
 // key.Token is the raw key value — show it to the user now, it can't be recovered later.
 
-r.Use(auth.APIKeyMiddleware) // group-level gate: any valid key of this user's gets past this
+r.Use(auth.Handler.APIKeyMiddleware) // group-level gate: any valid key gets past this
 r.With(auth.RequireAPIKeyScope("reports:read")).Get("/api/reports", reportsHandler)
 ```
 
