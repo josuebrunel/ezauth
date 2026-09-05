@@ -1010,6 +1010,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#standalone-middleware-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Standalone Middleware Package
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1393,6 +1404,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#standalone-middleware-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Standalone Middleware Package
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1469,6 +1491,47 @@
 <p>Resolves the "current organization" for a request via an app-supplied <code>OrgLoader</code> (<code>ezauth</code> doesn't presume how an org is identified — URL param, subdomain, header, etc.) and loads it into context. Mirrors <code>LoadUserMiddleware</code> exactly. See <a href="../../guides/admin-operations/#organizations">Organizations</a>.</p>
 <pre><code class="language-go">type OrgLoader func(context.Context) (*models.Organization, error)
 func (h *Handler) OrgLoaderMiddleware(loader ezmiddleware.OrgLoader) func(http.Handler) http.Handler
+</code></pre>
+<h2 id="standalone-middleware-package">Standalone Middleware Package</h2>
+<p>Every middleware above is a thin <code>(h *Handler)</code> wrapper around a standalone
+function in <code>github.com/josuebrunel/ezauth/pkg/handler/middleware</code> (imported
+as <code>ezmiddleware</code> elsewhere in this reference). Reach for the package
+directly if you're composing routes without a <code>Handler</code> instance — e.g.
+protecting a non-<code>ezauth</code> route with just a <code>TokenGetter</code>/<code>RoleChecker</code>
+implementation.</p>
+<pre><code class="language-go">// Same logic as the Handler methods above, taking explicit dependencies
+// (a RoleChecker, TokenGetter, etc.) instead of a *Handler.
+func AuthMiddleware(keyFunc jwt.Keyfunc, validMethods []string) func(http.Handler) http.Handler
+func APIKeyMiddleware(configApiKey string, tokenRepo TokenGetter) func(http.Handler) http.Handler
+func RequireAPIKeyScope(scope string) func(http.Handler) http.Handler
+func RequireRole(checker RoleChecker, role string) func(http.Handler) http.Handler
+func RequirePermission(checker PermissionChecker, permission string) func(http.Handler) http.Handler
+func LoginRequiredMiddleware(authChecker AuthChecker, loginPath string) func(http.Handler) http.Handler
+func LoadUserMiddleware(loader UserLoader) func(http.Handler) http.Handler
+func OrgLoaderMiddleware(loader OrgLoader) func(http.Handler) http.Handler
+func LoadAndSaveMiddleware(sm *scs.SessionManager) func(http.Handler) http.Handler
+func SessionMiddleware(sm *scs.SessionManager, loader UserLoader) func(http.Handler) http.Handler
+
+// Chains middlewares in order: Chain(a, b)(h) runs a, then b, then h.
+func Chain(middlewares ...func(http.Handler) http.Handler) func(http.Handler) http.Handler
+</code></pre>
+<p><strong>Context-key constants</strong> — set by the middleware above, read via
+<code>context.Value</code>: <code>UserContextKey</code>, <code>UserObjectContextKey</code>,
+<code>ImpersonatorContextKey</code>, <code>SessionTokensContextKey</code>,
+<code>SessionImpersonatorKey</code>, <code>APIKeyScopesContextKey</code>, <code>OrgContextKey</code>,
+<code>OrgObjectContextKey</code>.</p>
+<p><strong>Rate limiting</strong> — the <code>EZAUTH_RATE_LIMIT_*</code> settings (see
+<a href="../../configuration/#rate-limit-settings">Configuration</a>) configure the
+<code>RateLimiter</code> ezauth mounts internally, but you can also run one standalone:</p>
+<pre><code class="language-go">type RateLimitConfig struct {
+    Enabled    bool
+    Requests   int
+    Window     time.Duration
+    ByClientIP bool
+}
+
+func NewRateLimiter(cfg RateLimitConfig) *RateLimiter
+func (rl *RateLimiter) Middleware(next http.Handler) http.Handler
 </code></pre>
 
 
