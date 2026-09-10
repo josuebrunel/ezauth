@@ -9,6 +9,7 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	ezmiddleware "github.com/josuebrunel/ezauth/pkg/handler/middleware"
+	"github.com/josuebrunel/ezauth/pkg/service"
 	"github.com/josuebrunel/ezauth/pkg/util"
 )
 
@@ -230,6 +231,61 @@ func TestStashSessionContext(t *testing.T) {
 	// Stashing must not disturb the underlying session.
 	if got, ok := h.Session.Get(ctx, sessionImpersonatorIDKey).(string); !ok || got != "admin-1" {
 		t.Errorf("session impersonator id changed: %q ok=%v", got, ok)
+	}
+}
+
+// TestSetAuthCookies_RenewsSessionToken guards against session fixation: a
+// session token issued before login must not still be valid after login, so
+// setAuthCookies must rotate it (scs.SessionManager.RenewToken) before
+// storing the auth tokens.
+func TestSetAuthCookies_RenewsSessionToken(t *testing.T) {
+	h := &Handler{Session: scs.New()}
+
+	ctx, err := h.Session.Load(context.Background(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	preLoginToken := h.Session.Token(ctx)
+
+	tokenResp := &service.TokenResponse{AccessToken: "access", RefreshToken: "refresh"}
+	if err := h.setAuthCookies(ctx, tokenResp); err != nil {
+		t.Fatalf("setAuthCookies failed: %v", err)
+	}
+
+	if got := h.Session.Token(ctx); got == preLoginToken {
+		t.Error("expected session token to be renewed on login, but it did not change")
+	}
+
+	tokens, ok := GetSessionTokens(h.stashSessionContext(ctx))
+	if !ok || tokens["access_token"] != "access" || tokens["refresh_token"] != "refresh" {
+		t.Errorf("expected auth tokens to still be set after renewal, got %v ok=%v", tokens, ok)
+	}
+}
+
+// TestSetImpersonationCookies_RenewsSessionToken covers the same fixation
+// guard for the impersonation-start path, which is itself a privilege-level
+// change, while confirming the impersonator stash written just before the
+// renewal survives it (RenewToken migrates session data, it doesn't drop it).
+func TestSetImpersonationCookies_RenewsSessionToken(t *testing.T) {
+	h := &Handler{Session: scs.New()}
+
+	ctx, err := h.Session.Load(context.Background(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	preToken := h.Session.Token(ctx)
+
+	tokenResp := &service.TokenResponse{AccessToken: "target-access", RefreshToken: "target-refresh"}
+	if err := h.setImpersonationCookies(ctx, "admin-1", tokenResp); err != nil {
+		t.Fatalf("setImpersonationCookies failed: %v", err)
+	}
+
+	if got := h.Session.Token(ctx); got == preToken {
+		t.Error("expected session token to be renewed on impersonation start, but it did not change")
+	}
+
+	if got, ok := h.Session.Get(ctx, sessionImpersonatorIDKey).(string); !ok || got != "admin-1" {
+		t.Errorf("expected impersonator id admin-1 to survive renewal, got %q ok=%v", got, ok)
 	}
 }
 

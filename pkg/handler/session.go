@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	ezmiddleware "github.com/josuebrunel/ezauth/pkg/handler/middleware"
@@ -44,13 +45,23 @@ func (h *Handler) stashSessionContext(ctx context.Context) context.Context {
 	return ctx
 }
 
-// setAuthCookies sets the access and refresh tokens in the session.
-func (h *Handler) setAuthCookies(ctx context.Context, tokenResp *service.TokenResponse) {
+// setAuthCookies establishes an authenticated session: it renews the
+// session token before storing the access/refresh tokens, so a session ID
+// issued before login is never reused after login (session fixation — scs's
+// own RenewToken doc comment calls out login/logout as exactly the
+// privilege-level changes this guards against). This is the single choke
+// point every login/registration/OAuth/passwordless/WebAuthn/SMS-OTP/MFA
+// path funnels through, so renewing here covers all of them.
+func (h *Handler) setAuthCookies(ctx context.Context, tokenResp *service.TokenResponse) error {
+	if err := h.Session.RenewToken(ctx); err != nil {
+		return fmt.Errorf("renew session token: %w", err)
+	}
 	tokens := map[string]string{
 		"access_token":  tokenResp.AccessToken,
 		"refresh_token": tokenResp.RefreshToken,
 	}
 	h.Session.Put(ctx, sessionTokensKey, tokens)
+	return nil
 }
 
 // clearAuthCookies clears the authentication session.
@@ -61,13 +72,16 @@ func (h *Handler) clearAuthCookies(ctx context.Context) {
 
 // setImpersonationCookies stashes the admin's current session tokens, then swaps the
 // session over to the target user's tokens. Used to start a "swap back"-capable
-// impersonation session for cookie-based (form) clients.
-func (h *Handler) setImpersonationCookies(ctx context.Context, adminID string, tokenResp *service.TokenResponse) {
+// impersonation session for cookie-based (form) clients. Impersonation is itself a
+// privilege-level change, so it goes through setAuthCookies's session-renewal too;
+// renewal migrates the session token while keeping its data (including the stash
+// just written below), so this ordering is safe.
+func (h *Handler) setImpersonationCookies(ctx context.Context, adminID string, tokenResp *service.TokenResponse) error {
 	if current, ok := h.GetSessionTokens(ctx); ok {
 		h.Session.Put(ctx, sessionImpersonatorTokensKey, current)
 	}
 	h.Session.Put(ctx, sessionImpersonatorIDKey, adminID)
-	h.setAuthCookies(ctx, tokenResp)
+	return h.setAuthCookies(ctx, tokenResp)
 }
 
 // clearImpersonationCookies restores the stashed admin tokens into the session, ending

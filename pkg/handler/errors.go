@@ -16,6 +16,7 @@ var (
 	ErrBearerTokenRequired          = middleware.ErrBearerTokenRequired
 	ErrAuthorizationHeaderRequired  = middleware.ErrAuthorizationHeaderRequired
 	ErrCouldNotCreateToken          = errors.New("could not create token")
+	ErrCouldNotEstablishSession     = errors.New("could not establish session")
 	ErrCouldNotCreateUser           = errors.New("could not create user")
 	ErrInvalidCredentials           = errors.New("invalid email or password")
 	ErrCouldNotRetrieveUser         = errors.New("could not retrieve user")

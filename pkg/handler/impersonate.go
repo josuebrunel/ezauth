@@ -192,7 +192,11 @@ func (h *Handler) FormImpersonate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	h.setImpersonationCookies(r.Context(), admin.ID, tokenResp)
+	if err := h.setImpersonationCookies(r.Context(), admin.ID, tokenResp); err != nil {
+		xlog.Error("could not establish impersonation session", "admin_id", admin.ID, "target_user_id", targetUserID, "err", err)
+		h.redirectWithError(w, r, h.svc.Cfg.Redirects.AfterLogin, ErrCouldNotEstablishSession.Error())
+		return
+	}
 	http.Redirect(w, r, h.svc.Cfg.Redirects.AfterLogin, http.StatusFound)
 }
 

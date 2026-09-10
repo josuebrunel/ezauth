@@ -82,7 +82,11 @@ func (h *Handler) FormRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.setAuthCookies(r.Context(), tokenResp)
+	if err := h.setAuthCookies(r.Context(), tokenResp); err != nil {
+		xlog.Error("could not establish session", "user_id", user.ID, "err", err)
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.Register, ErrCouldNotEstablishSession.Error())
+		return
+	}
 	http.Redirect(w, r, h.svc.Cfg.Redirects.AfterRegister, http.StatusFound)
 }
 
@@ -186,7 +190,11 @@ func (h *Handler) FormInvitationAccept(w http.ResponseWriter, r *http.Request) {
 		xlog.Error("hook AfterUserSignedIn failed", "user_id", user.ID, "err", err)
 	}
 
-	h.setAuthCookies(r.Context(), tokenResp)
+	if err := h.setAuthCookies(r.Context(), tokenResp); err != nil {
+		xlog.Error("could not establish session", "user_id", user.ID, "err", err)
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.InvitationAccept, ErrCouldNotEstablishSession.Error())
+		return
+	}
 	http.Redirect(w, r, h.svc.Cfg.Redirects.AfterRegister, http.StatusFound)
 }
 
@@ -233,7 +241,11 @@ func (h *Handler) FormLogin(w http.ResponseWriter, r *http.Request) {
 		xlog.Error("hook AfterUserSignedIn failed", "user_id", user.ID, "err", err)
 	}
 
-	h.setAuthCookies(r.Context(), loginResp.TokenResponse)
+	if err := h.setAuthCookies(r.Context(), loginResp.TokenResponse); err != nil {
+		xlog.Error("could not establish session", "user_id", user.ID, "err", err)
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrCouldNotEstablishSession.Error())
+		return
+	}
 	http.Redirect(w, r, h.svc.Cfg.Redirects.AfterLogin, http.StatusFound)
 }
 
@@ -282,7 +294,11 @@ func (h *Handler) FormMFALoginVerify(w http.ResponseWriter, r *http.Request) {
 		xlog.Error("hook AfterUserSignedIn failed", "user_id", user.ID, "err", err)
 	}
 
-	h.setAuthCookies(r.Context(), tokenResp)
+	if err := h.setAuthCookies(r.Context(), tokenResp); err != nil {
+		xlog.Error("could not establish session", "user_id", user.ID, "err", err)
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrCouldNotEstablishSession.Error())
+		return
+	}
 	http.Redirect(w, r, h.svc.Cfg.Redirects.AfterLogin, http.StatusFound)
 }
 
@@ -482,7 +498,11 @@ func (h *Handler) FormWebauthnLoginFinish(w http.ResponseWriter, r *http.Request
 		xlog.Error("hook AfterUserSignedIn failed", "user_id", user.ID, "err", err)
 	}
 
-	h.setAuthCookies(r.Context(), tokenResp)
+	if err := h.setAuthCookies(r.Context(), tokenResp); err != nil {
+		xlog.Error("could not establish session", "user_id", user.ID, "err", err)
+		WriteJSONResponseError(w, http.StatusInternalServerError, ErrCouldNotEstablishSession)
+		return
+	}
 	WriteJSONResponse(w, http.StatusOK, map[string]string{"redirect": h.svc.Cfg.Redirects.AfterLogin}, nil)
 }
 
@@ -538,7 +558,11 @@ func (h *Handler) FormPasswordlessLogin(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	h.setAuthCookies(r.Context(), tokenResp)
+	if err := h.setAuthCookies(r.Context(), tokenResp); err != nil {
+		xlog.Error("could not establish session", "err", err)
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrCouldNotEstablishSession.Error())
+		return
+	}
 	http.Redirect(w, r, h.svc.Cfg.Redirects.AfterLogin, http.StatusFound)
 }
 
@@ -585,7 +609,11 @@ func (h *Handler) FormSMSOTPVerify(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	h.setAuthCookies(r.Context(), tokenResp)
+	if err := h.setAuthCookies(r.Context(), tokenResp); err != nil {
+		xlog.Error("could not establish session", "err", err)
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrCouldNotEstablishSession.Error())
+		return
+	}
 	http.Redirect(w, r, h.svc.Cfg.Redirects.AfterLogin, http.StatusFound)
 }
 
@@ -841,6 +869,10 @@ func (h *Handler) OAuth2Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.setAuthCookies(r.Context(), tokenResp)
+	if err := h.setAuthCookies(r.Context(), tokenResp); err != nil {
+		xlog.Error("could not establish session", "provider", provider, "user_id", user.ID, "err", err)
+		WriteJSONResponseError(w, http.StatusInternalServerError, ErrCouldNotEstablishSession)
+		return
+	}
 	http.Redirect(w, r, h.svc.Cfg.Redirects.AfterLogin, http.StatusFound)
 }

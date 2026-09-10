@@ -45,7 +45,9 @@ func TestHandler_CurrentImpersonatorID(t *testing.T) {
 
 	t.Run("cookie-session transport", func(t *testing.T) {
 		tokenResp := &service.TokenResponse{AccessToken: "access", RefreshToken: "refresh"}
-		h.setImpersonationCookies(sessionCtx, admin.ID, tokenResp)
+		if err := h.setImpersonationCookies(sessionCtx, admin.ID, tokenResp); err != nil {
+			t.Fatalf("setImpersonationCookies failed: %v", err)
+		}
 
 		id, ok := h.CurrentImpersonatorID(sessionCtx)
 		if !ok || id != admin.ID {
