@@ -112,3 +112,4 @@ jobs:
               with:
                   name: ezauthapi-binary
                   path: bin/ezauthapi
+                  retention-days: 7
