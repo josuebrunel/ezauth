@@ -63,7 +63,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 Retrieves the authenticated user. It checks:
 
 1.  Context (if `LoadUserMiddleware` was used)
-2.  Session Cookies (extracts tokens and verifies with DB)
+2.  Session Cookies (extracts the refresh token and verifies it against the
+    DB: it must be an unrevoked, unexpired `refresh` token belonging to an
+    active user, or the lookup fails and the cookie session is destroyed so
+    the same stale cookie isn't re-validated on every subsequent request)
 
 ```go
 func (h *Handler) GetSessionUser(ctx context.Context) (*models.User, error)

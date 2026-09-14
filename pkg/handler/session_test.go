@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/alexedwards/scs/v2"
 	"github.com/josuebrunel/ezauth/pkg/db/models"
@@ -99,6 +100,116 @@ func TestHandler_GetSessionUser(t *testing.T) {
 			t.Errorf("Expected user ID %s, got %s", user.ID, got.ID)
 		}
 	})
+}
+
+// stashRefreshTokenInSession loads a fresh scs session context and stashes
+// rawRefreshToken as the cookie session's refresh token, the same shape
+// GetSessionUser's fallback (cookie-session) lookup path expects.
+func stashRefreshTokenInSession(t *testing.T, h *Handler, rawRefreshToken string) context.Context {
+	t.Helper()
+	ctxVal, err := h.Session.Load(context.Background(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.Session.Put(ctxVal, sessionTokensKey, map[string]string{
+		"access_token":  "irrelevant-for-this-test",
+		"refresh_token": rawRefreshToken,
+	})
+	return ctxVal
+}
+
+// TestHandler_GetSessionUser_RejectsRevokedToken proves a cookie session
+// backed by a revoked refresh token (e.g. after logout, "log out
+// everywhere", or a password reset elsewhere) no longer authenticates, and
+// that the now-useless session is destroyed rather than re-presented. See
+// #202: this row-validation was entirely missing before.
+func TestHandler_GetSessionUser_RejectsRevokedToken(t *testing.T) {
+	h := setupTestHandler(t)
+	ctx := context.Background()
+
+	user, err := h.svc.Repo.UserCreate(ctx, &models.User{Email: util.UniqueEmail("revoked")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tokenResp, err := h.svc.TokenCreate(ctx, user)
+	if err != nil {
+		t.Fatal(err)
+	}
+	row, err := h.svc.Repo.TokenGetByToken(ctx, util.HashToken(tokenResp.RefreshToken))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := h.svc.Repo.TokenRevoke(ctx, row.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	ctxVal := stashRefreshTokenInSession(t, h, tokenResp.RefreshToken)
+	if _, err := h.GetSessionUser(ctxVal); err == nil {
+		t.Fatal("expected a revoked refresh token to fail authentication")
+	}
+	if _, ok := h.GetSessionTokens(ctxVal); ok {
+		t.Error("expected the session to be destroyed after rejecting a revoked token")
+	}
+}
+
+// TestHandler_GetSessionUser_RejectsExpiredToken proves an expired refresh
+// token stops authenticating a cookie session even while the (much
+// longer-lived) scs session cookie itself is still valid.
+func TestHandler_GetSessionUser_RejectsExpiredToken(t *testing.T) {
+	h := setupTestHandler(t)
+	ctx := context.Background()
+
+	user, err := h.svc.Repo.UserCreate(ctx, &models.User{Email: util.UniqueEmail("expired")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rawToken := util.NewIDStripped()
+	_, err = h.svc.Repo.TokenCreate(ctx, &models.Token{
+		ID:        util.NewIDStripped(),
+		UserID:    user.ID,
+		Token:     util.HashToken(rawToken),
+		TokenType: models.TokenTypeRefresh,
+		ExpiresAt: time.Now().Add(-1 * time.Hour),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctxVal := stashRefreshTokenInSession(t, h, rawToken)
+	if _, err := h.GetSessionUser(ctxVal); err == nil {
+		t.Fatal("expected an expired refresh token to fail authentication")
+	}
+	if _, ok := h.GetSessionTokens(ctxVal); ok {
+		t.Error("expected the session to be destroyed after rejecting an expired token")
+	}
+}
+
+// TestHandler_GetSessionUser_RejectsInactiveUser proves a valid, unexpired
+// refresh token still fails cookie-session authentication once the owning
+// user has been suspended.
+func TestHandler_GetSessionUser_RejectsInactiveUser(t *testing.T) {
+	h := setupTestHandler(t)
+	ctx := context.Background()
+
+	user, err := h.svc.Repo.UserCreate(ctx, &models.User{Email: util.UniqueEmail("suspended")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tokenResp, err := h.svc.TokenCreate(ctx, user)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.svc.Repo.UserSetLockoutState(ctx, user.ID, 0, nil, false); err != nil {
+		t.Fatal(err)
+	}
+
+	ctxVal := stashRefreshTokenInSession(t, h, tokenResp.RefreshToken)
+	if _, err := h.GetSessionUser(ctxVal); err == nil {
+		t.Fatal("expected a suspended user's refresh token to fail authentication")
+	}
+	if _, ok := h.GetSessionTokens(ctxVal); ok {
+		t.Error("expected the session to be destroyed after rejecting a suspended user")
+	}
 }
 
 func TestLoadUserMiddleware(t *testing.T) {

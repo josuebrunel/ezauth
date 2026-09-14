@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	ezmiddleware "github.com/josuebrunel/ezauth/pkg/handler/middleware"
@@ -252,12 +253,40 @@ func (h *Handler) GetSessionUser(ctx context.Context) (*models.User, error) {
 		return nil, errors.New("not authenticated")
 	}
 
+	// The row existing is not enough: it may have been revoked (logout,
+	// "log out everywhere", a password reset) or have expired since the
+	// cookie was issued, or belong to a since-suspended user -- none of
+	// which stop the cookie itself from still being presented on every
+	// request until the scs session's own (much longer-lived) expiry.
+	// Destroying the session on any of these makes the failure permanent
+	// instead of re-running this same failed lookup on every subsequent
+	// request with the stale cookie.
+	if token.TokenType != models.TokenTypeRefresh || token.Revoked || !time.Now().Before(token.ExpiresAt) {
+		h.destroySessionQuietly(ctx)
+		return nil, errors.New("not authenticated")
+	}
+
 	user, err := h.svc.Repo.UserGetByID(ctx, token.UserID)
 	if err != nil {
 		return nil, errors.New("not authenticated")
 	}
+	if !user.IsActive {
+		h.destroySessionQuietly(ctx)
+		return nil, errors.New("not authenticated")
+	}
 
 	return user, nil
+}
+
+// destroySessionQuietly destroys the current scs session (so a stale/
+// revoked cookie stops being re-presented) and logs any failure rather than
+// surfacing it: this always runs from an already-failing authentication
+// path, and the caller's own "not authenticated" error is what matters to
+// the request -- a session-store error here shouldn't mask or replace it.
+func (h *Handler) destroySessionQuietly(ctx context.Context) {
+	if err := h.Session.Destroy(ctx); err != nil {
+		xlog.Debug("failed to destroy session for a rejected cookie-session lookup", "error", err)
+	}
 }
 
 // IsAuthenticated checks if the request is authenticated.
