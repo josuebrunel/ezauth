@@ -1177,16 +1177,16 @@
 <p><code>-dialect</code>/<code>-dsn</code>/<code>-schema</code> flags (placed after the action) override the corresponding <code>EZAUTH_DB_*</code> env vars for that one invocation — useful for targeting a different database without changing your environment, e.g. <code>./ezauthapi migrate up -dsn="postgres://.../other_db"</code>.</p>
 </li>
 <li>
+<p><strong>Create an Admin User</strong>:
+    <code>Handler</code>'s admin/RBAC/org/impersonation routes (<code>/auth/api/admin/*</code>, <code>/auth/api/impersonate</code>, and their Form equivalents) require the caller hold an RBAC role — <code>Cfg.AdminRole</code>, <code>admin</code> by default — so do this before you need any of them; nothing else in the standalone service depends on it, but every one of those routes 401s/403s without it. Bootstraps a user (creating it if it doesn't already exist) and grants it that role. Safe to run more than once, including on an already-running deployment — re-running with the same email just ensures the role is granted.
+    <code>bash
+    ./ezauthapi create-admin -email=admin@example.com -password=&lt;a-strong-password&gt;</code>
+    Use <code>-role=&lt;name&gt;</code> to grant a different role instead of the default <code>admin</code>. See <a href="https://github.com/josuebrunel/ezauth#admin-authorization">Admin Authorization</a> in the README for how to customize or disable this gate (<code>handler.WithAdminAuthz</code>) if you're embedding <code>ezauth</code> as a library instead of running this binary directly.</p>
+</li>
+<li>
 <p><strong>Start the Service</strong>:
     <code>bash
     ./ezauthapi</code></p>
-</li>
-<li>
-<p><strong>Create an Admin User</strong> (optional):
-    Bootstraps a user (creating it if it doesn't already exist) and grants it an RBAC role — by default <code>admin</code> — so it passes <code>RequireRole("admin")</code>-gated routes. Safe to run more than once; re-running with the same email just ensures the role is granted.
-    <code>bash
-    ./ezauthapi create-admin -email=admin@example.com -password=&lt;a-strong-password&gt;</code>
-    Use <code>-role=&lt;name&gt;</code> to grant a different role instead of the default <code>admin</code>.</p>
 </li>
 </ol>
 <h2 id="using-docker">Using Docker</h2>
