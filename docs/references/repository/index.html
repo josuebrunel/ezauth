@@ -1039,6 +1039,39 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#usersetemailverified" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UserSetEmailVerified
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usersetphoneverified" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UserSetPhoneVerified
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usersetmfaenabled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UserSetMFAEnabled
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#userdelete" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1137,6 +1170,17 @@
     <span class="md-ellipsis">
       
         TokenRevokeAllByUserID
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tokenrevokeallbyuseridandtype" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TokenRevokeAllByUserIDAndType
       
     </span>
   </a>
@@ -1547,6 +1591,39 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#usersetemailverified" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UserSetEmailVerified
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usersetphoneverified" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UserSetPhoneVerified
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usersetmfaenabled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UserSetMFAEnabled
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#userdelete" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1645,6 +1722,17 @@
     <span class="md-ellipsis">
       
         TokenRevokeAllByUserID
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tokenrevokeallbyuseridandtype" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TokenRevokeAllByUserIDAndType
       
     </span>
   </a>
@@ -1816,12 +1904,25 @@
 <pre><code class="language-go">func (r Repository) UserGetByPhone(ctx context.Context, phone string) (*models.User, error)
 </code></pre>
 <h3 id="userupdate"><code>UserUpdate</code></h3>
-<p>Updates an existing user record. Automatically updates <code>UpdatedAt</code> to the current UTC time.</p>
+<p>Updates an existing user record using partial-update semantics: a zero-valued field (<code>""</code>, <code>nil</code>) is left untouched rather than overwritten, so a caller can pass a partially-populated <code>models.User</code> and only change the fields they set. Automatically updates <code>UpdatedAt</code> to the current UTC time.</p>
+<p><strong><code>EmailVerified</code>, <code>PhoneVerified</code>, <code>IsActive</code>, and <code>MfaEnabled</code> are the exception: <code>UserUpdate</code> never touches them, regardless of what the struct carries.</strong> A bool has no "not set" zero value distinguishable from "set to false" the way <code>""</code>/<code>nil</code> work for other fields, so honoring these four the same way every other field is honored would mean any partial <code>models.User</code> (e.g. fetched by ID and email only) silently deactivates the account and disables MFA. Use <code>UserSetEmailVerified</code>/<code>UserSetPhoneVerified</code>/<code>UserSetMFAEnabled</code>/<code>UserSetLockoutState</code> to change them instead.</p>
 <pre><code class="language-go">func (r Repository) UserUpdate(ctx context.Context, user *models.User) (*models.User, error)
 </code></pre>
 <h3 id="usersetlockoutstate"><code>UserSetLockoutState</code></h3>
 <p>Sets the failed-attempt counter, an optional lockout expiry, and <code>IsActive</code> in one call. Used by both the account-lockout feature (temporary, auto-expiring) and admin suspend/reactivate (permanent, no expiry — <code>lockedUntil</code> is <code>nil</code>).</p>
 <pre><code class="language-go">func (r Repository) UserSetLockoutState(ctx context.Context, userID string, attempts int, lockedUntil *time.Time, isActive bool) (*models.User, error)
+</code></pre>
+<h3 id="usersetemailverified"><code>UserSetEmailVerified</code></h3>
+<p>Sets <code>EmailVerified</code> for a single user; when set to <code>true</code>, also stamps <code>EmailVerifiedAt</code> to now.</p>
+<pre><code class="language-go">func (r Repository) UserSetEmailVerified(ctx context.Context, userID string, verified bool) (*models.User, error)
+</code></pre>
+<h3 id="usersetphoneverified"><code>UserSetPhoneVerified</code></h3>
+<p>Sets <code>PhoneVerified</code> for a single user.</p>
+<pre><code class="language-go">func (r Repository) UserSetPhoneVerified(ctx context.Context, userID string, verified bool) (*models.User, error)
+</code></pre>
+<h3 id="usersetmfaenabled"><code>UserSetMFAEnabled</code></h3>
+<p>Sets <code>MfaEnabled</code> for a single user.</p>
+<pre><code class="language-go">func (r Repository) UserSetMFAEnabled(ctx context.Context, userID string, enabled bool) (*models.User, error)
 </code></pre>
 <h3 id="userdelete"><code>UserDelete</code></h3>
 <p>Deletes a user record.</p>
@@ -1857,8 +1958,12 @@
 <pre><code class="language-go">func (r Repository) TokenRevoke(ctx context.Context, id string) error
 </code></pre>
 <h3 id="tokenrevokeallbyuserid"><code>TokenRevokeAllByUserID</code></h3>
-<p>Revokes every active token for a user (e.g. all sessions, after a confirmed email change).</p>
+<p>Revokes <em>every</em> active token for a user, regardless of type — sessions, API keys, MFA recovery codes, trusted devices, everything. Used where that blanket behavior is the intended policy (e.g. <code>PasswordResetConfirm</code>, on the theory that a password reset should force re-auth everywhere). Most callers mean to revoke only one class of token; use <code>TokenRevokeAllByUserIDAndType</code> for those, so e.g. confirming MFA enrollment doesn't collaterally revoke the user's API keys.</p>
 <pre><code class="language-go">func (r Repository) TokenRevokeAllByUserID(ctx context.Context, userID string) error
+</code></pre>
+<h3 id="tokenrevokeallbyuseridandtype"><code>TokenRevokeAllByUserIDAndType</code></h3>
+<p>Revokes every active token of the given type for a user, leaving other token types untouched — e.g. <code>models.TokenTypeRefresh</code> after a confirmed email change (sessions only, not API keys), or <code>models.TokenTypeMFARecovery</code> when MFA re-enrollment invalidates old recovery codes.</p>
+<pre><code class="language-go">func (r Repository) TokenRevokeAllByUserIDAndType(ctx context.Context, userID, tokenType string) error
 </code></pre>
 <h3 id="tokenrevokefamily"><code>TokenRevokeFamily</code></h3>
 <p>Bulk-revokes every other active refresh token sharing the given rotation <code>family_id</code> (stored in <code>Metadata</code>), in one query. Used by <code>TokenRefresh</code> when it detects a replayed, already-rotated-out refresh token — a strong signal of theft. See <a href="../../guides/account-security/#refresh-token-reuse-detection">Refresh Token Reuse Detection</a>.</p>

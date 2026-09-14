@@ -2431,7 +2431,7 @@
 <pre><code class="language-go">func (a *Auth) UserUpdatePassword(ctx context.Context, user *models.User, password string) (*models.User, error)
 </code></pre>
 <h3 id="userupdate"><code>UserUpdate</code></h3>
-<p>Updates user profile information.</p>
+<p>Updates user profile information, using partial-update semantics (see <a href="../repository/#userupdate"><code>Repository.UserUpdate</code></a>). <code>EmailVerified</code>, <code>PhoneVerified</code>, <code>IsActive</code>, and <code>MfaEnabled</code> are never touched here regardless of what <code>user</code> carries -- use <code>Repo.UserSetEmailVerified</code>/<code>UserSetPhoneVerified</code>/<code>UserSetMFAEnabled</code>/<code>UserSetLockoutState</code> to change those.</p>
 <pre><code class="language-go">func (a *Auth) UserUpdate(ctx context.Context, user *models.User) (*models.User, error)
 </code></pre>
 <h3 id="userdelete"><code>UserDelete</code></h3>
@@ -2501,12 +2501,12 @@ func (a *Auth) JWKS() JWKSet                     // JSON Web Key Set for GET /.w
 <h2 id="impersonation">Impersonation</h2>
 <p><code>ezauth</code> enforces no authorization on who may impersonate at <em>this</em> level — the caller is responsible for checking that the admin is allowed to (e.g. <code>adminUser.HasRole("admin")</code>) before calling <code>Impersonate</code> directly. If you're going through <code>Handler</code>'s built-in HTTP routes instead of calling this service method yourself, that layer <em>does</em> gate it by default (<code>Cfg.AdminRole</code>, customizable via <code>WithAdminAuthz</code>) — see <a href="../handler/#impersonation">Impersonation</a> in the Handler reference.</p>
 <h3 id="impersonate"><code>Impersonate</code></h3>
-<p>Mints a new token pair for a target user on behalf of the admin. The resulting access token carries an <code>act</code> claim identifying the admin.</p>
+<p>Mints a new token pair for a target user on behalf of the admin. The resulting access token carries an <code>act</code> claim identifying the admin. The refresh token's lifetime is 1 hour, not the 30 days a normal session's is — <code>TokenRefresh</code> never re-checks the acting admin's <em>current</em> role on refresh, only the impersonated target's, so this bounds how long an admin whose role gets revoked mid-impersonation can keep the session going.</p>
 <pre><code class="language-go">func (a *Auth) Impersonate(ctx context.Context, adminUser *models.User, targetUserID string) (*TokenResponse, error)
 </code></pre>
 <h3 id="stopimpersonating"><code>StopImpersonating</code></h3>
-<p>Revokes an impersonation refresh token, ending that session.</p>
-<pre><code class="language-go">func (a *Auth) StopImpersonating(ctx context.Context, impersonationRefreshToken string) error
+<p>Revokes an impersonation refresh token, ending that session. <code>callerID</code> must match the token's <code>actor_id</code> (the admin who started it), or it fails with the same "invalid impersonation token" error as an unknown token.</p>
+<pre><code class="language-go">func (a *Auth) StopImpersonating(ctx context.Context, callerID, impersonationRefreshToken string) error
 </code></pre>
 <h2 id="multi-factor-authentication-totp">Multi-Factor Authentication (TOTP)</h2>
 <h3 id="mfaenroll"><code>MFAEnroll</code></h3>
@@ -2565,7 +2565,7 @@ func (a *Auth) WebauthnDeleteCredential(ctx context.Context, user *models.User, 
 <pre><code class="language-go">func (a *Auth) SMSOTPVerify(ctx context.Context, req RequestSMSOTPVerify) (*TokenResponse, error)
 </code></pre>
 <h2 id="invitation-based-onboarding">Invitation-Based Onboarding</h2>
-<p><code>ezauth</code> enforces no authorization on <em>who</em> may invite — same stance as <code>Impersonate</code>. It does enforce authorization on <em>what roles an invitation can grant</em>: <code>InvitationCreate</code> returns <code>ErrCannotGrantRole</code> if <code>Roles</code> includes anything the inviter doesn't already hold (<code>inviter.HasRole</code>).</p>
+<p><code>ezauth</code> enforces no authorization on <em>who</em> may invite — same stance as <code>Impersonate</code>. It does enforce authorization on <em>what roles an invitation can grant</em>: <code>InvitationCreate</code> returns <code>ErrCannotGrantRole</code> if <code>Roles</code> includes anything the inviter doesn't already hold via RBAC (<code>UserHasRole</code>, not the legacy <code>User.Roles</code> field). <code>InvitationAccept</code> grants the invited roles the same way (<code>UserRoleGrant</code>, attributed to the original inviter) rather than writing that legacy field.</p>
 <pre><code class="language-go">func (a *Auth) InvitationCreate(ctx context.Context, inviter *models.User, req RequestInvitation) (*InvitationInfo, error)
 func (a *Auth) InvitationPreview(ctx context.Context, tokenValue string) (*InvitationInfo, error)
 func (a *Auth) InvitationAccept(ctx context.Context, req RequestInvitationAccept) (*models.User, *TokenResponse, error)
