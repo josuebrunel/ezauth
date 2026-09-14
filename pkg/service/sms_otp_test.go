@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -93,6 +94,81 @@ func TestSMSOTP(t *testing.T) {
 			t.Fatalf("expected reused code to be rejected, got %v", err)
 		}
 	})
+}
+
+// TestSMSOTPRequest_RevokesPreviousCodeOnResend proves requesting a new
+// code invalidates any still-live earlier code for the same phone number,
+// so at most one code is ever valid at a time.
+func TestSMSOTPRequest_RevokesPreviousCodeOnResend(t *testing.T) {
+	auth := setupSMSTestDB(t)
+	ctx := context.Background()
+	phone := uniqueTestPhone()
+
+	if err := auth.SMSOTPRequest(ctx, RequestSMSOTP{Phone: phone}); err != nil {
+		t.Fatalf("first SMSOTPRequest failed: %v", err)
+	}
+	mockSMS, ok := auth.SMS.(*MockSMSSender)
+	if !ok {
+		t.Fatalf("expected MockSMSSender, got %T", auth.SMS)
+	}
+	firstBody := mockSMS.SentMessages[0]["body"]
+	firstCode := firstBody[len(firstBody)-6:]
+
+	if err := auth.SMSOTPRequest(ctx, RequestSMSOTP{Phone: phone}); err != nil {
+		t.Fatalf("second SMSOTPRequest failed: %v", err)
+	}
+	secondBody := mockSMS.SentMessages[1]["body"]
+	secondCode := secondBody[len(secondBody)-6:]
+
+	if _, err := auth.SMSOTPVerify(ctx, RequestSMSOTPVerify{Phone: phone, Code: firstCode}); err != ErrInvalidOrExpiredSMSCode {
+		t.Fatalf("expected the first (now superseded) code to be rejected, got %v", err)
+	}
+
+	if _, err := auth.SMSOTPVerify(ctx, RequestSMSOTPVerify{Phone: phone, Code: secondCode}); err != nil {
+		t.Fatalf("expected the second (current) code to succeed, got %v", err)
+	}
+}
+
+// TestSMSOTPRequest_CodeNotDerivableFromStoredToken proves the persisted
+// Token.Token value has no relationship to the OTP code -- unlike the old
+// sha256(phone+code) scheme, a DB-read compromise can't derive the valid
+// code offline from Token.Token, and the code's own hash (Metadata
+// "code_hash") uses the same deliberately slow algorithm as real passwords.
+func TestSMSOTPRequest_CodeNotDerivableFromStoredToken(t *testing.T) {
+	auth := setupSMSTestDB(t)
+	ctx := context.Background()
+	phone := uniqueTestPhone()
+
+	if err := auth.SMSOTPRequest(ctx, RequestSMSOTP{Phone: phone}); err != nil {
+		t.Fatalf("SMSOTPRequest failed: %v", err)
+	}
+	mockSMS := auth.SMS.(*MockSMSSender)
+	body := mockSMS.SentMessages[0]["body"]
+	code := body[len(body)-6:]
+
+	user, err := auth.Repo.UserGetByPhone(ctx, phone)
+	if err != nil {
+		t.Fatalf("UserGetByPhone failed: %v", err)
+	}
+	tokens, err := auth.Repo.TokenListByUserIDAndType(ctx, user.ID, models.TokenTypeSMSOTP)
+	if err != nil {
+		t.Fatalf("TokenListByUserIDAndType failed: %v", err)
+	}
+	if len(tokens) != 1 {
+		t.Fatalf("expected exactly 1 live sms otp token, got %d", len(tokens))
+	}
+	tok := tokens[0]
+
+	if tok.Token == util.HashToken(phone+":"+code) {
+		t.Fatal("Token.Token must not be derivable from phone+code (the old, low-entropy scheme)")
+	}
+	codeHash, _ := tok.Metadata["code_hash"].(string)
+	if codeHash == "" {
+		t.Fatal("expected Metadata[\"code_hash\"] to be set")
+	}
+	if !strings.HasPrefix(codeHash, "$2a$") && !strings.HasPrefix(codeHash, "$2b$") && !strings.HasPrefix(codeHash, "$argon2id$") {
+		t.Errorf("expected code_hash to use a deliberately slow password-hashing scheme, got %q", codeHash)
+	}
 }
 
 // TestSMSOTPVerify_BruteForceLockout proves repeated wrong OTP guesses

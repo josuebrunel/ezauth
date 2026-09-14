@@ -3,8 +3,6 @@ package service
 import (
 	"context"
 	"crypto/rand"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -13,6 +11,7 @@ import (
 	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/ezauth/pkg/util"
 	"github.com/josuebrunel/gopkg/xlog"
 )
 
@@ -48,15 +47,6 @@ func validatePhone(phone string) error {
 		return ErrInvalidPhone
 	}
 	return nil
-}
-
-// smsOTPTokenValue derives the Token.Token lookup value for an SMS OTP code.
-// Combining phone and code (rather than storing the 6-digit code alone) keeps
-// the value globally unique despite the code's low entropy, and matches the
-// existing pattern used for hashed MFA recovery codes.
-func smsOTPTokenValue(phone, code string) string {
-	sum := sha256.Sum256([]byte(phone + ":" + code))
-	return hex.EncodeToString(sum[:])
 }
 
 func generateSMSOTPCode() (string, error) {
@@ -95,19 +85,48 @@ func (a *Auth) SMSOTPRequest(ctx context.Context, req RequestSMSOTP) error {
 		}
 	}
 
+	// Revoke any still-live code from an earlier request before issuing a
+	// new one, so at most one code is ever valid for a phone number at a
+	// time -- otherwise an older, still-unexpired code stays usable
+	// alongside the new one.
+	if err := a.Repo.TokenRevokeAllByUserIDAndType(ctx, user.ID, models.TokenTypeSMSOTP); err != nil {
+		xlog.Warn("failed to revoke previous sms otp codes", "user_id", user.ID, "err", err)
+	}
+
 	code, err := generateSMSOTPCode()
 	if err != nil {
 		xlog.Error("failed to generate sms otp code", "err", err)
 		return err
 	}
 
+	// The 6-digit code itself carries only ~20 bits of entropy, so it's
+	// hashed with the same (deliberately slow, configurable-cost)
+	// algorithm as real passwords rather than a fast hash like SHA-256 --
+	// a DB-read compromise still can't derive the valid code by brute
+	// force in any practical time, unlike a fast hash which making all
+	// 10^6 candidates checkable in milliseconds. Token.Token itself is a
+	// separate, high-entropy random value with no relationship to the
+	// code, so it isn't a viable offline attack surface either; it exists
+	// only to satisfy the column's NOT NULL UNIQUE constraint the same way
+	// every other token type's does.
+	codeHash, err := a.UserHashPassword(code)
+	if err != nil {
+		xlog.Error("failed to hash sms otp code", "err", err)
+		return err
+	}
+	tokenValue, err := a.generateRefreshToken()
+	if err != nil {
+		xlog.Error("failed to generate sms otp token", "err", err)
+		return err
+	}
+
 	token := &models.Token{
 		UserID:    user.ID,
-		Token:     smsOTPTokenValue(phone, code),
+		Token:     util.HashToken(tokenValue),
 		TokenType: models.TokenTypeSMSOTP,
 		ExpiresAt: time.Now().Add(smsOTPTTL),
 		CreatedAt: time.Now(),
-		Metadata:  models.JSONMap{},
+		Metadata:  models.JSONMap{"code_hash": codeHash},
 	}
 	if _, err := a.Repo.TokenCreate(ctx, token); err != nil {
 		xlog.Error("failed to save sms otp token", "user_id", user.ID, "err", err)
@@ -144,32 +163,50 @@ func (a *Auth) SMSOTPVerify(ctx context.Context, req RequestSMSOTPVerify) (*Toke
 	}
 
 	byPhone, byPhoneErr := a.Repo.UserGetByPhone(ctx, phone)
-	if byPhoneErr == nil && a.Cfg.AccountLockout.Enabled {
+	if byPhoneErr != nil {
+		xlog.Debug("sms otp verify failed: no user for phone")
+		return nil, ErrInvalidOrExpiredSMSCode
+	}
+	if a.Cfg.AccountLockout.Enabled {
 		if _, err := a.checkAccountActive(ctx, byPhone); err != nil {
 			xlog.Debug("sms otp verify failed: account locked", "user_id", byPhone.ID, "err", err)
 			return nil, err
 		}
 	}
 
-	token, err := a.Repo.TokenGetByToken(ctx, smsOTPTokenValue(phone, req.Code))
-	if err != nil || token.TokenType != models.TokenTypeSMSOTP {
-		xlog.Debug("sms otp token not found", "err", err)
-		if byPhoneErr == nil && a.Cfg.AccountLockout.Enabled {
+	// Codes are looked up by (user, type) rather than by a value derived
+	// from the submitted code -- see SMSOTPRequest's comment on codeHash
+	// for why -- so every still-live candidate (in practice at most one,
+	// since SMSOTPRequest revokes prior codes on resend) is checked against
+	// the submitted code with the same verifyPassword used for real
+	// passwords.
+	tokens, err := a.Repo.TokenListByUserIDAndType(ctx, byPhone.ID, models.TokenTypeSMSOTP)
+	if err != nil {
+		xlog.Error("failed to list sms otp tokens", "user_id", byPhone.ID, "err", err)
+		return nil, err
+	}
+
+	var token *models.Token
+	for _, candidate := range tokens {
+		if time.Now().After(candidate.ExpiresAt) {
+			continue
+		}
+		codeHash, _ := candidate.Metadata["code_hash"].(string)
+		if codeHash != "" && verifyPassword(req.Code, codeHash) {
+			token = candidate
+			break
+		}
+	}
+
+	if token == nil {
+		xlog.Debug("sms otp code did not match")
+		if a.Cfg.AccountLockout.Enabled {
 			a.recordFailedLogin(ctx, byPhone)
 		}
 		return nil, ErrInvalidOrExpiredSMSCode
 	}
 
-	if token.Revoked || time.Now().After(token.ExpiresAt) {
-		xlog.Debug("sms otp token expired or revoked", "token_id", token.ID)
-		return nil, ErrInvalidOrExpiredSMSCode
-	}
-
-	user, err := a.Repo.UserGetByID(ctx, token.UserID)
-	if err != nil {
-		xlog.Error("failed to get user for sms otp login", "user_id", token.UserID, "err", err)
-		return nil, err
-	}
+	user := byPhone
 
 	if user.FailedLoginAttempts > 0 {
 		if reset, err := a.Repo.UserSetLockoutState(ctx, user.ID, 0, nil, true); err != nil {
