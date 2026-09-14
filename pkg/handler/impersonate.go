@@ -135,7 +135,17 @@ func (h *Handler) StopImpersonation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.svc.StopImpersonating(r.Context(), req.RefreshToken); err != nil {
+	// The caller authenticates with the impersonation access token itself
+	// (the target's identity, carrying an "act" claim) -- callerID is that
+	// claim's admin, not the token's own subject, since StopImpersonating
+	// must verify the *admin* who started this session is the one ending it.
+	callerID, err := GetImpersonatorID(r.Context())
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	if err := h.svc.StopImpersonating(r.Context(), callerID, req.RefreshToken); err != nil {
 		WriteJSONResponseError(w, http.StatusBadRequest, err)
 		return
 	}
@@ -214,7 +224,7 @@ func (h *Handler) FormStopImpersonation(w http.ResponseWriter, r *http.Request) 
 
 	if tokens, ok := h.GetSessionTokens(r.Context()); ok {
 		if refreshToken, ok := tokens["refresh_token"]; ok && refreshToken != "" {
-			_ = h.svc.StopImpersonating(r.Context(), refreshToken)
+			_ = h.svc.StopImpersonating(r.Context(), adminID, refreshToken)
 		}
 	}
 

@@ -797,6 +797,54 @@ func TestHandler_Impersonation_JSON(t *testing.T) {
 		}
 	})
 
+	t.Run("a different admin's impersonation token cannot stop this one", func(t *testing.T) {
+		otherAdmin, otherAdminAccessToken, otherAdminRefreshToken := registerAndLogin(t, h, "impersonate-other-admin")
+		otherTarget, _, _ := registerAndLogin(t, h, "impersonate-other-target")
+		grantAdminRole(t, h, otherAdmin.ID)
+		// otherTarget also needs the admin role: the request below
+		// authenticates with an impersonation access token, whose JWT "sub"
+		// (what the admin-authz gate checks) is the target, not the actor.
+		grantAdminRole(t, h, otherTarget.ID)
+
+		reqBody := map[string]any{
+			"target_user_id": otherTarget.ID,
+			"refresh_token":  otherAdminRefreshToken,
+		}
+		body, _ := json.Marshal(reqBody)
+		req := httptest.NewRequest(http.MethodPost, "/auth/api/impersonate", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+otherAdminAccessToken)
+		req.Header.Set("X-API-Key", "test-api-key")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
+		}
+		var resp testResponse[ImpersonateResponse]
+		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		otherImpersonationAccessToken := resp.Data.AccessToken
+
+		// otherAdmin, authenticated via their OWN impersonation access token,
+		// tries to stop the original admin's impersonation session by
+		// submitting its refresh token value.
+		stopBody := map[string]string{"refresh_token": impersonationRefreshToken}
+		body, _ = json.Marshal(stopBody)
+		req = httptest.NewRequest(http.MethodPost, "/auth/api/impersonate/stop", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+otherImpersonationAccessToken)
+		req.Header.Set("X-API-Key", "test-api-key")
+		w = httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("expected status 400 rejecting the wrong admin's stop attempt, got %d: %s", w.Code, w.Body.String())
+		}
+		// The original impersonation session must still be usable -- proven
+		// by the "StopImpersonation" subtest below still succeeding with the
+		// same, unmodified impersonationRefreshToken.
+	})
+
 	t.Run("StopImpersonation", func(t *testing.T) {
 		reqBody := map[string]string{"refresh_token": impersonationRefreshToken}
 		body, _ := json.Marshal(reqBody)

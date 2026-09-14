@@ -503,8 +503,9 @@ func (e *EzAuth) Impersonate(ctx context.Context, adminUser *models.User, target
 }
 
 // StopImpersonating revokes an impersonation refresh token, ending that session.
-func (e *EzAuth) StopImpersonating(ctx context.Context, impersonationRefreshToken string) error {
-	return e.Service.StopImpersonating(ctx, impersonationRefreshToken)
+// callerID must match the token's actor_id (the admin who started the impersonation).
+func (e *EzAuth) StopImpersonating(ctx context.Context, callerID, impersonationRefreshToken string) error {
+	return e.Service.StopImpersonating(ctx, callerID, impersonationRefreshToken)
 }
 
 // IsImpersonating reports whether the current cookie-based session is an impersonation

@@ -966,13 +966,35 @@ func TestImpersonation(t *testing.T) {
 		if err != nil {
 			t.Fatalf("TokenCreate() unexpected error: %v", err)
 		}
-		if err := auth.StopImpersonating(ctx, resp.RefreshToken); err == nil {
+		if err := auth.StopImpersonating(ctx, admin.ID, resp.RefreshToken); err == nil {
 			t.Error("expected error when stopping a non-impersonation token, got nil")
 		}
 	})
 
+	t.Run("StopImpersonating rejects a caller who isn't the impersonation's actor", func(t *testing.T) {
+		otherAdmin, err := auth.UserCreate(ctx, &RequestBasicAuth{
+			Email:    util.UniqueEmail("otheradmin"),
+			Password: "securepass123",
+		})
+		if err != nil {
+			t.Fatalf("UserCreate() unexpected error: %v", err)
+		}
+		if err := auth.StopImpersonating(ctx, otherAdmin.ID, impersonationRefreshToken); err == nil {
+			t.Error("expected error when a different admin stops someone else's impersonation, got nil")
+		}
+
+		// The wrong caller's attempt must not have revoked the token.
+		storedToken, err := auth.Repo.TokenGetByToken(ctx, util.HashToken(impersonationRefreshToken))
+		if err != nil {
+			t.Fatalf("failed to get impersonation token: %v", err)
+		}
+		if storedToken.Revoked {
+			t.Error("impersonation token was revoked by a caller who wasn't its actor")
+		}
+	})
+
 	t.Run("StopImpersonating revokes the impersonation token", func(t *testing.T) {
-		if err := auth.StopImpersonating(ctx, impersonationRefreshToken); err != nil {
+		if err := auth.StopImpersonating(ctx, admin.ID, impersonationRefreshToken); err != nil {
 			t.Fatalf("StopImpersonating() unexpected error: %v", err)
 		}
 

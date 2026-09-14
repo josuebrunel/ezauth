@@ -137,7 +137,7 @@ func TestEzAuth(t *testing.T) {
 			t.Error("expected GetImpersonator to error before setting an impersonation session")
 		}
 
-		if err := auth.StopImpersonating(ctx, tokenResp.RefreshToken); err != nil {
+		if err := auth.StopImpersonating(ctx, admin.ID, tokenResp.RefreshToken); err != nil {
 			t.Fatalf("StopImpersonating() unexpected error: %v", err)
 		}
 	})

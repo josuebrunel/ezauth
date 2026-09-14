@@ -784,8 +784,11 @@ func (a *Auth) Impersonate(ctx context.Context, adminUser *models.User, targetUs
 }
 
 // StopImpersonating revokes an impersonation refresh token, ending that impersonation
-// session server-side.
-func (a *Auth) StopImpersonating(ctx context.Context, impersonationRefreshToken string) error {
+// session server-side. callerID must match the token's actor_id (the admin who started
+// the impersonation) -- without this check, any admin who obtained another admin's
+// impersonation refresh token (logs, a shared terminal, ...) could end, or replay via
+// TokenRefresh before this revokes it, a session they never started.
+func (a *Auth) StopImpersonating(ctx context.Context, callerID, impersonationRefreshToken string) error {
 	token, err := a.Repo.TokenGetByToken(ctx, util.HashToken(impersonationRefreshToken))
 	if err != nil {
 		xlog.Debug("stop impersonation failed: token not found", "err", err)
@@ -793,6 +796,10 @@ func (a *Auth) StopImpersonating(ctx context.Context, impersonationRefreshToken 
 	}
 	if imp, _ := token.Metadata["impersonation"].(bool); !imp {
 		return errors.New("not an impersonation token")
+	}
+	if actorID, _ := token.Metadata["actor_id"].(string); actorID != callerID {
+		xlog.Warn("stop impersonation failed: caller is not the impersonation's actor", "token_id", token.ID, "caller_id", callerID)
+		return errors.New("invalid impersonation token")
 	}
 	if err := a.Repo.TokenRevoke(ctx, token.ID); err != nil {
 		xlog.Error("failed to revoke impersonation token", "token_id", token.ID, "err", err)
