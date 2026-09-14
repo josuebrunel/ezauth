@@ -32,6 +32,9 @@ func TestLoadConfig_Success(t *testing.T) {
 	if cfg.JWTSecret != secret {
 		t.Errorf("expected JWTSecret to be %q, got %q", secret, cfg.JWTSecret)
 	}
+	if !cfg.RateLimit.Enabled {
+		t.Error("expected RateLimit.Enabled to default to true (secure by default)")
+	}
 }
 
 func TestLoadConfig_JWTSecretTooShort(t *testing.T) {

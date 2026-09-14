@@ -192,7 +192,7 @@ type WebAuthn struct {
 
 // RateLimit defines the rate limiting configuration.
 type RateLimit struct {
-	Enabled    bool          `json:"enabled" env:"RATE_LIMIT_ENABLED" default:"false"`
+	Enabled    bool          `json:"enabled" env:"RATE_LIMIT_ENABLED" default:"true"`
 	Requests   int           `json:"requests" env:"RATE_LIMIT_REQUESTS" default:"10"`
 	Window     time.Duration `json:"window" env:"RATE_LIMIT_WINDOW" default:"1m"`
 	ByClientIP bool          `json:"by_client_ip" env:"RATE_LIMIT_BY_CLIENT_IP" default:"true"`

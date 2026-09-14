@@ -63,7 +63,7 @@ Needs no code or configuration — it's automatic. Every refresh token is tagged
 
 `UserAuthenticate` enforces `IsActive` as a login gate and counts consecutive failed attempts, locking the account (clearing `IsActive`) for `EZAUTH_ACCOUNT_LOCKOUT_DURATION` after `EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS` in a row; it auto-unlocks (and resets the counter) on the first login attempt after that window passes. A successful login resets the counter immediately.
 
-`MFALoginVerify` and `SMSOTPVerify` share this same counter and lockout: an invalid TOTP/recovery code or SMS code counts toward the same `EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS` threshold as a wrong password, and once locked, both reject even a *correct* code until the account unlocks. This is what actually bounds brute-force guessing against those codes — the global rate limiter (`EZAUTH_RATE_LIMIT_ENABLED`) is off by default and, even enabled, is a separate, coarser IP-based control.
+`MFALoginVerify` and `SMSOTPVerify` share this same counter and lockout: an invalid TOTP/recovery code or SMS code counts toward the same `EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS` threshold as a wrong password, and once locked, both reject even a *correct* code until the account unlocks. This is what actually bounds brute-force guessing against those codes — the global rate limiter (`EZAUTH_RATE_LIMIT_ENABLED`, on by default) is a separate, coarser IP-based control.
 
 ```go
 _, err := auth.Service.UserAuthenticate(ctx, req)

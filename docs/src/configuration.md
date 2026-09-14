@@ -57,7 +57,7 @@ WebAuthn support is disabled unless both `EZAUTH_WEBAUTHN_RP_ID` and `EZAUTH_WEB
 
 | Variable                         | Description                                              | Default  |
 | -------------------------------- | -------------------------------------------------------- | -------- |
-| `EZAUTH_RATE_LIMIT_ENABLED`      | Enable rate limiting on authentication endpoints.        | `false`  |
+| `EZAUTH_RATE_LIMIT_ENABLED`      | Enable rate limiting on authentication endpoints.        | `true`  |
 | `EZAUTH_RATE_LIMIT_REQUESTS`     | Maximum requests allowed per window.                     | `10`     |
 | `EZAUTH_RATE_LIMIT_WINDOW`       | Rate limit window duration (e.g., `1m`, `30s`).          | `1m`     |
 | `EZAUTH_RATE_LIMIT_BY_CLIENT_IP` | Apply rate limiting per client IP address.               | `true`   |

@@ -161,7 +161,7 @@ You can run `ezauth` as a separate service that handles authentication for your 
    export EZAUTH_DB_SCHEMA="public"    # Optional: Database schema (PostgreSQL only)
    export EZAUTH_JWT_SECRET="super-secret-key-at-least-32-characters-long"  # HS256 requires >= 32 chars
    export EZAUTH_HASHING_ALGORITHM="bcrypt"      # Optional; "bcrypt" or "argon2id"
-   export EZAUTH_RATE_LIMIT_ENABLED="false"       # Optional; enable rate limiting on auth endpoints
+   export EZAUTH_RATE_LIMIT_ENABLED="true"       # Optional; rate limiting on auth endpoints, on by default -- set false to disable
    export EZAUTH_FORCE_SECURE_COOKIES="false"    # Optional; force Secure on session/CSRF cookies regardless of BASE_URL's scheme (set true behind a TLS-terminating reverse proxy)
    export EZAUTH_TRUST_PROXY_HEADERS="false"     # Optional; only set true behind a reverse proxy that sets/overwrites True-Client-IP/X-Real-IP/X-Forwarded-For itself
 
