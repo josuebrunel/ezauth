@@ -388,6 +388,29 @@ func TestMysqlQuerier_AuditLogOperations(t *testing.T) {
 	})
 }
 
+// TestMysqlQuerier_UserGetByPhoneUsesGeneratedColumn proves the phone
+// lookup predicates on phone_unique_key (the generated VIRTUAL column the
+// unique index is actually built on -- 20260830140000_add_phone_unique_index.sql),
+// not the raw phone column, so MySQL can use that index instead of a full
+// table scan.
+func TestMysqlQuerier_UserGetByPhoneUsesGeneratedColumn(t *testing.T) {
+	querier := &MysqlQuerier{}
+	q := querier.QueryUserGetByPhone(context.Background(), "+15551234567")
+	sql, args, err := bob.Build(context.Background(), q)
+	if err != nil {
+		t.Fatalf("failed to build query: %v", err)
+	}
+	if !strings.Contains(sql, "phone_unique_key") {
+		t.Errorf("expected the query to predicate on phone_unique_key, got: %s", sql)
+	}
+	if strings.Contains(sql, "`phone`") {
+		t.Errorf("expected the query to NOT predicate on the raw phone column, got: %s", sql)
+	}
+	if len(args) != 1 || args[0] != "+15551234567" {
+		t.Errorf("unexpected args: %v", args)
+	}
+}
+
 // TestMysqlQuerier_RoleGrantsUseOnDuplicateKeyUpdate proves the idempotent
 // role/permission grant inserts use ON DUPLICATE KEY UPDATE, not INSERT
 // IGNORE -- IGNORE suppresses all errors including FK violations, silently
