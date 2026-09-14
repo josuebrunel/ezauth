@@ -49,6 +49,15 @@ func New(cfg *config.Config, repo *repository.Repository, pathPrefix string) (*A
 		xlog.Warn("SMS provider not configured, using mock sender — SMS OTP codes will not be sent")
 	}
 
+	if cfg.AccountLockout == (config.AccountLockout{}) {
+		// A fully zero-value AccountLockout means either it was never set
+		// (config.Config{} built by hand, bypassing LoadConfig's
+		// default:"true" env tag) or Enabled was deliberately left false
+		// alongside untouched MaxAttempts/LockoutDuration -- these two cases
+		// are indistinguishable from a bool alone, so warn either way.
+		xlog.Warn("AccountLockout is unset (brute-force lockout disabled): call config.LoadConfig() to get its default:\"true\" enablement, or set Cfg.AccountLockout explicitly if this is intentional")
+	}
+
 	a := &Auth{
 		Cfg:             cfg,
 		Repo:            repo,
