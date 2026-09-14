@@ -46,7 +46,7 @@ migration-create:
 
 # ACTION is one of up|down|revert, e.g. `make migrate ACTION=revert`.
 migrate:
-	EZAUTH_API_KEY=dev-cli EZAUTH_JWT_SECRET=dev-cli EZAUTH_DB_DIALECT=$(DRIVER) EZAUTH_DB_DSN=$(DSN) go run ./cmd/ezauthapi migrate $(ACTION)
+	EZAUTH_API_KEY=dev-cli EZAUTH_JWT_SECRET=dev-cli-migrate-secret-at-least-32-chars EZAUTH_DB_DIALECT=$(DRIVER) EZAUTH_DB_DSN=$(DSN) go run ./cmd/ezauthapi migrate $(ACTION)
 
 test:
 	go test -failfast ./... -v -p=1 -count=1 -coverprofile .coverage.txt

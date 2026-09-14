@@ -16,8 +16,9 @@ func TestLoadConfig_RequiredJWTSecret(t *testing.T) {
 }
 
 func TestLoadConfig_Success(t *testing.T) {
+	const secret = "super-secret-at-least-32-characters-long"
 	os.Setenv("EZAUTH_API_KEY", "test-api-key")
-	os.Setenv("EZAUTH_JWT_SECRET", "super-secret")
+	os.Setenv("EZAUTH_JWT_SECRET", secret)
 	defer os.Unsetenv("EZAUTH_JWT_SECRET")
 	defer os.Unsetenv("EZAUTH_API_KEY")
 
@@ -26,8 +27,32 @@ func TestLoadConfig_Success(t *testing.T) {
 		t.Errorf("expected no error when EZAUTH_JWT_SECRET is set, got %v", err)
 	}
 
-	if cfg.JWTSecret != "super-secret" {
-		t.Errorf("expected JWTSecret to be 'super-secret', got '%s'", cfg.JWTSecret)
+	if cfg.JWTSecret != secret {
+		t.Errorf("expected JWTSecret to be %q, got %q", secret, cfg.JWTSecret)
+	}
+}
+
+func TestLoadConfig_JWTSecretTooShort(t *testing.T) {
+	os.Setenv("EZAUTH_API_KEY", "test-api-key")
+	os.Setenv("EZAUTH_JWT_SECRET", "too-short")
+	defer os.Unsetenv("EZAUTH_JWT_SECRET")
+	defer os.Unsetenv("EZAUTH_API_KEY")
+
+	if _, err := LoadConfig(); err == nil {
+		t.Error("expected an error when EZAUTH_JWT_SECRET is shorter than the minimum length, got nil")
+	}
+}
+
+func TestLoadConfig_JWTSecretLengthNotEnforcedForAsymmetricAlgorithms(t *testing.T) {
+	os.Setenv("EZAUTH_API_KEY", "test-api-key")
+	os.Setenv("EZAUTH_JWT_SECRET", "unused-for-asymmetric-signing")
+	os.Setenv("EZAUTH_JWT_ALGORITHM", "RS256")
+	defer os.Unsetenv("EZAUTH_JWT_SECRET")
+	defer os.Unsetenv("EZAUTH_API_KEY")
+	defer os.Unsetenv("EZAUTH_JWT_ALGORITHM")
+
+	if _, err := LoadConfig(); err != nil {
+		t.Errorf("expected the JWTSecret length floor to only apply to HS256, got %v", err)
 	}
 }
 

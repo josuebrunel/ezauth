@@ -300,10 +300,22 @@ func (c Config) Sanitized() Config {
 	return c
 }
 
+// minJWTSecretLength is the floor enforced on JWTSecret by LoadConfig when
+// signing HS256 (the default algorithm): roughly 256 bits, in line with the
+// HMAC-SHA256 key size RFC 7518 recommends. A shorter secret is
+// brute-forceable offline once an attacker has even one valid token.
+const minJWTSecretLength = 32
+
 func LoadConfig() (Config, error) {
 	var cfg Config
 
 	if err := xenv.LoadWithOptions(&cfg, xenv.Options{Prefix: "EZAUTH_"}); err != nil {
+		xlog.Error("failed to load config", "err", err)
+		return cfg, err
+	}
+
+	if (cfg.JWT.Algorithm == "" || cfg.JWT.Algorithm == "HS256") && len(cfg.JWTSecret) < minJWTSecretLength {
+		err := fmt.Errorf("EZAUTH_JWT_SECRET must be at least %d characters long for HS256 signing (got %d); generate one with e.g. `openssl rand -base64 32`", minJWTSecretLength, len(cfg.JWTSecret))
 		xlog.Error("failed to load config", "err", err)
 		return cfg, err
 	}

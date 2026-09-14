@@ -170,7 +170,10 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 			// CSRF Middleware
 			csrfKey := h.svc.Cfg.CSRFSecret
 			if csrfKey == "" {
-				xlog.Warn("CSRF_SECRET not set, falling back to JWT_SECRET. Set a dedicated EZAUTH_CSRF_SECRET for proper key separation.")
+				// Logged at Error, not Warn: this is a silent security
+				// downgrade (CSRF and JWT signing share a key) that's easy
+				// to miss at Warn level in production log pipelines.
+				xlog.Error("CSRF_SECRET not set, falling back to JWT_SECRET -- this reuses the JWT signing key for CSRF protection, weakening key separation. Set a dedicated EZAUTH_CSRF_SECRET.")
 				csrfKey = h.svc.Cfg.JWTSecret
 			}
 			r.Use(csrf.Protect([]byte(csrfKey), csrf.Secure(secureCookies)))

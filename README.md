@@ -98,7 +98,7 @@ import (
 func main() {
     // 1. Setup Config
     os.Setenv("EZAUTH_API_KEY", "my-api-key")
-    os.Setenv("EZAUTH_JWT_SECRET", "my-jwt-key")
+    os.Setenv("EZAUTH_JWT_SECRET", "my-jwt-key-at-least-32-characters-long") // HS256 requires >= 32 chars
     
     cfg, err := config.LoadConfig()
     if err != nil {
@@ -157,7 +157,7 @@ You can run `ezauth` as a separate service that handles authentication for your 
    export EZAUTH_DB_DIALECT="sqlite3"  # or "postgres" or "mysql"
    export EZAUTH_DB_DSN="auth.db"      # for mysql: "user:pass@tcp(localhost:3306)/dbname?parseTime=true"
    export EZAUTH_DB_SCHEMA="public"    # Optional: Database schema (PostgreSQL only)
-   export EZAUTH_JWT_SECRET="super-secret-key"
+   export EZAUTH_JWT_SECRET="super-secret-key-at-least-32-characters-long"  # HS256 requires >= 32 chars
    export EZAUTH_CSRF_SECRET="your-csrf-secret"  # Optional; defaults to JWT_SECRET if not set
    export EZAUTH_HASHING_ALGORITHM="bcrypt"      # Optional; "bcrypt" or "argon2id"
    export EZAUTH_RATE_LIMIT_ENABLED="false"       # Optional; enable rate limiting on auth endpoints
