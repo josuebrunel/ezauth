@@ -82,6 +82,25 @@ func TestSessions(t *testing.T) {
 		}
 	})
 
+	t.Run("TokenRevoke rejects a refresh token belonging to another user", func(t *testing.T) {
+		victim := sessionTestUser(t, auth, ctx)
+		pair, err := auth.TokenCreate(ctx, victim)
+		if err != nil {
+			t.Fatalf("TokenCreate failed: %v", err)
+		}
+
+		attacker := sessionTestUser(t, auth, ctx)
+		if err := auth.TokenRevoke(ctx, attacker.ID, pair.RefreshToken); err != ErrSessionNotFound {
+			t.Fatalf("expected ErrSessionNotFound, got %v", err)
+		}
+
+		// The victim's token must still be usable -- the attacker's call must
+		// not have revoked it.
+		if _, err := auth.TokenRefresh(ctx, pair.RefreshToken); err != nil {
+			t.Fatalf("victim's token should still be valid, TokenRefresh failed: %v", err)
+		}
+	})
+
 	t.Run("RevokeAllSessions keeps the excepted session", func(t *testing.T) {
 		sessions, err := auth.Sessions(ctx, user.ID)
 		if err != nil {

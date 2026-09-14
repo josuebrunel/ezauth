@@ -850,13 +850,18 @@ func (a *Auth) revokeTokenFamily(ctx context.Context, userID, familyID string) {
 	}
 }
 
-// TokenRevoke revokes the given refresh token.
-func (a *Auth) TokenRevoke(ctx context.Context, refreshToken string) error {
+// TokenRevoke revokes the given refresh token, provided it belongs to
+// userID. Returns ErrSessionNotFound if the token doesn't exist or belongs
+// to a different user -- without this check, a caller who obtained (e.g.
+// leaked/stolen) another user's refresh token value could revoke it, and
+// authenticating as *some* user (which every caller of this method already
+// is) was never sufficient proof that the token being revoked is theirs.
+func (a *Auth) TokenRevoke(ctx context.Context, userID, refreshToken string) error {
 	xlog.Info("revoking token")
 	token, err := a.Repo.TokenGetByToken(ctx, util.HashToken(refreshToken))
-	if err != nil {
+	if err != nil || token.UserID != userID {
 		xlog.Debug("token to revoke not found", "err", err)
-		return err
+		return ErrSessionNotFound
 	}
 	err = a.Repo.TokenRevoke(ctx, token.ID)
 	if err != nil {

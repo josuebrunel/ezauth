@@ -512,14 +512,16 @@ func (h *Handler) FormWebauthnLoginFinish(w http.ResponseWriter, r *http.Request
 
 // FormLogout handles user logout via form submission or link.
 func (h *Handler) FormLogout(w http.ResponseWriter, r *http.Request) {
-	if tokens, ok := h.GetSessionTokens(r.Context()); ok {
-		if refreshToken, ok := tokens["refresh_token"]; ok && refreshToken != "" {
-			_ = h.svc.TokenRevoke(r.Context(), refreshToken)
-		}
-	}
+	// Fetch the user first: needed both for the hook below and to scope the
+	// refresh-token revocation to its owner.
+	user, userErr := h.GetSessionUser(r.Context())
 
-	// Fetch the user for the hook if possible
-	if user, err := h.GetSessionUser(r.Context()); err == nil {
+	if userErr == nil {
+		if tokens, ok := h.GetSessionTokens(r.Context()); ok {
+			if refreshToken, ok := tokens["refresh_token"]; ok && refreshToken != "" {
+				_ = h.svc.TokenRevoke(r.Context(), user.ID, refreshToken)
+			}
+		}
 		if err := h.svc.Hook.AfterUserSignedOut(r.Context(), user); err != nil {
 			xlog.Error("hook AfterUserSignedOut failed", "user_id", user.ID, "err", err)
 		}

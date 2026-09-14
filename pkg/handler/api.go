@@ -221,18 +221,21 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.svc.TokenRevoke(r.Context(), req.RefreshToken); err != nil {
-		WriteJSONResponseError(w, http.StatusInternalServerError, ErrCouldNotRevokeToken)
+	userID, ok := r.Context().Value(ezmiddleware.UserContextKey).(string)
+	if !ok {
+		WriteJSONResponseError(w, http.StatusInternalServerError, ErrUserNotFoundInContext)
+		return
+	}
+
+	if err := h.svc.TokenRevoke(r.Context(), userID, req.RefreshToken); err != nil {
+		WriteJSONResponseError(w, http.StatusBadRequest, ErrCouldNotRevokeToken)
 		return
 	}
 
 	// Fetch the user for the hook if possible
-	userID, ok := r.Context().Value(ezmiddleware.UserContextKey).(string)
-	if ok {
-		if user, err := h.svc.Repo.UserGetByID(r.Context(), userID); err == nil {
-			if err := h.svc.Hook.AfterUserSignedOut(r.Context(), user); err != nil {
-				xlog.Error("hook AfterUserSignedOut failed", "user_id", user.ID, "err", err)
-			}
+	if user, err := h.svc.Repo.UserGetByID(r.Context(), userID); err == nil {
+		if err := h.svc.Hook.AfterUserSignedOut(r.Context(), user); err != nil {
+			xlog.Error("hook AfterUserSignedOut failed", "user_id", user.ID, "err", err)
 		}
 	}
 

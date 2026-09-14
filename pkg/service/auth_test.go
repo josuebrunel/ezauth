@@ -697,7 +697,7 @@ func TestTokenOperations(t *testing.T) {
 	})
 
 	t.Run("TokenRevoke", func(t *testing.T) {
-		err := auth.TokenRevoke(ctx, refreshToken)
+		err := auth.TokenRevoke(ctx, createdUser.ID, refreshToken)
 		if err != nil {
 			t.Fatalf("TokenRevoke() unexpected error: %v", err)
 		}
