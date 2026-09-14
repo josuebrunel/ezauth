@@ -1019,6 +1019,10 @@ func getDialectQuery(dbDialect string) Querier {
 	case "sqlite", "sqlite3":
 		return &sqlite.SqliteQuerier{}
 	default:
+		// Unlike getDBConnection (which now rejects an unrecognized dialect
+		// outright), this silently falls back to sqlite -- New (the
+		// NewWithDB path) has no error return to reject one through. See
+		// the pool-defaults-on-NewWithDB gap this shares a root cause with.
 		return &sqlite.SqliteQuerier{}
 	}
 }
@@ -1054,9 +1058,15 @@ func getDBConnection(opts Opts) (*sql.DB, error) {
 	case DialectMysql:
 		db, err = mysql.GetDBConnection(opts.DSN)
 		opts.Dialect = DialectMysql
-	default:
+	case DialectSqlite, "sqlite3", "":
+		// "" (dialect unset) and "sqlite3" (config.Database.Dialect's own
+		// documented default, and the modernc.org/sqlite driver's common
+		// alias) both mean sqlite -- anything else is a typo, not a silent
+		// sqlite fallback.
 		db, err = sqlite.GetDBConnection(opts.DSN)
 		opts.Dialect = DialectSqlite
+	default:
+		return nil, fmt.Errorf("unknown db dialect %q: must be %q, %q, or %q", opts.Dialect, DialectPSQL, DialectMysql, DialectSqlite)
 	}
 
 	if err != nil {

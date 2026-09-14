@@ -173,12 +173,24 @@ func execGooseMigration(db *sql.DB, dialect string, action string) error {
 }
 
 func getDBConnection(dialect string, dsn string) (*sql.DB, error) {
-	db, err := sql.Open(dialect, dsn)
+	driverName := dialect
+	if dialect == "sqlite3" {
+		// database/sql driver names are exact matches, unlike the
+		// DialectSqlite/"sqlite3" alias goose.Dialect switches above
+		// accept -- modernc.org/sqlite registers itself as "sqlite", so
+		// sql.Open("sqlite3", ...) fails with "unknown driver" even though
+		// "sqlite3" is otherwise treated as a valid sqlite alias throughout
+		// this package.
+		driverName = DialectSqlite
+	}
+
+	db, err := sql.Open(driverName, dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
 	if err := db.Ping(); err != nil {
+		db.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
