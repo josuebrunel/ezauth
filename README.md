@@ -161,6 +161,8 @@ You can run `ezauth` as a separate service that handles authentication for your 
    export EZAUTH_CSRF_SECRET="your-csrf-secret"  # Optional; defaults to JWT_SECRET if not set
    export EZAUTH_HASHING_ALGORITHM="bcrypt"      # Optional; "bcrypt" or "argon2id"
    export EZAUTH_RATE_LIMIT_ENABLED="false"       # Optional; enable rate limiting on auth endpoints
+   export EZAUTH_FORCE_SECURE_COOKIES="false"    # Optional; force Secure on session/CSRF cookies regardless of BASE_URL's scheme (set true behind a TLS-terminating reverse proxy)
+   export EZAUTH_TRUST_PROXY_HEADERS="false"     # Optional; only set true behind a reverse proxy that sets/overwrites True-Client-IP/X-Real-IP/X-Forwarded-For itself
 
    # SMTP (Optional - for Email features)
    export EZAUTH_SMTP_HOST="smtp.example.com"

@@ -27,7 +27,7 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler
 
 ### `Run`
 
-Starts the HTTP server on the address configured in `service.Config`.
+Starts the HTTP server on the address configured in `service.Config`, with conservative `ReadHeaderTimeout`/`ReadTimeout`/`WriteTimeout`/`IdleTimeout`. Blocks until it receives `SIGINT`/`SIGTERM`, at which point it stops accepting new connections and drains in-flight requests (up to a 15s grace period) before returning.
 
 ```go
 func (h *Handler) Run()

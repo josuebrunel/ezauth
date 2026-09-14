@@ -36,7 +36,7 @@ func (r Repository) UserCreate(ctx context.Context, user *models.User) (*models.
 ```
 
 ### `UserGetByEmail`
-Retrieves a user by email.
+Retrieves a user by email. The lookup email (and, in `UserCreate`/`UserUpdate`, the stored email) is lowercased and trimmed before use, so lookups behave the same regardless of input casing or the DB dialect's default collation.
 
 ```go
 func (r Repository) UserGetByEmail(ctx context.Context, email string) (*models.User, error)
