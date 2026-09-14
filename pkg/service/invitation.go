@@ -187,6 +187,11 @@ func (a *Auth) InvitationAccept(ctx context.Context, req RequestInvitationAccept
 		return nil, nil, ErrEmailAlreadyRegistered
 	}
 
+	username := strings.TrimSpace(req.Username)
+	if username != "" && !usernameRegex.MatchString(username) {
+		return nil, nil, errors.New("username must be 3-30 characters: letters, numbers, underscores, hyphens")
+	}
+
 	if err := a.validatePassword(req.Password); err != nil {
 		return nil, nil, err
 	}
@@ -198,7 +203,7 @@ func (a *Auth) InvitationAccept(ctx context.Context, req RequestInvitationAccept
 	now := time.Now()
 	user := &models.User{
 		Email:           email,
-		Username:        strings.TrimSpace(req.Username),
+		Username:        username,
 		PasswordHash:    hash,
 		Provider:        "local",
 		EmailVerified:   true,

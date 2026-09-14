@@ -189,3 +189,68 @@ func TestInvitationFlow(t *testing.T) {
 		}
 	})
 }
+
+// TestInvitationAccept_ValidatesUsernameFormat proves an invited user can't
+// register with a username that would be rejected via the normal
+// registration flow (normalizeUserInput's usernameRegex) -- InvitationAccept
+// previously built the User struct directly from req.Username with no
+// format check at all.
+func TestInvitationAccept_ValidatesUsernameFormat(t *testing.T) {
+	auth := setupInvitationTestDB(t)
+	ctx := context.Background()
+
+	inviter, err := auth.Repo.UserCreate(ctx, &models.User{
+		Email:    util.UniqueEmail("inviter"),
+		Provider: "local",
+	})
+	if err != nil {
+		t.Fatalf("failed to create inviter: %v", err)
+	}
+
+	newInvitationToken := func(t *testing.T) string {
+		t.Helper()
+		if _, err := auth.InvitationCreate(ctx, inviter, RequestInvitation{Email: util.UniqueEmail("invitee")}); err != nil {
+			t.Fatalf("InvitationCreate failed: %v", err)
+		}
+		mockMailer := auth.Mailer.(*MockMailer)
+		sentBody := mockMailer.SentEmails[len(mockMailer.SentEmails)-1]["body"]
+		return sentBody[len(sentBody)-64:]
+	}
+
+	t.Run("rejects an invalid username", func(t *testing.T) {
+		token := newInvitationToken(t)
+		_, _, err := auth.InvitationAccept(ctx, RequestInvitationAccept{
+			Token:    token,
+			Password: "securepass123",
+			Username: "a b!", // spaces/punctuation not allowed
+		})
+		if err == nil {
+			t.Fatal("expected an error for an invalid username, got nil")
+		}
+	})
+
+	t.Run("accepts a valid username", func(t *testing.T) {
+		token := newInvitationToken(t)
+		user, _, err := auth.InvitationAccept(ctx, RequestInvitationAccept{
+			Token:    token,
+			Password: "securepass123",
+			Username: "valid_username",
+		})
+		if err != nil {
+			t.Fatalf("expected a valid username to be accepted, got %v", err)
+		}
+		if user.Username != "valid_username" {
+			t.Fatalf("expected username %q, got %q", "valid_username", user.Username)
+		}
+	})
+
+	t.Run("blank username is still allowed (optional field)", func(t *testing.T) {
+		token := newInvitationToken(t)
+		if _, _, err := auth.InvitationAccept(ctx, RequestInvitationAccept{
+			Token:    token,
+			Password: "securepass123",
+		}); err != nil {
+			t.Fatalf("expected a blank username to be accepted, got %v", err)
+		}
+	})
+}
