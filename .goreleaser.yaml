@@ -40,17 +40,62 @@ release:
   header: |
     ## Highlights
 
-    Security fix, found during a downstream audit:
+    A broader security audit turned up sixteen issues; this release closes
+    the thirteen lowest-risk/lowest-effort ones (three bigger design
+    changes — admin authorization, plaintext token storage, an invitation
+    privilege-escalation path — are tracked separately as #131-#133):
 
-    - **Fix: session fixation on every login-adjacent path** —
-      `setAuthCookies` (the single choke point form login/registration,
-      OAuth2 callback, passwordless, WebAuthn, SMS OTP, MFA verify, and
-      impersonation-start all funnel through) wrote the session's auth
-      tokens without first rotating the session ID. A session ID issued
-      before authentication — one an attacker could fix on a victim —
-      stayed valid after login and inherited the authenticated session.
-      `scs.SessionManager.RenewToken` is now called before the tokens are
-      written, closing all of those paths in one place. See #130.
+    - **Fix: MFA/SMS OTP had no dedicated brute-force protection** —
+      `MFALoginVerify`/`SMSOTPVerify` now share the same account-lockout
+      counter as password auth: a wrong code counts toward
+      `EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS`, and once locked, both reject
+      even a *correct* code until the account unlocks. Previously the only
+      guard was the optional, off-by-default global rate limiter. See #134.
+    - **Fix: rate limiter bypassable via spoofed `X-Forwarded-For`** —
+      chi's `RealIP` unconditionally trusted client-supplied
+      `X-Forwarded-For`/`X-Real-IP`/`True-Client-IP` with no trusted-proxy
+      allowlist. New `EZAUTH_TRUST_PROXY_HEADERS` (default `false`) gates
+      it: by default ezauth now keys the rate limiter on the raw,
+      unspoofable TCP peer address. See #135.
+    - **Fix: failed-login counter race condition** — the lockout counter
+      was read-then-written from Go, letting concurrent parallel guesses
+      undercount attempts. Now a single atomic
+      `failed_login_attempts = failed_login_attempts + 1` UPDATE. See #137.
+    - **Fix: email case-sensitivity was inconsistent across DB dialects** —
+      postgres/sqlite compared case-sensitively by default, mysql
+      case-insensitively, so the same code let `User@Example.com` and
+      `user@example.com` register as distinct accounts on some backends.
+      Email is now normalized (lowercased/trimmed) at every repository
+      choke point, with a migration to backfill existing data. See #144.
+    - **Fix: no HTTP server timeouts or graceful shutdown** — `Handler.Run`
+      now sets conservative read/write/idle timeouts and drains in-flight
+      requests on `SIGINT`/`SIGTERM` instead of hard-killing them. See #138.
+    - **Fix: unbounded request body size** — every JSON-decoding handler,
+      including unauthenticated ones, now goes through a 1 MiB
+      `MaxBytesReader` by default. See #136.
+    - **Fix: raw internal/DB errors echoed to clients in 500 responses** —
+      5xx responses now return a generic message; the real error is still
+      logged server-side. See #142.
+    - **New: `EZAUTH_FORCE_SECURE_COOKIES`** — session/CSRF cookie
+      `Secure` no longer depends solely on parsing `BASE_URL`'s scheme,
+      which silently dropped `Secure` behind a TLS-terminating reverse
+      proxy left on an `http://` `BASE_URL`. See #141.
+    - **Fix: DSN credentials logged in plaintext on connection failure** —
+      the DSN is now redacted before it hits the logs. See #140.
+    - **Fix: weak `JWT_SECRET` accepted; `CSRF_SECRET` fallback logged too
+      quietly** — `LoadConfig` now rejects an HS256 secret shorter than 32
+      characters, and the CSRF-falls-back-to-JWT-secret line is now logged
+      at Error instead of Warn. See #139.
+    - **Fix: admin user search didn't escape LIKE wildcards** — a search
+      term containing `%`/`_` now matches literally instead of acting as a
+      wildcard. See #145.
+    - **Docs: unscoped API keys clarified** — `RequireAPIKeyScope`'s
+      "no scopes = full access, not restricted access" behavior (kept
+      as-is for backward compatibility) now has a hard-to-miss warning in
+      the README and doc comments. See #143.
+    - Also: `AccountLockout` now warns if left at its zero value on a
+      hand-built `config.Config{}` (i.e. not built via `LoadConfig`),
+      which silently disabled brute-force lockout. See #146.
 
 checksum:
   name_template: 'checksums.txt'
