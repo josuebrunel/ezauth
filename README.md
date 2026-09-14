@@ -346,6 +346,10 @@ r.Get("/my-custom-login", func(w http.ResponseWriter, r *http.Request) {
 })
 ```
 
+**Enforcement rules:** `GET`/`HEAD`/`OPTIONS` requests are always allowed (CSRF only matters for state-changing methods). For everything else: a `Sec-Fetch-Site` of `same-origin` or `none` is allowed, any other value (`cross-site`, `same-site`, `cross-origin`, ...) is rejected. If `Sec-Fetch-Site` is absent entirely (older browsers, or a non-browser client like curl/an SDK), the request falls back to comparing the `Origin` header's host against the request's `Host` header — a match is allowed, a mismatch is rejected, and a request with **neither** header is allowed outright (assumed same-origin or non-browser). This is exercised end-to-end in `pkg/handler/csrf_test.go`.
+
+If your frontend is served from a different origin than `ezauth` itself (so browsers legitimately send `Sec-Fetch-Site: cross-site`), set `EZAUTH_CSRF_TRUSTED_ORIGINS` to a comma-separated list of allowed `Origin` values (e.g. `https://app.example.com`) to exempt them from this check. Leave it unset for same-origin deployments, including behind a reverse proxy — those already pass the checks above without needing a trusted-origin entry.
+
 > [!NOTE]
 > If you are using the JSON API endpoints (`/auth/api/*`) instead of the web forms, CSRF is disabled automatically since they use standard JWT Bearer Auth without cookies.
 

@@ -17,6 +17,7 @@
 | `EZAUTH_ADMIN_ROLE` | RBAC role required to reach `Handler`'s admin/RBAC/org/impersonation HTTP routes by default (see [Admin Authorization](https://github.com/josuebrunel/ezauth#admin-authorization) in the README). Bootstrap your first admin via `ezauthapi create-admin`. | `admin` |
 | `EZAUTH_JWT_SECRET`    | Secret key used to sign JWT tokens (HS256). Must be at least 32 characters — `LoadConfig` rejects a shorter value. | |
 | `EZAUTH_CSRF_SECRET`   | Not currently used: CSRF protection (`filippo.io/csrf`) validates request headers, not an HMAC-signed token, so there's no key for this to provide. Accepted for config-shape compatibility only. | |
+| `EZAUTH_CSRF_TRUSTED_ORIGINS` | Comma-separated `Origin` values (e.g. `https://app.example.com`) exempted from the CSRF cross-origin check. Only needed when the frontend is served from a different origin than ezauth itself — see [CSRF Protection](https://github.com/josuebrunel/ezauth#csrf-protection) in the README. | |
 | `EZAUTH_TIMEOUT`       | Request timeout duration.                                      | `30s`                   |
 | `EZAUTH_MFA_ISSUER`    | Issuer name shown in authenticator apps for TOTP MFA.          | `EzAuth`                |
 | `EZAUTH_TRUSTED_DEVICE_TTL`         | How long a "remembered" device skips MFA step-up.  | `720h` (30 days)        |

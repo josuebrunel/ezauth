@@ -323,24 +323,33 @@ type Config struct {
 	// value to provide. Kept (and still redacted by Sanitized()) only so a
 	// future CSRF implementation change has a config slot to reuse without
 	// another env var migration.
-	CSRFSecret     string         `json:"-" env:"CSRF_SECRET"`
-	Hashing        Hashing        `json:"hashing"`
-	RateLimit      RateLimit      `json:"rate_limit"`
-	TrustedDevice  TrustedDevice  `json:"trusted_device"`
-	AccountLockout AccountLockout `json:"account_lockout"`
-	Invitation     Invitation     `json:"invitation"`
-	OAuth2         OAuth2         `json:"oauth2"`
-	SMTP           SMTP           `json:"smtp"`
-	EmailTemplates EmailTemplates `json:"email_templates"`
-	SMS            SMS            `json:"sms"`
-	SMSTemplates   SMSTemplates   `json:"sms_templates"`
-	Redirects      Redirects      `json:"redirects"`
-	Pages          Pages          `json:"pages"`
-	TimeOut        time.Duration  `json:"timeout" env:"TIMEOUT" default:"30s"`
-	MFAIssuer      string         `json:"mfa_issuer" env:"MFA_ISSUER" default:"EzAuth"`
-	WebAuthn       WebAuthn       `json:"webauthn"`
-	AuditLog       AuditLog       `json:"audit_log"`
-	JWT            JWT            `json:"jwt"`
+	CSRFSecret string `json:"-" env:"CSRF_SECRET"`
+	// CSRFTrustedOrigins is a comma-separated list of Origin values (e.g.
+	// "https://app.example.com") exempted from the cross-origin check on
+	// Form routes (see handler.New's CSRF middleware registration). Only
+	// needed when the frontend making these requests is served from a
+	// different origin than ezauth itself -- same-origin deployments
+	// (including behind a reverse proxy) need nothing here, since the
+	// underlying library already treats those as same-origin without a
+	// trusted-origin entry.
+	CSRFTrustedOrigins string         `json:"csrf_trusted_origins" env:"CSRF_TRUSTED_ORIGINS"`
+	Hashing            Hashing        `json:"hashing"`
+	RateLimit          RateLimit      `json:"rate_limit"`
+	TrustedDevice      TrustedDevice  `json:"trusted_device"`
+	AccountLockout     AccountLockout `json:"account_lockout"`
+	Invitation         Invitation     `json:"invitation"`
+	OAuth2             OAuth2         `json:"oauth2"`
+	SMTP               SMTP           `json:"smtp"`
+	EmailTemplates     EmailTemplates `json:"email_templates"`
+	SMS                SMS            `json:"sms"`
+	SMSTemplates       SMSTemplates   `json:"sms_templates"`
+	Redirects          Redirects      `json:"redirects"`
+	Pages              Pages          `json:"pages"`
+	TimeOut            time.Duration  `json:"timeout" env:"TIMEOUT" default:"30s"`
+	MFAIssuer          string         `json:"mfa_issuer" env:"MFA_ISSUER" default:"EzAuth"`
+	WebAuthn           WebAuthn       `json:"webauthn"`
+	AuditLog           AuditLog       `json:"audit_log"`
+	JWT                JWT            `json:"jwt"`
 }
 
 // LoadConfig loads the configuration from environment variables.

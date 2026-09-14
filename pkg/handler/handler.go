@@ -338,7 +338,11 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 			// -- Cfg.CSRFSecret is accepted (and still redacted by
 			// Sanitized()) only in case a future CSRF implementation swap
 			// needs it again.
-			r.Use(csrf.Protect(nil))
+			var csrfOpts []csrf.Option
+			if h.svc.Cfg.CSRFTrustedOrigins != "" {
+				csrfOpts = append(csrfOpts, csrf.TrustedOrigins(strings.Split(h.svc.Cfg.CSRFTrustedOrigins, ",")))
+			}
+			r.Use(csrf.Protect(nil, csrfOpts...))
 
 			r.Get("/csrf", func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("X-CSRF-Token", csrf.Token(r))
