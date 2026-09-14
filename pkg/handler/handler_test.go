@@ -17,6 +17,8 @@ import (
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/josuebrunel/ezauth/pkg/service"
 	"github.com/josuebrunel/ezauth/pkg/util"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
@@ -976,6 +978,34 @@ func TestHandler_SecureCookies(t *testing.T) {
 		h := newHandler(t, "http://localhost:8080", true)
 		if !h.Session.Cookie.Secure {
 			t.Error("expected Secure=true when ForceSecureCookies is set, even with an http:// BaseURL (e.g. behind a TLS-terminating proxy)")
+		}
+	})
+
+	// The oauth_state cookie must agree with the session cookie -- it
+	// previously re-derived Secure from BaseURL alone, ignoring
+	// ForceSecureCookies, so behind a TLS-terminating proxy with BaseURL
+	// left at its http:// default this cookie (unlike the session cookie)
+	// went out without Secure.
+	t.Run("oauth_state cookie respects ForceSecureCookies with an http BaseURL", func(t *testing.T) {
+		h := newHandler(t, "http://localhost:8080", true)
+		h.svc.RegisterOAuth2Provider("testprovider", service.OAuth2Provider{
+			Config: oauth2.Config{ClientID: "id", ClientSecret: "secret", Endpoint: google.Endpoint},
+		})
+		req := httptest.NewRequest(http.MethodGet, "/auth/oauth2/testprovider/login", nil)
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+
+		var found bool
+		for _, c := range w.Result().Cookies() {
+			if c.Name == "oauth_state" {
+				found = true
+				if !c.Secure {
+					t.Error("expected oauth_state cookie Secure=true when ForceSecureCookies is set")
+				}
+			}
+		}
+		if !found {
+			t.Fatal("expected an oauth_state cookie to be set")
 		}
 	})
 }

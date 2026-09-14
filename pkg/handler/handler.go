@@ -108,6 +108,13 @@ type Handler struct {
 	svc     *service.Auth
 	Session *scs.SessionManager
 
+	// secureCookies is Cfg.ForceSecureCookies || strings.HasPrefix(Cfg.BaseURL,
+	// "https://"), computed once in New() and reused for every cookie this
+	// Handler sets (session, CSRF, oauth_state, trusted-device) so they all
+	// agree -- a cookie that re-derived this from BaseURL alone would ignore
+	// ForceSecureCookies.
+	secureCookies bool
+
 	// adminAuthz gates the admin/RBAC/org/impersonation route subtree (see
 	// WithAdminAuthz). nil until New() resolves it to either an explicit
 	// WithAdminAuthz value or the default RequireRole(svc, Cfg.AdminRole)
@@ -224,6 +231,7 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 	if !secureCookies && !h.svc.Cfg.Debug {
 		xlog.Warn("session/CSRF cookies are not marked Secure: BASE_URL doesn't start with https:// and FORCE_SECURE_COOKIES is unset. If ezauth sits behind a TLS-terminating reverse proxy, set EZAUTH_FORCE_SECURE_COOKIES=true.")
 	}
+	h.secureCookies = secureCookies
 
 	// Initialize Session Manager
 	h.Session = scs.New()

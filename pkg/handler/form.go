@@ -289,7 +289,7 @@ func (h *Handler) FormMFALoginVerify(w http.ResponseWriter, r *http.Request) {
 			Path:     "/",
 			Expires:  time.Now().Add(h.svc.Cfg.TrustedDevice.TTL),
 			HttpOnly: true,
-			Secure:   strings.HasPrefix(h.svc.Cfg.BaseURL, "https://"),
+			Secure:   h.secureCookies,
 			SameSite: http.SameSiteLaxMode,
 		})
 	}
@@ -765,7 +765,7 @@ func (h *Handler) OAuth2Login(w http.ResponseWriter, r *http.Request) {
 		Value:    state,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   strings.HasPrefix(h.svc.Cfg.BaseURL, "https://"),
+		Secure:   h.secureCookies,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   300,
 	})
