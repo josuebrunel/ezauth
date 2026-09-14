@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -51,8 +52,11 @@ func (rl *RateLimiter) cleanupLoop() {
 	}
 }
 
-// ipToKey returns the client IP to key the rate limiter on: r.RemoteAddr,
-// the raw TCP peer address, which a client can't spoof. It must not re-read
+// ipToKey returns the client IP to key the rate limiter on: the host part of
+// r.RemoteAddr (the raw TCP peer address, which a client can't spoof), with
+// the port stripped -- the port is different on every new TCP connection, so
+// keying on the full host:port (as this used to) let a client reset its own
+// bucket just by not reusing a connection. It must not re-read
 // True-Client-IP/X-Real-IP/X-Forwarded-For itself, since an unauthenticated
 // client can set any of those to an arbitrary value and get a fresh
 // rate-limit bucket on every request. chi's RealIP middleware overwrites
@@ -60,6 +64,9 @@ func (rl *RateLimiter) cleanupLoop() {
 // (see Handler's default middleware chain) when Cfg.TrustProxyHeaders
 // confirms ezauth sits behind a reverse proxy that sanitizes them first.
 func ipToKey(r *http.Request) string {
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return host
+	}
 	return r.RemoteAddr
 }
 

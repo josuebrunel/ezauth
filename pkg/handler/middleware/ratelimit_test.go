@@ -192,6 +192,35 @@ func TestRateLimiter_IgnoresSpoofedXForwardedFor(t *testing.T) {
 	}
 }
 
+func TestRateLimiter_SameIPDifferentPortsShareABucket(t *testing.T) {
+	rl := NewRateLimiter(RateLimitConfig{
+		Enabled:    true,
+		Requests:   2,
+		Window:     time.Minute,
+		ByClientIP: true,
+	})
+	handler := rl.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// Same client IP, a fresh source port each time (i.e. a new TCP
+	// connection) -- must not reset the bucket, or the limiter is trivially
+	// bypassed by not reusing a connection.
+	blocked := 0
+	for i := range 10 {
+		req := httptest.NewRequest("GET", "/", nil)
+		req.RemoteAddr = fmt.Sprintf("192.0.2.9:%d", 40000+i)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code == http.StatusTooManyRequests {
+			blocked++
+		}
+	}
+	if blocked != 8 {
+		t.Errorf("expected 8 of 10 requests blocked (limit 2), got %d", blocked)
+	}
+}
+
 func TestRateLimiter_ByClientIPFalse(t *testing.T) {
 	rl := NewRateLimiter(RateLimitConfig{
 		Enabled:    true,
