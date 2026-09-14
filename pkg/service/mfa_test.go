@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"encoding/hex"
+	"strings"
 	"testing"
 	"time"
 
@@ -274,5 +276,31 @@ func TestMFALoginVerify_BruteForceLockout(t *testing.T) {
 	}
 	if _, _, _, err := auth.MFALoginVerify(ctx, mfaToken, validCode, false); err != ErrAccountLocked {
 		t.Fatalf("expected ErrAccountLocked even with the correct code once locked, got %v", err)
+	}
+}
+
+// TestGenerateRecoveryCode_Entropy proves recovery codes carry 128 bits of
+// randomness (16 bytes), not the 40 bits a 5-byte code gave a DB-leak
+// attacker.
+func TestGenerateRecoveryCode_Entropy(t *testing.T) {
+	code, err := generateRecoveryCode()
+	if err != nil {
+		t.Fatalf("generateRecoveryCode failed: %v", err)
+	}
+
+	hexChars := strings.ReplaceAll(code, "-", "")
+	if len(hexChars) != recoveryCodeBytes*2 {
+		t.Fatalf("expected %d hex chars (%d random bytes), got %d in %q", recoveryCodeBytes*2, recoveryCodeBytes, len(hexChars), code)
+	}
+	if _, err := hex.DecodeString(hexChars); err != nil {
+		t.Fatalf("expected valid hex, got %q: %v", code, err)
+	}
+
+	code2, err := generateRecoveryCode()
+	if err != nil {
+		t.Fatalf("generateRecoveryCode failed: %v", err)
+	}
+	if code == code2 {
+		t.Fatal("expected two calls to produce different codes")
 	}
 }

@@ -323,10 +323,18 @@ func (a *Auth) mfaConsumeRecoveryCode(ctx context.Context, user *models.User, co
 	return true
 }
 
+// recoveryCodeBytes is 16 random bytes (128 bits) per code. MFA recovery
+// codes bypass MFA entirely on a successful match, so they need entropy in
+// the same range as the other high-entropy tokens in this codebase
+// (util.HashToken's doc comment), not the ~40 bits a shorter code would
+// give a DB-leak attacker -- at 5 bytes, each code was recoverable from its
+// stored hash in minutes on a GPU.
+const recoveryCodeBytes = 16
+
 func generateRecoveryCode() (string, error) {
-	b := make([]byte, 5)
+	b := make([]byte, recoveryCodeBytes)
 	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%s-%s", hex.EncodeToString(b[:2]), hex.EncodeToString(b[2:])), nil
+	return fmt.Sprintf("%s-%s-%s-%s", hex.EncodeToString(b[:4]), hex.EncodeToString(b[4:8]), hex.EncodeToString(b[8:12]), hex.EncodeToString(b[12:])), nil
 }
