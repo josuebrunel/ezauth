@@ -564,6 +564,17 @@ func (h *Handler) FormPasswordlessLogin(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// Fetch the user for the hook (silently ignore if not found) --
+	// PasswordlessLogin revokes but doesn't delete the token row, so it's
+	// still findable by its hash. Mirrors the JSON API's PasswordlessLogin.
+	if tokenRecord, err := h.svc.Repo.TokenGetByToken(r.Context(), util.HashToken(token)); err == nil {
+		if user, err := h.svc.Repo.UserGetByID(r.Context(), tokenRecord.UserID); err == nil {
+			if err := h.svc.Hook.AfterUserSignedIn(r.Context(), user); err != nil {
+				xlog.Error("hook AfterUserSignedIn failed for passwordless", "user_id", user.ID, "err", err)
+			}
+		}
+	}
+
 	if err := h.setAuthCookies(r.Context(), tokenResp); err != nil {
 		xlog.Error("could not establish session", "err", err)
 		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrCouldNotEstablishSession.Error())

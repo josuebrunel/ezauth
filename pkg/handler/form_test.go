@@ -38,6 +38,10 @@ func setupFormTestHandler(t *testing.T) *Handler {
 			Login:    "/login",
 			Register: "/register",
 		},
+		EmailTemplates: config.EmailTemplates{
+			PasswordlessSubject: "Magic Link Login",
+			PasswordlessBody:    "Click the following link to login: {{.Link}}",
+		},
 	}
 	authSvc, err := service.NewFromConfig(cfg, "auth")
 	if err != nil {
@@ -395,4 +399,47 @@ func TestFormHandler_ImpersonationSwapBack(t *testing.T) {
 			t.Fatalf("expected session to resolve back to admin after stop, got %s", got.Email)
 		}
 	})
+}
+
+// TestFormPasswordlessLogin_CallsAfterUserSignedInHook proves the Form
+// passwordless login path fires the same AfterUserSignedIn hook every other
+// login path (password, OAuth2, WebAuthn, SMS OTP, and the JSON API's own
+// PasswordlessLogin) already does.
+func TestFormPasswordlessLogin_CallsAfterUserSignedInHook(t *testing.T) {
+	h := setupFormTestHandler(t)
+	hook := &testHook{}
+	h.svc.Hook = hook
+
+	email := util.UniqueEmail("form-passwordless")
+
+	form := url.Values{"email": {email}}
+	req := httptest.NewRequest(http.MethodPost, "/auth/passwordless/request", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected 302 after passwordless request, got %d: %s", w.Code, w.Body.String())
+	}
+
+	mockMailer := h.svc.Mailer.(*service.MockMailer)
+	if len(mockMailer.SentEmails) == 0 {
+		t.Fatal("expected a magic link email to be sent")
+	}
+	sentBody := mockMailer.SentEmails[len(mockMailer.SentEmails)-1]["body"]
+	tokenStart := strings.Index(sentBody, "token=")
+	if tokenStart == -1 {
+		t.Fatalf("could not find token in email body: %s", sentBody)
+	}
+	tokenValue := sentBody[tokenStart+len("token="):]
+
+	req = httptest.NewRequest(http.MethodGet, "/auth/passwordless/login?token="+tokenValue, nil)
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected 302 after passwordless login, got %d: %s", w.Code, w.Body.String())
+	}
+
+	if !containsHookCall(hook.calls, "AfterUserSignedIn") {
+		t.Errorf("expected AfterUserSignedIn to be called, got %v", hook.calls)
+	}
 }
