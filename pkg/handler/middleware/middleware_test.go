@@ -3,8 +3,10 @@ package middleware
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -409,6 +411,42 @@ func TestOrgLoaderMiddleware(t *testing.T) {
 		mw(next).ServeHTTP(w, req)
 		if w.Code != http.StatusOK {
 			t.Errorf("expected 200 (passthrough), got %d", w.Code)
+		}
+	})
+}
+
+func TestMaxBodyBytes(t *testing.T) {
+	const limit = 16
+
+	mw := MaxBodyBytes(limit)
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusRequestEntityTooLarge)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+
+	t.Run("body within limit passes through", func(t *testing.T) {
+		req := httptest.NewRequest("POST", "/", strings.NewReader(strings.Repeat("a", limit)))
+		w := httptest.NewRecorder()
+
+		mw(next).ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected 200, got %d", w.Code)
+		}
+	})
+
+	t.Run("body over limit is rejected", func(t *testing.T) {
+		req := httptest.NewRequest("POST", "/", strings.NewReader(strings.Repeat("a", limit*10)))
+		w := httptest.NewRecorder()
+
+		mw(next).ServeHTTP(w, req)
+
+		if w.Code != http.StatusRequestEntityTooLarge {
+			t.Errorf("expected 413, got %d", w.Code)
 		}
 	})
 }

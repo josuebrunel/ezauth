@@ -35,6 +35,13 @@ const (
 	defaultWriteTimeout      = 30 * time.Second
 	defaultIdleTimeout       = 60 * time.Second
 	defaultShutdownTimeout   = 15 * time.Second
+
+	// defaultMaxBodyBytes caps request bodies handled by the default
+	// middleware chain. ezauth's JSON payloads (credentials, WebAuthn
+	// attestation objects, etc.) are all well under this; it exists to
+	// bound memory use against oversized/malicious request bodies rather
+	// than to accommodate any legitimate large payload.
+	defaultMaxBodyBytes = 1 << 20 // 1 MiB
 )
 
 // LoadUserMiddleware is a middleware that loads the authenticated user into the context.
@@ -129,6 +136,7 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 		h.r.Use(middleware.Logger)
 		h.r.Use(middleware.RequestID)
 		h.r.Use(middleware.RealIP)
+		h.r.Use(ezmiddleware.MaxBodyBytes(defaultMaxBodyBytes))
 		h.r.Use(ezmiddleware.NewRateLimiter(ezmiddleware.RateLimitConfig{
 			Enabled:    h.svc.Cfg.RateLimit.Enabled,
 			Requests:   h.svc.Cfg.RateLimit.Requests,

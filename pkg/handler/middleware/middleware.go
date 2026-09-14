@@ -279,3 +279,16 @@ func Chain(middlewares ...func(http.Handler) http.Handler) func(http.Handler) ht
 		return next
 	}
 }
+
+// MaxBodyBytes caps request bodies at limit bytes using http.MaxBytesReader,
+// so a client can't exhaust server memory/bandwidth with an oversized
+// payload. A handler's json.Decode (or similar) will fail with an error once
+// the limit is exceeded, same as any other malformed-body error.
+func MaxBodyBytes(limit int64) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r.Body = http.MaxBytesReader(w, r.Body, limit)
+			next.ServeHTTP(w, r)
+		})
+	}
+}

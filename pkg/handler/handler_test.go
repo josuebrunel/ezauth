@@ -852,3 +852,19 @@ func TestHandlerRun_GracefulShutdown(t *testing.T) {
 		t.Fatal("Run() did not return after SIGINT within the shutdown timeout")
 	}
 }
+
+func TestHandler_RejectsOversizedRequestBody(t *testing.T) {
+	h := setupTestHandler(t)
+
+	oversized := bytes.Repeat([]byte("a"), defaultMaxBodyBytes+1)
+	req := httptest.NewRequest(http.MethodPost, "/auth/api/register", bytes.NewReader(oversized))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-api-key")
+	w := httptest.NewRecorder()
+
+	h.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 for an oversized body (decode fails once MaxBytesReader's limit is hit), got %d: %s", w.Code, w.Body.String())
+	}
+}
