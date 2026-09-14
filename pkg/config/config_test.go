@@ -1,7 +1,9 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -86,5 +88,52 @@ func TestConfig_Sanitized(t *testing.T) {
 	// Ensure original values are preserved
 	if cfg.JWTSecret != "real-jwt-secret" {
 		t.Errorf("original JWTSecret was modified, got '%s'", cfg.JWTSecret)
+	}
+}
+
+// TestConfig_JSONMarshalNeverLeaksSecrets proves secrets never reach a
+// json.Marshal of the raw Config -- unlike Sanitized(), which only helps a
+// caller who remembers to call it, json:"-" on every secret field makes
+// Sanitized() belt-and-braces instead of the only line of defense (e.g.
+// against a debug endpoint or an errant log call that marshals Config
+// directly).
+func TestConfig_JSONMarshalNeverLeaksSecrets(t *testing.T) {
+	cfg := Config{
+		JWTSecret:  "super-secret-jwt-value",
+		CSRFSecret: "super-secret-csrf-value",
+		ApiKey:     "super-secret-api-key-value",
+	}
+	cfg.SMTP.Password = "super-secret-smtp-password"
+	cfg.SMS.AuthToken = "super-secret-sms-auth-token"
+	cfg.OAuth2.Google.ClientSecret = "super-secret-google-client-secret"
+	cfg.OAuth2.Github.ClientSecret = "super-secret-github-client-secret"
+	cfg.OAuth2.Facebook.ClientSecret = "super-secret-facebook-client-secret"
+	cfg.OAuth2.Discord.ClientSecret = "super-secret-discord-client-secret"
+	cfg.OAuth2.GitLab.ClientSecret = "super-secret-gitlab-client-secret"
+	cfg.OAuth2.Slack.ClientSecret = "super-secret-slack-client-secret"
+	cfg.OAuth2.LinkedIn.ClientSecret = "super-secret-linkedin-client-secret"
+	cfg.OAuth2.Spotify.ClientSecret = "super-secret-spotify-client-secret"
+	cfg.JWT.PrivateKey = "super-secret-jwt-private-key"
+
+	secrets := []string{
+		cfg.JWTSecret, cfg.CSRFSecret, cfg.ApiKey, cfg.SMTP.Password, cfg.SMS.AuthToken,
+		cfg.OAuth2.Google.ClientSecret, cfg.OAuth2.Github.ClientSecret,
+		cfg.OAuth2.Facebook.ClientSecret, cfg.OAuth2.Discord.ClientSecret,
+		cfg.OAuth2.GitLab.ClientSecret, cfg.OAuth2.Slack.ClientSecret,
+		cfg.OAuth2.LinkedIn.ClientSecret, cfg.OAuth2.Spotify.ClientSecret,
+		cfg.JWT.PrivateKey,
+	}
+
+	// Deliberately marshal the RAW config, not cfg.Sanitized() -- this is
+	// exactly the "forgot to sanitize" scenario json:"-" protects against.
+	out, err := json.Marshal(cfg)
+	if err != nil {
+		t.Fatalf("json.Marshal failed: %v", err)
+	}
+
+	for _, secret := range secrets {
+		if strings.Contains(string(out), secret) {
+			t.Errorf("secret value %q leaked into JSON output: %s", secret, out)
+		}
 	}
 }

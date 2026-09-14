@@ -29,7 +29,7 @@ type Database struct {
 // OAuth2Google defines the settings for Google OAuth2.
 type OAuth2Google struct {
 	ClientID     string `json:"client_id" env:"OAUTH2_GOOGLE_CLIENT_ID"`
-	ClientSecret string `json:"client_secret" env:"OAUTH2_GOOGLE_CLIENT_SECRET"`
+	ClientSecret string `json:"-" env:"OAUTH2_GOOGLE_CLIENT_SECRET"`
 	RedirectURL  string `json:"redirect_url" env:"OAUTH2_GOOGLE_REDIRECT_URL"`
 	Scopes       string `json:"scopes" env:"OAUTH2_GOOGLE_SCOPES" default:"openid,profile,email"`
 }
@@ -37,7 +37,7 @@ type OAuth2Google struct {
 // OAuth2Github defines the settings for GitHub OAuth2.
 type OAuth2Github struct {
 	ClientID     string `json:"client_id" env:"OAUTH2_GITHUB_CLIENT_ID"`
-	ClientSecret string `json:"client_secret" env:"OAUTH2_GITHUB_CLIENT_SECRET"`
+	ClientSecret string `json:"-" env:"OAUTH2_GITHUB_CLIENT_SECRET"`
 	RedirectURL  string `json:"redirect_url" env:"OAUTH2_GITHUB_REDIRECT_URL"`
 	Scopes       string `json:"scopes" env:"OAUTH2_GITHUB_SCOPES" default:"user:email"`
 }
@@ -45,7 +45,7 @@ type OAuth2Github struct {
 // OAuth2Facebook defines the settings for Facebook OAuth2.
 type OAuth2Facebook struct {
 	ClientID     string `json:"client_id" env:"OAUTH2_FACEBOOK_CLIENT_ID"`
-	ClientSecret string `json:"client_secret" env:"OAUTH2_FACEBOOK_CLIENT_SECRET"`
+	ClientSecret string `json:"-" env:"OAUTH2_FACEBOOK_CLIENT_SECRET"`
 	RedirectURL  string `json:"redirect_url" env:"OAUTH2_FACEBOOK_REDIRECT_URL"`
 	Scopes       string `json:"scopes" env:"OAUTH2_FACEBOOK_SCOPES" default:"email,public_profile"`
 }
@@ -53,7 +53,7 @@ type OAuth2Facebook struct {
 // OAuth2Discord defines the settings for Discord OAuth2.
 type OAuth2Discord struct {
 	ClientID     string `json:"client_id" env:"OAUTH2_DISCORD_CLIENT_ID"`
-	ClientSecret string `json:"client_secret" env:"OAUTH2_DISCORD_CLIENT_SECRET"`
+	ClientSecret string `json:"-" env:"OAUTH2_DISCORD_CLIENT_SECRET"`
 	RedirectURL  string `json:"redirect_url" env:"OAUTH2_DISCORD_REDIRECT_URL"`
 	Scopes       string `json:"scopes" env:"OAUTH2_DISCORD_SCOPES" default:"identify,email"`
 }
@@ -61,7 +61,7 @@ type OAuth2Discord struct {
 // OAuth2GitLab defines the settings for GitLab OAuth2.
 type OAuth2GitLab struct {
 	ClientID     string `json:"client_id" env:"OAUTH2_GITLAB_CLIENT_ID"`
-	ClientSecret string `json:"client_secret" env:"OAUTH2_GITLAB_CLIENT_SECRET"`
+	ClientSecret string `json:"-" env:"OAUTH2_GITLAB_CLIENT_SECRET"`
 	RedirectURL  string `json:"redirect_url" env:"OAUTH2_GITLAB_REDIRECT_URL"`
 	Scopes       string `json:"scopes" env:"OAUTH2_GITLAB_SCOPES" default:"read_user"`
 }
@@ -69,7 +69,7 @@ type OAuth2GitLab struct {
 // OAuth2Slack defines the settings for Slack OAuth2.
 type OAuth2Slack struct {
 	ClientID     string `json:"client_id" env:"OAUTH2_SLACK_CLIENT_ID"`
-	ClientSecret string `json:"client_secret" env:"OAUTH2_SLACK_CLIENT_SECRET"`
+	ClientSecret string `json:"-" env:"OAUTH2_SLACK_CLIENT_SECRET"`
 	RedirectURL  string `json:"redirect_url" env:"OAUTH2_SLACK_REDIRECT_URL"`
 	Scopes       string `json:"scopes" env:"OAUTH2_SLACK_SCOPES" default:"openid,email"`
 }
@@ -77,7 +77,7 @@ type OAuth2Slack struct {
 // OAuth2LinkedIn defines the settings for LinkedIn OAuth2.
 type OAuth2LinkedIn struct {
 	ClientID     string `json:"client_id" env:"OAUTH2_LINKEDIN_CLIENT_ID"`
-	ClientSecret string `json:"client_secret" env:"OAUTH2_LINKEDIN_CLIENT_SECRET"`
+	ClientSecret string `json:"-" env:"OAUTH2_LINKEDIN_CLIENT_SECRET"`
 	RedirectURL  string `json:"redirect_url" env:"OAUTH2_LINKEDIN_REDIRECT_URL"`
 	Scopes       string `json:"scopes" env:"OAUTH2_LINKEDIN_SCOPES" default:"openid,profile,email"`
 }
@@ -85,7 +85,7 @@ type OAuth2LinkedIn struct {
 // OAuth2Spotify defines the settings for Spotify OAuth2.
 type OAuth2Spotify struct {
 	ClientID     string `json:"client_id" env:"OAUTH2_SPOTIFY_CLIENT_ID"`
-	ClientSecret string `json:"client_secret" env:"OAUTH2_SPOTIFY_CLIENT_SECRET"`
+	ClientSecret string `json:"-" env:"OAUTH2_SPOTIFY_CLIENT_SECRET"`
 	RedirectURL  string `json:"redirect_url" env:"OAUTH2_SPOTIFY_REDIRECT_URL"`
 	Scopes       string `json:"scopes" env:"OAUTH2_SPOTIFY_SCOPES" default:"user-read-email,user-read-private"`
 }
@@ -108,7 +108,7 @@ type SMTP struct {
 	Host     string `json:"host" env:"SMTP_HOST"`
 	Port     int    `json:"port" env:"SMTP_PORT" default:"587"`
 	User     string `json:"user" env:"SMTP_USER"`
-	Password string `json:"password" env:"SMTP_PASSWORD"`
+	Password string `json:"-" env:"SMTP_PASSWORD"`
 	From     string `json:"from" env:"SMTP_FROM"`
 }
 
@@ -116,7 +116,7 @@ type SMTP struct {
 // SMS OTP support is disabled unless AccountSID, AuthToken, and From are all set.
 type SMS struct {
 	AccountSID string `json:"account_sid" env:"SMS_TWILIO_ACCOUNT_SID"`
-	AuthToken  string `json:"auth_token" env:"SMS_TWILIO_AUTH_TOKEN"`
+	AuthToken  string `json:"-" env:"SMS_TWILIO_AUTH_TOKEN"`
 	From       string `json:"from" env:"SMS_TWILIO_FROM"`
 }
 
@@ -248,7 +248,7 @@ type AuditLog struct {
 type Config struct {
 	Addr    string `json:"addr" env:"ADDR" default:":8080"`
 	BaseURL string `json:"base_url" env:"BASE_URL" default:"http://localhost:8080"`
-	ApiKey  string `json:"api_key" env:"API_KEY" required:"true"`
+	ApiKey  string `json:"-" env:"API_KEY" required:"true"`
 	Debug   bool   `json:"debug" env:"DEBUG" default:"false"`
 	// ForceSecureCookies forces the Secure flag on session/CSRF cookies
 	// regardless of BaseURL's scheme. By default, Secure is derived from
@@ -274,14 +274,14 @@ type Config struct {
 	// name your application already uses for something else.
 	AdminRole string   `json:"admin_role" env:"ADMIN_ROLE" default:"admin"`
 	DB        Database `json:"db"`
-	JWTSecret string   `json:"jwt_secret" env:"JWT_SECRET" required:"true"`
+	JWTSecret string   `json:"-" env:"JWT_SECRET" required:"true"`
 	// CSRFSecret is not currently used: ezauth's CSRF protection
 	// (filippo.io/csrf) validates the Sec-Fetch-Site/Origin request headers
 	// against Host, not an HMAC-signed token, so there is no key for this
 	// value to provide. Kept (and still redacted by Sanitized()) only so a
 	// future CSRF implementation change has a config slot to reuse without
 	// another env var migration.
-	CSRFSecret     string         `json:"csrf_secret" env:"CSRF_SECRET"`
+	CSRFSecret     string         `json:"-" env:"CSRF_SECRET"`
 	Hashing        Hashing        `json:"hashing"`
 	RateLimit      RateLimit      `json:"rate_limit"`
 	TrustedDevice  TrustedDevice  `json:"trusted_device"`
