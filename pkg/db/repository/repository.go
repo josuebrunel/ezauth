@@ -1036,15 +1036,18 @@ func getDBConnection(opts Opts) (*sql.DB, error) {
 		if err == nil && opts.Schema != "" {
 			for _, c := range opts.Schema {
 				if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_') {
+					db.Close()
 					return nil, fmt.Errorf("invalid schema name %q: only alphanumeric and underscore characters are allowed", opts.Schema)
 				}
 			}
 			if _, err := db.Exec("CREATE SCHEMA IF NOT EXISTS " + opts.Schema); err != nil {
 				xlog.Error("failed to create schema", "error", err, "schema", opts.Schema)
+				db.Close()
 				return nil, err
 			}
 			if _, err := db.Exec("SET search_path TO " + opts.Schema); err != nil {
 				xlog.Error("failed to set search_path", "error", err, "schema", opts.Schema)
+				db.Close()
 				return nil, err
 			}
 		}
@@ -1063,6 +1066,7 @@ func getDBConnection(opts Opts) (*sql.DB, error) {
 
 	if err := db.Ping(); err != nil {
 		xlog.Error("failed to ping database", "error", err)
+		db.Close()
 		return nil, err
 	}
 
