@@ -117,7 +117,7 @@ See the [Organizations section of the README](https://github.com/josuebrunel/eza
 
 ## Invitation-Based Onboarding
 
-An existing user invites someone by email; the invitee gets a link that pre-fills registration with their email pre-verified and, optionally, a pre-assigned role. `ezauth` enforces no authorization on who may invite (same stance as `Impersonate`) — check that yourself before calling it. `Roles` and `Data` are opaque to `ezauth` beyond being carried through to the created account.
+An existing user invites someone by email; the invitee gets a link that pre-fills registration with their email pre-verified and, optionally, a pre-assigned role. `ezauth` enforces no authorization on *who* may invite (same stance as `Impersonate`) — check that yourself before calling it. It does enforce authorization on *what roles an invitation can grant*: `InvitationCreate` rejects (`service.ErrCannotGrantRole`) any role in `Roles` the inviter doesn't already hold via `inviter.HasRole`, so an invitation can never grant a role its creator doesn't have. `Data` remains fully opaque to `ezauth`, carried through to the created account unchecked.
 
 ```go
 info, err := auth.Service.InvitationCreate(ctx, inviter, service.RequestInvitation{

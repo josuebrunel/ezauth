@@ -109,7 +109,11 @@ func (h *Handler) FormInvitationCreate(w http.ResponseWriter, r *http.Request) {
 
 	info, err := h.svc.InvitationCreate(r.Context(), inviter, req)
 	if err != nil {
-		WriteJSONResponseError(w, http.StatusBadRequest, err)
+		status := http.StatusBadRequest
+		if err == service.ErrCannotGrantRole {
+			status = http.StatusForbidden
+		}
+		WriteJSONResponseError(w, status, err)
 		return
 	}
 	WriteJSONResponse(w, http.StatusOK, info, nil)

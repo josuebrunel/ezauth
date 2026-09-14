@@ -125,7 +125,7 @@ The following methods are attached to routes internally by `New`, but are public
 -   `FormSMSOTPRequest(w, r)`, `FormSMSOTPVerify(w, r)`: Form equivalents
 
 ### Invitation-Based Onboarding
-`ezauth` enforces no authorization on who may invite — same stance as impersonation.
+`ezauth` enforces no authorization on *who* may invite — same stance as impersonation. It does enforce authorization on *what roles an invitation can grant*: `InvitationCreate` rejects (`service.ErrCannotGrantRole`, `403`) any requested role the inviter doesn't already hold.
 -   `InvitationCreate(w, r)`, `InvitationsList(w, r)`, `InvitationRevoke(w, r)`: Manage invitations (JSON; require a logged-in caller)
 -   `InvitationPreview(w, r)`: Look up invite details by token, no auth required (JSON)
 -   `InvitationAccept(w, r)`: Accept an invite and set a password (JSON)

@@ -533,7 +533,7 @@ Deletes one of the authenticated user's passkeys, identified by its credential r
 ### Invitation Create
 `POST /auth/api/invitations`
 
-Issues a new invitation and emails the invitee a link to accept it. `ezauth` enforces no authorization on who may invite — check that yourself (e.g. `caller.HasRole("admin")`) before calling this.
+Issues a new invitation and emails the invitee a link to accept it. `ezauth` enforces no authorization on *who* may invite — check that yourself (e.g. `caller.HasRole("admin")`) before calling this. It does enforce authorization on *what roles an invitation can grant*: a request whose `roles` includes anything the caller doesn't already hold (via `caller.HasRole`) is rejected with `403`, so a plain user can never self-invite with `"roles": "admin"` and escalate.
 
 **Request Body:**
 ```json

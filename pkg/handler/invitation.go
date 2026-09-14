@@ -21,6 +21,7 @@ import (
 // @Security ApiKeyAuth
 // @Success 200 {object} ApiResponse[service.InvitationInfo]
 // @Failure 400 {object} ApiResponse[string]
+// @Failure 403 {object} ApiResponse[string] "requested a role the inviter doesn't hold"
 // @Router /auth/api/invitations [post]
 func (h *Handler) InvitationCreate(w http.ResponseWriter, r *http.Request) {
 	userID, err := h.contextUser(r)
@@ -42,7 +43,11 @@ func (h *Handler) InvitationCreate(w http.ResponseWriter, r *http.Request) {
 
 	info, err := h.svc.InvitationCreate(r.Context(), inviter, req)
 	if err != nil {
-		WriteJSONResponseError(w, http.StatusBadRequest, err)
+		status := http.StatusBadRequest
+		if err == service.ErrCannotGrantRole {
+			status = http.StatusForbidden
+		}
+		WriteJSONResponseError(w, status, err)
 		return
 	}
 	WriteJSONResponse(w, http.StatusOK, info, nil)

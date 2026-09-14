@@ -15,6 +15,14 @@ var (
 	ErrInvitationNotFound         = errors.New("invitation not found")
 	ErrInvalidOrExpiredInvitation = errors.New("invalid or expired invitation")
 	ErrEmailAlreadyRegistered     = errors.New("an account with this email already exists")
+
+	// ErrCannotGrantRole is returned by InvitationCreate when the inviter
+	// requests a role they don't themselves hold (via the legacy
+	// User.Roles/HasRole field ezauth's own documented admin-check pattern
+	// uses -- e.g. caller.HasRole("admin")). Without this check, any
+	// authenticated user could self-invite with roles:"admin" and be
+	// treated as admin by any app following that pattern.
+	ErrCannotGrantRole = errors.New("inviter is not authorized to grant one or more of the requested roles")
 )
 
 // RequestInvitation defines the parameters for issuing an invitation.
@@ -62,14 +70,28 @@ func invitationInfoFromToken(tok *models.Token) *InvitationInfo {
 }
 
 // InvitationCreate issues a new invitation on behalf of inviter, emailing
-// invitee a link to accept it. Roles and Data are opaque to ezauth beyond
-// being carried through to the created account at InvitationAccept — the
-// caller decides what they mean (e.g. an org ID from a multi-tenancy layer
-// built on top of ezauth).
+// invitee a link to accept it. Data is opaque to ezauth beyond being carried
+// through to the created account at InvitationAccept — the caller decides
+// what it means (e.g. an org ID from a multi-tenancy layer built on top of
+// ezauth). Roles is similarly carried through, but is not opaque: inviter
+// must already hold every role requested (checked via the legacy
+// User.Roles/HasRole field), so an invitation can never grant a role its
+// creator doesn't have -- otherwise any authenticated user could self-invite
+// with roles:"admin" and escalate.
 func (a *Auth) InvitationCreate(ctx context.Context, inviter *models.User, req RequestInvitation) (*InvitationInfo, error) {
 	email := strings.ToLower(strings.TrimSpace(req.Email))
 	if err := validateEmail(email); err != nil {
 		return nil, err
+	}
+
+	for _, role := range strings.Split(req.Roles, ",") {
+		role = strings.TrimSpace(role)
+		if role == "" {
+			continue
+		}
+		if !inviter.HasRole(role) {
+			return nil, ErrCannotGrantRole
+		}
 	}
 
 	if _, err := a.Repo.UserGetByEmail(ctx, email); err == nil {

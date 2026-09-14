@@ -979,7 +979,7 @@ Each of the above has a form-based (cookie) equivalent at the same path minus th
 
 ### Invitation-Based Onboarding
 
-An existing user (e.g. a team admin) can invite someone by email; the invitee gets a link that pre-fills registration with their email pre-verified and, optionally, a pre-assigned role. Like `Impersonate`, `ezauth` enforces no authorization on who may invite — check that yourself (e.g. `inviter.HasRole("admin")`) before calling it. `Roles` and `Data` are opaque to `ezauth` beyond being carried through to the created account, so a multi-tenancy/RBAC layer built on top can put an org ID or role name in `Data`/`Roles` without `ezauth` needing to know what they mean.
+Any authenticated user can invite someone by email; the invitee gets a link that pre-fills registration with their email pre-verified and, optionally, a pre-assigned role. `ezauth` enforces no authorization on *who* may invite — check that yourself (e.g. `inviter.HasRole("admin")`) before calling it if you want to restrict invitation-sending itself. It does enforce authorization on *what roles an invitation can grant*, though: `InvitationCreate` rejects (`service.ErrCannotGrantRole`) any requested role the inviter doesn't already hold via `inviter.HasRole(role)`, so a plain user can never self-invite with `roles:"admin"` and escalate — an invitation can't grant a role its creator doesn't have. `Data` remains fully opaque to `ezauth`, carried through to the created account unchecked, so a multi-tenancy layer built on top can put an org ID there without `ezauth` needing to know what it means.
 
 ```go
 // inviter must already be authenticated; check authorization yourself first.

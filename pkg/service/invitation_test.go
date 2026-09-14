@@ -43,6 +43,11 @@ func TestInvitationFlow(t *testing.T) {
 	inviter, err := auth.Repo.UserCreate(ctx, &models.User{
 		Email:    util.UniqueEmail("inviter"),
 		Provider: "local",
+		// InvitationCreate only allows granting roles the inviter already
+		// holds (see "rejects granting a role the inviter doesn't hold"
+		// below) -- the inviter needs "member" itself to invite others as
+		// "member" in the happy-path tests.
+		Roles: "member",
 	})
 	if err != nil {
 		t.Fatalf("failed to create inviter: %v", err)
@@ -147,6 +152,40 @@ func TestInvitationFlow(t *testing.T) {
 		}
 		if err := auth.InvitationRevoke(ctx, inviter, info.ID); err != nil {
 			t.Fatalf("InvitationRevoke by the actual inviter failed: %v", err)
+		}
+	})
+
+	t.Run("rejects granting a role the inviter doesn't hold", func(t *testing.T) {
+		plainUser, err := auth.Repo.UserCreate(ctx, &models.User{Email: util.UniqueEmail("plain"), Provider: "local"})
+		if err != nil {
+			t.Fatalf("failed to create plain user: %v", err)
+		}
+		if plainUser.HasRole("admin") {
+			t.Fatal("test setup: plainUser should not hold admin")
+		}
+
+		if _, err := auth.InvitationCreate(ctx, plainUser, RequestInvitation{
+			Email: util.UniqueEmail("escalation-attempt"),
+			Roles: "admin",
+		}); err != ErrCannotGrantRole {
+			t.Fatalf("expected ErrCannotGrantRole for a role the inviter doesn't hold, got %v", err)
+		}
+
+		// A mix of a held and an unheld role is rejected too -- partial
+		// grants aren't allowed.
+		if _, err := auth.InvitationCreate(ctx, inviter, RequestInvitation{
+			Email: util.UniqueEmail("escalation-attempt2"),
+			Roles: "member,admin",
+		}); err != ErrCannotGrantRole {
+			t.Fatalf("expected ErrCannotGrantRole for a roles list containing an unheld role, got %v", err)
+		}
+
+		// No roles requested at all is always fine, regardless of what the
+		// inviter holds.
+		if _, err := auth.InvitationCreate(ctx, plainUser, RequestInvitation{
+			Email: util.UniqueEmail("no-roles-requested"),
+		}); err != nil {
+			t.Fatalf("expected an unscoped invitation (no roles requested) to succeed, got %v", err)
 		}
 	})
 }

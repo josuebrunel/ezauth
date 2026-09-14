@@ -313,7 +313,7 @@ func (a *Auth) SMSOTPVerify(ctx context.Context, req RequestSMSOTPVerify) (*Toke
 
 ## Invitation-Based Onboarding
 
-`ezauth` enforces no authorization on who may invite — same stance as `Impersonate`.
+`ezauth` enforces no authorization on *who* may invite — same stance as `Impersonate`. It does enforce authorization on *what roles an invitation can grant*: `InvitationCreate` returns `ErrCannotGrantRole` if `Roles` includes anything the inviter doesn't already hold (`inviter.HasRole`).
 
 ```go
 func (a *Auth) InvitationCreate(ctx context.Context, inviter *models.User, req RequestInvitation) (*InvitationInfo, error)
