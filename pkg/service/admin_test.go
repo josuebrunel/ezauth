@@ -81,6 +81,40 @@ func TestAdminUsersList(t *testing.T) {
 		}
 	})
 
+	t.Run("LIKE wildcard characters in search are matched literally", func(t *testing.T) {
+		// A search containing a raw '%' must not behave as a wildcard: no
+		// created email contains a literal '%', so this should match nothing.
+		result, err := auth.UsersList(ctx, ListUsersOptions{Search: prefix + "%"})
+		if err != nil {
+			t.Fatalf("UsersList failed: %v", err)
+		}
+		if len(result.Users) != 0 {
+			t.Fatalf("expected literal '%%' to match nothing, got %d users", len(result.Users))
+		}
+
+		// '_' matches exactly one arbitrary character in SQL LIKE if left
+		// unescaped. Two users differing by a single character at the same
+		// position let us distinguish "literal underscore" (no match) from
+		// "single-char wildcard" (matches both).
+		wcPrefix := "wildcard" + util.NewIDStripped()[:8]
+		for _, suffix := range []string{"a", "b"} {
+			if _, err := auth.Repo.UserCreate(ctx, &models.User{
+				Email:    fmt.Sprintf("%s%s@test.com", wcPrefix, suffix),
+				Provider: "local",
+			}); err != nil {
+				t.Fatalf("failed to create user: %v", err)
+			}
+		}
+
+		result, err = auth.UsersList(ctx, ListUsersOptions{Search: wcPrefix + "_@test.com"})
+		if err != nil {
+			t.Fatalf("UsersList failed: %v", err)
+		}
+		if len(result.Users) != 0 {
+			t.Fatalf("expected literal '_' to match neither user (would match both if treated as a wildcard), got %d users", len(result.Users))
+		}
+	})
+
 	t.Run("rejects an invalid status filter", func(t *testing.T) {
 		if _, err := auth.UsersList(ctx, ListUsersOptions{Status: "bogus"}); err != ErrInvalidUserStatusFilter {
 			t.Fatalf("expected ErrInvalidUserStatusFilter, got %v", err)

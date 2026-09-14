@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gofrs/uuid/v5" // Added import
@@ -82,4 +83,23 @@ func IsPersistentDB() bool {
 // UniqueEmail generates a unique email address for tests to avoid conflicts in persistent DBs.
 func UniqueEmail(prefix string) string {
 	return fmt.Sprintf("%s_%d@test.com", prefix, time.Now().UnixNano())
+}
+
+// LikeEscapeChar is the escape character used by EscapeLikePattern. Callers
+// building a LIKE query from the escaped output must pair it with an
+// explicit `ESCAPE '!'` clause, since dialects disagree on (or don't define)
+// a default LIKE escape character.
+const LikeEscapeChar = "!"
+
+// EscapeLikePattern escapes the LIKE wildcard characters (%, _) and the
+// escape character itself in s, so the result can be wrapped in wildcards
+// (e.g. "%"+EscapeLikePattern(s)+"%") and matched literally rather than as a
+// user-controlled pattern. Must be paired with an `ESCAPE '!'` clause.
+func EscapeLikePattern(s string) string {
+	r := strings.NewReplacer(
+		LikeEscapeChar, LikeEscapeChar+LikeEscapeChar,
+		"%", LikeEscapeChar+"%",
+		"_", LikeEscapeChar+"_",
+	)
+	return r.Replace(s)
 }

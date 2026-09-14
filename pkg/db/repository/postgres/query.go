@@ -242,12 +242,12 @@ func (q *PSQLQuerier) QueryUsersList(ctx context.Context, filter models.UserList
 	}
 
 	if filter.Search != "" {
-		pattern := "%" + filter.Search + "%"
+		pattern := "%" + util.EscapeLikePattern(filter.Search) + "%"
 		mods = append(mods, sm.Where(
 			// ILIKE (not LIKE) for case-insensitive matching, matching sqlite/mysql's
-			// default LIKE case-insensitivity.
-			psql.Quote(models.ColumnEmail).OP("ILIKE", psql.Arg(pattern)).
-				Or(psql.Quote(models.ColumnUsername).OP("ILIKE", psql.Arg(pattern))),
+			// default LIKE case-insensitivity. Explicit ESCAPE clause so a search term
+			// containing %, _, or ! is matched literally instead of as a wildcard.
+			psql.Raw("("+models.ColumnEmail+" ILIKE ? ESCAPE '!' OR "+models.ColumnUsername+" ILIKE ? ESCAPE '!')", pattern, pattern),
 		))
 	}
 

@@ -239,10 +239,11 @@ func (q *SqliteQuerier) QueryUsersList(ctx context.Context, filter models.UserLi
 	}
 
 	if filter.Search != "" {
-		pattern := "%" + filter.Search + "%"
+		pattern := "%" + util.EscapeLikePattern(filter.Search) + "%"
 		mods = append(mods, sm.Where(
-			sqlite.Quote(models.ColumnEmail).Like(sqlite.Arg(pattern)).
-				Or(sqlite.Quote(models.ColumnUsername).Like(sqlite.Arg(pattern))),
+			// Explicit ESCAPE clause so a search term containing %, _, or ! is
+			// matched literally instead of as a wildcard.
+			sqlite.Raw("("+models.ColumnEmail+" LIKE ? ESCAPE '!' OR "+models.ColumnUsername+" LIKE ? ESCAPE '!')", pattern, pattern),
 		))
 	}
 

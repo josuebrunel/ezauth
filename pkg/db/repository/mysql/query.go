@@ -234,10 +234,11 @@ func (q *MysqlQuerier) QueryUsersList(ctx context.Context, filter models.UserLis
 	}
 
 	if filter.Search != "" {
-		pattern := "%" + filter.Search + "%"
+		pattern := "%" + util.EscapeLikePattern(filter.Search) + "%"
 		mods = append(mods, sm.Where(
-			mysql.Quote(models.ColumnEmail).Like(mysql.Arg(pattern)).
-				Or(mysql.Quote(models.ColumnUsername).Like(mysql.Arg(pattern))),
+			// Explicit ESCAPE clause so a search term containing %, _, or ! is
+			// matched literally instead of as a wildcard.
+			mysql.Raw("("+models.ColumnEmail+" LIKE ? ESCAPE '!' OR "+models.ColumnUsername+" LIKE ? ESCAPE '!')", pattern, pattern),
 		))
 	}
 
