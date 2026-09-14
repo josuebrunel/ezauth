@@ -14,7 +14,7 @@
 - **Authorization**: real RBAC (roles/permissions tables) and lightweight multi-tenancy (organizations), fully additive alongside the legacy `User.Roles` field.
 - **Admin & operations**: impersonation, invitation-based onboarding, user management, a persisted audit log, and extensible hooks.
 - **Extended User Profiles**: username, name, locale, timezone, roles, and metadata.
-- **Storage**: SQLite, PostgreSQL, and MySQL.
+- **Storage**: SQLite, PostgreSQL, and MySQL (8.0.23+).
 - **Integration**: embed as a Go library, or run as a standalone authentication service.
 
 > [!IMPORTANT]

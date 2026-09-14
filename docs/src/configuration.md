@@ -66,7 +66,7 @@ WebAuthn support is disabled unless both `EZAUTH_WEBAUTHN_RP_ID` and `EZAUTH_WEB
 
 | Variable            | Description                                           | Default     |
 | ------------------- | ----------------------------------------------------- | ----------- |
-| `EZAUTH_DB_DIALECT` | Database dialect (`sqlite3`, `postgres`, or `mysql`). | `sqlite3`   |
+| `EZAUTH_DB_DIALECT` | Database dialect (`sqlite3`, `postgres`, or `mysql`). `mysql` requires 8.0.23+ -- migrations use generated/invisible columns and expression column defaults. | `sqlite3`   |
 | `EZAUTH_DB_DSN`     | Database connection string.                           | `ezauth.db` |
 | `EZAUTH_DB_SCHEMA`  | Database schema (PostgreSQL only). Empty uses the schema on the connection's `search_path` (typically `public`). | (empty) |
 | `EZAUTH_DB_MAX_OPEN_CONNS`    | Max open connections in the pool.                    | `25`  |

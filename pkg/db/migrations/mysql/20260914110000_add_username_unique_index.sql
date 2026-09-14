@@ -28,12 +28,37 @@ WHERE u1.username <> '';
 -- INVISIBLE (8.0.23+) keeps it out of `SELECT *`, so it doesn't break the
 -- existing "SELECT * -> struct scan" query pattern used throughout the
 -- repository layer.
-ALTER TABLE ezauth_users ADD COLUMN username_unique_key VARCHAR(255) GENERATED ALWAYS AS (NULLIF(username, '')) VIRTUAL INVISIBLE;
-ALTER TABLE ezauth_users ADD UNIQUE INDEX idx_ezauth_users_username_unique (username_unique_key);
+--
+-- See 20260717220000_add_username.sql for why the ADD COLUMN/ADD INDEX here
+-- are guarded by an information_schema existence check.
+SET @stmt := (SELECT IF(
+  (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ezauth_users' AND COLUMN_NAME = 'username_unique_key') = 0,
+  'ALTER TABLE ezauth_users ADD COLUMN username_unique_key VARCHAR(255) GENERATED ALWAYS AS (NULLIF(username, '''')) VIRTUAL INVISIBLE',
+  'SELECT 1'
+));
+PREPARE stmt FROM @stmt; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @stmt := (SELECT IF(
+  (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ezauth_users' AND INDEX_NAME = 'idx_ezauth_users_username_unique') = 0,
+  'ALTER TABLE ezauth_users ADD UNIQUE INDEX idx_ezauth_users_username_unique (username_unique_key)',
+  'SELECT 1'
+));
+PREPARE stmt FROM @stmt; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-ALTER TABLE ezauth_users DROP INDEX idx_ezauth_users_username_unique;
-ALTER TABLE ezauth_users DROP COLUMN username_unique_key;
+SET @stmt := (SELECT IF(
+  (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ezauth_users' AND INDEX_NAME = 'idx_ezauth_users_username_unique') > 0,
+  'ALTER TABLE ezauth_users DROP INDEX idx_ezauth_users_username_unique',
+  'SELECT 1'
+));
+PREPARE stmt FROM @stmt; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @stmt := (SELECT IF(
+  (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ezauth_users' AND COLUMN_NAME = 'username_unique_key') > 0,
+  'ALTER TABLE ezauth_users DROP COLUMN username_unique_key',
+  'SELECT 1'
+));
+PREPARE stmt FROM @stmt; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 -- +goose StatementEnd

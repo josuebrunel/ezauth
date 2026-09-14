@@ -156,7 +156,7 @@ You can run `ezauth` as a separate service that handles authentication for your 
    export EZAUTH_ADDR=":8080"
    export EZAUTH_API_KEY="your-master-api-key"
    export EZAUTH_BASE_URL="http://localhost:8080"
-   export EZAUTH_DB_DIALECT="sqlite3"  # or "postgres" or "mysql"
+   export EZAUTH_DB_DIALECT="sqlite3"  # or "postgres" or "mysql" (mysql requires 8.0.23+ -- migrations use generated/invisible columns and expression column defaults)
    export EZAUTH_DB_DSN="auth.db"      # for mysql: "user:pass@tcp(localhost:3306)/dbname?parseTime=true"
    export EZAUTH_DB_SCHEMA="public"    # Optional: Database schema (PostgreSQL only)
    export EZAUTH_JWT_SECRET="super-secret-key-at-least-32-characters-long"  # HS256 requires >= 32 chars
