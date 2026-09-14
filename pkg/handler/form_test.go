@@ -395,8 +395,26 @@ func TestFormHandler_ImpersonationSwapBack(t *testing.T) {
 		}
 		restoredCookie := w.Result().Cookies()[0]
 
+		// The session token must be renewed on restore, exactly like every
+		// login path -- otherwise the session ID used throughout the
+		// impersonation window (visible to anyone who captured it via XSS,
+		// logs, or sniffing) would stay valid after admin privileges are
+		// restored (session fixation).
+		if restoredCookie.Value == impersonatedCookie.Value {
+			t.Fatal("expected the session token to be renewed on impersonation stop, got the same session ID")
+		}
+
 		if got := formSessionUser(t, h, restoredCookie); got.ID != admin.ID {
 			t.Fatalf("expected session to resolve back to admin after stop, got %s", got.Email)
+		}
+
+		// The old (pre-restore) session ID must no longer work at all.
+		staleReq := httptest.NewRequest(http.MethodGet, "/auth/sessions", nil)
+		staleReq.AddCookie(impersonatedCookie)
+		staleW := httptest.NewRecorder()
+		h.ServeHTTP(staleW, staleReq)
+		if staleW.Code == http.StatusOK {
+			t.Error("expected the pre-restore (impersonation) session cookie to no longer authenticate after stop")
 		}
 	})
 }

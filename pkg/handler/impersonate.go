@@ -230,7 +230,11 @@ func (h *Handler) FormStopImpersonation(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	restored := h.clearImpersonationCookies(r.Context())
+	restored, err := h.clearImpersonationCookies(r.Context())
+	if err != nil {
+		xlog.Error("failed to restore admin session after stopping impersonation", "admin_id", adminID, "err", err)
+		restored = false
+	}
 
 	if target != nil {
 		if admin, err := h.svc.Repo.UserGetByID(r.Context(), adminID); err == nil {

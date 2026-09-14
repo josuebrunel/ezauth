@@ -86,17 +86,28 @@ func (h *Handler) setImpersonationCookies(ctx context.Context, adminID string, t
 }
 
 // clearImpersonationCookies restores the stashed admin tokens into the session, ending
-// the impersonation session and returning the caller to their own session. Returns false
-// if there was no stashed impersonator session to restore.
-func (h *Handler) clearImpersonationCookies(ctx context.Context) bool {
+// the impersonation session and returning the caller to their own session. Returns
+// (false, nil) if there was no stashed impersonator session to restore.
+//
+// Renews the session token first, exactly like setAuthCookies does for every
+// login path -- restoring admin privileges is itself a privilege-level
+// change, so the session ID issued while impersonating (visible to anyone
+// who captured it via XSS, logs, or sniffing during that window) must not
+// stay valid afterward. RenewToken migrates the session token while
+// preserving its data (including the stash this function reads/writes), so
+// doing it first here is safe.
+func (h *Handler) clearImpersonationCookies(ctx context.Context) (bool, error) {
 	stashed, ok := h.Session.Get(ctx, sessionImpersonatorTokensKey).(map[string]string)
 	if !ok {
-		return false
+		return false, nil
+	}
+	if err := h.Session.RenewToken(ctx); err != nil {
+		return false, fmt.Errorf("renew session token: %w", err)
 	}
 	h.Session.Put(ctx, sessionTokensKey, stashed)
 	h.Session.Remove(ctx, sessionImpersonatorTokensKey)
 	h.Session.Remove(ctx, sessionImpersonatorIDKey)
-	return true
+	return true, nil
 }
 
 // IsImpersonating reports whether the current cookie session is an impersonation
