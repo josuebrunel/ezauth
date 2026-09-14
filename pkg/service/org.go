@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/josuebrunel/gopkg/xlog"
@@ -72,14 +73,27 @@ func (a *Auth) OrganizationDelete(ctx context.Context, id string) error {
 	return a.Repo.OrganizationDelete(ctx, id)
 }
 
+// ErrOrgMemberCannotHoldAdminRole is returned by OrgMemberAdd when roleName
+// is the configured global AdminRole: org-scoped membership grants must not
+// be usable to escalate to application-wide admin, which RequireRole checks
+// for on every admin-gated route regardless of which organization (if any)
+// the caller belongs to.
+var ErrOrgMemberCannotHoldAdminRole = errors.New("cannot grant the global admin role through organization membership")
+
 // OrgMemberAdd grants userID the given role within orgID, drawn from the
-// same role catalog RequireRole/RequirePermission check (see #114). If the
-// user is already a member, their role is updated instead.
+// same role catalog RequireRole/RequirePermission check (see #114) -- except
+// Cfg.AdminRole itself, which OrgMemberAdd always refuses (see
+// ErrOrgMemberCannotHoldAdminRole). If the user is already a member, their
+// role is updated instead.
 func (a *Auth) OrgMemberAdd(ctx context.Context, orgID, userID, roleName string) error {
 	role, err := a.Repo.RoleGetByName(ctx, roleName)
 	if err != nil {
 		xlog.Debug("add org member failed: role not found", "role", roleName, "err", err)
 		return errors.New("role not found")
+	}
+	if strings.EqualFold(role.Name, a.Cfg.AdminRole) {
+		xlog.Debug("add org member refused: role is the global admin role", "org_id", orgID, "user_id", userID, "role", roleName)
+		return ErrOrgMemberCannotHoldAdminRole
 	}
 	if err := a.Repo.OrgMemberUpsert(ctx, orgID, userID, role.ID); err != nil {
 		xlog.Error("failed to add org member", "org_id", orgID, "user_id", userID, "role", roleName, "err", err)
@@ -102,6 +116,25 @@ func (a *Auth) OrgMemberRemove(ctx context.Context, orgID, userID string) error 
 // OrgMembersList lists an organization's members, with each member's role name joined in.
 func (a *Auth) OrgMembersList(ctx context.Context, orgID string) ([]*models.OrgMember, error) {
 	return a.Repo.OrgMembersByOrgID(ctx, orgID)
+}
+
+// OrgMemberRole returns the role name userID holds within orgID, and
+// whether they're a member at all -- backs middleware.RequireOrgMembership/
+// RequireOrgRole (see #204), which scope a route to members of the
+// "current organization" (set by OrgLoaderMiddleware) instead of relying
+// solely on a blanket, application-wide admin gate. isMember false with a
+// nil error means "not a member", not a failure.
+func (a *Auth) OrgMemberRole(ctx context.Context, orgID, userID string) (roleName string, isMember bool, err error) {
+	members, err := a.Repo.OrgMembersByOrgID(ctx, orgID)
+	if err != nil {
+		return "", false, err
+	}
+	for _, m := range members {
+		if m.UserID == userID {
+			return m.RoleName, true, nil
+		}
+	}
+	return "", false, nil
 }
 
 // UserOrganizationsList lists the organizations a user belongs to.

@@ -257,6 +257,72 @@ func RequirePermission(checker PermissionChecker, permission string) func(http.H
 	}
 }
 
+// OrgMembershipChecker defines the interface for checking a user's role
+// within a specific organization, backed by the org_members table.
+type OrgMembershipChecker interface {
+	OrgMemberRole(ctx context.Context, orgID, userID string) (roleName string, isMember bool, err error)
+}
+
+// RequireOrgMembership is a middleware that requires the authenticated user
+// (UserContextKey, set by AuthMiddleware or LoadUserMiddleware) to be a
+// member -- of any role -- of the "current organization" (OrgContextKey,
+// set by OrgLoaderMiddleware). Both of those middlewares must run upstream.
+//
+// ezauth's own org service methods (pkg/service/org.go) perform no
+// membership check themselves, matching the rest of this package's RBAC
+// methods, which rely entirely on the HTTP-gate layer for authorization
+// (see #204) -- so mount this (or RequireOrgRole) on organization routes
+// yourself if you've customized WithAdminAuthz to something other than the
+// default blanket global-admin gate, and want per-organization scoping
+// instead of (or in addition to) it.
+func RequireOrgMembership(checker OrgMembershipChecker) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			userID, ok := r.Context().Value(UserContextKey).(string)
+			if !ok || userID == "" {
+				WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
+				return
+			}
+			orgID, ok := r.Context().Value(OrgContextKey).(string)
+			if !ok || orgID == "" {
+				WriteJSONResponseError(w, http.StatusForbidden, ErrForbidden)
+				return
+			}
+			_, isMember, err := checker.OrgMemberRole(r.Context(), orgID, userID)
+			if err != nil || !isMember {
+				WriteJSONResponseError(w, http.StatusForbidden, ErrForbidden)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// RequireOrgRole is like RequireOrgMembership, additionally requiring the
+// caller's membership role within the current organization to equal role.
+func RequireOrgRole(checker OrgMembershipChecker, role string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			userID, ok := r.Context().Value(UserContextKey).(string)
+			if !ok || userID == "" {
+				WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
+				return
+			}
+			orgID, ok := r.Context().Value(OrgContextKey).(string)
+			if !ok || orgID == "" {
+				WriteJSONResponseError(w, http.StatusForbidden, ErrForbidden)
+				return
+			}
+			roleName, isMember, err := checker.OrgMemberRole(r.Context(), orgID, userID)
+			if err != nil || !isMember || roleName != role {
+				WriteJSONResponseError(w, http.StatusForbidden, ErrForbidden)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 // LoginRequiredMiddleware is a middleware that requires the request to be authenticated.
 func LoginRequiredMiddleware(authChecker AuthChecker, loginPath string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {

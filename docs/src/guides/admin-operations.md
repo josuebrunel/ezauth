@@ -87,7 +87,9 @@ See the [Roles & Permissions section of the README](https://github.com/josuebrun
 
 ## Organizations
 
-Lightweight multi-tenancy: organizations/teams, with each member holding one role per organization — drawn from the same RBAC role catalog `RequireRole` checks against (a role is just an `ezauth_roles` row; org membership is `ezauth_org_members`, mapping `(org, user) → role`). Kept deliberately minimal — no settings/billing/invitations — a consuming app that needs more can extend via its own table FK'd to `ezauth_organizations`. Org membership rows cascade-delete like everything else in the schema — see the SQLite foreign-key note at the top of [Roles & Permissions (RBAC)](#roles-permissions-rbac) if you're upgrading an existing SQLite deployment.
+Lightweight multi-tenancy: organizations/teams, with each member holding one role per organization — drawn from the same RBAC role catalog `RequireRole` checks against (a role is just an `ezauth_roles` row; org membership is `ezauth_org_members`, mapping `(org, user) → role`), except `Cfg.AdminRole` itself: `OrgMemberAdd` always refuses to grant it, so org-scoped membership can't be used to escalate to application-wide admin. Kept deliberately minimal — no settings/billing/invitations — a consuming app that needs more can extend via its own table FK'd to `ezauth_organizations`. Org membership rows cascade-delete like everything else in the schema — see the SQLite foreign-key note at the top of [Roles & Permissions (RBAC)](#roles-permissions-rbac) if you're upgrading an existing SQLite deployment.
+
+Like every other RBAC-gated method in this package, the org service methods themselves (`OrganizationGetByID`, `OrgMemberAdd`, `OrganizationDelete`, ...) perform no membership check — they rely entirely on the HTTP-gate layer (the default `adminAuthz`, or your own via `WithAdminAuthz`) for authorization. See below for scoping a route to an organization's actual members instead of (or in addition to) a blanket global-admin gate.
 
 ```go
 org, err := auth.Service.OrganizationCreate(ctx, "Acme Inc")
@@ -115,7 +117,7 @@ r.Use(auth.OrgLoaderMiddleware(func(ctx context.Context) (*models.Organization, 
 org, err := ezauth.GetSessionOrg(ctx)
 ```
 
-There's no `RequireOrgRole` middleware — compose `OrgLoaderMiddleware` with `RequireRole`/`RequirePermission` if a route needs to enforce the current org member's role.
+Compose `OrgLoaderMiddleware` with [`RequireOrgMembership`/`RequireOrgRole`](../references/middleware.md#requireorgmembership--requireorgrole) if a route needs to enforce the current org member's (or an exact) role, instead of (or in addition to) a blanket admin gate.
 
 See the [Organizations section of the README](https://github.com/josuebrunel/ezauth#organizations) for the standalone-service (JSON API / form) equivalents.
 

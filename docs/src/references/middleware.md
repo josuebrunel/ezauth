@@ -92,6 +92,15 @@ Same as `RequireRole`, but checks a permission, resolved transitively through ev
 func (h *Handler) RequirePermission(permission string) func(http.Handler) http.Handler
 ```
 
+### `RequireOrgMembership` / `RequireOrgRole`
+
+Scope a route to members of the "current organization" (set by an `OrgLoaderMiddleware` mounted upstream — see [Organizations](../guides/admin-operations.md#organizations)) instead of relying solely on a blanket, application-wide admin gate. `ezauth`'s own org service methods (`OrganizationGetByID`, `OrgMemberAdd`, etc.) perform no membership check themselves — matching every other RBAC-gated method in this package, which rely entirely on the HTTP-gate layer for authorization — so mount one of these yourself on organization routes if you've customized `WithAdminAuthz` to something other than the default global-admin-only gate, and want per-organization scoping instead of (or in addition to) it. `RequireOrgMembership` accepts any role; `RequireOrgRole` additionally requires an exact role match. Both return `401` if no user is in context, `403` if no org is in context, the caller isn't a member, or (for `RequireOrgRole`) their role doesn't match.
+
+```go
+func (h *Handler) RequireOrgMembership(next http.Handler) http.Handler
+func (h *Handler) RequireOrgRole(role string) func(http.Handler) http.Handler
+```
+
 ## Organization Middleware
 
 ### `OrgLoaderMiddleware`
@@ -120,6 +129,8 @@ func APIKeyMiddleware(configApiKey string, tokenRepo TokenGetter, userRepo UserA
 func RequireAPIKeyScope(scope string) func(http.Handler) http.Handler
 func RequireRole(checker RoleChecker, role string) func(http.Handler) http.Handler
 func RequirePermission(checker PermissionChecker, permission string) func(http.Handler) http.Handler
+func RequireOrgMembership(checker OrgMembershipChecker) func(http.Handler) http.Handler
+func RequireOrgRole(checker OrgMembershipChecker, role string) func(http.Handler) http.Handler
 func LoginRequiredMiddleware(authChecker AuthChecker, loginPath string) func(http.Handler) http.Handler
 func LoadUserMiddleware(loader UserLoader) func(http.Handler) http.Handler
 func OrgLoaderMiddleware(loader OrgLoader) func(http.Handler) http.Handler

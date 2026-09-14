@@ -969,7 +969,7 @@ Each of the above has a form-based (cookie) equivalent at the same path minus th
 
 ### Organizations
 
-Lightweight multi-tenancy: organizations/teams, with each member holding one role per organization — drawn from the same RBAC role catalog `RequireRole` checks against (a role is just an `ezauth_roles` row; org membership is `ezauth_org_members`, mapping `(org, user) → role`). Kept deliberately minimal — no settings/billing/invitations — a consuming app that needs more can extend via its own table FK'd to `ezauth_organizations`. Org membership rows cascade-delete like everything else in the schema — see the SQLite foreign-key note at the top of [Roles & Permissions (RBAC)](#roles--permissions-rbac) if you're upgrading an existing SQLite deployment.
+Lightweight multi-tenancy: organizations/teams, with each member holding one role per organization — drawn from the same RBAC role catalog `RequireRole` checks against (a role is just an `ezauth_roles` row; org membership is `ezauth_org_members`, mapping `(org, user) → role`), except `Cfg.AdminRole` itself: `OrgMemberAdd` always refuses to grant it, so org-scoped membership can't be used to escalate to application-wide admin. Kept deliberately minimal — no settings/billing/invitations — a consuming app that needs more can extend via its own table FK'd to `ezauth_organizations`. Org membership rows cascade-delete like everything else in the schema — see the SQLite foreign-key note at the top of [Roles & Permissions (RBAC)](#roles--permissions-rbac) if you're upgrading an existing SQLite deployment.
 
 ```go
 org, err := auth.OrganizationCreate(ctx, "Acme Inc")
@@ -997,7 +997,7 @@ r.Use(auth.OrgLoaderMiddleware(func(ctx context.Context) (*models.Organization, 
 org, err := ezauth.GetSessionOrg(ctx)
 ```
 
-There's no `RequireOrgRole` middleware — compose `OrgLoaderMiddleware` with `RequireRole`/`RequirePermission` if a route needs to enforce the current org member's role.
+The org service methods (`OrganizationGetByID`, `OrgMemberAdd`, `OrganizationDelete`, ...) perform no membership check themselves — same as every other RBAC-gated method in this package, they rely on the HTTP-gate layer for authorization. Compose `OrgLoaderMiddleware` with `RequireOrgMembership` (any role) or `RequireOrgRole` (an exact role) if a route needs to scope access to the current org's actual members, instead of (or in addition to) a blanket admin gate.
 
 #### Standalone-service Mode
 

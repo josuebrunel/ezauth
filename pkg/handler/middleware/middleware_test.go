@@ -469,6 +469,118 @@ func TestRequirePermission(t *testing.T) {
 	})
 }
 
+// MockOrgMembershipChecker mocks the OrgMembershipChecker interface.
+type MockOrgMembershipChecker struct {
+	RoleName string
+	IsMember bool
+	Err      error
+}
+
+func (m *MockOrgMembershipChecker) OrgMemberRole(ctx context.Context, orgID, userID string) (string, bool, error) {
+	return m.RoleName, m.IsMember, m.Err
+}
+
+func TestRequireOrgMembership(t *testing.T) {
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	reqWithUserAndOrg := func(userID, orgID string) *http.Request {
+		req := httptest.NewRequest("GET", "/", nil)
+		ctx := req.Context()
+		if userID != "" {
+			ctx = context.WithValue(ctx, UserContextKey, userID)
+		}
+		if orgID != "" {
+			ctx = context.WithValue(ctx, OrgContextKey, orgID)
+		}
+		return req.WithContext(ctx)
+	}
+
+	t.Run("NoUserInContext", func(t *testing.T) {
+		mw := RequireOrgMembership(&MockOrgMembershipChecker{IsMember: true})
+		w := httptest.NewRecorder()
+		mw(next).ServeHTTP(w, reqWithUserAndOrg("", "org1"))
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("expected 401 with no user in context, got %d", w.Code)
+		}
+	})
+
+	t.Run("NoOrgInContext", func(t *testing.T) {
+		mw := RequireOrgMembership(&MockOrgMembershipChecker{IsMember: true})
+		w := httptest.NewRecorder()
+		mw(next).ServeHTTP(w, reqWithUserAndOrg("user1", ""))
+		if w.Code != http.StatusForbidden {
+			t.Errorf("expected 403 with no org in context, got %d", w.Code)
+		}
+	})
+
+	t.Run("IsMember", func(t *testing.T) {
+		mw := RequireOrgMembership(&MockOrgMembershipChecker{IsMember: true, RoleName: "viewer"})
+		w := httptest.NewRecorder()
+		mw(next).ServeHTTP(w, reqWithUserAndOrg("user1", "org1"))
+		if w.Code != http.StatusOK {
+			t.Errorf("expected 200 for a member of any role, got %d", w.Code)
+		}
+	})
+
+	t.Run("NotMember", func(t *testing.T) {
+		mw := RequireOrgMembership(&MockOrgMembershipChecker{IsMember: false})
+		w := httptest.NewRecorder()
+		mw(next).ServeHTTP(w, reqWithUserAndOrg("user1", "org1"))
+		if w.Code != http.StatusForbidden {
+			t.Errorf("expected 403 for a non-member, got %d", w.Code)
+		}
+	})
+
+	t.Run("CheckerError", func(t *testing.T) {
+		mw := RequireOrgMembership(&MockOrgMembershipChecker{IsMember: true, Err: errCheckerFailed})
+		w := httptest.NewRecorder()
+		mw(next).ServeHTTP(w, reqWithUserAndOrg("user1", "org1"))
+		if w.Code != http.StatusForbidden {
+			t.Errorf("expected 403 when the checker errors, got %d", w.Code)
+		}
+	})
+}
+
+func TestRequireOrgRole(t *testing.T) {
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	reqWithUserAndOrg := func(userID, orgID string) *http.Request {
+		req := httptest.NewRequest("GET", "/", nil)
+		ctx := context.WithValue(req.Context(), UserContextKey, userID)
+		ctx = context.WithValue(ctx, OrgContextKey, orgID)
+		return req.WithContext(ctx)
+	}
+
+	t.Run("HasExactRole", func(t *testing.T) {
+		mw := RequireOrgRole(&MockOrgMembershipChecker{IsMember: true, RoleName: "org-admin"}, "org-admin")
+		w := httptest.NewRecorder()
+		mw(next).ServeHTTP(w, reqWithUserAndOrg("user1", "org1"))
+		if w.Code != http.StatusOK {
+			t.Errorf("expected 200 for the exact required role, got %d", w.Code)
+		}
+	})
+
+	t.Run("WrongRole", func(t *testing.T) {
+		mw := RequireOrgRole(&MockOrgMembershipChecker{IsMember: true, RoleName: "viewer"}, "org-admin")
+		w := httptest.NewRecorder()
+		mw(next).ServeHTTP(w, reqWithUserAndOrg("user1", "org1"))
+		if w.Code != http.StatusForbidden {
+			t.Errorf("expected 403 for a member with a different role, got %d", w.Code)
+		}
+	})
+
+	t.Run("NotMember", func(t *testing.T) {
+		mw := RequireOrgRole(&MockOrgMembershipChecker{IsMember: false}, "org-admin")
+		w := httptest.NewRecorder()
+		mw(next).ServeHTTP(w, reqWithUserAndOrg("user1", "org1"))
+		if w.Code != http.StatusForbidden {
+			t.Errorf("expected 403 for a non-member, got %d", w.Code)
+		}
+	})
+}
+
 func TestRequireAPIKeyScope(t *testing.T) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

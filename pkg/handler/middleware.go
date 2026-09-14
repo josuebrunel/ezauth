@@ -36,6 +36,20 @@ func (h *Handler) RequirePermission(permission string) func(http.Handler) http.H
 	return middleware.RequirePermission(h.svc, permission)
 }
 
+// RequireOrgMembership is a middleware that requires the authenticated user
+// to be a member of the "current organization" (set by an OrgLoaderMiddleware
+// mounted upstream) -- see middleware.RequireOrgMembership.
+func (h *Handler) RequireOrgMembership(next http.Handler) http.Handler {
+	return middleware.RequireOrgMembership(h.svc)(next)
+}
+
+// RequireOrgRole is a middleware that requires the authenticated user's role
+// within the "current organization" (set by an OrgLoaderMiddleware mounted
+// upstream) to equal role -- see middleware.RequireOrgRole.
+func (h *Handler) RequireOrgRole(role string) func(http.Handler) http.Handler {
+	return middleware.RequireOrgRole(h.svc, role)
+}
+
 // LoginRequiredMiddleware is a middleware that requires the request to be authenticated.
 // If the user is not authenticated, it redirects to the login page (for browser requests)
 // or returns a 401 Unauthorized error (for API requests).

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
@@ -136,6 +137,65 @@ func TestOrganizations(t *testing.T) {
 			if o.ID == tempOrg.ID {
 				t.Error("expected org_members row to be cascade-deleted with the organization")
 			}
+		}
+	})
+
+	t.Run("OrgMemberAdd_RefusesTheConfiguredAdminRole", func(t *testing.T) {
+		// A unique, per-test admin role name -- under CI's shared-test-DB
+		// configuration (EZAUTH_DB_DSN set), every test in this package
+		// shares one physical database, so a literal "admin" would collide
+		// with rbac_test.go's own use of that exact name.
+		adminRoleName := "org-test-admin-" + util.NewIDStripped()
+		// AdminRole is deliberately a differently-cased variant of the role
+		// name below -- role names are unique case-insensitively (RoleCreate
+		// would refuse a second row differing only by case), so this
+		// exercises the guard's strings.EqualFold comparison (matching
+		// RoleDelete's own) against a single row instead of needing two.
+		auth.Cfg.AdminRole = strings.ToUpper(adminRoleName)
+		defer func() { auth.Cfg.AdminRole = "" }()
+
+		if _, err := auth.RoleCreate(ctx, adminRoleName, "full admin access"); err != nil {
+			t.Fatalf("RoleCreate() unexpected error: %v", err)
+		}
+		if err := auth.OrgMemberAdd(ctx, org.ID, user.ID, adminRoleName); err != ErrOrgMemberCannotHoldAdminRole {
+			t.Fatalf("expected ErrOrgMemberCannotHoldAdminRole, got %v", err)
+		}
+
+		roleName, isMember, err := auth.OrgMemberRole(ctx, org.ID, user.ID)
+		if err != nil {
+			t.Fatalf("OrgMemberRole() unexpected error: %v", err)
+		}
+		if isMember && roleName == adminRoleName {
+			t.Error("expected the refused grant to not have applied")
+		}
+	})
+
+	t.Run("OrgMemberRole", func(t *testing.T) {
+		if err := auth.OrgMemberAdd(ctx, org.ID, user.ID, "org-owner"); err != nil {
+			t.Fatalf("OrgMemberAdd() unexpected error: %v", err)
+		}
+
+		roleName, isMember, err := auth.OrgMemberRole(ctx, org.ID, user.ID)
+		if err != nil {
+			t.Fatalf("OrgMemberRole() unexpected error: %v", err)
+		}
+		if !isMember || roleName != "org-owner" {
+			t.Errorf("expected member with role 'org-owner', got role=%q isMember=%v", roleName, isMember)
+		}
+
+		otherUser, err := auth.Repo.UserCreate(ctx, &models.User{
+			Email:    util.UniqueEmail("org-nonmember"),
+			Provider: "local",
+		})
+		if err != nil {
+			t.Fatalf("failed to create test user: %v", err)
+		}
+		_, isMember, err = auth.OrgMemberRole(ctx, org.ID, otherUser.ID)
+		if err != nil {
+			t.Fatalf("OrgMemberRole() unexpected error: %v", err)
+		}
+		if isMember {
+			t.Error("expected a non-member to report isMember=false")
 		}
 	})
 
