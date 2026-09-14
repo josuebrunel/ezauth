@@ -387,3 +387,40 @@ func TestMysqlQuerier_AuditLogOperations(t *testing.T) {
 		}
 	})
 }
+
+// TestMysqlQuerier_RoleGrantsUseOnDuplicateKeyUpdate proves the idempotent
+// role/permission grant inserts use ON DUPLICATE KEY UPDATE, not INSERT
+// IGNORE -- IGNORE suppresses all errors including FK violations, silently
+// turning a bug into "0 rows affected" instead of a real error.
+func TestMysqlQuerier_RoleGrantsUseOnDuplicateKeyUpdate(t *testing.T) {
+	querier := &MysqlQuerier{}
+	ctx := context.Background()
+
+	t.Run("QueryUserRoleInsert", func(t *testing.T) {
+		q := querier.QueryUserRoleInsert(ctx, "user-1", "role-1")
+		sql, _, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("failed to build query: %v", err)
+		}
+		if strings.Contains(sql, "IGNORE") {
+			t.Errorf("expected no INSERT IGNORE, got: %s", sql)
+		}
+		if !strings.Contains(sql, "ON DUPLICATE KEY UPDATE") {
+			t.Errorf("expected ON DUPLICATE KEY UPDATE, got: %s", sql)
+		}
+	})
+
+	t.Run("QueryRolePermissionInsert", func(t *testing.T) {
+		q := querier.QueryRolePermissionInsert(ctx, "role-1", "perm-1")
+		sql, _, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("failed to build query: %v", err)
+		}
+		if strings.Contains(sql, "IGNORE") {
+			t.Errorf("expected no INSERT IGNORE, got: %s", sql)
+		}
+		if !strings.Contains(sql, "ON DUPLICATE KEY UPDATE") {
+			t.Errorf("expected ON DUPLICATE KEY UPDATE, got: %s", sql)
+		}
+	})
+}

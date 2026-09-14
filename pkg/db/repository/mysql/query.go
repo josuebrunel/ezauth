@@ -658,13 +658,15 @@ func (q *MysqlQuerier) QueryPermissionDelete(ctx context.Context, id string) bob
 }
 
 // QueryUserRoleInsert is idempotent: granting a role the user already
-// holds is a no-op (INSERT IGNORE on the composite PK) rather than a
-// constraint-violation error.
+// holds is a no-op (ON DUPLICATE KEY UPDATE role_id = role_id on the
+// composite PK) rather than a constraint-violation error. Not INSERT
+// IGNORE: that suppresses *all* errors, including FK violations and
+// conversion errors, silently turning them into "0 rows affected" too.
 func (q *MysqlQuerier) QueryUserRoleInsert(ctx context.Context, userID, roleID string) bob.Query {
 	return mysql.Insert(
 		im.Into(models.TableUserRole, models.ColumnUserID, models.ColumnRoleID),
 		im.Values(mysql.Arg(userID), mysql.Arg(roleID)),
-		im.Ignore(),
+		im.OnDuplicateKeyUpdate(im.UpdateCol(models.ColumnRoleID).To(mysql.Quote(models.ColumnRoleID))),
 	)
 }
 
@@ -694,13 +696,16 @@ func (q *MysqlQuerier) QueryRolesByUserID(ctx context.Context, userID string) bo
 }
 
 // QueryRolePermissionInsert is idempotent: granting a permission the role
-// already has is a no-op (INSERT IGNORE on the composite PK) rather than a
-// constraint-violation error.
+// already has is a no-op (ON DUPLICATE KEY UPDATE permission_id =
+// permission_id on the composite PK) rather than a constraint-violation
+// error. Not INSERT IGNORE: that suppresses *all* errors, including FK
+// violations and conversion errors, silently turning them into "0 rows
+// affected" too.
 func (q *MysqlQuerier) QueryRolePermissionInsert(ctx context.Context, roleID, permissionID string) bob.Query {
 	return mysql.Insert(
 		im.Into(models.TableRolePermission, models.ColumnRoleID, models.ColumnPermissionID),
 		im.Values(mysql.Arg(roleID), mysql.Arg(permissionID)),
-		im.Ignore(),
+		im.OnDuplicateKeyUpdate(im.UpdateCol(models.ColumnPermissionID).To(mysql.Quote(models.ColumnPermissionID))),
 	)
 }
 
