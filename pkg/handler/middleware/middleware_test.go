@@ -485,3 +485,72 @@ func TestMaxBodyBytes(t *testing.T) {
 		}
 	})
 }
+
+type mockAuthChecker struct{ authenticated bool }
+
+func (m mockAuthChecker) IsAuthenticated(ctx context.Context) bool { return m.authenticated }
+
+func TestLoginRequiredMiddleware(t *testing.T) {
+	const loginPath = "/login"
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	t.Run("authenticated request passes through", func(t *testing.T) {
+		mw := LoginRequiredMiddleware(mockAuthChecker{authenticated: true}, loginPath)
+		req := httptest.NewRequest("GET", "/anything", nil)
+		w := httptest.NewRecorder()
+		mw(next).ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Errorf("expected 200, got %d", w.Code)
+		}
+	})
+
+	t.Run("unauthenticated browser request redirects to login", func(t *testing.T) {
+		mw := LoginRequiredMiddleware(mockAuthChecker{authenticated: false}, loginPath)
+		req := httptest.NewRequest("GET", "/dashboard", nil)
+		w := httptest.NewRecorder()
+		mw(next).ServeHTTP(w, req)
+		if w.Code != http.StatusFound {
+			t.Errorf("expected 302, got %d", w.Code)
+		}
+		if loc := w.Header().Get("Location"); loc != loginPath {
+			t.Errorf("expected redirect to %q, got %q", loginPath, loc)
+		}
+	})
+
+	// The path itself must never decide this -- a consuming app mounts this
+	// middleware on its own routes, at any prefix, not just ezauth's own
+	// "/auth/api" subtree.
+	t.Run("unauthenticated request to a non-auth-api path with Accept: application/json gets a 401, not a redirect", func(t *testing.T) {
+		mw := LoginRequiredMiddleware(mockAuthChecker{authenticated: false}, loginPath)
+		req := httptest.NewRequest("GET", "/some/other/api/path", nil)
+		req.Header.Set("Accept", "application/json")
+		w := httptest.NewRecorder()
+		mw(next).ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("expected 401, got %d", w.Code)
+		}
+	})
+
+	t.Run("unauthenticated request with Content-Type: application/json gets a 401", func(t *testing.T) {
+		mw := LoginRequiredMiddleware(mockAuthChecker{authenticated: false}, loginPath)
+		req := httptest.NewRequest("POST", "/some/other/path", nil)
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		mw(next).ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("expected 401, got %d", w.Code)
+		}
+	})
+
+	t.Run("unauthenticated request to /auth/api without a JSON Accept/Content-Type redirects", func(t *testing.T) {
+		mw := LoginRequiredMiddleware(mockAuthChecker{authenticated: false}, loginPath)
+		req := httptest.NewRequest("GET", "/auth/api/userinfo", nil)
+		w := httptest.NewRecorder()
+		mw(next).ServeHTTP(w, req)
+		if w.Code != http.StatusFound {
+			t.Errorf("expected 302 (path alone must not decide this), got %d", w.Code)
+		}
+	})
+}

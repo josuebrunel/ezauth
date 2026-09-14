@@ -225,8 +225,13 @@ func LoginRequiredMiddleware(authChecker AuthChecker, loginPath string) func(htt
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if !authChecker.IsAuthenticated(r.Context()) {
-				// Check if it's an API request (JSON) or a browser request
-				if strings.HasPrefix(r.URL.Path, "/auth/api") || strings.Contains(r.Header.Get("Accept"), "application/json") {
+				// Distinguish an API request (JSON) from a browser request by
+				// content negotiation alone -- this middleware is exported for
+				// use on a consuming application's own routes, which may be
+				// mounted at any path, so a hardcoded URL prefix (e.g.
+				// "/auth/api", ezauth's own JSON API) can't reliably identify
+				// an API request there.
+				if strings.Contains(r.Header.Get("Accept"), "application/json") || strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 					WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
 					return
 				}
