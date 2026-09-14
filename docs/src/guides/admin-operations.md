@@ -11,6 +11,8 @@ Admin-facing features: impersonation, invitation-based onboarding, user manageme
 
 > [!IMPORTANT]
 > The `Impersonate` *service method* enforces no authorization for who may impersonate (same stance as [Admin User Management](#admin-user-management) below) — it mints tokens for any target user on behalf of whoever calls it, so check `adminUser.HasRole("admin")` (or equivalent) yourself before calling it directly. `Handler`'s built-in `/impersonate` HTTP routes gate this by default instead (`Cfg.AdminRole`), customizable/disable-able via `WithAdminAuthz`. [Invitation-Based Onboarding](#invitation-based-onboarding) is different: *who* may invite is still unchecked at both levels, but *what roles an invitation can grant* is enforced even at the service level (`InvitationCreate` rejects a role the inviter doesn't hold).
+>
+> An impersonation session's refresh token lives for 1 hour, not the 30 days a normal session's does — `TokenRefresh` never re-checks the acting admin's *current* role, only the impersonated target's, so this bounds how long an admin whose role gets revoked mid-impersonation can keep the session going via refresh.
 
 ```go
 // adminUser must already be authenticated; check authorization yourself first.
@@ -22,8 +24,9 @@ tokenResp, err := auth.Service.Impersonate(ctx, adminUser, targetUserID)
 // tokenResp.AccessToken / tokenResp.RefreshToken now authenticate as targetUser,
 // with the access token carrying an "act" claim identifying adminUser.
 
-// ... later, end the impersonation session:
-err = auth.Service.StopImpersonating(ctx, tokenResp.RefreshToken)
+// ... later, end the impersonation session (callerID must match the admin
+// who started it, i.e. adminUser.ID):
+err = auth.Service.StopImpersonating(ctx, adminUser.ID, tokenResp.RefreshToken)
 ```
 
 Detecting whether the current request is an impersonation session depends on which auth mode the route uses:

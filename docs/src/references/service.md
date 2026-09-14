@@ -193,7 +193,7 @@ func (a *Auth) OAuth2Authenticate(ctx context.Context, provider string, userInfo
 
 ### `Impersonate`
 
-Mints a new token pair for a target user on behalf of the admin. The resulting access token carries an `act` claim identifying the admin.
+Mints a new token pair for a target user on behalf of the admin. The resulting access token carries an `act` claim identifying the admin. The refresh token's lifetime is 1 hour, not the 30 days a normal session's is — `TokenRefresh` never re-checks the acting admin's *current* role on refresh, only the impersonated target's, so this bounds how long an admin whose role gets revoked mid-impersonation can keep the session going.
 
 ```go
 func (a *Auth) Impersonate(ctx context.Context, adminUser *models.User, targetUserID string) (*TokenResponse, error)
@@ -201,10 +201,10 @@ func (a *Auth) Impersonate(ctx context.Context, adminUser *models.User, targetUs
 
 ### `StopImpersonating`
 
-Revokes an impersonation refresh token, ending that session.
+Revokes an impersonation refresh token, ending that session. `callerID` must match the token's `actor_id` (the admin who started it), or it fails with the same "invalid impersonation token" error as an unknown token.
 
 ```go
-func (a *Auth) StopImpersonating(ctx context.Context, impersonationRefreshToken string) error
+func (a *Auth) StopImpersonating(ctx context.Context, callerID, impersonationRefreshToken string) error
 ```
 
 ## Multi-Factor Authentication (TOTP)

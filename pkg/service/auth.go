@@ -773,6 +773,11 @@ type TokenResponse struct {
 	TokenType    string `json:"token_type"`
 }
 
+// impersonationRefreshTokenTTL is the refresh-token lifetime for an
+// impersonation session -- see tokenCreateForActor's doc comment for why
+// it's much shorter than a normal session's.
+const impersonationRefreshTokenTTL = 1 * time.Hour
+
 // TokenCreate creates a new pair of access and refresh tokens for the given user.
 func (a *Auth) TokenCreate(ctx context.Context, user *models.User) (*TokenResponse, error) {
 	return a.tokenCreateForActor(ctx, user, "", "")
@@ -806,9 +811,22 @@ func (a *Auth) tokenCreateForActor(ctx context.Context, user *models.User, actor
 		familyID = util.NewIDStripped()
 	}
 	metadata := models.JSONMap{"family_id": familyID}
+
+	// Impersonation sessions get a much shorter refresh-token lifetime than
+	// a normal session's 30 days: nothing here re-validates the acting
+	// admin's role on refresh (TokenRefresh only looks up the impersonated
+	// target, never the actor), so a revoked admin's already-issued
+	// impersonation token would otherwise keep working via refresh for the
+	// full 30-day window. impersonationRefreshTokenTTL bounds that exposure
+	// instead -- once it lapses, resuming impersonation requires a fresh
+	// Impersonate call, which (via the HTTP route's admin-authz gate, or
+	// whatever check the caller wraps around the library method) re-checks
+	// the admin's *current* role.
+	refreshTokenTTL := 30 * 24 * time.Hour
 	if actorID != "" {
 		metadata["impersonation"] = true
 		metadata["actor_id"] = actorID
+		refreshTokenTTL = impersonationRefreshTokenTTL
 	}
 
 	now := time.Now()
@@ -816,7 +834,7 @@ func (a *Auth) tokenCreateForActor(ctx context.Context, user *models.User, actor
 		UserID:    user.ID,
 		Token:     util.HashToken(refreshToken),
 		TokenType: models.TokenTypeRefresh,
-		ExpiresAt: now.Add(30 * 24 * time.Hour),
+		ExpiresAt: now.Add(refreshTokenTTL),
 		CreatedAt: now,
 		Revoked:   false,
 		Metadata:  metadata,

@@ -852,6 +852,8 @@ One exception: the form-based `/impersonate` and `/impersonate/stop` routes alwa
 > **Library mode**: the `Impersonate` *method* enforces no authorization for who may impersonate — it mints tokens for any target user on behalf of whoever calls it, so check `adminUser.HasRole("admin")` (or equivalent) yourself before calling it directly.
 >
 > **Standalone-service mode**: the `/auth/impersonate` and `/auth/api/impersonate` *routes* are different — by default `Handler` requires the caller hold the RBAC role `Cfg.AdminRole` (`EZAUTH_ADMIN_ROLE`, defaults to `"admin"`), checked via the RBAC tables (`RoleCreate`/`UserRoleGrant`, or the `ezauthapi create-admin` CLI, to grant it). Pass `handler.WithAdminAuthz(middleware)` to `New()` for a different scheme (e.g. `RequirePermission`), or `WithAdminAuthz(nil)` to disable the gate and restore the old fully-open behavior if you're authorizing this at a layer in front of ezauth instead. See [Admin Authorization](#admin-authorization) below for the full picture — this same gate covers Admin User Management, RBAC, and Organizations too.
+>
+> An impersonation session's refresh token lives for 1 hour, not the 30 days a normal session's does — `TokenRefresh` never re-checks the acting admin's *current* role, only the impersonated target's, so this bounds how long an admin whose role gets revoked mid-impersonation can keep the session going via refresh. Once it lapses, resuming requires a fresh `Impersonate` call, which re-runs whatever admin-authz check gates it.
 
 #### Library Mode
 
@@ -865,8 +867,9 @@ tokenResp, err := auth.Impersonate(ctx, adminUser, targetUserID)
 // tokenResp.AccessToken / tokenResp.RefreshToken now authenticate as targetUser,
 // with the access token carrying an "act" claim identifying adminUser.
 
-// ... later, end the impersonation session:
-err = auth.StopImpersonating(ctx, tokenResp.RefreshToken)
+// ... later, end the impersonation session (callerID must match the admin
+// who started it, i.e. adminUser.ID):
+err = auth.StopImpersonating(ctx, adminUser.ID, tokenResp.RefreshToken)
 ```
 
 #### Standalone-service Mode

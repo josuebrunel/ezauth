@@ -1197,6 +1197,15 @@ func TestImpersonation(t *testing.T) {
 		if storedToken.Metadata["actor_id"] != admin.ID {
 			t.Errorf("expected refresh token metadata actor_id %s, got %v", admin.ID, storedToken.Metadata["actor_id"])
 		}
+
+		// A much shorter lifetime than a normal session's 30 days: nothing
+		// re-validates the acting admin's role on refresh, so this bounds
+		// how long a revoked admin's already-issued impersonation token
+		// keeps working via refresh instead of trusting it for 30 days.
+		ttl := storedToken.ExpiresAt.Sub(storedToken.CreatedAt)
+		if ttl <= 0 || ttl > 2*time.Hour {
+			t.Errorf("expected a short impersonation refresh token TTL (<=2h), got %v", ttl)
+		}
 	})
 
 	t.Run("refresh preserves act claim", func(t *testing.T) {
@@ -1205,6 +1214,15 @@ func TestImpersonation(t *testing.T) {
 			t.Fatalf("TokenRefresh() unexpected error: %v", err)
 		}
 		impersonationRefreshToken = resp.RefreshToken
+
+		storedToken, err := auth.Repo.TokenGetByToken(ctx, util.HashToken(resp.RefreshToken))
+		if err != nil {
+			t.Fatalf("failed to get refreshed impersonation token: %v", err)
+		}
+		ttl := storedToken.ExpiresAt.Sub(storedToken.CreatedAt)
+		if ttl <= 0 || ttl > 2*time.Hour {
+			t.Errorf("expected the short impersonation TTL to carry over refresh (<=2h), got %v", ttl)
+		}
 
 		claims := parseClaims(t, resp.AccessToken)
 		act, ok := claims["act"].(map[string]any)
