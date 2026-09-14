@@ -85,6 +85,10 @@ func (a *Auth) SMSOTPRequest(ctx context.Context, req RequestSMSOTP) error {
 		}
 	}
 
+	if err := a.checkResendCooldown(ctx, user.ID, models.TokenTypeSMSOTP); err != nil {
+		return err
+	}
+
 	// Revoke any still-live code from an earlier request before issuing a
 	// new one, so at most one code is ever valid for a phone number at a
 	// time -- otherwise an older, still-unexpired code stays usable

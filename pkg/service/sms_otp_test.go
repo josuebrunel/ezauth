@@ -100,6 +100,10 @@ func TestSMSOTP(t *testing.T) {
 // code invalidates any still-live earlier code for the same phone number,
 // so at most one code is ever valid at a time.
 func TestSMSOTPRequest_RevokesPreviousCodeOnResend(t *testing.T) {
+	old := otpResendCooldown
+	otpResendCooldown = 0 // this test resends immediately; see TestSMSOTPRequest_EnforcesResendCooldown for the cooldown itself
+	defer func() { otpResendCooldown = old }()
+
 	auth := setupSMSTestDB(t)
 	ctx := context.Background()
 	phone := uniqueTestPhone()
@@ -126,6 +130,39 @@ func TestSMSOTPRequest_RevokesPreviousCodeOnResend(t *testing.T) {
 
 	if _, err := auth.SMSOTPVerify(ctx, RequestSMSOTPVerify{Phone: phone, Code: secondCode}); err != nil {
 		t.Fatalf("expected the second (current) code to succeed, got %v", err)
+	}
+}
+
+// TestSMSOTPRequest_EnforcesResendCooldown proves a second request for the
+// same phone number within otpResendCooldown is rejected rather than
+// sending another billable SMS -- a per-phone throttle independent of the
+// general-purpose IP rate limiter, since a caller spreading requests across
+// many source IPs could otherwise SMS-bomb a single target regardless of
+// any per-IP limit.
+func TestSMSOTPRequest_EnforcesResendCooldown(t *testing.T) {
+	auth := setupSMSTestDB(t)
+	ctx := context.Background()
+	phone := uniqueTestPhone()
+
+	if err := auth.SMSOTPRequest(ctx, RequestSMSOTP{Phone: phone}); err != nil {
+		t.Fatalf("first SMSOTPRequest failed: %v", err)
+	}
+	if err := auth.SMSOTPRequest(ctx, RequestSMSOTP{Phone: phone}); err != ErrResendTooSoon {
+		t.Fatalf("expected ErrResendTooSoon for an immediate resend, got %v", err)
+	}
+
+	mockSMS := auth.SMS.(*MockSMSSender)
+	if len(mockSMS.SentMessages) != 1 {
+		t.Fatalf("expected only 1 sms sent (the throttled resend must not send another), got %d", len(mockSMS.SentMessages))
+	}
+
+	otpResendCooldown = 0
+	defer func() { otpResendCooldown = 60 * time.Second }()
+	if err := auth.SMSOTPRequest(ctx, RequestSMSOTP{Phone: phone}); err != nil {
+		t.Fatalf("expected a resend to succeed once the cooldown has passed, got %v", err)
+	}
+	if len(mockSMS.SentMessages) != 2 {
+		t.Fatalf("expected 2 sms sent after the cooldown passed, got %d", len(mockSMS.SentMessages))
 	}
 }
 

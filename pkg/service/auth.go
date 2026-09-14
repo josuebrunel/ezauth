@@ -391,6 +391,40 @@ func (a *Auth) getDummyPasswordHash() string {
 	return a.dummyPasswordHash
 }
 
+// otpResendCooldown is the minimum time between two live codes/links of the
+// same type for the same user -- see checkResendCooldown. A var (not a
+// const) purely so tests can shrink it instead of waiting out a real minute.
+var otpResendCooldown = 60 * time.Second
+
+// ErrResendTooSoon is returned by PasswordlessRequest/SMSOTPRequest when a
+// still-live code/link of the same type was already issued for the same
+// address/phone within otpResendCooldown.
+var ErrResendTooSoon = errors.New("please wait before requesting another code")
+
+// checkResendCooldown returns ErrResendTooSoon if a still-unexpired token of
+// tokenType already exists for userID, created less than otpResendCooldown
+// ago. This is a per-address/per-phone throttle independent of the
+// general-purpose IP rate limiter: PasswordlessRequest/SMSOTPRequest create
+// a user (if one doesn't already exist) and send a real email or a billable
+// SMS on every call with no authentication required, so a caller spreading
+// requests across many source IPs could otherwise spam or SMS-bomb a single
+// target regardless of any per-IP limit.
+func (a *Auth) checkResendCooldown(ctx context.Context, userID, tokenType string) error {
+	existing, err := a.Repo.TokenListByUserIDAndType(ctx, userID, tokenType)
+	if err != nil {
+		return err
+	}
+	for _, tok := range existing {
+		if time.Now().After(tok.ExpiresAt) {
+			continue
+		}
+		if time.Since(tok.CreatedAt) < otpResendCooldown {
+			return ErrResendTooSoon
+		}
+	}
+	return nil
+}
+
 // UserUpdatePassword updates the password for a user.
 func (a *Auth) UserUpdatePassword(ctx context.Context, user *models.User, password string) (*models.User, error) {
 	if err := a.validatePassword(password); err != nil {
@@ -527,6 +561,10 @@ func (a *Auth) PasswordlessRequest(ctx context.Context, req RequestPasswordless)
 			xlog.Error("failed to create temporary user", "email", req.Email, "err", err)
 			return err
 		}
+	}
+
+	if err := a.checkResendCooldown(ctx, user.ID, models.TokenTypePasswordless); err != nil {
+		return err
 	}
 
 	tokenValue, err := a.generateRefreshToken()

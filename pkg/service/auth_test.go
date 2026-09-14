@@ -495,6 +495,39 @@ func TestPasswordless(t *testing.T) {
 		t.Error("expected token to be revoked after use")
 	}
 }
+
+// TestPasswordlessRequest_EnforcesResendCooldown proves a second request for
+// the same address within otpResendCooldown is rejected rather than sending
+// another email -- a per-address throttle independent of the general-purpose
+// IP rate limiter, since a caller spreading requests across many source IPs
+// could otherwise spam a single target's inbox regardless of any per-IP limit.
+func TestPasswordlessRequest_EnforcesResendCooldown(t *testing.T) {
+	auth := setupTestDB(t)
+	ctx := context.Background()
+	email := util.UniqueEmail("resendcooldown")
+
+	if err := auth.PasswordlessRequest(ctx, RequestPasswordless{Email: email}); err != nil {
+		t.Fatalf("first PasswordlessRequest failed: %v", err)
+	}
+	if err := auth.PasswordlessRequest(ctx, RequestPasswordless{Email: email}); err != ErrResendTooSoon {
+		t.Fatalf("expected ErrResendTooSoon for an immediate resend, got %v", err)
+	}
+
+	mockMailer := auth.Mailer.(*MockMailer)
+	if len(mockMailer.SentEmails) != 1 {
+		t.Fatalf("expected only 1 email sent (the throttled resend must not send another), got %d", len(mockMailer.SentEmails))
+	}
+
+	otpResendCooldown = 0
+	defer func() { otpResendCooldown = 60 * time.Second }()
+	if err := auth.PasswordlessRequest(ctx, RequestPasswordless{Email: email}); err != nil {
+		t.Fatalf("expected a resend to succeed once the cooldown has passed, got %v", err)
+	}
+	if len(mockMailer.SentEmails) != 2 {
+		t.Fatalf("expected 2 emails sent after the cooldown passed, got %d", len(mockMailer.SentEmails))
+	}
+}
+
 // TestPasswordResetAndPasswordlessRequest_EmailCaseInsensitive proves
 // PasswordResetRequest and PasswordlessRequest find an existing user
 // (created with mixed-case input, now stored lowercased) regardless of the

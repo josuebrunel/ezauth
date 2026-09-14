@@ -57,6 +57,11 @@ tokens, err := auth.Service.SMSOTPVerify(ctx, service.RequestSMSOTPVerify{
 > [!NOTE]
 > Verifying a code flips the account's contact flag: a successful `SMSOTPVerify` marks the phone verified (`PhoneVerified`), and a successful first magic-link (passwordless) login marks the email verified (`EmailVerified`/`EmailVerifiedAt`) the same way. So the temporary, unverified account created on first contact becomes verified on first successful login.
 
+> [!NOTE]
+> `SMSOTPRequest` and `PasswordlessRequest` require no authentication and each call sends a real, billable SMS or email — so both enforce a 60-second per-phone/per-address resend cooldown (`ErrResendTooSoon`) independent of `EZAUTH_RATE_LIMIT_ENABLED`'s per-IP limit, since a caller spreading requests across many source IPs could otherwise spam or SMS-bomb a single target regardless of any per-IP throttle.
+>
+> Because either flow creates an account on first contact with no verification step required to *request* a code/link, an address/phone that's spammed but never completes a login accumulates as an unverified, otherwise-inert row (`EmailVerified`/`PhoneVerified` both false). Neither flow deletes these automatically. If you expect meaningful volumes of unsolicited requests, periodically clean them up yourself: page through `UsersList` filtered on an old `CreatedAfter`/`CreatedBefore` window, skip any row where `EmailVerified`/`PhoneVerified` is true, and `UserDelete` the rest -- there's no default retention window baked into `ezauth`, since what counts as "never completed" is deployment-specific.
+
 ## WebAuthn / Passkeys
 
 `ezauth` supports WebAuthn/FIDO2 passkey registration and login. Login is **discoverable (usernameless)** — the browser's platform UI lets the user pick a passkey, so no prior email/username is required. WebAuthn is disabled unless `EZAUTH_WEBAUTHN_RP_ID` and `EZAUTH_WEBAUTHN_RP_ORIGINS` are both set, and ceremonies always require client-side JavaScript (`navigator.credentials.create()`/`.get()`) regardless of cookie vs. Bearer auth style.
