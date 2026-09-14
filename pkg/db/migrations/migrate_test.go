@@ -37,3 +37,17 @@ func TestGetDBConnection_RejectsNothingButNormalizesSqlite3(t *testing.T) {
 		t.Fatalf("connection opened via the sqlite3 alias failed to ping: %v", err)
 	}
 }
+
+func TestQuotePostgresIdentifier(t *testing.T) {
+	cases := map[string]string{
+		"myschema":   `"myschema"`,
+		"order":      `"order"`,       // a reserved word -- must still quote cleanly
+		"MySchema":   `"MySchema"`,    // case preserved inside quotes
+		`with"quote`: `"with""quote"`, // embedded quote doubled, per standard SQL escaping
+	}
+	for in, want := range cases {
+		if got := quotePostgresIdentifier(in); got != want {
+			t.Errorf("quotePostgresIdentifier(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

@@ -6,6 +6,7 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
+	"strings"
 
 	"github.com/josuebrunel/gopkg/xlog"
 	"github.com/pressly/goose/v3"
@@ -96,6 +97,18 @@ func validateSchemaName(schema string) error {
 	return nil
 }
 
+// quotePostgresIdentifier double-quotes a SQL identifier the standard way
+// (embedded double-quotes doubled), so it's syntactically valid regardless
+// of case or whether it happens to be a reserved word ("order", "user",
+// ...) -- unquoted, either of those produces a confusing syntax error
+// instead of just working. validateSchemaName's charset restriction means
+// schema names here never actually contain a `"`, but escaping it anyway
+// costs nothing and matches how a quoting function should behave in
+// general.
+func quotePostgresIdentifier(name string) string {
+	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
+}
+
 func runMigration(dsn, dialect, schema string, action string) error {
 	if dsn == "" {
 		return fmt.Errorf("dsn is required")
@@ -111,12 +124,13 @@ func runMigration(dsn, dialect, schema string, action string) error {
 		if err := validateSchemaName(schema); err != nil {
 			return err
 		}
+		quoted := quotePostgresIdentifier(schema)
 		// Set the search path to the specified schema
-		if _, err := db.Exec("CREATE SCHEMA IF NOT EXISTS " + schema); err != nil {
+		if _, err := db.Exec("CREATE SCHEMA IF NOT EXISTS " + quoted); err != nil {
 			xlog.Error("failed to create schema", "error", err, "schema", schema)
 			return err
 		}
-		if _, err := db.Exec("SET search_path TO " + schema); err != nil {
+		if _, err := db.Exec("SET search_path TO " + quoted); err != nil {
 			xlog.Error("failed to set search_path", "error", err, "schema", schema)
 			return err
 		}

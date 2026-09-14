@@ -218,6 +218,18 @@ func normalizeRoleName(name string) string {
 	return strings.ToLower(strings.TrimSpace(name))
 }
 
+// quotePostgresIdentifier double-quotes a SQL identifier the standard way
+// (embedded double-quotes doubled), so it's syntactically valid regardless
+// of case or whether it happens to be a reserved word ("order", "user",
+// ...) -- unquoted, either of those produces a confusing syntax error
+// instead of just working. The charset check at this function's one call
+// site means a schema name here never actually contains a `"`, but
+// escaping it anyway costs nothing and matches how a quoting function
+// should behave in general.
+func quotePostgresIdentifier(name string) string {
+	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
+}
+
 // UserCreate creates a new user in the database.
 func (r Repository) UserCreate(ctx context.Context, user *models.User) (*models.User, error) {
 	user.Email = normalizeEmail(user.Email)
@@ -1059,12 +1071,13 @@ func getDBConnection(opts Opts) (*sql.DB, error) {
 					return nil, fmt.Errorf("invalid schema name %q: only alphanumeric and underscore characters are allowed", opts.Schema)
 				}
 			}
-			if _, err := db.Exec("CREATE SCHEMA IF NOT EXISTS " + opts.Schema); err != nil {
+			quoted := quotePostgresIdentifier(opts.Schema)
+			if _, err := db.Exec("CREATE SCHEMA IF NOT EXISTS " + quoted); err != nil {
 				xlog.Error("failed to create schema", "error", err, "schema", opts.Schema)
 				db.Close()
 				return nil, err
 			}
-			if _, err := db.Exec("SET search_path TO " + opts.Schema); err != nil {
+			if _, err := db.Exec("SET search_path TO " + quoted); err != nil {
 				xlog.Error("failed to set search_path", "error", err, "schema", opts.Schema)
 				db.Close()
 				return nil, err
