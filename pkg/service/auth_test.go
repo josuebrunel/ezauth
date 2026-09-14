@@ -495,6 +495,62 @@ func TestPasswordless(t *testing.T) {
 		t.Error("expected token to be revoked after use")
 	}
 }
+// TestPasswordResetAndPasswordlessRequest_EmailCaseInsensitive proves
+// PasswordResetRequest and PasswordlessRequest find an existing user
+// (created with mixed-case input, now stored lowercased) regardless of the
+// casing used at request time -- both go through Repository.UserGetByEmail,
+// which normalizes internally, so this "just works" without either
+// function needing its own normalization step. Also proves PasswordlessRequest
+// sends to (and templates with) the canonical stored email, not whatever
+// casing the caller typed, matching PasswordResetRequest's existing behavior.
+func TestPasswordResetAndPasswordlessRequest_EmailCaseInsensitive(t *testing.T) {
+	auth := setupTestDB(t)
+	ctx := context.Background()
+
+	mixedEmail := "MixedCase_" + util.NewIDStripped()[:8] + "@Example.COM"
+	lowerEmail := strings.ToLower(mixedEmail)
+
+	if _, err := auth.UserCreate(ctx, &RequestBasicAuth{Email: mixedEmail, Password: "securepass123"}); err != nil {
+		t.Fatalf("UserCreate failed: %v", err)
+	}
+
+	t.Run("PasswordResetRequest finds the user via upper-case input", func(t *testing.T) {
+		if err := auth.PasswordResetRequest(ctx, RequestPasswordReset{Email: strings.ToUpper(mixedEmail)}); err != nil {
+			t.Fatalf("PasswordResetRequest failed: %v", err)
+		}
+		mockMailer := auth.Mailer.(*MockMailer)
+		if len(mockMailer.SentEmails) != 1 {
+			t.Fatalf("expected 1 email sent, got %d", len(mockMailer.SentEmails))
+		}
+		if got := mockMailer.SentEmails[0]["to"]; got != lowerEmail {
+			t.Errorf("expected reset email sent to canonical %q, got %q", lowerEmail, got)
+		}
+	})
+
+	t.Run("PasswordlessRequest finds the user via upper-case input and emails the canonical address", func(t *testing.T) {
+		if err := auth.PasswordlessRequest(ctx, RequestPasswordless{Email: strings.ToUpper(mixedEmail)}); err != nil {
+			t.Fatalf("PasswordlessRequest failed: %v", err)
+		}
+		mockMailer := auth.Mailer.(*MockMailer)
+		if len(mockMailer.SentEmails) != 2 {
+			t.Fatalf("expected 2 emails sent total, got %d", len(mockMailer.SentEmails))
+		}
+		if got := mockMailer.SentEmails[1]["to"]; got != lowerEmail {
+			t.Errorf("expected passwordless email sent to canonical %q, got %q", lowerEmail, got)
+		}
+
+		// A second, already-registered user must not be silently
+		// re-created as a new "temporary user for passwordless login".
+		users, _, err := auth.Repo.UsersList(ctx, models.UserListFilter{}, 10, 0)
+		if err != nil {
+			t.Fatalf("UsersList failed: %v", err)
+		}
+		if len(users) != 1 {
+			t.Fatalf("expected exactly 1 user (no case-variant duplicate created), got %d", len(users))
+		}
+	})
+}
+
 func TestOAuth2GetConfig(t *testing.T) {
 	cfg := &config.Config{
 		OAuth2: config.OAuth2{

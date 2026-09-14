@@ -537,16 +537,20 @@ func (a *Auth) PasswordlessRequest(ctx context.Context, req RequestPasswordless)
 	data := EmailTemplateData{
 		Link:  link,
 		Token: tokenValue,
-		Email: req.Email,
+		Email: user.Email,
 	}
 	subject := RenderTemplate(a.Cfg.EmailTemplates.PasswordlessSubject, data)
 	body := RenderTemplate(a.Cfg.EmailTemplates.PasswordlessBody, data)
 
-	if err := a.Mailer.Send(req.Email, subject, body); err != nil {
-		xlog.Error("failed to send passwordless email", "email", req.Email, "err", err)
+	// user.Email (normalized/lowercased), not req.Email (whatever casing the
+	// caller typed) -- matches PasswordResetRequest's already-correct
+	// pattern, so the sent-to address and template data always reflect the
+	// canonical stored address regardless of input casing.
+	if err := a.Mailer.Send(user.Email, subject, body); err != nil {
+		xlog.Error("failed to send passwordless email", "email", user.Email, "err", err)
 		return err
 	}
-	xlog.Info("passwordless login email sent", "email", req.Email)
+	xlog.Info("passwordless login email sent", "email", user.Email)
 	return nil
 }
 
