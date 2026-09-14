@@ -675,6 +675,23 @@ func registerAndLogin(t *testing.T, h *Handler, emailPrefix string) (user *model
 	return u, resp.Data.AccessToken, resp.Data.RefreshToken
 }
 
+// grantAdminRole grants userID the RBAC role h.svc.Cfg.AdminRole resolves to
+// (default "admin"), creating the role first if it doesn't exist yet. This
+// is what the default admin/RBAC/org/impersonation authorization gate (see
+// WithAdminAuthz) checks via RequireRole -- a real deployment would grant it
+// the same way (UserRoleGrant, or the ezauthapi create-admin CLI).
+func grantAdminRole(t *testing.T, h *Handler, userID string) {
+	t.Helper()
+	ctx := context.Background()
+	role := h.svc.Cfg.AdminRole
+	if _, err := h.svc.RoleCreate(ctx, role, "test fixture admin role"); err != nil && err.Error() != "role already exists" {
+		t.Fatalf("failed to create %q role: %v", role, err)
+	}
+	if err := h.svc.UserRoleGrant(ctx, userID, role); err != nil {
+		t.Fatalf("failed to grant %q role to %s: %v", role, userID, err)
+	}
+}
+
 func TestHandler_Impersonation_JSON(t *testing.T) {
 	h := setupTestHandler(t)
 	hook := &testHook{}
@@ -683,12 +700,14 @@ func TestHandler_Impersonation_JSON(t *testing.T) {
 	admin, adminAccessToken, adminRefreshToken := registerAndLogin(t, h, "impersonate-admin")
 	target, _, _ := registerAndLogin(t, h, "impersonate-target")
 
-	// Promote admin to have an "admin" role (BYO authorization: ezauth itself does
-	// not check this, but the fixture mirrors how a consuming app would gate access).
-	admin.Roles = "admin"
-	if _, err := h.svc.Repo.UserUpdate(context.Background(), admin); err != nil {
-		t.Fatalf("failed to promote admin: %v", err)
-	}
+	// The default admin authorization gate (WithAdminAuthz) requires the
+	// RBAC "admin" role -- grant it so this admin can actually reach
+	// /impersonate. target gets it too: the "already impersonating" subtest
+	// below calls /impersonate again *as target* (that's what an
+	// impersonation access token's sub claim resolves to), and this test is
+	// about that business-rule guard specifically, not the authz gate.
+	grantAdminRole(t, h, admin.ID)
+	grantAdminRole(t, h, target.ID)
 
 	var impersonationAccessToken, impersonationRefreshToken string
 

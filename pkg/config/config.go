@@ -267,27 +267,32 @@ type Config struct {
 	// limiter's internal state unbounded. Only set this to true when ezauth
 	// sits behind a reverse proxy (nginx, HAProxy, a cloud load balancer,
 	// ...) that is known to set/overwrite these headers itself.
-	TrustProxyHeaders bool           `json:"trust_proxy_headers" env:"TRUST_PROXY_HEADERS" default:"false"`
-	DB                Database       `json:"db"`
-	JWTSecret         string         `json:"jwt_secret" env:"JWT_SECRET" required:"true"`
-	CSRFSecret        string         `json:"csrf_secret" env:"CSRF_SECRET"`
-	Hashing           Hashing        `json:"hashing"`
-	RateLimit         RateLimit      `json:"rate_limit"`
-	TrustedDevice     TrustedDevice  `json:"trusted_device"`
-	AccountLockout    AccountLockout `json:"account_lockout"`
-	Invitation        Invitation     `json:"invitation"`
-	OAuth2            OAuth2         `json:"oauth2"`
-	SMTP              SMTP           `json:"smtp"`
-	EmailTemplates    EmailTemplates `json:"email_templates"`
-	SMS               SMS            `json:"sms"`
-	SMSTemplates      SMSTemplates   `json:"sms_templates"`
-	Redirects         Redirects      `json:"redirects"`
-	Pages             Pages          `json:"pages"`
-	TimeOut           time.Duration  `json:"timeout" env:"TIMEOUT" default:"30s"`
-	MFAIssuer         string         `json:"mfa_issuer" env:"MFA_ISSUER" default:"EzAuth"`
-	WebAuthn          WebAuthn       `json:"webauthn"`
-	AuditLog          AuditLog       `json:"audit_log"`
-	JWT               JWT            `json:"jwt"`
+	TrustProxyHeaders bool `json:"trust_proxy_headers" env:"TRUST_PROXY_HEADERS" default:"false"`
+	// AdminRole is the RBAC role (see RoleCreate/UserRoleGrant) required by
+	// the default admin/RBAC/org/impersonation authorization gate (see
+	// handler.WithAdminAuthz). Change this if "admin" collides with a role
+	// name your application already uses for something else.
+	AdminRole      string         `json:"admin_role" env:"ADMIN_ROLE" default:"admin"`
+	DB             Database       `json:"db"`
+	JWTSecret      string         `json:"jwt_secret" env:"JWT_SECRET" required:"true"`
+	CSRFSecret     string         `json:"csrf_secret" env:"CSRF_SECRET"`
+	Hashing        Hashing        `json:"hashing"`
+	RateLimit      RateLimit      `json:"rate_limit"`
+	TrustedDevice  TrustedDevice  `json:"trusted_device"`
+	AccountLockout AccountLockout `json:"account_lockout"`
+	Invitation     Invitation     `json:"invitation"`
+	OAuth2         OAuth2         `json:"oauth2"`
+	SMTP           SMTP           `json:"smtp"`
+	EmailTemplates EmailTemplates `json:"email_templates"`
+	SMS            SMS            `json:"sms"`
+	SMSTemplates   SMSTemplates   `json:"sms_templates"`
+	Redirects      Redirects      `json:"redirects"`
+	Pages          Pages          `json:"pages"`
+	TimeOut        time.Duration  `json:"timeout" env:"TIMEOUT" default:"30s"`
+	MFAIssuer      string         `json:"mfa_issuer" env:"MFA_ISSUER" default:"EzAuth"`
+	WebAuthn       WebAuthn       `json:"webauthn"`
+	AuditLog       AuditLog       `json:"audit_log"`
+	JWT            JWT            `json:"jwt"`
 }
 
 // LoadConfig loads the configuration from environment variables.

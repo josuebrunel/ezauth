@@ -51,7 +51,9 @@ type ListUsersResult struct {
 // UsersList lists/searches/filters users, most recently created first. ezauth
 // performs no authorization check here — same stance as Impersonate — the
 // caller is responsible for verifying the requester is allowed to list users
-// (e.g. via caller.HasRole("admin")).
+// (e.g. via caller.HasRole("admin")) when calling this method directly.
+// Handler's built-in HTTP route (AdminUsersList) is different: it gates on
+// Cfg.AdminRole by default (see handler.WithAdminAuthz).
 func (a *Auth) UsersList(ctx context.Context, opts ListUsersOptions) (*ListUsersResult, error) {
 	switch opts.Status {
 	case "", models.UserStatusActive, models.UserStatusLocked, models.UserStatusSuspended:

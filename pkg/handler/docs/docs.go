@@ -1563,6 +1563,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/handler.ApiResponse-string"
                         }
+                    },
+                    "403": {
+                        "description": "requested a role the inviter doesn't hold",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
                     }
                 }
             }

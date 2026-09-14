@@ -760,7 +760,8 @@ func (a *Auth) tokenCreateForActor(ctx context.Context, user *models.User, actor
 //
 // ezauth performs no authorization check here: the caller is responsible for verifying
 // that adminUser is allowed to impersonate (e.g. via adminUser.HasRole("admin")) before
-// calling this method.
+// calling this method directly. Handler's built-in HTTP route (Impersonate) is
+// different: it gates on Cfg.AdminRole by default (see handler.WithAdminAuthz).
 func (a *Auth) Impersonate(ctx context.Context, adminUser *models.User, targetUserID string) (*TokenResponse, error) {
 	if adminUser == nil {
 		return nil, errors.New("acting admin user is required")

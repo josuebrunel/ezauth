@@ -38,9 +38,9 @@ type StopImpersonationRequest struct {
 }
 
 // Impersonate mints a new token pair for a target user, acting on behalf of the
-// currently authenticated user (the "admin"). ezauth performs no authorization check
-// here: the caller is responsible for verifying the admin is allowed to impersonate
-// (e.g. via admin.HasRole("admin")) before this endpoint is reached.
+// currently authenticated user (the "admin"). New()'s default route wiring
+// requires the caller hold the RBAC role Cfg.AdminRole (default "admin") --
+// see handler.WithAdminAuthz to customize or disable this check.
 // @Summary Start impersonating a user
 // @Description Mint tokens for a target user on behalf of the authenticated admin
 // @Tags impersonation

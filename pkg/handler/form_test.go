@@ -299,10 +299,15 @@ func TestFormHandler_ImpersonationSwapBack(t *testing.T) {
 		t.Fatalf("failed to fetch target: %v", err)
 	}
 
-	admin.Roles = "admin"
-	if _, err := h.svc.Repo.UserUpdate(ctx, admin); err != nil {
-		t.Fatalf("failed to promote admin: %v", err)
-	}
+	// The default admin authorization gate (WithAdminAuthz /
+	// formRequireAdminRole) requires the RBAC "admin" role -- grant it so
+	// this admin can actually reach /impersonate. target gets it too: the
+	// "reject double impersonation" subtest below calls /impersonate again
+	// *as target* (that's who the impersonated session resolves to), and
+	// this test is about that business-rule guard specifically, not the
+	// authz gate.
+	grantAdminRole(t, h, admin.ID)
+	grantAdminRole(t, h, target.ID)
 
 	adminCookie := formLogin(t, h, adminEmail, password)
 	if got := formSessionUser(t, h, adminCookie); got.ID != admin.ID {

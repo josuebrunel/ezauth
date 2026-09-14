@@ -12,6 +12,7 @@
 | `EZAUTH_DEBUG`      | Enable debug logging.                               | `false`                 |
 | `EZAUTH_FORCE_SECURE_COOKIES` | Force the `Secure` flag on session/CSRF cookies regardless of `BASE_URL`'s scheme. Set `true` when ezauth sits behind a TLS-terminating reverse proxy and `BASE_URL` can't be `https://`. | `false` |
 | `EZAUTH_TRUST_PROXY_HEADERS`  | Trust `True-Client-IP`/`X-Real-IP`/`X-Forwarded-For` to resolve the client IP (used by the rate limiter). Only set `true` behind a reverse proxy that sets/overwrites these headers itself — otherwise any client can spoof them to bypass rate limiting. | `false` |
+| `EZAUTH_ADMIN_ROLE` | RBAC role required to reach `Handler`'s admin/RBAC/org/impersonation HTTP routes by default (see [Admin Authorization](https://github.com/josuebrunel/ezauth#admin-authorization) in the README). Bootstrap your first admin via `ezauthapi create-admin`. | `admin` |
 | `EZAUTH_JWT_SECRET`    | Secret key used to sign JWT tokens (HS256). Must be at least 32 characters — `LoadConfig` rejects a shorter value. | |
 | `EZAUTH_CSRF_SECRET`   | Secret key for CSRF protection. Falls back to JWT_SECRET (logged at Error level, since sharing a key weakens CSRF/JWT separation). | (falls back to JWT_SECRET) |
 | `EZAUTH_TIMEOUT`       | Request timeout duration.                                      | `30s`                   |

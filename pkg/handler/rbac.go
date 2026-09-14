@@ -27,9 +27,9 @@ type grantPermissionRequest struct {
 
 // RoleCreate creates a new RBAC role.
 //
-// ezauth performs no authorization check here — the caller is responsible
-// for verifying the requester is allowed (e.g. via an admin-only middleware
-// checking RequireRole/RequirePermission) before this route is reachable.
+// New()'s default route wiring requires the caller hold the RBAC role
+// Cfg.AdminRole (default "admin") -- see handler.WithAdminAuthz to customize
+// or disable this check.
 // @Summary Create a role (admin)
 // @Tags rbac
 // @Accept json

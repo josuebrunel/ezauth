@@ -23,6 +23,18 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler
 - **path**: The base path for the auth routes (e.g., "/auth").
 - **options**: Functional options for configuration.
 
+### HandlerOptions
+
+```go
+func WithRouter(r *chi.Mux) HandlerOption
+```
+Mounts routes on a caller-supplied `chi.Mux` instead of a fresh one `New()` creates. Skips the default middleware chain (logger, rate limiter, recoverer, ...) — a caller supplying their own router is assumed to also want to control its middleware stack.
+
+```go
+func WithAdminAuthz(mw func(http.Handler) http.Handler) HandlerOption
+```
+Sets the middleware gating the admin/RBAC/org route subtree (JSON + Form) — see [Admin User Management](#admin-user-management) below. Without this option, `New()` defaults to `RequireRole(svc, Cfg.AdminRole)` (`Cfg.AdminRole` defaults to `"admin"`). Pass a custom middleware for a different scheme (e.g. `RequirePermission`), or `nil` to disable the gate entirely (restoring the pre-#132 fully-open behavior) — only do this if you're gating this subtree yourself in front of ezauth. Impersonation's Form routes (`FormImpersonate`/`FormStopImpersonation`) are the one exception: they always enforce `Cfg.AdminRole` with no customization point (only `nil` affects them), since they redirect rather than return JSON on every other error path and a generic middleware can't match that automatically.
+
 ## Methods
 
 ### `Run`
@@ -92,7 +104,7 @@ The following methods are attached to routes internally by `New`, but are public
 -   `PasswordlessLogin(w, r)`: Login via magic link
 
 ### Impersonation
-`ezauth` enforces no authorization here — protect these with your own admin-only check.
+`New()`'s default route wiring requires the caller hold the RBAC role `Cfg.AdminRole` (default `"admin"`) — grant it via `RoleCreate`/`UserRoleGrant`, or the `ezauthapi create-admin` CLI. See [`HandlerOptions`](#handleroptions) above (`WithAdminAuthz`) to customize the check or disable it.
 -   `Impersonate(w, r)`: Start impersonating a target user (JSON)
 -   `StopImpersonation(w, r)`: End an impersonation session (JSON)
 -   `FormImpersonate(w, r)`: Start impersonating (form; swaps the session cookie)
@@ -137,7 +149,7 @@ The following methods are attached to routes internally by `New`, but are public
 -   `FormEmailChangeRequest(w, r)`, `FormEmailChangeConfirm(w, r)`: Form equivalents
 
 ### Admin User Management
-`ezauth` enforces no authorization on who may call these — same stance as impersonation.
+Gated the same way as [Impersonation](#impersonation) above: `Cfg.AdminRole` by default, customizable/disable-able via `WithAdminAuthz`.
 -   `AdminUsersList(w, r)`: Search/filter/paginate users (JSON)
 -   `AdminUserSuspend(w, r)`, `AdminUserReactivate(w, r)`: Suspend/reactivate an account (JSON)
 -   `AdminUserAuthHistory(w, r)`: View a user's auth history (JSON)
@@ -145,7 +157,7 @@ The following methods are attached to routes internally by `New`, but are public
 -   `FormAdminUsersList(w, r)`, `FormAdminUserSuspend(w, r)`, `FormAdminUserReactivate(w, r)`, `FormAdminUserAuthHistory(w, r)`, `FormAdminUserAuditLogsList(w, r)`: Form equivalents
 
 ### Roles & Permissions (RBAC)
-`ezauth` enforces no authorization on who may call these — same stance as impersonation. See [Roles & Permissions (RBAC)](../guides/admin-operations.md#roles-permissions-rbac).
+Gated the same way as [Impersonation](#impersonation) above: `Cfg.AdminRole` by default, customizable/disable-able via `WithAdminAuthz`. See [Roles & Permissions (RBAC)](../guides/admin-operations.md#roles-permissions-rbac).
 -   `RoleCreate(w, r)`, `RolesList(w, r)`, `RoleDelete(w, r)`: Manage roles (JSON)
 -   `PermissionCreate(w, r)`, `PermissionsList(w, r)`, `PermissionDelete(w, r)`: Manage permissions (JSON)
 -   `UserRoleGrant(w, r)`, `UserRolesList(w, r)`, `UserRoleRevoke(w, r)`: Grant/list/revoke a user's roles (JSON)
@@ -153,7 +165,7 @@ The following methods are attached to routes internally by `New`, but are public
 -   `FormRoleCreate(w, r)`, `FormRolesList(w, r)`, `FormRoleDelete(w, r)`, `FormPermissionCreate(w, r)`, `FormPermissionsList(w, r)`, `FormPermissionDelete(w, r)`, `FormUserRoleGrant(w, r)`, `FormUserRolesList(w, r)`, `FormUserRoleRevoke(w, r)`, `FormRolePermissionGrant(w, r)`, `FormRolePermissionRevoke(w, r)`: Form equivalents
 
 ### Organizations
-`ezauth` enforces no authorization on who may call these — same stance as impersonation. See [Organizations](../guides/admin-operations.md#organizations).
+Gated the same way as [Impersonation](#impersonation) above: `Cfg.AdminRole` by default, customizable/disable-able via `WithAdminAuthz`. See [Organizations](../guides/admin-operations.md#organizations).
 -   `OrganizationCreate(w, r)`, `OrganizationsList(w, r)`, `OrganizationGetByID(w, r)`, `OrganizationDelete(w, r)`: Manage organizations (JSON; `OrganizationsList` paginated via `limit`/`offset`)
 -   `OrgMemberAdd(w, r)`, `OrgMembersList(w, r)`, `OrgMemberRemove(w, r)`: Manage an organization's members (JSON; `OrgMemberAdd` upserts)
 -   `UserOrganizationsList(w, r)`: List the organizations a user belongs to (JSON)

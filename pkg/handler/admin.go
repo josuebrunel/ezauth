@@ -49,10 +49,9 @@ func parseListUsersOptions(r *http.Request) (service.ListUsersOptions, error) {
 
 // AdminUsersList lists/searches/filters users.
 //
-// ezauth performs no authorization check here — same stance as Impersonate.
-// The caller is responsible for verifying the requester is allowed to list
-// users (e.g. via an admin-only middleware checking caller.HasRole("admin"))
-// before this route is reachable.
+// New()'s default route wiring requires the caller hold the RBAC role
+// Cfg.AdminRole (default "admin") -- see handler.WithAdminAuthz to customize
+// or disable this check.
 // @Summary List/search users (admin)
 // @Tags admin
 // @Produce json

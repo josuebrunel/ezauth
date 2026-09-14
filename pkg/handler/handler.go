@@ -70,6 +70,29 @@ func (h *Handler) SessionMiddleware(next http.Handler) http.Handler {
 	}))
 }
 
+// formRequireAdminRole gates the Form admin/RBAC/org/impersonation
+// subtree. It's the Form-route counterpart of the JSON API's default
+// adminAuthz (RequireRole(svc, Cfg.AdminRole)), redirecting on failure
+// instead of writing a JSON body, matching every other Form handler's
+// convention -- unlike adminAuthz, it isn't overridable via WithAdminAuthz
+// (see that option's doc comment for why) and always runs unless
+// WithAdminAuthz(nil) disabled admin authorization entirely.
+func (h *Handler) formRequireAdminRole(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, err := h.GetSessionUser(r.Context())
+		if err != nil {
+			h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrUnauthorized.Error())
+			return
+		}
+		has, err := h.svc.UserHasRole(r.Context(), user.ID, h.svc.Cfg.AdminRole)
+		if err != nil || !has {
+			h.redirectWithError(w, r, h.svc.Cfg.Redirects.AfterLogin, ezmiddleware.ErrForbidden.Error())
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 type LogoutRequest struct {
 	RefreshToken string `json:"refresh_token"`
 }
@@ -84,15 +107,73 @@ type Handler struct {
 	r       *chi.Mux
 	svc     *service.Auth
 	Session *scs.SessionManager
+
+	// adminAuthz gates the admin/RBAC/org/impersonation route subtree (see
+	// WithAdminAuthz). nil until New() resolves it to either an explicit
+	// WithAdminAuthz value or the default RequireRole(svc, Cfg.AdminRole)
+	// check; adminAuthzDisabled distinguishes "use the default" (both nil)
+	// from "explicitly disabled via WithAdminAuthz(nil)".
+	adminAuthz         func(http.Handler) http.Handler
+	adminAuthzDisabled bool
+
+	// customRouter is true once WithRouter has been applied, so New() can
+	// tell "a caller passed WithAdminAuthz but not WithRouter" apart from
+	// "a caller passed WithRouter" -- only the latter should skip the
+	// default middleware chain. (Historically that check was len(options)
+	// == 0, which broke the moment a second HandlerOption was introduced.)
+	customRouter bool
 }
 
 // HandlerOption defines a functional option for configuring the Handler.
 type HandlerOption func(*Handler)
 
-// WithRouter sets a custom chi router for the Handler.
+// WithRouter sets a custom chi router for the Handler. New() skips its
+// default middleware chain (logger, rate limiter, recoverer, ...) when this
+// is used, since a caller supplying their own router is assumed to also
+// want to control its middleware stack.
 func WithRouter(r *chi.Mux) HandlerOption {
 	return func(h *Handler) {
 		h.r = r
+		h.customRouter = true
+	}
+}
+
+// WithAdminAuthz sets the middleware that gates the admin/RBAC/org route
+// subtree (AdminUsersList/Suspend/Reactivate, RoleCreate/Delete,
+// PermissionCreate/Delete, UserRoleGrant/Revoke, RolePermissionGrant/
+// Revoke, OrganizationCreate/Delete, OrgMemberAdd/Remove) on both the JSON
+// API and the Form routes -- both return a JSON body on an auth failure
+// here (the Form ones did before #132 too, via an inline GetSessionUser
+// check each handler already had), so one middleware shape covers both.
+//
+// Without this option, New() defaults to RequireRole(svc, Cfg.AdminRole)
+// (Cfg.AdminRole defaults to "admin"), so those routes are denied unless the
+// caller holds that RBAC role — see RoleCreate/UserRoleGrant, or the
+// ezauthapi create-admin CLI subcommand, to grant it. Pass a custom
+// middleware here instead for a different scheme (e.g. RequirePermission,
+// an org-scoped check, or a check against your own authorization system) --
+// it runs downstream of session/JWT/API-key/Form-session auth, so the
+// caller's user ID is already in context (see RequireRole's doc comment for
+// how to read it).
+//
+// Impersonate/StopImpersonation are the one exception: both transports
+// gate them separately (formRequireAdminRole for the Form pair), always
+// enforcing Cfg.AdminRole with no customization point, since
+// FormImpersonate/FormStopImpersonation redirect (not JSON) on every other
+// error path and a generic http.Handler middleware can't match that
+// convention automatically. WithAdminAuthz's custom middleware has no
+// effect on them; only WithAdminAuthz(nil) does (see below).
+//
+// Pass nil to explicitly disable the gate everywhere (JSON API, Form
+// admin/RBAC/org, and Form impersonation alike), restoring the pre-#132
+// behavior (any authenticated user reaches these routes) -- only do this if
+// you're gating this subtree yourself at a layer in front of ezauth (e.g.
+// an API gateway), since leaving it fully open otherwise is exactly the
+// hole this option exists to close.
+func WithAdminAuthz(mw func(http.Handler) http.Handler) HandlerOption {
+	return func(h *Handler) {
+		h.adminAuthz = mw
+		h.adminAuthzDisabled = mw == nil
 	}
 }
 
@@ -136,8 +217,27 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 		opt(h)
 	}
 
+	// Resolve the admin/RBAC/org/impersonation authorization gate: an
+	// explicit WithAdminAuthz wins (including WithAdminAuthz(nil), which
+	// sets adminAuthzDisabled and leaves adminAuthz nil); otherwise default
+	// to requiring Cfg.AdminRole via the RBAC tables. See WithAdminAuthz's
+	// doc comment.
+	//
+	// Cfg.AdminRole's default:"admin" env tag only applies via LoadConfig;
+	// a hand-built config.Config{} (bypassing LoadConfig, e.g. in tests, or
+	// a library consumer constructing it directly) leaves it "" otherwise,
+	// which would make the gate unsatisfiable by any role -- so fill it in
+	// here too rather than repeating this footgun (see AccountLockout's
+	// equivalent gap in service.New).
+	if h.svc.Cfg.AdminRole == "" {
+		h.svc.Cfg.AdminRole = "admin"
+	}
+	if h.adminAuthz == nil && !h.adminAuthzDisabled {
+		h.adminAuthz = ezmiddleware.RequireRole(h.svc, h.svc.Cfg.AdminRole)
+	}
+
 	// Default middlewares if router was newly created
-	if len(options) == 0 {
+	if !h.customRouter {
 		h.r.Use(middleware.Logger)
 		h.r.Use(middleware.RequestID)
 		// chi's RealIP unconditionally trusts True-Client-IP/X-Real-IP/
@@ -200,8 +300,6 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 			})
 			r.Post("/login", h.FormLogin)
 			r.Post("/logout", h.FormLogout)
-			r.Post("/impersonate", h.FormImpersonate)
-			r.Post("/impersonate/stop", h.FormStopImpersonation)
 			r.Post("/password-reset/request", h.FormPasswordResetRequest)
 			r.Post("/password-reset/confirm", h.FormPasswordResetConfirm)
 			r.Post("/email-change/request", h.FormEmailChangeRequest)
@@ -244,30 +342,59 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 			r.Get("/invitations", h.FormInvitationsList)
 			r.Delete("/invitations/{id}", h.FormInvitationRevoke)
 			r.Get("/invitations/preview", h.InvitationPreview)
-			r.Get("/admin/users", h.FormAdminUsersList)
-			r.Post("/admin/users/{id}/suspend", h.FormAdminUserSuspend)
-			r.Post("/admin/users/{id}/reactivate", h.FormAdminUserReactivate)
-			r.Get("/admin/users/{id}/history", h.FormAdminUserAuthHistory)
-			r.Get("/admin/users/{id}/audit-logs", h.FormAdminUserAuditLogsList)
-			r.Post("/admin/roles", h.FormRoleCreate)
-			r.Get("/admin/roles", h.FormRolesList)
-			r.Delete("/admin/roles/{id}", h.FormRoleDelete)
-			r.Post("/admin/permissions", h.FormPermissionCreate)
-			r.Get("/admin/permissions", h.FormPermissionsList)
-			r.Delete("/admin/permissions/{id}", h.FormPermissionDelete)
-			r.Post("/admin/users/{id}/roles", h.FormUserRoleGrant)
-			r.Get("/admin/users/{id}/roles", h.FormUserRolesList)
-			r.Delete("/admin/users/{id}/roles/{role_name}", h.FormUserRoleRevoke)
-			r.Post("/admin/roles/{name}/permissions", h.FormRolePermissionGrant)
-			r.Delete("/admin/roles/{name}/permissions/{permission_name}", h.FormRolePermissionRevoke)
-			r.Post("/admin/organizations", h.FormOrganizationCreate)
-			r.Get("/admin/organizations", h.FormOrganizationsList)
-			r.Get("/admin/organizations/{id}", h.FormOrganizationGetByID)
-			r.Delete("/admin/organizations/{id}", h.FormOrganizationDelete)
-			r.Post("/admin/organizations/{id}/members", h.FormOrgMemberAdd)
-			r.Get("/admin/organizations/{id}/members", h.FormOrgMembersList)
-			r.Delete("/admin/organizations/{id}/members/{user_id}", h.FormOrgMemberRemove)
-			r.Get("/admin/users/{id}/organizations", h.FormUserOrganizationsList)
+
+			// Impersonation: gated by formRequireAdminRole, which redirects
+			// on failure like FormImpersonate/FormStopImpersonation's own
+			// other error paths do -- unlike the rest of the Form
+			// admin/RBAC/org routes just below, which (like the JSON API)
+			// return a JSON body on failure. Not customizable via
+			// WithAdminAuthz (see its doc comment for why), unless
+			// WithAdminAuthz(nil) disabled admin authorization entirely.
+			r.Group(func(r chi.Router) {
+				if !h.adminAuthzDisabled {
+					r.Use(h.formRequireAdminRole)
+				}
+				r.Post("/impersonate", h.FormImpersonate)
+				r.Post("/impersonate/stop", h.FormStopImpersonation)
+			})
+
+			// Admin/RBAC/Org routes: these already return a JSON body (not
+			// a redirect) on their own pre-existing auth failure, so they
+			// share adminAuthz (see WithAdminAuthz) with the JSON API
+			// instead of formRequireAdminRole. LoadUserMiddleware runs
+			// first to populate the same UserContextKey adminAuthz's
+			// default (RequireRole) reads -- Form routes don't run
+			// AuthMiddleware.
+			r.Group(func(r chi.Router) {
+				r.Use(h.LoadUserMiddleware)
+				if h.adminAuthz != nil {
+					r.Use(h.adminAuthz)
+				}
+				r.Get("/admin/users", h.FormAdminUsersList)
+				r.Post("/admin/users/{id}/suspend", h.FormAdminUserSuspend)
+				r.Post("/admin/users/{id}/reactivate", h.FormAdminUserReactivate)
+				r.Get("/admin/users/{id}/history", h.FormAdminUserAuthHistory)
+				r.Get("/admin/users/{id}/audit-logs", h.FormAdminUserAuditLogsList)
+				r.Post("/admin/roles", h.FormRoleCreate)
+				r.Get("/admin/roles", h.FormRolesList)
+				r.Delete("/admin/roles/{id}", h.FormRoleDelete)
+				r.Post("/admin/permissions", h.FormPermissionCreate)
+				r.Get("/admin/permissions", h.FormPermissionsList)
+				r.Delete("/admin/permissions/{id}", h.FormPermissionDelete)
+				r.Post("/admin/users/{id}/roles", h.FormUserRoleGrant)
+				r.Get("/admin/users/{id}/roles", h.FormUserRolesList)
+				r.Delete("/admin/users/{id}/roles/{role_name}", h.FormUserRoleRevoke)
+				r.Post("/admin/roles/{name}/permissions", h.FormRolePermissionGrant)
+				r.Delete("/admin/roles/{name}/permissions/{permission_name}", h.FormRolePermissionRevoke)
+				r.Post("/admin/organizations", h.FormOrganizationCreate)
+				r.Get("/admin/organizations", h.FormOrganizationsList)
+				r.Get("/admin/organizations/{id}", h.FormOrganizationGetByID)
+				r.Delete("/admin/organizations/{id}", h.FormOrganizationDelete)
+				r.Post("/admin/organizations/{id}/members", h.FormOrgMemberAdd)
+				r.Get("/admin/organizations/{id}/members", h.FormOrgMembersList)
+				r.Delete("/admin/organizations/{id}/members/{user_id}", h.FormOrgMemberRemove)
+				r.Get("/admin/users/{id}/organizations", h.FormUserOrganizationsList)
+			})
 		})
 
 		// Routes protected by API Key
@@ -297,8 +424,6 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 					r.Use(h.AuthMiddleware)
 					r.Get("/userinfo", h.UserInfo)
 					r.Post("/logout", h.Logout)
-					r.Post("/impersonate", h.Impersonate)
-					r.Post("/impersonate/stop", h.StopImpersonation)
 					r.Delete("/user", h.DeleteUser)
 					r.Post("/mfa/enroll", h.MFAEnroll)
 					r.Post("/mfa/confirm", h.MFAConfirm)
@@ -319,30 +444,43 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 					r.Get("/invitations", h.InvitationsList)
 					r.Delete("/invitations/{id}", h.InvitationRevoke)
 					r.Post("/email-change/request", h.EmailChangeRequest)
-					r.Get("/admin/users", h.AdminUsersList)
-					r.Post("/admin/users/{id}/suspend", h.AdminUserSuspend)
-					r.Post("/admin/users/{id}/reactivate", h.AdminUserReactivate)
-					r.Get("/admin/users/{id}/history", h.AdminUserAuthHistory)
-					r.Get("/admin/users/{id}/audit-logs", h.AdminUserAuditLogsList)
-					r.Post("/admin/roles", h.RoleCreate)
-					r.Get("/admin/roles", h.RolesList)
-					r.Delete("/admin/roles/{id}", h.RoleDelete)
-					r.Post("/admin/permissions", h.PermissionCreate)
-					r.Get("/admin/permissions", h.PermissionsList)
-					r.Delete("/admin/permissions/{id}", h.PermissionDelete)
-					r.Post("/admin/users/{id}/roles", h.UserRoleGrant)
-					r.Get("/admin/users/{id}/roles", h.UserRolesList)
-					r.Delete("/admin/users/{id}/roles/{role_name}", h.UserRoleRevoke)
-					r.Post("/admin/roles/{name}/permissions", h.RolePermissionGrant)
-					r.Delete("/admin/roles/{name}/permissions/{permission_name}", h.RolePermissionRevoke)
-					r.Post("/admin/organizations", h.OrganizationCreate)
-					r.Get("/admin/organizations", h.OrganizationsList)
-					r.Get("/admin/organizations/{id}", h.OrganizationGetByID)
-					r.Delete("/admin/organizations/{id}", h.OrganizationDelete)
-					r.Post("/admin/organizations/{id}/members", h.OrgMemberAdd)
-					r.Get("/admin/organizations/{id}/members", h.OrgMembersList)
-					r.Delete("/admin/organizations/{id}/members/{user_id}", h.OrgMemberRemove)
-					r.Get("/admin/users/{id}/organizations", h.UserOrganizationsList)
+
+					// Admin/RBAC/Org/Impersonation routes: gated by
+					// adminAuthz (see WithAdminAuthz), defaulting to
+					// requiring Cfg.AdminRole. AuthMiddleware already ran
+					// above, so UserContextKey -- what adminAuthz's default
+					// (RequireRole) reads -- is already populated.
+					r.Group(func(r chi.Router) {
+						if h.adminAuthz != nil {
+							r.Use(h.adminAuthz)
+						}
+						r.Post("/impersonate", h.Impersonate)
+						r.Post("/impersonate/stop", h.StopImpersonation)
+						r.Get("/admin/users", h.AdminUsersList)
+						r.Post("/admin/users/{id}/suspend", h.AdminUserSuspend)
+						r.Post("/admin/users/{id}/reactivate", h.AdminUserReactivate)
+						r.Get("/admin/users/{id}/history", h.AdminUserAuthHistory)
+						r.Get("/admin/users/{id}/audit-logs", h.AdminUserAuditLogsList)
+						r.Post("/admin/roles", h.RoleCreate)
+						r.Get("/admin/roles", h.RolesList)
+						r.Delete("/admin/roles/{id}", h.RoleDelete)
+						r.Post("/admin/permissions", h.PermissionCreate)
+						r.Get("/admin/permissions", h.PermissionsList)
+						r.Delete("/admin/permissions/{id}", h.PermissionDelete)
+						r.Post("/admin/users/{id}/roles", h.UserRoleGrant)
+						r.Get("/admin/users/{id}/roles", h.UserRolesList)
+						r.Delete("/admin/users/{id}/roles/{role_name}", h.UserRoleRevoke)
+						r.Post("/admin/roles/{name}/permissions", h.RolePermissionGrant)
+						r.Delete("/admin/roles/{name}/permissions/{permission_name}", h.RolePermissionRevoke)
+						r.Post("/admin/organizations", h.OrganizationCreate)
+						r.Get("/admin/organizations", h.OrganizationsList)
+						r.Get("/admin/organizations/{id}", h.OrganizationGetByID)
+						r.Delete("/admin/organizations/{id}", h.OrganizationDelete)
+						r.Post("/admin/organizations/{id}/members", h.OrgMemberAdd)
+						r.Get("/admin/organizations/{id}/members", h.OrgMembersList)
+						r.Delete("/admin/organizations/{id}/members/{user_id}", h.OrgMemberRemove)
+						r.Get("/admin/users/{id}/organizations", h.UserOrganizationsList)
+					})
 				})
 			})
 		})

@@ -31,6 +31,7 @@ Simple and easy to use authentication library for Golang.
   - [Scoped API Keys](#scoped-api-keys)
   - [Guarded Email Change](#guarded-email-change)
 - [Admin and Operations](#admin-and-operations)
+  - [Admin Authorization](#admin-authorization)
   - [Impersonation](#impersonation)
   - [Roles & Permissions (RBAC)](#roles--permissions-rbac)
   - [Organizations](#organizations)
@@ -803,14 +804,45 @@ Set `EZAUTH_EMAIL_CHANGE_SUBJECT`/`EZAUTH_EMAIL_CHANGE_BODY` to customize the ve
 
 ## Admin and Operations
 
-Admin-facing features. These enforce no role checks themselves, so gate them behind your own authorization (e.g. `caller.HasRole("admin")`).
+Admin-facing features: impersonation, RBAC, organizations, invitation-based onboarding, user management, the audit log, and hooks. The `service.Auth` *methods* behind these (`Impersonate`, `UsersList`, `RoleCreate`, etc.) enforce no role checks themselves — calling them directly, your application is responsible for checking the caller is allowed (e.g. `caller.HasRole("admin")`) first. In standalone-service mode, `Handler`'s built-in HTTP routes are different: see below.
+
+### Admin Authorization
+
+By default, `Handler`'s admin/RBAC/org/impersonation HTTP routes (`/admin/*`, `/impersonate`, `/impersonate/stop`, on both the JSON API and form-based transports) require the caller hold the RBAC role `Cfg.AdminRole` (`EZAUTH_ADMIN_ROLE`, defaults to `"admin"`) — checked against the [RBAC](#roles--permissions-rbac) tables, not the legacy `User.Roles` string field. Unauthenticated requests get `401`; authenticated requests lacking the role get `403` (form routes redirect instead, like every other form error).
+
+Bootstrap your first admin with the CLI, then grant the role to others through the API/RBAC methods below:
+
+```bash
+ezauthapi create-admin -email=admin@example.com -password=<password>   # defaults to -role=admin
+```
+
+```go
+_, _ = auth.Service.RoleCreate(ctx, "admin", "full admin access") // if it doesn't already exist
+err := auth.Service.UserRoleGrant(ctx, userID, "admin")
+```
+
+To use a different scheme — RBAC permissions instead of a single role, an org-scoped check, or your own authorization system entirely — pass `handler.WithAdminAuthz(middleware)` to `New()`. The middleware runs downstream of auth, so it can check against `auth.Service` (which satisfies `RequirePermission`'s `PermissionChecker` interface) directly:
+
+```go
+import ezmiddleware "github.com/josuebrunel/ezauth/pkg/handler/middleware"
+
+h := handler.New(auth.Service, "auth", handler.WithAdminAuthz(
+    ezmiddleware.RequirePermission(auth.Service, "admin:access"),
+))
+```
+
+Or disable the gate entirely with `handler.WithAdminAuthz(nil)`, restoring the fully-open (any authenticated user) behavior — only do this if you're authorizing this subtree yourself in front of ezauth (e.g. an API gateway); leaving it open otherwise is exactly the privilege-escalation hole this default exists to close.
+
+One exception: the form-based `/impersonate` and `/impersonate/stop` routes always enforce `Cfg.AdminRole` specifically (redirecting on failure, matching `FormImpersonate`'s other error paths) and aren't affected by a custom `WithAdminAuthz` middleware — only `WithAdminAuthz(nil)` disables them too. A generic `func(http.Handler) http.Handler` can't know to redirect instead of writing a JSON body, so this one pair keeps a fixed check.
 
 ### Impersonation
 
 `ezauth` supports admin impersonation: an authenticated user can act as another user (e.g. for customer support debugging), then swap back to their own session.
 
 > [!IMPORTANT]
-> `ezauth` enforces **no authorization** for who may impersonate. The `Impersonate` method/endpoint mints tokens for any target user on behalf of whoever calls it. Your application is responsible for checking that the caller is allowed to impersonate — e.g. `adminUser.HasRole("admin")` — before calling it in library mode, or by adding your own authorization middleware in front of the `/auth/impersonate` and `/auth/api/impersonate` routes in standalone-service mode.
+> **Library mode**: the `Impersonate` *method* enforces no authorization for who may impersonate — it mints tokens for any target user on behalf of whoever calls it, so check `adminUser.HasRole("admin")` (or equivalent) yourself before calling it directly.
+>
+> **Standalone-service mode**: the `/auth/impersonate` and `/auth/api/impersonate` *routes* are different — by default `Handler` requires the caller hold the RBAC role `Cfg.AdminRole` (`EZAUTH_ADMIN_ROLE`, defaults to `"admin"`), checked via the RBAC tables (`RoleCreate`/`UserRoleGrant`, or the `ezauthapi create-admin` CLI, to grant it). Pass `handler.WithAdminAuthz(middleware)` to `New()` for a different scheme (e.g. `RequirePermission`), or `WithAdminAuthz(nil)` to disable the gate and restore the old fully-open behavior if you're authorizing this at a layer in front of ezauth instead. See [Admin Authorization](#admin-authorization) below for the full picture — this same gate covers Admin User Management, RBAC, and Organizations too.
 
 #### Library Mode
 
@@ -1026,7 +1058,7 @@ Set `EZAUTH_INVITATION_TTL` (default 168h/7 days) to control how long an invitat
 
 ### Admin User Management
 
-Beyond impersonation, `ezauth` exposes admin-facing endpoints to list/search users, suspend/reactivate an account, and view a user's auth history. Like `Impersonate`, `ezauth` enforces no authorization on who may call these — check that yourself (e.g. `caller.HasRole("admin")`) before exposing them, since as shipped they're reachable by any authenticated user.
+Beyond impersonation, `ezauth` exposes admin-facing endpoints to list/search users, suspend/reactivate an account, and view a user's auth history. The `service.Auth` methods below enforce no authorization themselves (same stance as `Impersonate`) — check that yourself before calling them directly. In standalone-service mode, `Handler`'s HTTP routes are gated by default instead — see [Admin Authorization](#admin-authorization).
 
 ```go
 result, err := auth.Service.UsersList(ctx, service.ListUsersOptions{

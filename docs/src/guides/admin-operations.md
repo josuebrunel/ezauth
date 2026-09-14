@@ -3,14 +3,14 @@
 Admin-facing features: impersonation, invitation-based onboarding, user management, the persisted audit log, and the hook system.
 
 > [!WARNING]
-> These features enforce no role checks themselves — your application must verify the caller is allowed (e.g. `caller.HasRole("admin")`) before exposing them.
+> The `service.Auth` methods on this page (`Impersonate`, `UsersList`, etc.) enforce no role checks themselves — if you call them directly, your application must verify the caller is allowed (e.g. `caller.HasRole("admin")`) first. If you're using `Handler`'s built-in HTTP routes instead, that layer *does* gate this subtree by default (`Cfg.AdminRole`, defaulting to `"admin"`, checked via the RBAC tables) — see [`WithAdminAuthz`](../references/handler.md#handleroptions) to customize or disable it.
 
 ## Impersonation
 
 `ezauth` supports admin impersonation: an authenticated user can act as another user (e.g. for customer support debugging), then swap back to their own session.
 
 > [!IMPORTANT]
-> `ezauth` enforces **no authorization** for who may impersonate (same stance as [Invitation-Based Onboarding](#invitation-based-onboarding) and [Admin User Management](#admin-user-management)). The `Impersonate` method mints tokens for any target user on behalf of whoever calls it — check `adminUser.HasRole("admin")` (or equivalent) yourself before calling it.
+> The `Impersonate` *service method* enforces no authorization for who may impersonate (same stance as [Admin User Management](#admin-user-management) below) — it mints tokens for any target user on behalf of whoever calls it, so check `adminUser.HasRole("admin")` (or equivalent) yourself before calling it directly. `Handler`'s built-in `/impersonate` HTTP routes gate this by default instead (`Cfg.AdminRole`), customizable/disable-able via `WithAdminAuthz`. [Invitation-Based Onboarding](#invitation-based-onboarding) is different: *who* may invite is still unchecked at both levels, but *what roles an invitation can grant* is enforced even at the service level (`InvitationCreate` rejects a role the inviter doesn't hold).
 
 ```go
 // adminUser must already be authenticated; check authorization yourself first.
@@ -140,7 +140,7 @@ err = auth.Service.InvitationRevoke(ctx, inviter, invitations[0].ID)
 
 ## Admin User Management
 
-Beyond impersonation, `ezauth` exposes admin-facing methods to list/search/filter users, suspend/reactivate an account, and view a user's auth history. `ezauth` enforces no authorization on who may call these (same stance as `Impersonate`) — check that yourself before exposing them.
+Beyond impersonation, `ezauth` exposes admin-facing methods to list/search/filter users, suspend/reactivate an account, and view a user's auth history. These *service methods* enforce no authorization on who may call them (same stance as `Impersonate` above) — check that yourself before calling them directly. `Handler`'s built-in HTTP routes gate this subtree by default instead (`Cfg.AdminRole`), customizable/disable-able via `WithAdminAuthz`.
 
 ```go
 result, err := auth.Service.UsersList(ctx, service.ListUsersOptions{

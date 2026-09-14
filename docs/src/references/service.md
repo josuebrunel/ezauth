@@ -189,7 +189,7 @@ func (a *Auth) OAuth2Authenticate(ctx context.Context, provider string, userInfo
 
 ## Impersonation
 
-`ezauth` enforces no authorization on who may impersonate — the caller is responsible for checking that the admin is allowed to (e.g. `adminUser.HasRole("admin")`) before calling `Impersonate`.
+`ezauth` enforces no authorization on who may impersonate at *this* level — the caller is responsible for checking that the admin is allowed to (e.g. `adminUser.HasRole("admin")`) before calling `Impersonate` directly. If you're going through `Handler`'s built-in HTTP routes instead of calling this service method yourself, that layer *does* gate it by default (`Cfg.AdminRole`, customizable via `WithAdminAuthz`) — see [Impersonation](handler.md#impersonation) in the Handler reference.
 
 ### `Impersonate`
 
@@ -343,7 +343,7 @@ func (a *Auth) EmailChangeConfirm(ctx context.Context, tokenValue string) (*mode
 
 ## Admin User Management
 
-`ezauth` enforces no authorization on who may call these — same stance as `Impersonate`.
+`ezauth` enforces no authorization on who may call these at *this* level — same stance as `Impersonate` above. `Handler`'s built-in HTTP routes gate them by default instead (`Cfg.AdminRole`, customizable via `WithAdminAuthz`) — see [Admin User Management](handler.md#admin-user-management) in the Handler reference.
 
 ### `UsersList`
 
@@ -378,7 +378,7 @@ func (a *Auth) UserAuthHistory(ctx context.Context, userID string, limit int) ([
 func (a *Auth) AuditLogs(ctx context.Context, userID string, opts ListAuditLogsOptions) (*ListAuditLogsResult, error)
 ```
 
-`ListAuditLogsOptions` supports `EventType` (a `models.AuditEvent*` constant), `Since`/`Until` (`*time.Time`), and `Limit`/`Offset` (default 50, max 200). `ezauth` enforces no authorization on who may call this — same stance as `UsersList`.
+`ListAuditLogsOptions` supports `EventType` (a `models.AuditEvent*` constant), `Since`/`Until` (`*time.Time`), and `Limit`/`Offset` (default 50, max 200). `ezauth` enforces no authorization on who may call this at *this* level — same stance as `UsersList` above (its HTTP route, `AdminUserAuditLogsList`, is gated by default the same way).
 
 ## Roles & Permissions (RBAC)
 
