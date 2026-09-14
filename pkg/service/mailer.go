@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/smtp"
 	"strings"
+	"sync"
 	"text/template"
 
 	"github.com/josuebrunel/ezauth/pkg/config"
@@ -97,8 +98,15 @@ func (m *SMTPMailer) Send(to string, subject string, body string) error {
 	return client.Quit()
 }
 
-// MockMailer implements the Mailer interface for testing purposes.
+// MockMailer implements the Mailer interface for testing purposes. It's also
+// the default Mailer when Cfg.SMTP.Host is unset (see service.New), so a
+// production deployment that forgets to configure SMTP gets this instead of
+// real delivery -- Send is safe to call concurrently either way.
 type MockMailer struct {
+	mu sync.Mutex
+	// SentEmails records every call to Send, most recent last. Reading it
+	// directly (as ezauth's own tests do) is safe only when nothing else is
+	// concurrently calling Send; for concurrent access, use Emails instead.
 	SentEmails []map[string]string
 }
 
@@ -110,6 +118,8 @@ func NewMockMailer() *MockMailer {
 }
 
 func (m *MockMailer) Send(to string, subject string, body string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.SentEmails = append(m.SentEmails, map[string]string{
 		"to":      to,
 		"subject": subject,
@@ -117,6 +127,16 @@ func (m *MockMailer) Send(to string, subject string, body string) error {
 	})
 	xlog.Debug("mock email sent", "to", to, "subject", subject)
 	return nil
+}
+
+// Emails returns a snapshot of every email sent so far, safe to call
+// concurrently with Send (unlike reading SentEmails directly).
+func (m *MockMailer) Emails() []map[string]string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := make([]map[string]string, len(m.SentEmails))
+	copy(out, m.SentEmails)
+	return out
 }
 
 // EmailTemplateData contains variables available in email templates.

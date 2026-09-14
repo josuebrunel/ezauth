@@ -2,10 +2,30 @@ package service
 
 import (
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/josuebrunel/ezauth/pkg/config"
 )
+
+func TestMockMailer_ConcurrentSendIsRaceFree(t *testing.T) {
+	m := NewMockMailer()
+	var wg sync.WaitGroup
+	for i := range 50 {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			_ = m.Send("to@example.com", "subject", "body")
+			_ = m.Emails() // concurrent read via the safe accessor
+			_ = i
+		}(i)
+	}
+	wg.Wait()
+
+	if got := len(m.Emails()); got != 50 {
+		t.Fatalf("expected 50 recorded emails, got %d", got)
+	}
+}
 
 func TestSMTPMailer_RejectsHeaderInjection(t *testing.T) {
 	// Host is deliberately unreachable/unset: these cases must be rejected
