@@ -1364,9 +1364,10 @@ perm, _ := auth.Service.PermissionCreate(ctx, &quot;posts:write&quot;, &quot;wri
 _ = auth.Service.RolePermissionGrant(ctx, &quot;editor&quot;, &quot;posts:write&quot;)
 
 // Grant/revoke a role on a user — idempotent, and records an
-// AuditEventRoleGranted/AuditEventRoleRevoked audit event (see Audit Log below).
-_ = auth.Service.UserRoleGrant(ctx, user.ID, &quot;editor&quot;)
-_ = auth.Service.UserRoleRevoke(ctx, user.ID, &quot;editor&quot;)
+// AuditEventRoleGranted/AuditEventRoleRevoked audit event (see Audit Log
+// below) with adminUser.ID as the actor.
+_ = auth.Service.UserRoleGrant(ctx, adminUser.ID, user.ID, &quot;editor&quot;)
+_ = auth.Service.UserRoleRevoke(ctx, adminUser.ID, user.ID, &quot;editor&quot;)
 
 // Check directly, or gate a route with the middleware.
 has, _ := auth.Service.UserHasRole(ctx, user.ID, &quot;editor&quot;)

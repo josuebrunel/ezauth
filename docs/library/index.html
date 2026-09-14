@@ -1358,6 +1358,12 @@ tokens, err := auth.Service.TokenCreate(ctx, user)
 <p>If your application already has a <code>*sql.DB</code> connection, you can use <code>NewWithDB</code>:</p>
 <pre><code class="language-go">auth, err := ezauth.NewWithDB(&amp;cfg, myDBConnection, &quot;auth&quot;)
 </code></pre>
+<p><code>NewWithDB</code> applies ezauth's default connection pool limits (25 max open, 5
+max idle, 30 minute max lifetime) to <code>myDBConnection</code>, overwriting whatever it
+was configured with. If you need different limits, call
+<code>myDBConnection.SetMaxOpenConns</code> / <code>SetMaxIdleConns</code> / <code>SetConnMaxLifetime</code>
+after <code>NewWithDB</code> returns -- they take effect immediately on the same
+connection pool.</p>
 
 
 

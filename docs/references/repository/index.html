@@ -1808,7 +1808,7 @@
 <pre><code class="language-go">func (r Repository) UserGetByProvider(ctx context.Context, provider, providerID string) (*models.User, error)
 </code></pre>
 <h3 id="usergetbyusername"><code>UserGetByUsername</code></h3>
-<p>Retrieves a user by username.</p>
+<p>Retrieves a user by username. The lookup username (and, in <code>UserCreate</code>/<code>UserUpdate</code>, the stored username) is lowercased and trimmed before use, same as email, so lookups behave the same regardless of input casing or the DB dialect's default collation. Non-empty usernames are enforced unique across accounts at the database level (a partial/filtered unique index; empty usernames are exempt, same as phone).</p>
 <pre><code class="language-go">func (r Repository) UserGetByUsername(ctx context.Context, username string) (*models.User, error)
 </code></pre>
 <h3 id="usergetbyphone"><code>UserGetByPhone</code></h3>

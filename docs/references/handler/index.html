@@ -1711,6 +1711,9 @@
 <pre><code class="language-go">func WithAdminAuthz(mw func(http.Handler) http.Handler) HandlerOption
 </code></pre>
 <p>Sets the middleware gating the admin/RBAC/org route subtree (JSON + Form) — see <a href="#admin-user-management">Admin User Management</a> below. Without this option, <code>New()</code> defaults to <code>RequireRole(svc, Cfg.AdminRole)</code> (<code>Cfg.AdminRole</code> defaults to <code>"admin"</code>). Pass a custom middleware for a different scheme (e.g. <code>RequirePermission</code>), or <code>nil</code> to disable the gate entirely (restoring the pre-#132 fully-open behavior) — only do this if you're gating this subtree yourself in front of ezauth. Impersonation's Form routes (<code>FormImpersonate</code>/<code>FormStopImpersonation</code>) are the one exception: they always enforce <code>Cfg.AdminRole</code> with no customization point (only <code>nil</code> affects them), since they redirect rather than return JSON on every other error path and a generic middleware can't match that automatically.</p>
+<pre><code class="language-go">func WithSwaggerAuth(mw func(http.Handler) http.Handler) HandlerOption
+</code></pre>
+<p>Gates <code>/swagger/*</code> with <code>mw</code>. Without this option the swagger UI (the full API surface/schema) is served with no authentication at all. Pass <code>nil</code> to remove the route entirely instead of gating it.</p>
 <h2 id="methods">Methods</h2>
 <h3 id="run"><code>Run</code></h3>
 <p>Starts the HTTP server on the address configured in <code>service.Config</code>, with conservative <code>ReadHeaderTimeout</code>/<code>ReadTimeout</code>/<code>WriteTimeout</code>/<code>IdleTimeout</code>. Blocks until it receives <code>SIGINT</code>/<code>SIGTERM</code>, at which point it stops accepting new connections and drains in-flight requests (up to a 15s grace period) before returning.</p>

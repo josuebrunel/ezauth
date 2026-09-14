@@ -1565,7 +1565,7 @@
 </tr>
 <tr>
 <td><code>EZAUTH_FORCE_SECURE_COOKIES</code></td>
-<td>Force the <code>Secure</code> flag on session/CSRF cookies regardless of <code>BASE_URL</code>'s scheme. Set <code>true</code> when ezauth sits behind a TLS-terminating reverse proxy and <code>BASE_URL</code> can't be <code>https://</code>.</td>
+<td>Force the <code>Secure</code> flag on every cookie ezauth sets (session, oauth_state, trusted-device) regardless of <code>BASE_URL</code>'s scheme. Set <code>true</code> when ezauth sits behind a TLS-terminating reverse proxy and <code>BASE_URL</code> can't be <code>https://</code>.</td>
 <td><code>false</code></td>
 </tr>
 <tr>
@@ -1585,8 +1585,8 @@
 </tr>
 <tr>
 <td><code>EZAUTH_CSRF_SECRET</code></td>
-<td>Secret key for CSRF protection. Falls back to JWT_SECRET (logged at Error level, since sharing a key weakens CSRF/JWT separation).</td>
-<td>(falls back to JWT_SECRET)</td>
+<td>Not currently used: CSRF protection (<code>filippo.io/csrf</code>) validates request headers, not an HMAC-signed token, so there's no key for this to provide. Accepted for config-shape compatibility only.</td>
+<td></td>
 </tr>
 <tr>
 <td><code>EZAUTH_TIMEOUT</code></td>
@@ -1753,7 +1753,7 @@
 <tr>
 <td><code>EZAUTH_RATE_LIMIT_ENABLED</code></td>
 <td>Enable rate limiting on authentication endpoints.</td>
-<td><code>false</code></td>
+<td><code>true</code></td>
 </tr>
 <tr>
 <td><code>EZAUTH_RATE_LIMIT_REQUESTS</code></td>
@@ -1784,7 +1784,7 @@
 <tbody>
 <tr>
 <td><code>EZAUTH_DB_DIALECT</code></td>
-<td>Database dialect (<code>sqlite3</code>, <code>postgres</code>, or <code>mysql</code>).</td>
+<td>Database dialect (<code>sqlite3</code>, <code>postgres</code>, or <code>mysql</code>). <code>mysql</code> requires 8.0.23+ -- migrations use generated/invisible columns and expression column defaults.</td>
 <td><code>sqlite3</code></td>
 </tr>
 <tr>

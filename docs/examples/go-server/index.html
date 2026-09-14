@@ -1407,7 +1407,7 @@ r.Post(&quot;/profile/delete&quot;, func(w http.ResponseWriter, r *http.Request)
 <p>Beyond session auth, <code>auth.Service</code> (or the top-level <code>auth.*</code> facade methods) exposes real RBAC, lightweight multi-tenancy, and scoped API keys — see <a href="../../guides/admin-operations/#roles-permissions-rbac">Roles &amp; Permissions</a>, <a href="../../guides/admin-operations/#organizations">Organizations</a>, and <a href="../../guides/account-security/#scoped-api-keys">Scoped API Keys</a> for the full reference. A one-time setup script for this dashboard app might look like:</p>
 <pre><code class="language-go">// Define a role once, then gate a route with it.
 role, _ := auth.RoleCreate(ctx, &quot;admin&quot;, &quot;full dashboard access&quot;)
-_ = auth.UserRoleGrant(ctx, user.ID, &quot;admin&quot;)
+_ = auth.UserRoleGrant(ctx, callerID, user.ID, &quot;admin&quot;) // callerID: the granting admin, recorded on the audit event
 
 r.With(auth.RequireRole(&quot;admin&quot;)).Get(&quot;/admin/settings&quot;, adminSettingsHandler)
 </code></pre>
