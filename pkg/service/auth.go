@@ -272,7 +272,7 @@ func (a *Auth) UserAuthenticate(ctx context.Context, req RequestBasicAuth) (*mod
 	user, err := a.Repo.UserGetByEmail(ctx, req.Email)
 	if err != nil {
 		xlog.Debug("authentication failed: user not found", "email", req.Email, "err", err)
-		verifyPassword(req.Password, dummyHash(a.Cfg.Hashing.Algorithm))
+		verifyPassword(req.Password, a.getDummyPasswordHash())
 		return nil, errors.New("invalid credentials")
 	}
 
@@ -343,14 +343,28 @@ func (a *Auth) recordFailedLogin(ctx context.Context, user *models.User) {
 	}
 }
 
-var dummyBcryptHash = "$2a$14$ggvoBThQ9l3LSe3o0Y5aKO5opqgoaDgMYONZvGwuN.7Duu/xUO36C"
-var dummyArgon2Hash = "$argon2id$v=19$m=65536,t=3,p=4$rShbPuU7iV9LeKMS/It7kw$6WhU5zYIEInUzD/VX77WT81MYJxvGXw227Hm9sxPCQ0"
+// dummyPassword is hashed once, lazily, by getDummyPasswordHash -- see the
+// Auth.dummyPasswordHash* field docs for why it can't be a hardcoded literal.
+const dummyPassword = "correct-horse-battery-staple-never-checked-against-anything-real"
 
-func dummyHash(algorithm string) string {
-	if algorithm == "argon2id" {
-		return dummyArgon2Hash
-	}
-	return dummyBcryptHash
+// getDummyPasswordHash returns a password hash produced with the currently
+// configured algorithm/cost/params, computing it on first call and caching
+// it for the lifetime of a. If hashing itself fails (e.g. an invalid Argon2
+// config), it logs the failure and returns "" -- verifyPassword treats an
+// unrecognized hash format as a fast, safe non-match; the same broken
+// config would also fail every real UserHashPassword call, so this doesn't
+// introduce a new failure mode, only degrades the timing-equalization
+// protection under an already-broken configuration.
+func (a *Auth) getDummyPasswordHash() string {
+	a.dummyPasswordHashOnce.Do(func() {
+		hash, err := a.UserHashPassword(dummyPassword)
+		if err != nil {
+			xlog.Error("failed to precompute dummy password hash; account-enumeration timing protection is degraded", "err", err)
+			return
+		}
+		a.dummyPasswordHash = hash
+	})
+	return a.dummyPasswordHash
 }
 
 // UserUpdatePassword updates the password for a user.
@@ -380,7 +394,13 @@ func (a *Auth) UserDelete(ctx context.Context, id string) error {
 func (a *Auth) PasswordResetRequest(ctx context.Context, req RequestPasswordReset) error {
 	user, err := a.Repo.UserGetByEmail(ctx, req.Email)
 	if err != nil {
-
+		// Equalize timing with the known-email path below (token generation,
+		// a DB write, and an SMTP send) so an anonymous caller can't infer
+		// account existence from response latency alone. Burns comparable
+		// CPU/DB cost -- generating a token and a harmless DB read -- without
+		// emailing anyone or writing a token row nothing will ever consume.
+		_, _ = a.generateRefreshToken()
+		_, _ = a.Repo.UserGetByID(ctx, util.NewID())
 		return nil
 	}
 

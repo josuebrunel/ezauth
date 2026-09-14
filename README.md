@@ -720,7 +720,7 @@ if errors.Is(err, service.ErrAccountLocked) {
 }
 ```
 
-`Login`/`FormLogin` surface `ErrAccountLocked`/`ErrAccountDisabled` distinctly (rather than a generic "invalid credentials") in both JSON API and form-based (cookie) modes, since — once an account is locked — even the correct password fails, so hiding the lockout state provides little security benefit while confusing legitimate users.
+`Login`/`FormLogin` themselves always return a generic "invalid credentials" message in both JSON API and form-based (cookie) modes, regardless of cause (no such account, wrong password, locked, or disabled) — `ErrAccountLocked`/`ErrAccountDisabled` only ever apply to an account that exists, so surfacing them verbatim to an anonymous caller would leak account existence/lockout state, the exact enumeration vector shown in the snippet above being guarded against server-side. Build your own handler on top of `Service.UserAuthenticate` (as shown above) if you want to surface the specific reason to an already-authenticated context (e.g. an account-settings page).
 
 ### Asymmetric JWT Signing (JWKS)
 

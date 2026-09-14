@@ -8,6 +8,7 @@ import (
 	"github.com/josuebrunel/ezauth/pkg/config"
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/josuebrunel/ezauth/pkg/util"
+	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 
@@ -747,6 +748,27 @@ func TestPasswordReset(t *testing.T) {
 		t.Error("expected error when using revoked token, got nil")
 	}
 }
+
+// TestPasswordResetRequest_UnknownEmailDoesEquivalentDummyWork proves the
+// unknown-email path still returns nil (unchanged -- an anonymous caller
+// must not be able to distinguish "no such account" from "reset email
+// sent" via the response itself) while doing comparable CPU/DB work to the
+// known-email path (token generation + a DB round-trip) instead of
+// returning instantly, and confirms it doesn't send an email or leave any
+// token behind for a nonexistent user.
+func TestPasswordResetRequest_UnknownEmailDoesEquivalentDummyWork(t *testing.T) {
+	auth := setupTestDB(t)
+	ctx := context.Background()
+
+	if err := auth.PasswordResetRequest(ctx, RequestPasswordReset{Email: util.UniqueEmail("no-such-account")}); err != nil {
+		t.Fatalf("expected nil error for an unknown email, got %v", err)
+	}
+
+	mockMailer := auth.Mailer.(*MockMailer)
+	if len(mockMailer.SentEmails) != 0 {
+		t.Fatalf("expected no email sent for an unknown account, got %d", len(mockMailer.SentEmails))
+	}
+}
 func setupTestDB(t *testing.T) *Auth {
 	dialect, dsn := util.GetTestDBConfig("token_test")
 
@@ -1200,4 +1222,34 @@ func TestArgon2idHashing(t *testing.T) {
 			t.Fatal("expected UserHashPassword() to return an error for an unconfigured argon2 config, got nil")
 		}
 	})
+}
+
+// TestGetDummyPasswordHash_MatchesConfiguredCost proves the timing-equalization
+// dummy hash used on UserAuthenticate's account-not-found path is derived
+// from the live configured bcrypt cost, not a hardcoded literal -- a
+// mismatch would make the real-vs-dummy comparison time itself an
+// account-existence signal, inverting the protection this mechanism exists
+// to provide.
+func TestGetDummyPasswordHash_MatchesConfiguredCost(t *testing.T) {
+	const configuredCost = 6 // deliberately not bcrypt.DefaultCost (10) or the old hardcoded 14
+	auth := &Auth{Cfg: &config.Config{Hashing: config.Hashing{BcryptCost: configuredCost}}}
+
+	hash := auth.getDummyPasswordHash()
+	if hash == "" {
+		t.Fatal("expected a non-empty dummy hash")
+	}
+
+	cost, err := bcrypt.Cost([]byte(hash))
+	if err != nil {
+		t.Fatalf("bcrypt.Cost failed to parse the dummy hash: %v", err)
+	}
+	if cost != configuredCost {
+		t.Errorf("expected the dummy hash to use the configured cost %d, got %d", configuredCost, cost)
+	}
+
+	// Computed once and cached -- a second call must return the identical
+	// hash, not recompute (which would defeat the point of caching it).
+	if second := auth.getDummyPasswordHash(); second != hash {
+		t.Errorf("expected getDummyPasswordHash to cache its result, got a different hash on the second call")
+	}
 }

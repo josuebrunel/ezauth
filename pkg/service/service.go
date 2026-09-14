@@ -27,6 +27,19 @@ type Auth struct {
 	jwtKeys           *jwtKeys
 	customProvidersMu sync.RWMutex
 	customProviders   map[string]OAuth2Provider
+
+	// dummyPasswordHash* back getDummyPasswordHash: a password hash computed
+	// lazily (once, on first use) with the actual configured algorithm/cost/
+	// params, so the CPU cost of comparing against it matches whatever cost
+	// a real user's hash was created with. A hardcoded literal would drift
+	// out of sync with a differently-configured BcryptCost/Argon2 params,
+	// turning the real-vs-dummy comparison time itself into the
+	// account-existence signal this mechanism exists to prevent. Lazy
+	// (rather than computed in New) so constructing an Auth that never
+	// authenticates anyone (e.g. most JWT-focused tests) doesn't pay a
+	// bcrypt-cost-14 startup penalty for a value it'll never use.
+	dummyPasswordHashOnce sync.Once
+	dummyPasswordHash     string
 }
 
 // New creates a new Auth service with the given config and repository.

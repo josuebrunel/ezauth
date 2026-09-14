@@ -2,7 +2,6 @@ package handler
 
 import (
 	"crypto/subtle"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -216,10 +215,8 @@ func (h *Handler) FormLogin(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.svc.UserAuthenticate(r.Context(), req)
 	if err != nil {
-		if errors.Is(err, service.ErrAccountLocked) || errors.Is(err, service.ErrAccountDisabled) {
-			h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, err.Error())
-			return
-		}
+		// Always the same generic message here, regardless of cause -- see
+		// the identical comment in api.go's Login for why.
 		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrInvalidCredentials.Error())
 		return
 	}

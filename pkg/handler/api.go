@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
@@ -113,10 +112,13 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.svc.UserAuthenticate(r.Context(), req)
 	if err != nil {
-		if errors.Is(err, service.ErrAccountLocked) || errors.Is(err, service.ErrAccountDisabled) {
-			WriteJSONResponseError(w, http.StatusUnauthorized, err)
-			return
-		}
+		// Always the same generic message here, regardless of cause (no
+		// account, wrong password, locked, disabled): ErrAccountLocked/
+		// ErrAccountDisabled only ever apply to an account that exists, so
+		// surfacing them verbatim would let an anonymous caller distinguish
+		// "no such account" from "account exists but is locked/disabled" --
+		// an account-enumeration side channel. UserAuthenticate already
+		// logs the real reason server-side.
 		WriteJSONResponseError(w, http.StatusUnauthorized, ErrInvalidCredentials)
 		return
 	}

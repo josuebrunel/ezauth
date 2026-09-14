@@ -77,6 +77,8 @@ case errors.Is(err, service.ErrAccountDisabled):
 }
 ```
 
+The built-in `Login`/`FormLogin` handlers don't surface this distinction to the caller: they always return a generic "invalid credentials" message regardless of cause, since `ErrAccountLocked`/`ErrAccountDisabled` only ever apply to an account that exists -- surfacing them verbatim would let an anonymous caller enumerate account existence/lockout state. Build on `Service.UserAuthenticate` directly (as above) if you want the specific reason in an already-authenticated context.
+
 Set `EZAUTH_ACCOUNT_LOCKOUT_ENABLED=false` to stop counting/locking on failed attempts while still enforcing `IsActive` for accounts disabled some other way; `MAX_ATTEMPTS`/`DURATION` keep their normal defaults regardless, so this alone is enough. `config.LoadConfig()` fails at startup if `ENABLED`/`MAX_ATTEMPTS`/`DURATION` *all* resolve to zero, since that combination can only come from a misconfigured deployment, never a deliberate choice to disable lockout.
 
 ## Guarded Email Change

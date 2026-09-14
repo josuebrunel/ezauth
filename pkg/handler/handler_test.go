@@ -221,6 +221,73 @@ func TestHandler_RegisterAndLoginFlow(t *testing.T) {
 	})
 }
 
+// TestHandler_Login_DoesNotLeakAccountExistenceOrLockState proves the JSON
+// API's Login always returns the same generic message regardless of cause
+// (no such account, wrong password, or a real account that's locked/
+// disabled) -- ErrAccountLocked/ErrAccountDisabled only ever apply to an
+// account that exists, so surfacing them verbatim would let an anonymous
+// caller distinguish "no such account" from "account exists but is locked",
+// an account-enumeration side channel.
+func TestHandler_Login_DoesNotLeakAccountExistenceOrLockState(t *testing.T) {
+	h := setupTestHandler(t)
+	ctx := context.Background()
+
+	email := util.UniqueEmail("lockleak")
+	password := "password123"
+	if _, err := h.svc.UserCreate(ctx, &service.RequestBasicAuth{Email: email, Password: password}); err != nil {
+		t.Fatalf("UserCreate failed: %v", err)
+	}
+	user, err := h.svc.Repo.UserGetByEmail(ctx, email)
+	if err != nil {
+		t.Fatalf("UserGetByEmail failed: %v", err)
+	}
+	if _, err := h.svc.Repo.UserSetLockoutState(ctx, user.ID, 0, nil, false); err != nil {
+		t.Fatalf("UserSetLockoutState failed: %v", err)
+	}
+
+	login := func(t *testing.T, loginEmail, loginPassword string) (int, string) {
+		t.Helper()
+		body, _ := json.Marshal(map[string]any{"email": loginEmail, "password": loginPassword})
+		req := httptest.NewRequest(http.MethodPost, "/auth/api/login", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-API-Key", "test-api-key")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+
+		var resp testResponse[string]
+		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		errMsg, _ := resp.Error.(string)
+		return w.Code, errMsg
+	}
+
+	lockedStatus, lockedMsg := login(t, email, password)
+	if lockedStatus != http.StatusUnauthorized {
+		t.Errorf("expected 401 for a locked account, got %d", lockedStatus)
+	}
+	if strings.Contains(strings.ToLower(lockedMsg), "lock") || strings.Contains(strings.ToLower(lockedMsg), "disabl") {
+		t.Errorf("expected a generic message for a locked account, got %q", lockedMsg)
+	}
+
+	unknownStatus, unknownMsg := login(t, util.UniqueEmail("nosuchaccount"), password)
+	if unknownStatus != http.StatusUnauthorized {
+		t.Errorf("expected 401 for an unknown account, got %d", unknownStatus)
+	}
+
+	wrongPassStatus, wrongPassMsg := login(t, email, "wrong-password")
+	if wrongPassStatus != http.StatusUnauthorized {
+		t.Errorf("expected 401 for a wrong password, got %d", wrongPassStatus)
+	}
+
+	if lockedStatus != unknownStatus || lockedMsg != unknownMsg {
+		t.Errorf("expected identical status/message for locked vs unknown account, got (%d, %q) vs (%d, %q)", lockedStatus, lockedMsg, unknownStatus, unknownMsg)
+	}
+	if lockedStatus != wrongPassStatus || lockedMsg != wrongPassMsg {
+		t.Errorf("expected identical status/message for locked vs wrong-password, got (%d, %q) vs (%d, %q)", lockedStatus, lockedMsg, wrongPassStatus, wrongPassMsg)
+	}
+}
+
 func TestHandler_ApiKeyFromDB(t *testing.T) {
 	h := setupTestHandler(t)
 	ctx := context.Background()
