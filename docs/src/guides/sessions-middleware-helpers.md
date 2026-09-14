@@ -2,6 +2,9 @@
 
 The core building blocks for form-based (cookie) auth: managing the session, retrieving the authenticated user, surfacing flash messages, CSRF protection, the route-protection middlewares, and the package-level helper functions for handlers and templates.
 
+> [!NOTE]
+> `Handler.Session` defaults to `scs`'s in-memory store: sessions don't survive a process restart, and aren't shared across nodes in a multi-node/load-balanced deployment. Fine for a single instance or local development; for anything else, swap in one of [`scs`'s pluggable external stores](https://github.com/alexedwards/scs?tab=readme-ov-file#session-stores) (Redis, Postgres, MySQL, ...) by setting `auth.Session.Store` after constructing the handler (`auth.Session.Store = redisstore.New(pool)`, or any other `scs.Store` implementation). The rate limiter (`EZAUTH_RATE_LIMIT_*`) has no pluggable store and is single-instance by design — each node in a multi-node deployment enforces its own independent budget; put a shared rate limit in front of `ezauth` at the load balancer/gateway layer if you need one.
+
 ## Retrieving Authenticated User
 
 To retrieve the authenticated user from the session cookies, you **must** mount the session middleware.

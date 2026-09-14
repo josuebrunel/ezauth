@@ -258,6 +258,14 @@ Core building blocks for the library API: cookie-based sessions, route protectio
 
 When using the Form-based handlers, `ezauth` manages sessions using HTTP-only cookies via the `scs` session manager. The cookie name is `ezauthsess`.
 
+> [!NOTE]
+> `Handler.Session` defaults to `scs`'s in-memory store (`scs.New()`'s default): sessions don't survive a process restart, and aren't shared across nodes in a multi-node/load-balanced deployment (each instance has its own independent session state). This is fine for a single-instance deployment or local development, but for anything else, swap in one of [`scs`'s pluggable external stores](https://github.com/alexedwards/scs?tab=readme-ov-file#session-stores) (Redis, Postgres, MySQL, ...) by setting `auth.Session.Store` after constructing the handler:
+> ```go
+> auth := handler.New(svc, "auth")
+> auth.Session.Store = redisstore.New(pool) // or any other scs.Store implementation
+> ```
+> The rate limiter (`EZAUTH_RATE_LIMIT_*`) is separate and has no pluggable store: its budget is an in-memory map, single-instance by design -- in a multi-node deployment, each node enforces its own independent budget rather than a shared one. If you need a shared, cross-node rate limit, put one in front of `ezauth` at the load balancer/gateway layer instead.
+
 Inside the session, the Access Token and Refresh Token are stored under the key `tokens`.
 
 You can retrieve them in your application using the helper method:
