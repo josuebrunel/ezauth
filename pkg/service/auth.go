@@ -233,11 +233,16 @@ var ErrAccountDisabled = errors.New("account is disabled")
 // Returns user unchanged if it isn't locked, the lock hasn't expired yet, or
 // the update fails (logged, not returned, so callers keep failing closed on
 // the pre-update state).
+//
+// FailedLoginAttempts is deliberately preserved across this unlock (not
+// reset to 0) so recordFailedLogin's exponential backoff keeps escalating
+// across repeated lockout cycles instead of restarting fresh every time a
+// lockout expires -- only an actual successful login resets it.
 func (a *Auth) autoUnlockIfExpired(ctx context.Context, user *models.User) *models.User {
 	if user.IsActive || user.LockedUntil == nil || !time.Now().After(*user.LockedUntil) {
 		return user
 	}
-	unlocked, err := a.Repo.UserSetLockoutState(ctx, user.ID, 0, nil, true)
+	unlocked, err := a.Repo.UserSetLockoutState(ctx, user.ID, user.FailedLoginAttempts, nil, true)
 	if err != nil {
 		xlog.Error("failed to auto-unlock account", "user_id", user.ID, "err", err)
 		return user
@@ -314,13 +319,26 @@ func (a *Auth) UserAuthenticate(ctx context.Context, req RequestBasicAuth) (*mod
 	return user, nil
 }
 
+// maxLockoutDuration caps recordFailedLogin's exponential backoff, so a
+// sustained flood of failed attempts can't extend a lockout indefinitely.
+const maxLockoutDuration = 24 * time.Hour
+
 // recordFailedLogin increments a user's failed-login counter and, once it
-// reaches Cfg.AccountLockout.MaxAttempts, locks the account for
-// Cfg.AccountLockout.LockoutDuration. The counter is incremented atomically
-// at the DB layer (UserIncrementFailedLoginAttempts) rather than computed
-// here from the already-fetched user and written back, so concurrent failed
-// logins against the same account can't race on a stale read and
-// undercount attempts.
+// reaches Cfg.AccountLockout.MaxAttempts, locks the account. The counter is
+// incremented atomically at the DB layer (UserIncrementFailedLoginAttempts)
+// rather than computed here from the already-fetched user and written back,
+// so concurrent failed logins against the same account can't race on a
+// stale read and undercount attempts.
+//
+// The lockout duration doubles each additional MaxAttempts-sized batch of
+// failures (capped at maxLockoutDuration): a fixed-duration lockout keyed
+// purely on the account is a repeatable, indefinite DoS otherwise -- an
+// attacker who only wants to deny a victim access, not actually guess the
+// password, can keep the account locked forever by sending MaxAttempts
+// wrong guesses every LockoutDuration once it auto-expires. autoUnlockIfExpired
+// preserves FailedLoginAttempts across that auto-expiry (rather than
+// resetting it to 0) specifically so this backoff keeps escalating across
+// cycles; only an actual successful login resets it back to 0.
 func (a *Auth) recordFailedLogin(ctx context.Context, user *models.User) {
 	updated, err := a.Repo.UserIncrementFailedLoginAttempts(ctx, user.ID)
 	if err != nil {
@@ -332,8 +350,14 @@ func (a *Auth) recordFailedLogin(ctx context.Context, user *models.User) {
 		return
 	}
 
-	until := time.Now().Add(a.Cfg.AccountLockout.LockoutDuration)
-	xlog.Warn("account locked after too many failed login attempts", "user_id", user.ID, "attempts", updated.FailedLoginAttempts)
+	multiplier := updated.FailedLoginAttempts / a.Cfg.AccountLockout.MaxAttempts
+	duration := a.Cfg.AccountLockout.LockoutDuration * time.Duration(1<<min(multiplier-1, 10))
+	if duration <= 0 || duration > maxLockoutDuration {
+		duration = maxLockoutDuration
+	}
+	until := time.Now().Add(duration)
+
+	xlog.Warn("account locked after too many failed login attempts", "user_id", user.ID, "attempts", updated.FailedLoginAttempts, "lockout_duration", duration)
 	if _, err := a.Repo.UserSetLockoutState(ctx, user.ID, updated.FailedLoginAttempts, &until, false); err != nil {
 		xlog.Error("failed to lock account", "user_id", user.ID, "err", err)
 		return

@@ -709,7 +709,9 @@ Needs no code or configuration — it's automatic. Every refresh token is tagged
 
 ### Account Lockout
 
-`UserAuthenticate` enforces the `IsActive` column as a login gate and counts consecutive failed password attempts: after `EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS` (default 5) in a row, the account is locked — `IsActive` is cleared — for `EZAUTH_ACCOUNT_LOCKOUT_DURATION` (default 15 minutes), then automatically unlocked (and the counter reset) on the next login attempt after that window passes. A successful login before the threshold resets the counter immediately. Set `EZAUTH_ACCOUNT_LOCKOUT_ENABLED=false` to stop counting/auto-locking failed attempts while still enforcing `IsActive` for accounts deactivated some other way (e.g. an administrative suspension).
+`UserAuthenticate` enforces the `IsActive` column as a login gate and counts consecutive failed password attempts: after `EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS` (default 5) in a row, the account is locked — `IsActive` is cleared — for `EZAUTH_ACCOUNT_LOCKOUT_DURATION` (default 15 minutes), then automatically unlocked on the next login attempt after that window passes. A successful login resets the counter immediately (and with it, the backoff described below). Set `EZAUTH_ACCOUNT_LOCKOUT_ENABLED=false` to stop counting/auto-locking failed attempts while still enforcing `IsActive` for accounts deactivated some other way (e.g. an administrative suspension).
+
+The counter itself is *not* reset by auto-unlock, only by a successful login: each additional `EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS`-sized batch of failures doubles the lockout duration (capped at 24 hours). A fixed-duration lockout keyed purely on the account would otherwise be a repeatable, indefinite denial-of-service — an attacker who only wants to deny a victim access, not actually guess the password, could keep the account locked forever by sending `MAX_ATTEMPTS` wrong guesses every `LOCKOUT_DURATION` once each lockout auto-expires.
 
 ```go
 _, err := auth.Service.UserAuthenticate(ctx, service.RequestBasicAuth{Email: email, Password: password})

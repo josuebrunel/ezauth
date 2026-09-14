@@ -120,6 +120,95 @@ func TestAccountLockout(t *testing.T) {
 	})
 }
 
+// TestAccountLockout_ExponentialBackoff proves repeated lockout cycles
+// (fail -> lock -> window expires -> fail again) escalate the lockout
+// duration instead of resetting to the same fixed window every time --
+// otherwise a fixed-duration, purely account-keyed lockout is a
+// repeatable, indefinite DoS: an attacker who only wants to deny a victim
+// access can keep the account locked forever by sending MaxAttempts wrong
+// guesses every LockoutDuration once it auto-expires.
+func TestAccountLockout_ExponentialBackoff(t *testing.T) {
+	const base = time.Minute
+	auth := setupLockoutTestDB(t, 1, base) // MaxAttempts=1: every wrong guess locks immediately
+	ctx := context.Background()
+
+	email := util.UniqueEmail("backoff")
+	password := "correct-horse-battery"
+	if _, err := auth.UserCreate(ctx, &RequestBasicAuth{Email: email, Password: password}); err != nil {
+		t.Fatalf("UserCreate failed: %v", err)
+	}
+
+	expireLockoutWindow := func(t *testing.T) {
+		t.Helper()
+		user, err := auth.Repo.UserGetByEmail(ctx, email)
+		if err != nil {
+			t.Fatalf("failed to get user: %v", err)
+		}
+		past := time.Now().Add(-time.Second)
+		if _, err := auth.Repo.UserSetLockoutState(ctx, user.ID, user.FailedLoginAttempts, &past, false); err != nil {
+			t.Fatalf("failed to force lockout into the past: %v", err)
+		}
+	}
+
+	lockedUntil := func(t *testing.T) time.Time {
+		t.Helper()
+		user, err := auth.Repo.UserGetByEmail(ctx, email)
+		if err != nil {
+			t.Fatalf("failed to get user: %v", err)
+		}
+		if user.LockedUntil == nil {
+			t.Fatal("expected the account to be locked")
+		}
+		return *user.LockedUntil
+	}
+
+	assertApprox := func(t *testing.T, label string, got time.Duration, want time.Duration) {
+		t.Helper()
+		delta := got - want
+		if delta < 0 {
+			delta = -delta
+		}
+		if delta > 5*time.Second {
+			t.Errorf("%s: expected a lockout duration of ~%v, got %v", label, want, got)
+		}
+	}
+
+	// First lockout: no prior cycles, duration is the configured base.
+	before := time.Now()
+	if _, err := auth.UserAuthenticate(ctx, RequestBasicAuth{Email: email, Password: "wrong"}); err == nil {
+		t.Fatal("expected error for wrong password")
+	}
+	assertApprox(t, "1st lockout", lockedUntil(t).Sub(before), base)
+
+	// Second cycle (window expired, then one more failure): duration doubles.
+	expireLockoutWindow(t)
+	before = time.Now()
+	if _, err := auth.UserAuthenticate(ctx, RequestBasicAuth{Email: email, Password: "wrong"}); err == nil {
+		t.Fatal("expected error for wrong password")
+	}
+	assertApprox(t, "2nd lockout", lockedUntil(t).Sub(before), 2*base)
+
+	// Third cycle: doubles again.
+	expireLockoutWindow(t)
+	before = time.Now()
+	if _, err := auth.UserAuthenticate(ctx, RequestBasicAuth{Email: email, Password: "wrong"}); err == nil {
+		t.Fatal("expected error for wrong password")
+	}
+	assertApprox(t, "3rd lockout", lockedUntil(t).Sub(before), 4*base)
+
+	// A successful login resets the counter, so the backoff also resets to
+	// the base duration on the next cycle rather than continuing to escalate.
+	expireLockoutWindow(t)
+	if _, err := auth.UserAuthenticate(ctx, RequestBasicAuth{Email: email, Password: password}); err != nil {
+		t.Fatalf("UserAuthenticate with correct password failed: %v", err)
+	}
+	before = time.Now()
+	if _, err := auth.UserAuthenticate(ctx, RequestBasicAuth{Email: email, Password: "wrong"}); err == nil {
+		t.Fatal("expected error for wrong password")
+	}
+	assertApprox(t, "post-success lockout", lockedUntil(t).Sub(before), base)
+}
+
 // TestRecordFailedLogin_ConcurrentCallsDoNotUndercount reproduces the race
 // the atomic UserIncrementFailedLoginAttempts fix closes: two concurrent
 // failed-login requests both read the same FailedLoginAttempts snapshot

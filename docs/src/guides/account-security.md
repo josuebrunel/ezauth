@@ -65,7 +65,9 @@ Needs no code or configuration — it's automatic. Every refresh token is tagged
 
 ## Account Lockout
 
-`UserAuthenticate` enforces `IsActive` as a login gate and counts consecutive failed attempts, locking the account (clearing `IsActive`) for `EZAUTH_ACCOUNT_LOCKOUT_DURATION` after `EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS` in a row; it auto-unlocks (and resets the counter) on the first login attempt after that window passes. A successful login resets the counter immediately.
+`UserAuthenticate` enforces `IsActive` as a login gate and counts consecutive failed attempts, locking the account (clearing `IsActive`) for `EZAUTH_ACCOUNT_LOCKOUT_DURATION` after `EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS` in a row; it auto-unlocks on the first login attempt after that window passes, but the failed-attempt counter itself carries over. A successful login is what resets the counter (and the backoff below) back to zero.
+
+Each additional `MAX_ATTEMPTS`-sized batch of failures doubles the lockout duration, capped at 24 hours: a fixed-duration lockout keyed purely on the account would otherwise be a repeatable, indefinite DoS -- an attacker who only wants to deny a victim access, not actually guess the password, could keep the account locked forever by sending `MAX_ATTEMPTS` wrong guesses every `LOCKOUT_DURATION` once each lockout auto-expires.
 
 `MFALoginVerify` and `SMSOTPVerify` share this same counter and lockout: an invalid TOTP/recovery code or SMS code counts toward the same `EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS` threshold as a wrong password, and once locked, both reject even a *correct* code until the account unlocks. This is what actually bounds brute-force guessing against those codes — the global rate limiter (`EZAUTH_RATE_LIMIT_ENABLED`, on by default) is a separate, coarser IP-based control.
 
