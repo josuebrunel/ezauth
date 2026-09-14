@@ -912,3 +912,68 @@ func TestHandler_SecureCookies(t *testing.T) {
 		}
 	})
 }
+
+func TestHandler_RateLimiterProxyHeaderTrust(t *testing.T) {
+	newHandler := func(t *testing.T, trustProxyHeaders bool) *Handler {
+		dialect, dsn := util.GetTestDBConfig("handler_ratelimit_proxy_test")
+		cfg := &config.Config{
+			DB:        config.Database{Dialect: dialect, DSN: dsn},
+			JWTSecret: "test-secret",
+			Hashing:   config.Hashing{BcryptCost: 4},
+			Addr:      ":8080",
+			ApiKey:    "test-api-key",
+			RateLimit: config.RateLimit{
+				Enabled:    true,
+				Requests:   1,
+				Window:     time.Minute,
+				ByClientIP: true,
+			},
+			TrustProxyHeaders: trustProxyHeaders,
+		}
+		authSvc, err := service.NewFromConfig(cfg, "auth")
+		if err != nil {
+			t.Fatalf("failed to create auth service: %v", err)
+		}
+		if err := ensureMigrated(authSvc.Repo.DB(), dialect, dsn); err != nil {
+			t.Fatalf("failed to run migrations: %v", err)
+		}
+		return New(authSvc, "auth")
+	}
+
+	// httptest.NewRequest defaults RemoteAddr to the same synthetic value
+	// for every request, so these two requests share one real client IP —
+	// the point is whether a different spoofed X-Forwarded-For per request
+	// buys a fresh rate-limit bucket anyway.
+	doTwoRequests := func(h *Handler, forwardedFor1, forwardedFor2 string) (code1, code2 int) {
+		req1 := httptest.NewRequest(http.MethodGet, "/ping", nil)
+		req1.Header.Set("X-Forwarded-For", forwardedFor1)
+		w1 := httptest.NewRecorder()
+		h.ServeHTTP(w1, req1)
+
+		req2 := httptest.NewRequest(http.MethodGet, "/ping", nil)
+		req2.Header.Set("X-Forwarded-For", forwardedFor2)
+		w2 := httptest.NewRecorder()
+		h.ServeHTTP(w2, req2)
+
+		return w1.Code, w2.Code
+	}
+
+	t.Run("default: spoofed X-Forwarded-For does not bypass the rate limit", func(t *testing.T) {
+		h := newHandler(t, false)
+		code1, code2 := doTwoRequests(h, "1.1.1.1", "2.2.2.2")
+		if code1 != http.StatusOK {
+			t.Fatalf("expected first request to succeed, got %d", code1)
+		}
+		if code2 != http.StatusTooManyRequests {
+			t.Fatalf("expected second request (different spoofed X-Forwarded-For, same real client) to be rate-limited, got %d", code2)
+		}
+	})
+
+	t.Run("TrustProxyHeaders=true: X-Forwarded-For is honored (opt-in, behind a real proxy)", func(t *testing.T) {
+		h := newHandler(t, true)
+		code1, code2 := doTwoRequests(h, "1.1.1.1", "2.2.2.2")
+		if code1 != http.StatusOK || code2 != http.StatusOK {
+			t.Fatalf("expected both requests to succeed as distinct clients, got %d and %d", code1, code2)
+		}
+	})
+}

@@ -246,10 +246,10 @@ type AuditLog struct {
 
 // Config defines the overall configuration for ezauth.
 type Config struct {
-	Addr           string         `json:"addr" env:"ADDR" default:":8080"`
-	BaseURL        string         `json:"base_url" env:"BASE_URL" default:"http://localhost:8080"`
-	ApiKey         string         `json:"api_key" env:"API_KEY" required:"true"`
-	Debug          bool           `json:"debug" env:"DEBUG" default:"false"`
+	Addr    string `json:"addr" env:"ADDR" default:":8080"`
+	BaseURL string `json:"base_url" env:"BASE_URL" default:"http://localhost:8080"`
+	ApiKey  string `json:"api_key" env:"API_KEY" required:"true"`
+	Debug   bool   `json:"debug" env:"DEBUG" default:"false"`
 	// ForceSecureCookies forces the Secure flag on session/CSRF cookies
 	// regardless of BaseURL's scheme. By default, Secure is derived from
 	// strings.HasPrefix(BaseURL, "https://"), which silently omits Secure
@@ -257,26 +257,37 @@ type Config struct {
 	// reverse proxy. Set this explicitly in that scenario instead of
 	// relying on BaseURL parsing.
 	ForceSecureCookies bool `json:"force_secure_cookies" env:"FORCE_SECURE_COOKIES" default:"false"`
-	DB             Database       `json:"db"`
-	JWTSecret      string         `json:"jwt_secret" env:"JWT_SECRET" required:"true"`
-	CSRFSecret     string         `json:"csrf_secret" env:"CSRF_SECRET"`
-	Hashing        Hashing        `json:"hashing"`
-	RateLimit      RateLimit      `json:"rate_limit"`
-	TrustedDevice  TrustedDevice  `json:"trusted_device"`
-	AccountLockout AccountLockout `json:"account_lockout"`
-	Invitation     Invitation     `json:"invitation"`
-	OAuth2         OAuth2         `json:"oauth2"`
-	SMTP           SMTP           `json:"smtp"`
-	EmailTemplates EmailTemplates `json:"email_templates"`
-	SMS            SMS            `json:"sms"`
-	SMSTemplates   SMSTemplates   `json:"sms_templates"`
-	Redirects      Redirects      `json:"redirects"`
-	Pages          Pages          `json:"pages"`
-	TimeOut        time.Duration  `json:"timeout" env:"TIMEOUT" default:"30s"`
-	MFAIssuer      string         `json:"mfa_issuer" env:"MFA_ISSUER" default:"EzAuth"`
-	WebAuthn       WebAuthn       `json:"webauthn"`
-	AuditLog       AuditLog       `json:"audit_log"`
-	JWT            JWT            `json:"jwt"`
+	// TrustProxyHeaders controls whether ezauth trusts the client-supplied
+	// True-Client-IP/X-Real-IP/X-Forwarded-For headers (via chi's RealIP
+	// middleware) to resolve the connecting client's IP -- used to key the
+	// rate limiter (RateLimit.ByClientIP) and in request logs. Defaults to
+	// false: without a reverse proxy that overwrites these headers before
+	// requests reach ezauth, any anonymous client can set a fresh spoofed
+	// value per request to reset their own rate-limit bucket and grow the
+	// limiter's internal state unbounded. Only set this to true when ezauth
+	// sits behind a reverse proxy (nginx, HAProxy, a cloud load balancer,
+	// ...) that is known to set/overwrite these headers itself.
+	TrustProxyHeaders bool           `json:"trust_proxy_headers" env:"TRUST_PROXY_HEADERS" default:"false"`
+	DB                Database       `json:"db"`
+	JWTSecret         string         `json:"jwt_secret" env:"JWT_SECRET" required:"true"`
+	CSRFSecret        string         `json:"csrf_secret" env:"CSRF_SECRET"`
+	Hashing           Hashing        `json:"hashing"`
+	RateLimit         RateLimit      `json:"rate_limit"`
+	TrustedDevice     TrustedDevice  `json:"trusted_device"`
+	AccountLockout    AccountLockout `json:"account_lockout"`
+	Invitation        Invitation     `json:"invitation"`
+	OAuth2            OAuth2         `json:"oauth2"`
+	SMTP              SMTP           `json:"smtp"`
+	EmailTemplates    EmailTemplates `json:"email_templates"`
+	SMS               SMS            `json:"sms"`
+	SMSTemplates      SMSTemplates   `json:"sms_templates"`
+	Redirects         Redirects      `json:"redirects"`
+	Pages             Pages          `json:"pages"`
+	TimeOut           time.Duration  `json:"timeout" env:"TIMEOUT" default:"30s"`
+	MFAIssuer         string         `json:"mfa_issuer" env:"MFA_ISSUER" default:"EzAuth"`
+	WebAuthn          WebAuthn       `json:"webauthn"`
+	AuditLog          AuditLog       `json:"audit_log"`
+	JWT               JWT            `json:"jwt"`
 }
 
 // LoadConfig loads the configuration from environment variables.

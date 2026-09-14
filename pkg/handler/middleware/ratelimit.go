@@ -51,11 +51,14 @@ func (rl *RateLimiter) cleanupLoop() {
 	}
 }
 
-// ipToKey returns the client IP to key the rate limiter on. It relies on
-// chi's RealIP middleware (registered upstream in the middleware chain) to
-// have already resolved r.RemoteAddr; it must not re-read X-Forwarded-For
-// itself, since an unauthenticated client can set that header to any value
-// and get a fresh rate-limit bucket on every request.
+// ipToKey returns the client IP to key the rate limiter on: r.RemoteAddr,
+// the raw TCP peer address, which a client can't spoof. It must not re-read
+// True-Client-IP/X-Real-IP/X-Forwarded-For itself, since an unauthenticated
+// client can set any of those to an arbitrary value and get a fresh
+// rate-limit bucket on every request. chi's RealIP middleware overwrites
+// r.RemoteAddr from those same headers, so it's only registered upstream
+// (see Handler's default middleware chain) when Cfg.TrustProxyHeaders
+// confirms ezauth sits behind a reverse proxy that sanitizes them first.
 func ipToKey(r *http.Request) string {
 	return r.RemoteAddr
 }

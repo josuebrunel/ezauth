@@ -140,7 +140,15 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 	if len(options) == 0 {
 		h.r.Use(middleware.Logger)
 		h.r.Use(middleware.RequestID)
-		h.r.Use(middleware.RealIP)
+		// chi's RealIP unconditionally trusts True-Client-IP/X-Real-IP/
+		// X-Forwarded-For from any client, with no trusted-proxy allowlist.
+		// Only register it when the operator has confirmed ezauth sits
+		// behind a reverse proxy that sets/overwrites these headers itself
+		// -- otherwise leave r.RemoteAddr as the raw (unspoofable) TCP peer
+		// address the rate limiter keys on.
+		if h.svc.Cfg.TrustProxyHeaders {
+			h.r.Use(middleware.RealIP)
+		}
 		h.r.Use(ezmiddleware.MaxBodyBytes(defaultMaxBodyBytes))
 		h.r.Use(ezmiddleware.NewRateLimiter(ezmiddleware.RateLimitConfig{
 			Enabled:    h.svc.Cfg.RateLimit.Enabled,
