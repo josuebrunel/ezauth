@@ -41,4 +41,6 @@ var (
 	ErrInvitationTokenRequired      = errors.New("token is required")
 	ErrInvitationIDRequired         = errors.New("invitation id is required")
 	ErrInvalidTimestampFilter       = errors.New("invalid timestamp filter; expected RFC3339 format")
+	ErrInvalidLimitParam            = errors.New("invalid limit; expected a non-negative integer")
+	ErrInvalidOffsetParam           = errors.New("invalid offset; expected a non-negative integer")
 )

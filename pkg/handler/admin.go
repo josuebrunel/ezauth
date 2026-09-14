@@ -2,12 +2,30 @@ package handler
 
 import (
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/josuebrunel/ezauth/pkg/service"
 )
+
+// parseIntQueryParam parses the named query param as a non-negative int.
+// A missing/empty value returns (0, nil) -- callers treat 0 as "not
+// provided" and apply their own default -- but a present, malformed value
+// (e.g. "abc" or "-1") returns invalidErr rather than silently becoming 0,
+// which would otherwise be indistinguishable from "not provided".
+func parseIntQueryParam(q url.Values, name string, invalidErr error) (int, error) {
+	raw := q.Get(name)
+	if raw == "" {
+		return 0, nil
+	}
+	v, err := strconv.Atoi(raw)
+	if err != nil || v < 0 {
+		return 0, invalidErr
+	}
+	return v, nil
+}
 
 // parseListUsersOptions builds ListUsersOptions from query params shared by
 // the JSON API and form variants of AdminUsersList:
@@ -17,8 +35,14 @@ import (
 //	*_before params are RFC3339 timestamps).
 func parseListUsersOptions(r *http.Request) (service.ListUsersOptions, error) {
 	q := r.URL.Query()
-	limit, _ := strconv.Atoi(q.Get("limit"))
-	offset, _ := strconv.Atoi(q.Get("offset"))
+	limit, err := parseIntQueryParam(q, "limit", ErrInvalidLimitParam)
+	if err != nil {
+		return service.ListUsersOptions{}, err
+	}
+	offset, err := parseIntQueryParam(q, "offset", ErrInvalidOffsetParam)
+	if err != nil {
+		return service.ListUsersOptions{}, err
+	}
 
 	opts := service.ListUsersOptions{
 		Search: q.Get("search"),
@@ -149,7 +173,11 @@ func (h *Handler) AdminUserReactivate(w http.ResponseWriter, r *http.Request) {
 // @Router /auth/api/admin/users/{id}/history [get]
 func (h *Handler) AdminUserAuthHistory(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	limit, err := parseIntQueryParam(r.URL.Query(), "limit", ErrInvalidLimitParam)
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusBadRequest, err)
+		return
+	}
 
 	history, err := h.svc.UserAuthHistory(r.Context(), id, limit)
 	if err != nil {
@@ -230,7 +258,11 @@ func (h *Handler) FormAdminUserAuthHistory(w http.ResponseWriter, r *http.Reques
 	}
 
 	id := chi.URLParam(r, "id")
-	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	limit, err := parseIntQueryParam(r.URL.Query(), "limit", ErrInvalidLimitParam)
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusBadRequest, err)
+		return
+	}
 
 	history, err := h.svc.UserAuthHistory(r.Context(), id, limit)
 	if err != nil {
@@ -247,8 +279,14 @@ func (h *Handler) FormAdminUserAuthHistory(w http.ResponseWriter, r *http.Reques
 //	RFC3339 timestamps).
 func parseAuditLogsOptions(r *http.Request) (service.ListAuditLogsOptions, error) {
 	q := r.URL.Query()
-	limit, _ := strconv.Atoi(q.Get("limit"))
-	offset, _ := strconv.Atoi(q.Get("offset"))
+	limit, err := parseIntQueryParam(q, "limit", ErrInvalidLimitParam)
+	if err != nil {
+		return service.ListAuditLogsOptions{}, err
+	}
+	offset, err := parseIntQueryParam(q, "offset", ErrInvalidOffsetParam)
+	if err != nil {
+		return service.ListAuditLogsOptions{}, err
+	}
 
 	opts := service.ListAuditLogsOptions{
 		EventType: q.Get("event_type"),
