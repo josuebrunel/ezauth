@@ -1564,13 +1564,23 @@
 <td><code>false</code></td>
 </tr>
 <tr>
+<td><code>EZAUTH_FORCE_SECURE_COOKIES</code></td>
+<td>Force the <code>Secure</code> flag on session/CSRF cookies regardless of <code>BASE_URL</code>'s scheme. Set <code>true</code> when ezauth sits behind a TLS-terminating reverse proxy and <code>BASE_URL</code> can't be <code>https://</code>.</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_TRUST_PROXY_HEADERS</code></td>
+<td>Trust <code>True-Client-IP</code>/<code>X-Real-IP</code>/<code>X-Forwarded-For</code> to resolve the client IP (used by the rate limiter). Only set <code>true</code> behind a reverse proxy that sets/overwrites these headers itself — otherwise any client can spoof them to bypass rate limiting.</td>
+<td><code>false</code></td>
+</tr>
+<tr>
 <td><code>EZAUTH_JWT_SECRET</code></td>
-<td>Secret key used to sign JWT tokens.</td>
+<td>Secret key used to sign JWT tokens (HS256). Must be at least 32 characters — <code>LoadConfig</code> rejects a shorter value.</td>
 <td></td>
 </tr>
 <tr>
 <td><code>EZAUTH_CSRF_SECRET</code></td>
-<td>Secret key for CSRF protection. Falls back to JWT_SECRET.</td>
+<td>Secret key for CSRF protection. Falls back to JWT_SECRET (logged at Error level, since sharing a key weakens CSRF/JWT separation).</td>
 <td>(falls back to JWT_SECRET)</td>
 </tr>
 <tr>
@@ -1595,7 +1605,7 @@
 </tr>
 <tr>
 <td><code>EZAUTH_ACCOUNT_LOCKOUT_ENABLED</code></td>
-<td>Count failed logins and auto-lock accounts after too many.</td>
+<td>Count failed attempts and auto-lock accounts after too many. Covers password login, MFA TOTP/recovery-code verification, and SMS OTP verification — all three share one counter, so a failed guess against any of them counts toward the same lockout.</td>
 <td><code>true</code></td>
 </tr>
 <tr>

@@ -1319,6 +1319,7 @@ err = auth.RevokeAllSessions(ctx, user, &quot;&quot;)                // log out 
 <p>Needs no code or configuration — it's automatic. Every refresh token is tagged with a rotation <code>family_id</code>, carried forward across <code>TokenRefresh</code> rotations. If an already-rotated-out (revoked) refresh token is ever replayed, that's a strong signal it was stolen and the legitimate client has since rotated past it — so <code>TokenRefresh</code> responds by revoking every other active token in that family in one bulk operation, not just rejecting the replayed one. In practice: if an attacker steals a refresh token and uses it after the real client already refreshed past it, both the attacker's and the legitimate client's sessions get logged out, forcing a fresh login.</p>
 <h2 id="account-lockout">Account Lockout</h2>
 <p><code>UserAuthenticate</code> enforces <code>IsActive</code> as a login gate and counts consecutive failed attempts, locking the account (clearing <code>IsActive</code>) for <code>EZAUTH_ACCOUNT_LOCKOUT_DURATION</code> after <code>EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS</code> in a row; it auto-unlocks (and resets the counter) on the first login attempt after that window passes. A successful login resets the counter immediately.</p>
+<p><code>MFALoginVerify</code> and <code>SMSOTPVerify</code> share this same counter and lockout: an invalid TOTP/recovery code or SMS code counts toward the same <code>EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS</code> threshold as a wrong password, and once locked, both reject even a <em>correct</em> code until the account unlocks. This is what actually bounds brute-force guessing against those codes — the global rate limiter (<code>EZAUTH_RATE_LIMIT_ENABLED</code>) is off by default and, even enabled, is a separate, coarser IP-based control.</p>
 <pre><code class="language-go">_, err := auth.Service.UserAuthenticate(ctx, req)
 switch {
 case errors.Is(err, service.ErrAccountLocked):
@@ -1355,7 +1356,9 @@ err = auth.Service.APIKeyRevoke(ctx, user.ID, token.ID) // fails with service.Er
 <pre><code class="language-go">r.Use(auth.Handler.APIKeyMiddleware) // group-level gate: any valid key gets past this
 r.With(auth.RequireAPIKeyScope(&quot;posts:write&quot;)).Post(&quot;/posts&quot;, createPostHandler)
 </code></pre>
-<p>An <strong>unscoped</strong> key — <code>APIKeyCreate(ctx, userID, nil)</code>, or any key issued before this feature existed — has full access to every <code>RequireAPIKeyScope</code> check; only a key created with a non-empty scopes list is actually restricted. The master <code>EZAUTH_API_KEY</code> config key has no associated <code>Token</code> at all, so it's always unscoped/full-access too.</p>
+<blockquote>
+<p><strong>Warning:</strong> an unscoped key has full access, not restricted access. <code>APIKeyCreate(ctx, userID, nil)</code> does <strong>not</strong> create a key with no permissions — it creates a key that passes every <code>RequireAPIKeyScope</code> check unconditionally, identically to a key issued before scoping existed. Always pass an explicit non-empty scopes list for any key that should be limited. The master <code>EZAUTH_API_KEY</code> config key has no associated <code>Token</code> at all, so it's always unscoped/full-access too, regardless of any <code>RequireAPIKeyScope</code> check.</p>
+</blockquote>
 <p>See the <a href="https://github.com/josuebrunel/ezauth#scoped-api-keys">Scoped API Keys section of the README</a> for more.</p>
 
 

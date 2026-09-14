@@ -1266,7 +1266,7 @@ import (
 func main() {
     // 1. Setup Config
     os.Setenv(&quot;EZAUTH_API_KEY&quot;, &quot;my-api-key&quot;)
-    os.Setenv(&quot;EZAUTH_JWT_SECRET&quot;, &quot;my-jwt-key&quot;)
+    os.Setenv(&quot;EZAUTH_JWT_SECRET&quot;, &quot;my-jwt-key-at-least-32-characters-long&quot;) // HS256 requires &gt;= 32 chars
     // ... set other necessary env vars
 
     cfg, err := config.LoadConfig()
