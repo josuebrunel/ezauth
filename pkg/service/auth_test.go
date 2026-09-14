@@ -344,6 +344,45 @@ func TestUserUsernameUniqueness(t *testing.T) {
 	}
 }
 
+// TestLocaleTimezoneAvatarURLAcceptLongValues guards against the columns
+// drifting back to a fixed-width type on any one dialect: mysql used to cap
+// locale/timezone/avatar_url at VARCHAR(10)/VARCHAR(50)/VARCHAR(500), so a
+// value accepted when writing against postgres/sqlite (both unbounded TEXT)
+// could be silently truncated or rejected on mysql.
+func TestLocaleTimezoneAvatarURLAcceptLongValues(t *testing.T) {
+	auth := setupBasicAuthTestDB(t)
+	ctx := context.Background()
+
+	longLocale := strings.Repeat("x", 64)
+	longTimezone := strings.Repeat("y", 128)
+	longAvatarURL := "https://example.com/avatar.png?token=" + strings.Repeat("z", 600)
+
+	created, err := auth.Repo.UserCreate(ctx, &models.User{
+		Email:     util.UniqueEmail("longfields"),
+		Provider:  "local",
+		Locale:    longLocale,
+		Timezone:  longTimezone,
+		AvatarURL: longAvatarURL,
+	})
+	if err != nil {
+		t.Fatalf("UserCreate with long locale/timezone/avatar_url failed: %v", err)
+	}
+
+	fetched, err := auth.Repo.UserGetByID(ctx, created.ID)
+	if err != nil {
+		t.Fatalf("UserGetByID failed: %v", err)
+	}
+	if fetched.Locale != longLocale {
+		t.Errorf("locale truncated: got %d chars, want %d", len(fetched.Locale), len(longLocale))
+	}
+	if fetched.Timezone != longTimezone {
+		t.Errorf("timezone truncated: got %d chars, want %d", len(fetched.Timezone), len(longTimezone))
+	}
+	if fetched.AvatarURL != longAvatarURL {
+		t.Errorf("avatar_url truncated: got %d chars, want %d", len(fetched.AvatarURL), len(longAvatarURL))
+	}
+}
+
 func TestPasswordless(t *testing.T) {
 	auth := setupTestDB(t)
 	ctx := context.Background()
