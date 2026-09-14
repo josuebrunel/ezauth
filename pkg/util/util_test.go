@@ -103,3 +103,43 @@ func TestHashToken(t *testing.T) {
 		t.Fatal("expected different inputs to hash differently")
 	}
 }
+
+func TestPostgresDSNWithSearchPath(t *testing.T) {
+	cases := []struct {
+		name   string
+		dsn    string
+		schema string
+		want   string
+	}{
+		{
+			name:   "URL DSN gets an options query param",
+			dsn:    "postgres://myuser:s3cr3t@localhost:5432/mydb?sslmode=disable",
+			schema: "myschema",
+			want:   "postgres://myuser:s3cr3t@localhost:5432/mydb?options=-c+search_path%3Dmyschema&sslmode=disable",
+		},
+		{
+			name:   "URL DSN with no existing query string",
+			dsn:    "postgres://localhost/mydb",
+			schema: "tenant1",
+			want:   "postgres://localhost/mydb?options=-c+search_path%3Dtenant1",
+		},
+		{
+			name:   "keyword/value DSN gets options appended",
+			dsn:    "host=localhost user=myuser dbname=mydb sslmode=disable",
+			schema: "myschema",
+			want:   "host=localhost user=myuser dbname=mydb sslmode=disable options='-c search_path=myschema'",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := PostgresDSNWithSearchPath(c.dsn, c.schema)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != c.want {
+				t.Fatalf("PostgresDSNWithSearchPath(%q, %q) = %q, want %q", c.dsn, c.schema, got, c.want)
+			}
+		})
+	}
+}

@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"strings"
 
+	"github.com/josuebrunel/ezauth/pkg/util"
 	"github.com/josuebrunel/gopkg/xlog"
 	"github.com/pressly/goose/v3"
 
@@ -44,8 +45,15 @@ func MigrateRevert(dsn, dialect, schema string) error {
 	return runMigration(dsn, dialect, schema, "revert")
 }
 
+// MigrateUpWithDBConn runs migrations against a caller-supplied *sql.DB (the
+// NewWithDB path), which -- unlike MigrateUp -- performs no postgres schema
+// setup at all: it has no DSN to embed search_path into, since the pool is
+// already open by the time it's called. On a custom-schema postgres
+// deployment, the caller's own DSN must already set search_path (e.g. via
+// util.PostgresDSNWithSearchPath, or libpq's "options=-c search_path=<schema>"
+// directly) before opening db, or migrations/queries will run against
+// "public" instead of the intended schema.
 func MigrateUpWithDBConn(db *sql.DB, dialect string) error {
-	// For existing DB connection, we assume schema setup is already done or not needed
 	return execGooseMigration(db, dialect, "up")
 }
 
@@ -114,6 +122,26 @@ func runMigration(dsn, dialect, schema string, action string) error {
 		return fmt.Errorf("dsn is required")
 	}
 
+	if dialect == DialectPostgres && schema != "" {
+		if err := validateSchemaName(schema); err != nil {
+			return err
+		}
+		// search_path is embedded in the DSN (via libpq's "options"
+		// mechanism) rather than set with a one-off SET against whichever
+		// connection happens to be open afterward, so every connection
+		// MaxOpenConns lets the pool open picks it up -- see
+		// util.PostgresDSNWithSearchPath's doc comment for why that
+		// distinction matters. Otherwise, on a custom-schema deployment,
+		// goose's own queries (run against the pool, not necessarily the
+		// same connection this func's schema setup used) could create
+		// tables in "public" while the repository queries the custom schema.
+		var err error
+		dsn, err = util.PostgresDSNWithSearchPath(dsn, schema)
+		if err != nil {
+			return err
+		}
+	}
+
 	db, err := getDBConnection(dialect, dsn)
 	if err != nil {
 		return err
@@ -121,17 +149,9 @@ func runMigration(dsn, dialect, schema string, action string) error {
 	defer db.Close()
 
 	if dialect == DialectPostgres && schema != "" {
-		if err := validateSchemaName(schema); err != nil {
-			return err
-		}
 		quoted := quotePostgresIdentifier(schema)
-		// Set the search path to the specified schema
 		if _, err := db.Exec("CREATE SCHEMA IF NOT EXISTS " + quoted); err != nil {
 			xlog.Error("failed to create schema", "error", err, "schema", schema)
-			return err
-		}
-		if _, err := db.Exec("SET search_path TO " + quoted); err != nil {
-			xlog.Error("failed to set search_path", "error", err, "schema", schema)
 			return err
 		}
 	}

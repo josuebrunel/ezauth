@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -126,6 +127,36 @@ func RedactDSN(dsn string) string {
 	dsn = dsnUserInfoRE.ReplaceAllString(dsn, "$1:***@")
 	dsn = dsnPasswordKVR.ReplaceAllString(dsn, "$1=***")
 	return dsn
+}
+
+// PostgresDSNWithSearchPath returns dsn with a search_path=schema connection
+// parameter added via libpq's "options" mechanism, so every connection the
+// postgres driver ever opens for a pooled *sql.DB gets it -- unlike a
+// one-off `SET search_path` run against whichever single connection happens
+// to be checked out at the time, which leaves every other connection in the
+// pool on the default search_path (`"$user", public`). With MaxOpenConns > 1
+// that meant `relation "..." does not exist` errors, or silently
+// reading/writing the wrong schema, depending on which pooled connection
+// happened to serve a given query.
+//
+// Handles both DSN forms lib/pq accepts: postgres://user:pass@host/db?... URLs
+// (an "options" query param is added/overwritten) and libpq keyword/value
+// strings like "host=... dbname=... sslmode=disable" (the parameter is
+// appended). schema is assumed already validated (alphanumeric/underscore
+// only), so no escaping is needed for it here.
+func PostgresDSNWithSearchPath(dsn, schema string) (string, error) {
+	options := "-c search_path=" + schema
+	if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
+		u, err := url.Parse(dsn)
+		if err != nil {
+			return "", fmt.Errorf("invalid postgres DSN: %w", err)
+		}
+		q := u.Query()
+		q.Set("options", options)
+		u.RawQuery = q.Encode()
+		return u.String(), nil
+	}
+	return strings.TrimSpace(dsn) + " options='" + options + "'", nil
 }
 
 // HashToken returns the SHA-256 hex digest of a bearer-style token value

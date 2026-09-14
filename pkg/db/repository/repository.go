@@ -1111,23 +1111,30 @@ func getDBConnection(opts Opts) (*sql.DB, error) {
 
 	switch opts.Dialect {
 	case DialectPSQL:
-		db, err = postgres.GetDBConnection(opts.DSN)
 		opts.Dialect = DialectPSQL
-		if err == nil && opts.Schema != "" {
+		dsn := opts.DSN
+		if opts.Schema != "" {
 			for _, c := range opts.Schema {
 				if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_') {
-					db.Close()
 					return nil, fmt.Errorf("invalid schema name %q: only alphanumeric and underscore characters are allowed", opts.Schema)
 				}
 			}
+			// search_path is embedded in the DSN (via libpq's "options"
+			// mechanism) rather than set with a one-off SET against whichever
+			// connection happens to be open at startup, so every connection
+			// MaxOpenConns lets the pool open picks it up -- see
+			// util.PostgresDSNWithSearchPath's doc comment for why that
+			// distinction matters.
+			dsn, err = util.PostgresDSNWithSearchPath(opts.DSN, opts.Schema)
+			if err != nil {
+				return nil, err
+			}
+		}
+		db, err = postgres.GetDBConnection(dsn)
+		if err == nil && opts.Schema != "" {
 			quoted := quotePostgresIdentifier(opts.Schema)
 			if _, err := db.Exec("CREATE SCHEMA IF NOT EXISTS " + quoted); err != nil {
 				xlog.Error("failed to create schema", "error", err, "schema", opts.Schema)
-				db.Close()
-				return nil, err
-			}
-			if _, err := db.Exec("SET search_path TO " + quoted); err != nil {
-				xlog.Error("failed to set search_path", "error", err, "schema", opts.Schema)
 				db.Close()
 				return nil, err
 			}
