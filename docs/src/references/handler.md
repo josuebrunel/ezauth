@@ -35,6 +35,11 @@ func WithAdminAuthz(mw func(http.Handler) http.Handler) HandlerOption
 ```
 Sets the middleware gating the admin/RBAC/org route subtree (JSON + Form) — see [Admin User Management](#admin-user-management) below. Without this option, `New()` defaults to `RequireRole(svc, Cfg.AdminRole)` (`Cfg.AdminRole` defaults to `"admin"`). Pass a custom middleware for a different scheme (e.g. `RequirePermission`), or `nil` to disable the gate entirely (restoring the pre-#132 fully-open behavior) — only do this if you're gating this subtree yourself in front of ezauth. Impersonation's Form routes (`FormImpersonate`/`FormStopImpersonation`) are the one exception: they always enforce `Cfg.AdminRole` with no customization point (only `nil` affects them), since they redirect rather than return JSON on every other error path and a generic middleware can't match that automatically.
 
+```go
+func WithSwaggerAuth(mw func(http.Handler) http.Handler) HandlerOption
+```
+Gates `/swagger/*` with `mw`. Without this option the swagger UI (the full API surface/schema) is served with no authentication at all. Pass `nil` to remove the route entirely instead of gating it.
+
 ## Methods
 
 ### `Run`

@@ -1426,6 +1426,17 @@ make swagger
 
 The Swagger UI is available at `/swagger/index.html`.
 
+> [!WARNING]
+> `/swagger/*` is served with **no authentication by default**, exposing the full API surface/schema to anyone who can reach the service. Gate or disable it with `handler.WithSwaggerAuth`:
+>
+> ```go
+> // Gate it behind your own middleware:
+> h := handler.New(auth.Service, "auth", handler.WithSwaggerAuth(yourAuthMiddleware))
+>
+> // Or remove the route entirely:
+> h := handler.New(auth.Service, "auth", handler.WithSwaggerAuth(nil))
+> ```
+
 ### Examples
 
 Check out the `_example` directory for ready-to-use examples:
