@@ -40,46 +40,77 @@ release:
   header: |
     ## Highlights
 
-    The three highest-severity findings from the recent security audit,
-    closing it out (see v0.24.0's notes for the other thirteen):
+    This release closes out the full security audit: 66 tickets across
+    three tiers of severity, on top of the sixteen already closed in
+    v0.24.0/v0.25.0. Five changes are breaking; everything else is a
+    backward-compatible fix or hardening. The full commit-by-commit list
+    is below this summary.
 
-    - **BREAKING: admin/RBAC/org/impersonation routes now deny by
-      default** — `AdminUsersList/Suspend/Reactivate`, `RoleCreate/Delete`,
-      `UserRoleGrant/Revoke`, `OrganizationCreate/Delete`,
-      `OrgMemberAdd/Remove`, `Impersonate/StopImpersonation` (JSON API and
-      Form, everywhere `RequireRole`/`RequirePermission` existed but were
-      never wired in) were reachable by any authenticated user. `New()` now
-      requires the caller hold the RBAC role `Cfg.AdminRole`
-      (`EZAUTH_ADMIN_ROLE`, defaults to `"admin"`) on both transports.
-      **Action required**: bootstrap your first admin via
-      `ezauthapi create-admin` (or `UserRoleGrant` directly) after
-      upgrading, or every admin/RBAC/org/impersonation call starts
-      returning 401/403. Use `handler.WithAdminAuthz(middleware)` for a
-      different scheme (`RequirePermission`, an org-scoped check, your own
-      authorization system), or `WithAdminAuthz(nil)` to disable the gate
-      and restore the old behavior if you're authorizing this subtree
-      yourself in front of ezauth. See #132 and the README's new
-      "Admin Authorization" section.
-    - **Fix: bearer tokens stored in plaintext at rest** — refresh tokens,
-      password-reset/passwordless links, API keys, MFA pre-auth tokens,
-      trusted-device tokens, invitations, and email-change links were
-      persisted and looked up verbatim (MFA recovery codes and SMS OTP
-      codes already followed the safer pattern). All are now stored and
-      looked up by SHA-256 hash. A migration hashes existing rows in place
-      on postgres/mysql (verified byte-identical to what the app computes
-      at runtime, so existing sessions/API keys keep working) — SQLite has
-      no built-in SHA-256, so that migration is a documented no-op:
-      existing tokens on a SQLite-backed deployment are invalidated by
-      upgrading (a full session flush), which only matters for actual
-      production use of SQLite specifically. See #133.
-    - **Fix: invitations could self-escalate privilege** —
-      `InvitationCreate` accepted a caller-supplied `Roles` string with no
-      check that the inviter actually held it, and `InvitationAccept`
-      wrote it verbatim into the new account. Since ezauth's own documented
-      authorization pattern is `caller.HasRole("admin")`, any authenticated
-      user could self-invite with `roles:"admin"` and escalate. Rejected
-      now (`403`) unless the inviter already holds every requested role.
-      See #131.
+    ### Breaking changes
+
+    - **Bearer/API-key auth now re-validates the owning user on every
+      request, not just at token-issue time.** `AuthMiddleware`/
+      `APIKeyMiddleware` previously trusted a valid signature/DB lookup
+      and never checked `IsActive` again, so a suspended or deleted
+      account kept working until the access token's natural expiry (up
+      to an hour) or the API key was manually revoked. Both standalone
+      middleware functions gain a `UserActiveGetter` parameter
+      (`Repository` already satisfies it) — a direct caller of
+      `middleware.AuthMiddleware`/`APIKeyMiddleware` outside of `Handler`
+      needs a one-line update. See #203.
+    - **Access tokens default to a 15-minute TTL (was 1 hour) and gain
+      `jti`/`iss`/`aud` claims.** New `Cfg.JWT.AccessTokenTTL`,
+      `Cfg.JWT.Issuer`, `Cfg.JWT.Audience` — issuer/audience are only
+      enforced if you set them, so upgrading is a no-op unless you opt
+      in. `middleware.AuthMiddleware` gains a variadic
+      `extraOpts ...jwt.ParserOption` parameter (existing callers can
+      omit it). See #207.
+    - **`Auth.APIKeyCreate` takes a `ttl time.Duration` parameter, and
+      `middleware.APIKeyMiddleware` takes a `previousApiKey string`
+      parameter** (for master-key rotation, mirroring the existing JWT
+      key-rotation pattern). Pass `0`/`""` to keep prior behavior. New
+      `EZAUTH_API_KEY_DEFAULT_TTL` and `EZAUTH_PREVIOUS_API_KEY`. See
+      #210.
+    - **`models.AuditLog.UserID` is now `*string`, not `string`.**
+      Audit-log rows used to cascade-delete with their user, erasing the
+      trail of what happened right when it mattered most; the row now
+      survives with `UserID` set to `nil` instead. See #212.
+    - **Rate limiting is enabled by default** (`RATE_LIMIT_ENABLED`,
+      10 req/min per client IP) — previously off by default, so an
+      out-of-the-box deployment had no IP-based brute-force throttle at
+      all, only the per-account lockout counter. See #182.
+
+    ### Selected security fixes
+
+    - Suspended/disabled accounts could still mint a session via refresh,
+      magic link, OAuth2, WebAuthn, and impersonation — every path but
+      password login skipped the `IsActive` check. Closed at the single
+      choke point all of them share, and `UserSuspend` now revokes every
+      outstanding token immediately. See #205.
+    - Single-use tokens (refresh, password-reset, passwordless,
+      email-change, invitation-accept, MFA/SMS-OTP) were redeemable more
+      than once under concurrent requests (TOCTOU across 8 call sites) —
+      redemption is now one atomic conditional `UPDATE`. See #206.
+    - Any authenticated user could grant themselves the global admin role
+      through an unrelated organization's membership endpoint, with no
+      per-org membership checks anywhere in that subsystem. See #204.
+    - `RequireAPIKeyScope` waved through any request where
+      `APIKeyMiddleware` never ran at all (e.g. a custom router missing
+      it), not just legitimately-unscoped keys. Now fails closed. See
+      #184.
+    - MFA recovery codes went from 40 to 128 bits of entropy (#161); SMS
+      OTP codes now resist offline brute force and are revoked on resend
+      (#195); replayed TOTP codes within their validity window are
+      rejected (#189).
+    - CSRF protection (`filippo.io/csrf`) had zero test coverage — added,
+      along with `EZAUTH_CSRF_TRUSTED_ORIGINS` for frontends served from a
+      different origin than the API. See #213.
+
+    Also: idempotent MySQL migrations, a username uniqueness index,
+    connection-pool defaults applied consistently, SMTP/SMS client
+    timeouts, structured logging instead of leaking PII/raw DB errors,
+    and a long tail of smaller hardening fixes and documentation
+    corrections. See the full list below.
 
 checksum:
   name_template: 'checksums.txt'
