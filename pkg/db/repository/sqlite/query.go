@@ -542,6 +542,14 @@ func (q *SqliteQuerier) QueryWebauthnChallengeDelete(ctx context.Context, id str
 	return sqlite.Delete(dm.From(models.TableWebauthnChallenge), dm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
 }
 
+// QueryWebauthnChallengeDeleteExpired bulk-deletes every challenge row past
+// its expiry -- ceremony challenges are otherwise only ever deleted on
+// successful completion, so an abandoned registration/login ceremony would
+// leave its row forever.
+func (q *SqliteQuerier) QueryWebauthnChallengeDeleteExpired(ctx context.Context, now time.Time) bob.Query {
+	return sqlite.Delete(dm.From(models.TableWebauthnChallenge), dm.Where(sqlite.Quote(models.ColumnExpiresAt).LT(sqlite.Arg(now))))
+}
+
 func (q *SqliteQuerier) QueryAuditLogInsert(ctx context.Context, log *models.AuditLog) bob.Query {
 	if log.ID == "" {
 		log.ID = util.NewIDStripped()

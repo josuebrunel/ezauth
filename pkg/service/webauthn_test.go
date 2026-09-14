@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/protocol/webauthncbor"
@@ -408,5 +409,47 @@ func TestWebauthnFinishLogin_RejectsClonedAuthenticatorCounter(t *testing.T) {
 	authenticator.signCount = 5
 	if _, err := login(); err != ErrWebauthnCloneDetected {
 		t.Fatalf("expected the credential to stay permanently rejected after a clone warning, got %v", err)
+	}
+}
+
+// TestWebauthnChallengeDeleteExpired proves abandoned ceremony challenges
+// (never completed, so never deleted by WebauthnFinish*) can be pruned once
+// expired, without touching ones still within their validity window.
+func TestWebauthnChallengeDeleteExpired(t *testing.T) {
+	auth := setupWebauthnTestDB(t, true)
+	ctx := context.Background()
+
+	expired, err := auth.Repo.WebauthnChallengeCreate(ctx, &models.WebauthnChallenge{
+		SessionKey:    "expired-session",
+		ChallengeType: models.WebauthnChallengeTypeLogin,
+		Data:          models.JSONMap{},
+		ExpiresAt:     time.Now().Add(-time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("failed to create expired challenge: %v", err)
+	}
+	current, err := auth.Repo.WebauthnChallengeCreate(ctx, &models.WebauthnChallenge{
+		SessionKey:    "current-session",
+		ChallengeType: models.WebauthnChallengeTypeLogin,
+		Data:          models.JSONMap{},
+		ExpiresAt:     time.Now().Add(time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("failed to create current challenge: %v", err)
+	}
+
+	n, err := auth.WebauthnChallengeDeleteExpired(ctx)
+	if err != nil {
+		t.Fatalf("WebauthnChallengeDeleteExpired failed: %v", err)
+	}
+	if n != 1 {
+		t.Fatalf("expected exactly 1 expired challenge deleted, got %d", n)
+	}
+
+	if _, err := auth.Repo.WebauthnChallengeGetBySessionKey(ctx, expired.SessionKey); err == nil {
+		t.Error("expected the expired challenge to be gone")
+	}
+	if _, err := auth.Repo.WebauthnChallengeGetBySessionKey(ctx, current.SessionKey); err != nil {
+		t.Errorf("expected the still-current challenge to survive, got %v", err)
 	}
 }

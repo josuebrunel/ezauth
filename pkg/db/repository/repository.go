@@ -73,6 +73,7 @@ type WebauthnChallengeQuerier interface {
 	QueryWebauthnChallengeInsert(ctx context.Context, ch *models.WebauthnChallenge) bob.Query
 	QueryWebauthnChallengeGetBySessionKey(ctx context.Context, sessionKey string) bob.Query
 	QueryWebauthnChallengeDelete(ctx context.Context, id string) bob.Query
+	QueryWebauthnChallengeDeleteExpired(ctx context.Context, now time.Time) bob.Query
 }
 
 type AuditLogQuerier interface {
@@ -666,6 +667,28 @@ func (r Repository) WebauthnChallengeDelete(ctx context.Context, id string) erro
 		return err
 	}
 	return nil
+}
+
+// WebauthnChallengeDeleteExpired bulk-deletes every challenge row whose
+// expiry has passed, returning how many rows were removed. Ceremony
+// challenges are otherwise only ever deleted on successful completion
+// (WebauthnFinishRegistration/WebauthnFinishLogin), so an abandoned
+// registration/login ceremony leaves its row forever -- call this
+// periodically (e.g. from your own cron/scheduler; ezauth doesn't run one
+// itself) to prune them.
+func (r Repository) WebauthnChallengeDeleteExpired(ctx context.Context) (int64, error) {
+	query := r.QueryWebauthnChallengeDeleteExpired(ctx, time.Now())
+	result, err := bob.Exec(ctx, r.bdb, query)
+	if err != nil {
+		xlog.Error("Failed to delete expired webauthn challenges", "error", err)
+		return 0, err
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		xlog.Error("Failed to get rows affected deleting expired webauthn challenges", "error", err)
+		return 0, err
+	}
+	return n, nil
 }
 
 // AuditLogCreate persists a security-relevant audit event.

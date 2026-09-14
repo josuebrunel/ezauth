@@ -540,6 +540,14 @@ func (q *MysqlQuerier) QueryWebauthnChallengeDelete(ctx context.Context, id stri
 	return mysql.Delete(dm.From(models.TableWebauthnChallenge), dm.Where(mysql.Quote("id").EQ(mysql.Arg(id))))
 }
 
+// QueryWebauthnChallengeDeleteExpired bulk-deletes every challenge row past
+// its expiry -- ceremony challenges are otherwise only ever deleted on
+// successful completion, so an abandoned registration/login ceremony would
+// leave its row forever.
+func (q *MysqlQuerier) QueryWebauthnChallengeDeleteExpired(ctx context.Context, now time.Time) bob.Query {
+	return mysql.Delete(dm.From(models.TableWebauthnChallenge), dm.Where(mysql.Quote(models.ColumnExpiresAt).LT(mysql.Arg(now))))
+}
+
 func (q *MysqlQuerier) QueryAuditLogInsert(ctx context.Context, log *models.AuditLog) bob.Query {
 	if log.ID == "" {
 		log.ID = util.NewIDStripped()

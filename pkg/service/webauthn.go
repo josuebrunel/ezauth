@@ -313,6 +313,17 @@ func (a *Auth) WebauthnDeleteCredential(ctx context.Context, user *models.User, 
 	return a.Repo.WebauthnCredentialDelete(ctx, rec.ID)
 }
 
+// WebauthnChallengeDeleteExpired bulk-deletes every WebAuthn ceremony
+// challenge row whose expiry has passed, returning how many rows were
+// removed. Ceremony challenges are otherwise only ever deleted on
+// successful completion (WebauthnFinishRegistration/WebauthnFinishLogin),
+// so an abandoned registration/login ceremony leaves its row forever --
+// ezauth runs no background jobs of its own, so call this periodically
+// (e.g. from your own cron/scheduler) to prune them.
+func (a *Auth) WebauthnChallengeDeleteExpired(ctx context.Context) (int64, error) {
+	return a.Repo.WebauthnChallengeDeleteExpired(ctx)
+}
+
 func webauthnCredentialToJSONMap(cred *webauthn.Credential) (models.JSONMap, error) {
 	raw, err := json.Marshal(cred)
 	if err != nil {

@@ -542,6 +542,14 @@ func (q *PSQLQuerier) QueryWebauthnChallengeDelete(ctx context.Context, id strin
 	return psql.Delete(dm.From(psql.Quote(models.TableWebauthnChallenge)), dm.Where(psql.Quote("id").EQ(psql.Arg(id))))
 }
 
+// QueryWebauthnChallengeDeleteExpired bulk-deletes every challenge row past
+// its expiry -- ceremony challenges are otherwise only ever deleted on
+// successful completion, so an abandoned registration/login ceremony would
+// leave its row forever.
+func (q *PSQLQuerier) QueryWebauthnChallengeDeleteExpired(ctx context.Context, now time.Time) bob.Query {
+	return psql.Delete(dm.From(psql.Quote(models.TableWebauthnChallenge)), dm.Where(psql.Quote(models.ColumnExpiresAt).LT(psql.Arg(now))))
+}
+
 func (q *PSQLQuerier) QueryAuditLogInsert(ctx context.Context, log *models.AuditLog) bob.Query {
 	if log.ID == "" {
 		log.ID = util.NewID()

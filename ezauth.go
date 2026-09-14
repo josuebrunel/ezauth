@@ -657,6 +657,14 @@ func (e *EzAuth) WebauthnDeleteCredential(ctx context.Context, user *models.User
 	return e.Service.WebauthnDeleteCredential(ctx, user, credentialRecordID)
 }
 
+// WebauthnChallengeDeleteExpired bulk-deletes every expired WebAuthn
+// ceremony challenge row, returning how many were removed. ezauth runs no
+// background jobs of its own -- call this periodically (e.g. from your own
+// cron/scheduler) to prune ceremonies abandoned before completion.
+func (e *EzAuth) WebauthnChallengeDeleteExpired(ctx context.Context) (int64, error) {
+	return e.Service.WebauthnChallengeDeleteExpired(ctx)
+}
+
 // GetUserID retrieves the user ID from the request context.
 // It requires AuthMiddleware, LoadUserMiddleware, or SessionMiddleware to be used.
 // It returns an error if the user ID is not found in the context.
