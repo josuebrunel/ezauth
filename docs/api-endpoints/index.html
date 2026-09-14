@@ -2553,7 +2553,7 @@
 <code>POST /auth/password-reset/confirm</code></p>
 <h3 id="passwordless-form">Passwordless (Form)</h3>
 <p><code>POST /auth/passwordless/request</code>
-<code>GET /auth/passwordless/login?token=...</code></p>
+<code>GET /auth/passwordless/login?token=...</code> (also accepts <code>POST</code> with <code>token</code> as a form field -- safer, since a query-string token lands in access logs/history/Referer headers; both responses set <code>Referrer-Policy: no-referrer</code>)</p>
 <h3 id="sms-otp-form">SMS OTP (Form)</h3>
 <p><code>POST /auth/sms-otp/request</code> (field: <code>phone</code>)
 <code>POST /auth/sms-otp/verify</code> (fields: <code>phone</code>, <code>code</code>)</p>
@@ -2583,7 +2583,7 @@
 <code>GET /auth/invitations/preview?token=...</code> (No auth required; returns JSON)</p>
 <h3 id="email-change-form">Email Change (Form)</h3>
 <p><code>POST /auth/email-change/request</code> (fields: <code>current_password</code>, <code>new_email</code>; requires a logged-in session)
-<code>GET /auth/email-change/confirm?token=...</code> (No auth required; applies the change, clears the session, and redirects to <code>Pages.Login</code>)</p>
+<code>GET /auth/email-change/confirm?token=...</code> (No auth required; applies the change, clears the session, and redirects to <code>Pages.Login</code>; also accepts <code>POST</code> with <code>token</code> as a form field -- see the passwordless-login entry above for why)</p>
 <h3 id="admin-user-management-form">Admin User Management (Form)</h3>
 <p><code>GET /auth/admin/users</code> (Query params: <code>search</code>, <code>status</code>, <code>created_after</code>/<code>created_before</code>, <code>last_active_after</code>/<code>last_active_before</code>, <code>limit</code>/<code>offset</code>; requires a logged-in session)
 <code>POST /auth/admin/users/{id}/suspend</code>, <code>POST /auth/admin/users/{id}/reactivate</code> (Require a logged-in session)
@@ -2696,7 +2696,7 @@ Exchange <code>mfa_token</code> via <code>POST /auth/api/mfa/login/verify</code>
 }
 </code></pre>
 <h3 id="passwordless-login">Passwordless Login</h3>
-<p><code>GET /auth/api/passwordless/login?token=...</code></p>
+<p><code>GET /auth/api/passwordless/login?token=...</code> (also accepts <code>POST</code> with <code>{"token": "..."}</code> -- safer, since a query-string token lands in access logs/history/Referer headers; both responses set <code>Referrer-Policy: no-referrer</code>)</p>
 <p>Authenticates a user using a magic link token.</p>
 <p><strong>Response Data:</strong> Same as Register.</p>
 <h3 id="sms-otp-request">SMS OTP Request</h3>
@@ -2907,7 +2907,7 @@ Exchange <code>mfa_token</code> via <code>POST /auth/api/mfa/login/verify</code>
 }
 </code></pre>
 <h3 id="email-change-confirm">Email Change Confirm</h3>
-<p><code>GET /auth/api/email-change/confirm?token=...</code></p>
+<p><code>GET /auth/api/email-change/confirm?token=...</code> (also accepts <code>POST</code> with <code>{"token": "..."}</code> -- see the Passwordless Login section above for why)</p>
 <p>Applies the requested email change and revokes every other session. No authentication required (the token itself is the credential).</p>
 <p><strong>Response Data:</strong> the updated user profile (same shape as User Info).</p>
 <h3 id="impersonate">Impersonate</h3>

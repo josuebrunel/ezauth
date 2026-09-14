@@ -1663,6 +1663,21 @@
 <td>Outgoing key's <code>kid</code>; auto-derived from <code>EZAUTH_JWT_PREVIOUS_PUBLIC_KEY</code> if unset.</td>
 <td></td>
 </tr>
+<tr>
+<td><code>EZAUTH_JWT_ACCESS_TOKEN_TTL</code></td>
+<td>How long a Bearer access token stays valid before needing a refresh.</td>
+<td><code>15m</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_JWT_ISSUER</code></td>
+<td>Stamped into access tokens as <code>iss</code> and enforced by <code>AuthMiddleware</code>; unset means no <code>iss</code> claim and no enforcement.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_JWT_AUDIENCE</code></td>
+<td>Stamped into access tokens as <code>aud</code> and enforced by <code>AuthMiddleware</code>; unset means no <code>aud</code> claim and no enforcement. Useful when multiple services share a signing key, so a token minted for one can't authenticate to another.</td>
+<td></td>
+</tr>
 </tbody>
 </table>
 <h2 id="webauthnpasskey-settings">WebAuthn/Passkey Settings</h2>
@@ -1741,6 +1756,15 @@
 </tbody>
 </table>
 <h2 id="rate-limit-settings">Rate Limit Settings</h2>
+<p>Two independent limiters are mounted (see <a href="../references/middleware/">Middleware</a>):
+<code>RATE_LIMIT_REQUESTS</code>/<code>RATE_LIMIT_WINDOW</code> bound every route as a coarse
+abuse/DoS guard, while <code>RATE_LIMIT_SENSITIVE_REQUESTS</code>/<code>RATE_LIMIT_SENSITIVE_WINDOW</code>
+bound only the unauthenticated endpoints that create or verify a short-lived
+credential -- login, password reset, passwordless, SMS OTP, and MFA
+verification, on both the Form and JSON API transports (they share one
+budget). Splitting them keeps a client's ordinary browsing/API usage from
+exhausting the tight budget meant to slow down credential stuffing, and vice
+versa.</p>
 <table>
 <thead>
 <tr>
@@ -1752,23 +1776,38 @@
 <tbody>
 <tr>
 <td><code>EZAUTH_RATE_LIMIT_ENABLED</code></td>
-<td>Enable rate limiting on authentication endpoints.</td>
+<td>Enable the general, site-wide rate limiter.</td>
 <td><code>true</code></td>
 </tr>
 <tr>
 <td><code>EZAUTH_RATE_LIMIT_REQUESTS</code></td>
-<td>Maximum requests allowed per window.</td>
-<td><code>10</code></td>
+<td>Maximum requests allowed per window, site-wide.</td>
+<td><code>300</code></td>
 </tr>
 <tr>
 <td><code>EZAUTH_RATE_LIMIT_WINDOW</code></td>
-<td>Rate limit window duration (e.g., <code>1m</code>, <code>30s</code>).</td>
+<td>General rate limit window duration (e.g., <code>1m</code>, <code>30s</code>).</td>
 <td><code>1m</code></td>
 </tr>
 <tr>
 <td><code>EZAUTH_RATE_LIMIT_BY_CLIENT_IP</code></td>
-<td>Apply rate limiting per client IP address.</td>
+<td>Apply both rate limiters per client IP address.</td>
 <td><code>true</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_RATE_LIMIT_SENSITIVE_ENABLED</code></td>
+<td>Enable the stricter limiter on login/password-reset/OTP endpoints.</td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_RATE_LIMIT_SENSITIVE_REQUESTS</code></td>
+<td>Maximum sensitive-endpoint requests allowed per window.</td>
+<td><code>10</code></td>
+</tr>
+<tr>
+<td><code>EZAUTH_RATE_LIMIT_SENSITIVE_WINDOW</code></td>
+<td>Sensitive-endpoint rate limit window duration.</td>
+<td><code>1m</code></td>
 </tr>
 </tbody>
 </table>

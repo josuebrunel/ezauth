@@ -1166,6 +1166,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#tokenconsume" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TokenConsume
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#tokenrevokeallbyuserid" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1718,6 +1729,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#tokenconsume" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TokenConsume
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#tokenrevokeallbyuserid" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1956,6 +1978,10 @@
 <h3 id="tokenrevoke"><code>TokenRevoke</code></h3>
 <p>Marks a token as revoked.</p>
 <pre><code class="language-go">func (r Repository) TokenRevoke(ctx context.Context, id string) error
+</code></pre>
+<h3 id="tokenconsume"><code>TokenConsume</code></h3>
+<p>Atomically revokes a single-use token (<code>UPDATE ... WHERE id = ? AND revoked = false</code>), making the update itself the concurrency guard instead of a separate read-then-write. <code>consumed</code> is <code>false</code> if the token was already revoked -- by a prior legitimate use, or a concurrent caller that won the race -- which callers should treat as reuse, not silently ignore. Used by every single-use-token flow (<code>TokenRefresh</code>, <code>PasswordResetConfirm</code>, <code>PasswordlessLogin</code>, <code>EmailChangeConfirm</code>, <code>InvitationAccept</code>, <code>MFALoginVerify</code>, <code>SMSOTPVerify</code>, MFA recovery codes) in place of a plain <code>TokenRevoke</code>.</p>
+<pre><code class="language-go">func (r Repository) TokenConsume(ctx context.Context, id string) (consumed bool, err error)
 </code></pre>
 <h3 id="tokenrevokeallbyuserid"><code>TokenRevokeAllByUserID</code></h3>
 <p>Revokes <em>every</em> active token for a user, regardless of type — sessions, API keys, MFA recovery codes, trusted devices, everything. Used where that blanket behavior is the intended policy (e.g. <code>PasswordResetConfirm</code>, on the theory that a password reset should force re-auth everywhere). Most callers mean to revoke only one class of token; use <code>TokenRevokeAllByUserIDAndType</code> for those, so e.g. confirming MFA enrollment doesn't collaterally revoke the user's API keys.</p>

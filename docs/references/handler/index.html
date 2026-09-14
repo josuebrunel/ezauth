@@ -1727,7 +1727,10 @@
 <p>Retrieves the authenticated user. It checks:</p>
 <ol>
 <li>Context (if <code>LoadUserMiddleware</code> was used)</li>
-<li>Session Cookies (extracts tokens and verifies with DB)</li>
+<li>Session Cookies (extracts the refresh token and verifies it against the
+    DB: it must be an unrevoked, unexpired <code>refresh</code> token belonging to an
+    active user, or the lookup fails and the cookie session is destroyed so
+    the same stale cookie isn't re-validated on every subsequent request)</li>
 </ol>
 <pre><code class="language-go">func (h *Handler) GetSessionUser(ctx context.Context) (*models.User, error)
 </code></pre>

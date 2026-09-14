@@ -2588,7 +2588,7 @@ func (a *Auth) InvitationRevoke(ctx context.Context, inviter *models.User, invit
 <pre><code class="language-go">func (a *Auth) UsersList(ctx context.Context, opts ListUsersOptions) (*ListUsersResult, error)
 </code></pre>
 <h3 id="usersuspend-userreactivate"><code>UserSuspend</code> / <code>UserReactivate</code></h3>
-<p>Suspend deactivates a user's account with no auto-expiry (distinct from a brute-force lockout); reactivate re-enables a suspended or locked-out account.</p>
+<p>Suspend deactivates a user's account with no auto-expiry (distinct from a brute-force lockout) and revokes every outstanding token, so the effect is immediate rather than waiting for a pre-suspension token to next be used; reactivate re-enables a suspended or locked-out account. See <a href="../../guides/account-security/#account-lockout">Account Lockout</a> for where <code>IsActive</code> is enforced.</p>
 <pre><code class="language-go">func (a *Auth) UserSuspend(ctx context.Context, userID string) (*models.User, error)
 func (a *Auth) UserReactivate(ctx context.Context, userID string) (*models.User, error)
 </code></pre>

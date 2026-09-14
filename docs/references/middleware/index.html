@@ -977,6 +977,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#requireorgmembership-requireorgrole" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RequireOrgMembership / RequireOrgRole
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1371,6 +1382,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#requireorgmembership-requireorgrole" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RequireOrgMembership / RequireOrgRole
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1465,7 +1487,7 @@
 </code></pre>
 <h2 id="json-api-middleware">JSON API Middleware</h2>
 <h3 id="authmiddleware-bearer"><code>AuthMiddleware</code> (Bearer)</h3>
-<p>Validates the <code>Authorization: Bearer &lt;token&gt;</code> header. It parses the JWT, verifies the signature against the configured signing key (<code>EZAUTH_JWT_SECRET</code> for the default HS256 mode, or the asymmetric key(s) under <code>EZAUTH_JWT_*</code> — see <a href="../../guides/account-security/#asymmetric-jwt-signing-jwks">Asymmetric JWT Signing (JWKS)</a>), and sets the user ID in the context.</p>
+<p>Validates the <code>Authorization: Bearer &lt;token&gt;</code> header. It parses the JWT, verifies the signature against the configured signing key (<code>EZAUTH_JWT_SECRET</code> for the default HS256 mode, or the asymmetric key(s) under <code>EZAUTH_JWT_*</code> — see <a href="../../guides/account-security/#asymmetric-jwt-signing-jwks">Asymmetric JWT Signing (JWKS)</a>), re-checks the token's subject is still an active user, and sets the user ID in the context. When <code>EZAUTH_JWT_ISSUER</code>/<code>EZAUTH_JWT_AUDIENCE</code> are configured, the token's <code>iss</code>/<code>aud</code> claims must also match.</p>
 <pre><code class="language-go">func (h *Handler) AuthMiddleware(next http.Handler) http.Handler
 </code></pre>
 <h3 id="apikeymiddleware"><code>APIKeyMiddleware</code></h3>
@@ -1486,6 +1508,11 @@
 <p>Same as <code>RequireRole</code>, but checks a permission, resolved transitively through every role granted to the user.</p>
 <pre><code class="language-go">func (h *Handler) RequirePermission(permission string) func(http.Handler) http.Handler
 </code></pre>
+<h3 id="requireorgmembership-requireorgrole"><code>RequireOrgMembership</code> / <code>RequireOrgRole</code></h3>
+<p>Scope a route to members of the "current organization" (set by an <code>OrgLoaderMiddleware</code> mounted upstream — see <a href="../../guides/admin-operations/#organizations">Organizations</a>) instead of relying solely on a blanket, application-wide admin gate. <code>ezauth</code>'s own org service methods (<code>OrganizationGetByID</code>, <code>OrgMemberAdd</code>, etc.) perform no membership check themselves — matching every other RBAC-gated method in this package, which rely entirely on the HTTP-gate layer for authorization — so mount one of these yourself on organization routes if you've customized <code>WithAdminAuthz</code> to something other than the default global-admin-only gate, and want per-organization scoping instead of (or in addition to) it. <code>RequireOrgMembership</code> accepts any role; <code>RequireOrgRole</code> additionally requires an exact role match. Both return <code>401</code> if no user is in context, <code>403</code> if no org is in context, the caller isn't a member, or (for <code>RequireOrgRole</code>) their role doesn't match.</p>
+<pre><code class="language-go">func (h *Handler) RequireOrgMembership(next http.Handler) http.Handler
+func (h *Handler) RequireOrgRole(role string) func(http.Handler) http.Handler
+</code></pre>
 <h2 id="organization-middleware">Organization Middleware</h2>
 <h3 id="orgloadermiddleware"><code>OrgLoaderMiddleware</code></h3>
 <p>Resolves the "current organization" for a request via an app-supplied <code>OrgLoader</code> (<code>ezauth</code> doesn't presume how an org is identified — URL param, subdomain, header, etc.) and loads it into context. Mirrors <code>LoadUserMiddleware</code> exactly. See <a href="../../guides/admin-operations/#organizations">Organizations</a>.</p>
@@ -1501,11 +1528,13 @@ protecting a non-<code>ezauth</code> route with just a <code>TokenGetter</code>/
 implementation.</p>
 <pre><code class="language-go">// Same logic as the Handler methods above, taking explicit dependencies
 // (a RoleChecker, TokenGetter, etc.) instead of a *Handler.
-func AuthMiddleware(keyFunc jwt.Keyfunc, validMethods []string) func(http.Handler) http.Handler
-func APIKeyMiddleware(configApiKey string, tokenRepo TokenGetter) func(http.Handler) http.Handler
+func AuthMiddleware(keyFunc jwt.Keyfunc, validMethods []string, userRepo UserActiveGetter, extraOpts ...jwt.ParserOption) func(http.Handler) http.Handler
+func APIKeyMiddleware(configApiKey string, tokenRepo TokenGetter, userRepo UserActiveGetter) func(http.Handler) http.Handler
 func RequireAPIKeyScope(scope string) func(http.Handler) http.Handler
 func RequireRole(checker RoleChecker, role string) func(http.Handler) http.Handler
 func RequirePermission(checker PermissionChecker, permission string) func(http.Handler) http.Handler
+func RequireOrgMembership(checker OrgMembershipChecker) func(http.Handler) http.Handler
+func RequireOrgRole(checker OrgMembershipChecker, role string) func(http.Handler) http.Handler
 func LoginRequiredMiddleware(authChecker AuthChecker, loginPath string) func(http.Handler) http.Handler
 func LoadUserMiddleware(loader UserLoader) func(http.Handler) http.Handler
 func OrgLoaderMiddleware(loader OrgLoader) func(http.Handler) http.Handler
@@ -1521,8 +1550,12 @@ func Chain(middlewares ...func(http.Handler) http.Handler) func(http.Handler) ht
 <code>SessionImpersonatorKey</code>, <code>APIKeyScopesContextKey</code>, <code>OrgContextKey</code>,
 <code>OrgObjectContextKey</code>.</p>
 <p><strong>Rate limiting</strong> — the <code>EZAUTH_RATE_LIMIT_*</code> settings (see
-<a href="../../configuration/#rate-limit-settings">Configuration</a>) configure the
-<code>RateLimiter</code> ezauth mounts internally, but you can also run one standalone:</p>
+<a href="../../configuration/#rate-limit-settings">Configuration</a>) configure two
+<code>RateLimiter</code> instances ezauth mounts internally from this same config
+struct: a general one at the router root, and a stricter one applied only to
+login/password-reset/passwordless/SMS-OTP/MFA-verification routes (Form and
+JSON API versions of each share one budget). You can also run <code>RateLimiter</code>
+standalone:</p>
 <pre><code class="language-go">type RateLimitConfig struct {
     Enabled    bool
     Requests   int
