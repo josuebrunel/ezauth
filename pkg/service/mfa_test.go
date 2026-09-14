@@ -205,3 +205,74 @@ func TestMFALoginStepUp(t *testing.T) {
 		}
 	})
 }
+
+// TestMFALoginVerify_BruteForceLockout proves repeated wrong TOTP codes
+// against a still-valid pre-auth token lock the account, instead of being
+// limited only by the (optional, off by default) global rate limiter.
+func TestMFALoginVerify_BruteForceLockout(t *testing.T) {
+	dialect, dsn := util.GetTestDBConfig("mfa_lockout_test")
+	cfg := &config.Config{
+		DB:            config.Database{Dialect: dialect, DSN: dsn},
+		JWTSecret:     "test-secret",
+		Hashing:       config.Hashing{BcryptCost: 4},
+		MFAIssuer:     "EzAuthTest",
+		TrustedDevice: config.TrustedDevice{TTL: 720 * time.Hour},
+		AccountLockout: config.AccountLockout{
+			Enabled:         true,
+			MaxAttempts:     3,
+			LockoutDuration: time.Hour,
+		},
+	}
+	auth, err := NewFromConfig(cfg, "auth")
+	if err != nil {
+		t.Fatalf("failed to create auth service: %v", err)
+	}
+	if err := ensureMigrated(auth.Repo.DB(), dialect, dsn); err != nil {
+		t.Fatalf("failed to run migrations: %v", err)
+	}
+
+	ctx := context.Background()
+	user := mfaTestUser(t, auth, ctx)
+	enrollResp, err := auth.MFAEnroll(ctx, user)
+	if err != nil {
+		t.Fatalf("MFAEnroll failed: %v", err)
+	}
+	code, err := totp.GenerateCode(enrollResp.Secret, time.Now())
+	if err != nil {
+		t.Fatalf("failed to generate totp code: %v", err)
+	}
+	if _, err := auth.MFAConfirm(ctx, user, code); err != nil {
+		t.Fatalf("MFAConfirm failed: %v", err)
+	}
+
+	resp, err := auth.CompleteBasicLogin(ctx, user, "")
+	if err != nil {
+		t.Fatalf("CompleteBasicLogin failed: %v", err)
+	}
+	mfaToken := resp.MFAToken
+
+	// MaxAttempts wrong guesses against the same pre-auth token lock the account.
+	for i := 0; i < 3; i++ {
+		if _, _, _, err := auth.MFALoginVerify(ctx, mfaToken, "000000", false); err == nil {
+			t.Fatal("expected error for wrong code")
+		}
+	}
+
+	locked, err := auth.Repo.UserGetByID(ctx, user.ID)
+	if err != nil {
+		t.Fatalf("failed to get user: %v", err)
+	}
+	if locked.IsActive || locked.LockedUntil == nil {
+		t.Fatalf("expected account locked after %d wrong mfa codes, got IsActive=%v lockedUntil=%v", 3, locked.IsActive, locked.LockedUntil)
+	}
+
+	// Even the correct code is now rejected against the (still otherwise
+	// valid) pre-auth token, since the account itself is locked.
+	validCode, err := totp.GenerateCode(*user.MfaSecret, time.Now())
+	if err != nil {
+		t.Fatalf("failed to generate totp code: %v", err)
+	}
+	if _, _, _, err := auth.MFALoginVerify(ctx, mfaToken, validCode, false); err != ErrAccountLocked {
+		t.Fatalf("expected ErrAccountLocked even with the correct code once locked, got %v", err)
+	}
+}

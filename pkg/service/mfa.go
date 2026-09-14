@@ -185,6 +185,12 @@ func (a *Auth) MFADisable(ctx context.Context, user *models.User, code string) e
 // When rememberDevice is true, it also issues a trusted-device token (see
 // TrustDevice) so future logins from the same device can skip this step-up for
 // Cfg.TrustedDevice.TTL; deviceToken is empty when rememberDevice is false.
+//
+// When Cfg.AccountLockout.Enabled, an invalid code counts against the same
+// failed-attempt counter and lockout as a wrong password (recordFailedLogin/
+// checkAccountActive), so repeated guessing against a still-valid pre-auth
+// token locks the account instead of being limited only by the (optional,
+// IP-keyed) global rate limiter.
 func (a *Auth) MFALoginVerify(ctx context.Context, mfaToken, code string, rememberDevice bool) (user *models.User, tokens *TokenResponse, deviceToken string, err error) {
 	token, err := a.Repo.TokenGetByToken(ctx, mfaToken)
 	if err != nil || token.TokenType != models.TokenTypeMFAPreAuth {
@@ -202,9 +208,27 @@ func (a *Auth) MFALoginVerify(ctx context.Context, mfaToken, code string, rememb
 		return nil, nil, "", err
 	}
 
+	if a.Cfg.AccountLockout.Enabled {
+		if user, err = a.checkAccountActive(ctx, user); err != nil {
+			xlog.Debug("mfa login verify failed: account locked", "user_id", user.ID, "err", err)
+			return nil, nil, "", err
+		}
+	}
+
 	if !a.mfaValidateAnyCode(ctx, user, code) {
 		xlog.Debug("mfa login verify failed: invalid code", "user_id", user.ID)
+		if a.Cfg.AccountLockout.Enabled {
+			a.recordFailedLogin(ctx, user)
+		}
 		return nil, nil, "", ErrInvalidMFACode
+	}
+
+	if user.FailedLoginAttempts > 0 {
+		if reset, err := a.Repo.UserSetLockoutState(ctx, user.ID, 0, nil, true); err != nil {
+			xlog.Warn("failed to reset failed login attempt counter after mfa success", "user_id", user.ID, "err", err)
+		} else {
+			user = reset
+		}
 	}
 
 	if err := a.Repo.TokenRevoke(ctx, token.ID); err != nil {

@@ -125,6 +125,15 @@ func (a *Auth) SMSOTPRequest(ctx context.Context, req RequestSMSOTP) error {
 
 // SMSOTPVerify completes the SMS OTP login flow, mirroring PasswordlessLogin:
 // a successful verification also marks the phone number verified.
+//
+// When Cfg.AccountLockout.Enabled, an invalid code counts against the same
+// per-account failed-attempt counter and lockout as a wrong password
+// (recordFailedLogin/checkAccountActive), so repeated code guessing against
+// a phone number locks the account instead of being limited only by the
+// (optional, IP-keyed) global rate limiter. The user is looked up by phone
+// before the code is checked so a lockout can be attributed and enforced
+// even though (unlike MFA's pre-auth token) nothing here identifies the
+// account independently of a correct code guess.
 func (a *Auth) SMSOTPVerify(ctx context.Context, req RequestSMSOTPVerify) (*TokenResponse, error) {
 	phone := strings.TrimSpace(req.Phone)
 	if err := validatePhone(phone); err != nil {
@@ -134,9 +143,20 @@ func (a *Auth) SMSOTPVerify(ctx context.Context, req RequestSMSOTPVerify) (*Toke
 		return nil, ErrInvalidOrExpiredSMSCode
 	}
 
+	byPhone, byPhoneErr := a.Repo.UserGetByPhone(ctx, phone)
+	if byPhoneErr == nil && a.Cfg.AccountLockout.Enabled {
+		if _, err := a.checkAccountActive(ctx, byPhone); err != nil {
+			xlog.Debug("sms otp verify failed: account locked", "user_id", byPhone.ID, "err", err)
+			return nil, err
+		}
+	}
+
 	token, err := a.Repo.TokenGetByToken(ctx, smsOTPTokenValue(phone, req.Code))
 	if err != nil || token.TokenType != models.TokenTypeSMSOTP {
 		xlog.Debug("sms otp token not found", "err", err)
+		if byPhoneErr == nil && a.Cfg.AccountLockout.Enabled {
+			a.recordFailedLogin(ctx, byPhone)
+		}
 		return nil, ErrInvalidOrExpiredSMSCode
 	}
 
@@ -149,6 +169,14 @@ func (a *Auth) SMSOTPVerify(ctx context.Context, req RequestSMSOTPVerify) (*Toke
 	if err != nil {
 		xlog.Error("failed to get user for sms otp login", "user_id", token.UserID, "err", err)
 		return nil, err
+	}
+
+	if user.FailedLoginAttempts > 0 {
+		if reset, err := a.Repo.UserSetLockoutState(ctx, user.ID, 0, nil, true); err != nil {
+			xlog.Warn("failed to reset failed login attempt counter after sms otp success", "user_id", user.ID, "err", err)
+		} else {
+			user = reset
+		}
 	}
 
 	if !user.PhoneVerified {

@@ -223,6 +223,42 @@ var ErrAccountLocked = errors.New("account is temporarily locked due to too many
 // so it has no LockedUntil expiry and won't auto-recover.
 var ErrAccountDisabled = errors.New("account is disabled")
 
+// autoUnlockIfExpired clears a user's brute-force lockout bookkeeping once
+// LockedUntil has passed, matching UserAuthenticate's auto-unlock-on-next-
+// attempt behavior. Shared with the MFA/SMS OTP step-up flows below, which
+// enforce the same account-level lockout against repeated code guesses.
+// Returns user unchanged if it isn't locked, the lock hasn't expired yet, or
+// the update fails (logged, not returned, so callers keep failing closed on
+// the pre-update state).
+func (a *Auth) autoUnlockIfExpired(ctx context.Context, user *models.User) *models.User {
+	if user.IsActive || user.LockedUntil == nil || !time.Now().After(*user.LockedUntil) {
+		return user
+	}
+	unlocked, err := a.Repo.UserSetLockoutState(ctx, user.ID, 0, nil, true)
+	if err != nil {
+		xlog.Error("failed to auto-unlock account", "user_id", user.ID, "err", err)
+		return user
+	}
+	return unlocked
+}
+
+// checkAccountActive auto-unlocks user if its lockout window has passed,
+// then returns ErrAccountLocked/ErrAccountDisabled if it's still inactive.
+// Used by the MFA and SMS OTP verification flows so a brute-force lockout
+// triggered by repeated invalid codes (recorded via recordFailedLogin, same
+// counter as password brute force) actually blocks further attempts,
+// instead of only affecting a future password login.
+func (a *Auth) checkAccountActive(ctx context.Context, user *models.User) (*models.User, error) {
+	user = a.autoUnlockIfExpired(ctx, user)
+	if !user.IsActive {
+		if user.LockedUntil != nil {
+			return user, ErrAccountLocked
+		}
+		return user, ErrAccountDisabled
+	}
+	return user, nil
+}
+
 // UserAuthenticate authenticates a user with email and password. It enforces
 // the IsActive gate and brute-force lockout: after Cfg.AccountLockout.MaxAttempts
 // consecutive failed attempts, the account is locked (IsActive cleared) for
@@ -237,13 +273,7 @@ func (a *Auth) UserAuthenticate(ctx context.Context, req RequestBasicAuth) (*mod
 		return nil, errors.New("invalid credentials")
 	}
 
-	if !user.IsActive && user.LockedUntil != nil && time.Now().After(*user.LockedUntil) {
-		if unlocked, err := a.Repo.UserSetLockoutState(ctx, user.ID, 0, nil, true); err != nil {
-			xlog.Error("failed to auto-unlock account", "user_id", user.ID, "err", err)
-		} else {
-			user = unlocked
-		}
-	}
+	user = a.autoUnlockIfExpired(ctx, user)
 
 	// Always run the password comparison, even on an inactive account, so a
 	// locked/disabled account's response takes the same time as a wrong-password
