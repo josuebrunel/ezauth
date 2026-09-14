@@ -3,13 +3,20 @@ package service
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/config"
 	"github.com/josuebrunel/gopkg/xlog"
 )
+
+// smsTimeout bounds the whole Twilio API call (connect, TLS, request,
+// response). Not exposed via config: a generous, conservative default
+// matching the timeout the SMTP mailer applies to its own transaction.
+const smsTimeout = 30 * time.Second
 
 // SMSSender defines the interface for sending SMS messages.
 // Implement this to plug in an SMS provider other than Twilio.
@@ -25,7 +32,7 @@ type TwilioSMSSender struct {
 
 // NewTwilioSMSSender creates a new TwilioSMSSender.
 func NewTwilioSMSSender(cfg config.SMS) *TwilioSMSSender {
-	return &TwilioSMSSender{cfg: cfg, client: &http.Client{}}
+	return &TwilioSMSSender{cfg: cfg, client: &http.Client{Timeout: smsTimeout}}
 }
 
 // Send sends an SMS via Twilio's Messages REST API.
@@ -58,7 +65,12 @@ func (s *TwilioSMSSender) Send(to string, body string) error {
 		xlog.Error("failed to send sms", "error", err)
 		return err
 	}
-	defer resp.Body.Close()
+	// Drain before closing so the underlying connection can be reused by
+	// the client's keep-alive pool instead of being torn down every call.
+	defer func() {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}()
 
 	if resp.StatusCode >= 300 {
 		err := fmt.Errorf("sms provider returned status %s", resp.Status)

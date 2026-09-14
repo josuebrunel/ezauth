@@ -10,10 +10,21 @@ import (
 	"strings"
 	"sync"
 	"text/template"
+	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/config"
 	"github.com/josuebrunel/gopkg/xlog"
 )
+
+// smtpTimeout bounds the entire SMTP transaction (dial, STARTTLS, auth,
+// MAIL/RCPT/DATA, quit) via conn.SetDeadline -- not just the initial dial --
+// so a server that accepts the connection but then stalls mid-transaction
+// can't block the calling goroutine indefinitely either. Not exposed via
+// config: a generous, conservative default matching the read/write
+// timeouts Handler.Run already applies to its own HTTP server.
+// Not a const so tests in this package can shrink it temporarily rather
+// than waiting out the real default to exercise the deadline path.
+var smtpTimeout = 30 * time.Second
 
 // Mailer defines the interface for sending emails.
 type Mailer interface {
@@ -43,12 +54,16 @@ func (m *SMTPMailer) Send(to string, subject string, body string) error {
 
 	addr := net.JoinHostPort(m.cfg.Host, fmt.Sprintf("%d", m.cfg.Port))
 
-	conn, err := net.Dial("tcp", addr)
+	conn, err := net.DialTimeout("tcp", addr, smtpTimeout)
 	if err != nil {
 		xlog.Error("failed to connect to SMTP server", "error", err)
 		return err
 	}
 	defer conn.Close()
+	if err := conn.SetDeadline(time.Now().Add(smtpTimeout)); err != nil {
+		xlog.Error("failed to set SMTP connection deadline", "error", err)
+		return err
+	}
 
 	client, err := smtp.NewClient(conn, m.cfg.Host)
 	if err != nil {
