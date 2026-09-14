@@ -219,6 +219,15 @@ func normalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
 }
 
+// normalizeUsername lowercases and trims a username before it's stored or
+// queried, the same reasoning as normalizeEmail: MySQL's default collation
+// makes "JohnDoe" and "johndoe" collide there while comparing distinctly on
+// postgres/sqlite, so the exact same application code would behave
+// differently depending on the deployed dialect without this.
+func normalizeUsername(username string) string {
+	return strings.ToLower(strings.TrimSpace(username))
+}
+
 // normalizeRoleName lowercases and trims an RBAC role name before it's
 // stored or queried, the same reasoning as normalizeEmail: MySQL's default
 // collation makes "Admin" and "admin" collide there while comparing
@@ -244,6 +253,9 @@ func quotePostgresIdentifier(name string) string {
 // UserCreate creates a new user in the database.
 func (r Repository) UserCreate(ctx context.Context, user *models.User) (*models.User, error) {
 	user.Email = normalizeEmail(user.Email)
+	if user.Username != "" {
+		user.Username = normalizeUsername(user.Username)
+	}
 	query := r.QueryUserInsert(ctx, user)
 
 	if r.Opts.Dialect == DialectMysql {
@@ -290,6 +302,7 @@ func (r Repository) UserGetByEmail(ctx context.Context, email string) (*models.U
 
 // UserGetByUsername retrieves a user by their username.
 func (r Repository) UserGetByUsername(ctx context.Context, username string) (*models.User, error) {
+	username = normalizeUsername(username)
 	query := r.QueryUserGetByUsername(ctx, username)
 	user, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
 	if err != nil {
@@ -325,6 +338,9 @@ func (r Repository) UserGetByID(ctx context.Context, id string) (*models.User, e
 func (r Repository) UserUpdate(ctx context.Context, user *models.User) (*models.User, error) {
 	if user.Email != "" {
 		user.Email = normalizeEmail(user.Email)
+	}
+	if user.Username != "" {
+		user.Username = normalizeUsername(user.Username)
 	}
 	query := r.QueryUserUpdate(ctx, user)
 

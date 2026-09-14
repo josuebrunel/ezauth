@@ -285,6 +285,36 @@ func TestEmailCaseNormalization(t *testing.T) {
 	})
 }
 
+func TestUsernameCaseNormalization(t *testing.T) {
+	auth := setupBasicAuthTestDB(t)
+	ctx := context.Background()
+
+	mixedCaseUsername := "MixedCase_" + util.NewIDStripped()[:8]
+	lowerCaseUsername := strings.ToLower(mixedCaseUsername)
+	email := util.UniqueEmail("usernamecase")
+	password := "securepass123"
+
+	t.Run("UserCreate stores username lowercased", func(t *testing.T) {
+		user, err := auth.UserCreate(ctx, &RequestBasicAuth{Email: email, Username: mixedCaseUsername, Password: password})
+		if err != nil {
+			t.Fatalf("UserCreate failed: %v", err)
+		}
+		if user.Username != lowerCaseUsername {
+			t.Fatalf("expected stored username %q, got %q", lowerCaseUsername, user.Username)
+		}
+	})
+
+	t.Run("UserGetByUsername finds it regardless of input casing", func(t *testing.T) {
+		user, err := auth.Repo.UserGetByUsername(ctx, strings.ToUpper(mixedCaseUsername))
+		if err != nil {
+			t.Fatalf("UserGetByUsername with upper-cased input failed: %v", err)
+		}
+		if user.Username != lowerCaseUsername {
+			t.Fatalf("expected %q, got %q", lowerCaseUsername, user.Username)
+		}
+	})
+}
+
 func TestPasswordless(t *testing.T) {
 	auth := setupTestDB(t)
 	ctx := context.Background()

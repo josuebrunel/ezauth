@@ -57,7 +57,7 @@ func (r Repository) UserGetByProvider(ctx context.Context, provider, providerID 
 ```
 
 ### `UserGetByUsername`
-Retrieves a user by username.
+Retrieves a user by username. The lookup username (and, in `UserCreate`/`UserUpdate`, the stored username) is lowercased and trimmed before use, same as email, so lookups behave the same regardless of input casing or the DB dialect's default collation.
 
 ```go
 func (r Repository) UserGetByUsername(ctx context.Context, username string) (*models.User, error)
