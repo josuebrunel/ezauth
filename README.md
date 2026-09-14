@@ -825,7 +825,7 @@ ezauthapi create-admin -email=admin@example.com -password=<password>   # default
 
 ```go
 _, _ = auth.Service.RoleCreate(ctx, "admin", "full admin access") // if it doesn't already exist
-err := auth.Service.UserRoleGrant(ctx, userID, "admin")
+err := auth.Service.UserRoleGrant(ctx, callerID, userID, "admin") // callerID: the granting admin, recorded on the audit event
 ```
 
 To use a different scheme — RBAC permissions instead of a single role, an org-scoped check, or your own authorization system entirely — pass `handler.WithAdminAuthz(middleware)` to `New()`. The middleware runs downstream of auth, so it can check against `auth.Service` (which satisfies `RequirePermission`'s `PermissionChecker` interface) directly:
@@ -919,9 +919,10 @@ perm, _ := auth.PermissionCreate(ctx, "posts:write", "write posts")
 _ = auth.RolePermissionGrant(ctx, "editor", "posts:write")
 
 // Grant/revoke a role on a user — idempotent, and records an
-// AuditEventRoleGranted/AuditEventRoleRevoked audit event (see Audit Log).
-_ = auth.UserRoleGrant(ctx, user.ID, "editor")
-_ = auth.UserRoleRevoke(ctx, user.ID, "editor")
+// AuditEventRoleGranted/AuditEventRoleRevoked audit event (see Audit Log)
+// with adminUser.ID as the actor.
+_ = auth.UserRoleGrant(ctx, adminUser.ID, user.ID, "editor")
+_ = auth.UserRoleRevoke(ctx, adminUser.ID, user.ID, "editor")
 
 // Check directly, or gate a route with the middleware.
 has, _ := auth.UserHasRole(ctx, user.ID, "editor")

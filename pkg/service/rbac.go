@@ -72,7 +72,7 @@ func (a *Auth) PermissionDelete(ctx context.Context, id string) error {
 // UserRoleGrant grants a role to a user by role name, and records an audit
 // event. Idempotent at the DB level (see Repo.UserRoleGrant): granting a
 // role the user already holds is a no-op, no audit event fired.
-func (a *Auth) UserRoleGrant(ctx context.Context, userID, roleName string) error {
+func (a *Auth) UserRoleGrant(ctx context.Context, actorID, userID, roleName string) error {
 	role, err := a.Repo.RoleGetByName(ctx, roleName)
 	if err != nil {
 		xlog.Debug("grant role failed: role not found", "role", roleName, "err", err)
@@ -86,15 +86,15 @@ func (a *Auth) UserRoleGrant(ctx context.Context, userID, roleName string) error
 	if !granted {
 		return nil
 	}
-	a.recordAuditEvent(ctx, userID, models.AuditEventRoleGranted, models.JSONMap{"role": roleName})
-	xlog.Info("role granted", "user_id", userID, "role", roleName)
+	a.recordAuditEvent(ctx, userID, models.AuditEventRoleGranted, models.JSONMap{"role": roleName, "actor_id": actorID})
+	xlog.Info("role granted", "user_id", userID, "role", roleName, "actor_id", actorID)
 	return nil
 }
 
 // UserRoleRevoke revokes a role from a user by role name, and records an
 // audit event. Idempotent: revoking a role the user doesn't hold is a
 // no-op, no audit event fired.
-func (a *Auth) UserRoleRevoke(ctx context.Context, userID, roleName string) error {
+func (a *Auth) UserRoleRevoke(ctx context.Context, actorID, userID, roleName string) error {
 	role, err := a.Repo.RoleGetByName(ctx, roleName)
 	if err != nil {
 		xlog.Debug("revoke role failed: role not found", "role", roleName, "err", err)
@@ -108,8 +108,8 @@ func (a *Auth) UserRoleRevoke(ctx context.Context, userID, roleName string) erro
 	if !revoked {
 		return nil
 	}
-	a.recordAuditEvent(ctx, userID, models.AuditEventRoleRevoked, models.JSONMap{"role": roleName})
-	xlog.Info("role revoked", "user_id", userID, "role", roleName)
+	a.recordAuditEvent(ctx, userID, models.AuditEventRoleRevoked, models.JSONMap{"role": roleName, "actor_id": actorID})
+	xlog.Info("role revoked", "user_id", userID, "role", roleName, "actor_id", actorID)
 	return nil
 }
 

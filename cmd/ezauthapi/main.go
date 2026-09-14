@@ -142,7 +142,10 @@ func createAdmin(cfg *config.Config, args []string) {
 		}
 	}
 
-	if err := auth.Service.UserRoleGrant(ctx, user.ID, *role); err != nil {
+	// "system" attributes this grant to the bootstrap CLI itself in the
+	// audit log, since there's no authenticated admin user performing it --
+	// this command IS the mechanism for creating the first admin.
+	if err := auth.Service.UserRoleGrant(ctx, "system", user.ID, *role); err != nil {
 		log.Fatalf("failed to grant role %q: %v", *role, err)
 	}
 

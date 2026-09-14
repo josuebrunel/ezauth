@@ -294,7 +294,13 @@ func (h *Handler) UserRoleGrant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.svc.UserRoleGrant(r.Context(), id, req.RoleName); err != nil {
+	actorID, err := GetUserID(r.Context())
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusInternalServerError, ErrUserNotFoundInContext)
+		return
+	}
+
+	if err := h.svc.UserRoleGrant(r.Context(), actorID, id, req.RoleName); err != nil {
 		WriteJSONResponseError(w, http.StatusBadRequest, err)
 		return
 	}
@@ -304,7 +310,8 @@ func (h *Handler) UserRoleGrant(w http.ResponseWriter, r *http.Request) {
 // FormUserRoleGrant grants a role to a user for the current session user.
 // ezauth performs no authorization check here — see RoleCreate.
 func (h *Handler) FormUserRoleGrant(w http.ResponseWriter, r *http.Request) {
-	if _, err := h.GetSessionUser(r.Context()); err != nil {
+	actor, err := h.GetSessionUser(r.Context())
+	if err != nil {
 		WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
 		return
 	}
@@ -314,7 +321,7 @@ func (h *Handler) FormUserRoleGrant(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := chi.URLParam(r, "id")
-	if err := h.svc.UserRoleGrant(r.Context(), id, r.FormValue("role_name")); err != nil {
+	if err := h.svc.UserRoleGrant(r.Context(), actor.ID, id, r.FormValue("role_name")); err != nil {
 		WriteJSONResponseError(w, http.StatusBadRequest, err)
 		return
 	}
@@ -377,7 +384,12 @@ func (h *Handler) FormUserRolesList(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UserRoleRevoke(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	roleName := chi.URLParam(r, "role_name")
-	if err := h.svc.UserRoleRevoke(r.Context(), id, roleName); err != nil {
+	actorID, err := GetUserID(r.Context())
+	if err != nil {
+		WriteJSONResponseError(w, http.StatusInternalServerError, ErrUserNotFoundInContext)
+		return
+	}
+	if err := h.svc.UserRoleRevoke(r.Context(), actorID, id, roleName); err != nil {
 		WriteJSONResponseError(w, http.StatusBadRequest, err)
 		return
 	}
@@ -387,14 +399,15 @@ func (h *Handler) UserRoleRevoke(w http.ResponseWriter, r *http.Request) {
 // FormUserRoleRevoke revokes a role from a user for the current session user.
 // ezauth performs no authorization check here — see RoleCreate.
 func (h *Handler) FormUserRoleRevoke(w http.ResponseWriter, r *http.Request) {
-	if _, err := h.GetSessionUser(r.Context()); err != nil {
+	actor, err := h.GetSessionUser(r.Context())
+	if err != nil {
 		WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
 		return
 	}
 
 	id := chi.URLParam(r, "id")
 	roleName := chi.URLParam(r, "role_name")
-	if err := h.svc.UserRoleRevoke(r.Context(), id, roleName); err != nil {
+	if err := h.svc.UserRoleRevoke(r.Context(), actor.ID, id, roleName); err != nil {
 		WriteJSONResponseError(w, http.StatusBadRequest, err)
 		return
 	}

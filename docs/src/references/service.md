@@ -393,9 +393,10 @@ func (a *Auth) PermissionCreate(ctx context.Context, name, description string) (
 func (a *Auth) PermissionsList(ctx context.Context) ([]*models.Permission, error)
 func (a *Auth) PermissionDelete(ctx context.Context, id string) error
 
-// Idempotent; each records an AuditEventRoleGranted/AuditEventRoleRevoked audit event.
-func (a *Auth) UserRoleGrant(ctx context.Context, userID, roleName string) error
-func (a *Auth) UserRoleRevoke(ctx context.Context, userID, roleName string) error
+// Idempotent; each records an AuditEventRoleGranted/AuditEventRoleRevoked audit
+// event with actorID (the granting/revoking admin) in its metadata.
+func (a *Auth) UserRoleGrant(ctx context.Context, actorID, userID, roleName string) error
+func (a *Auth) UserRoleRevoke(ctx context.Context, actorID, userID, roleName string) error
 
 func (a *Auth) RolePermissionGrant(ctx context.Context, roleName, permissionName string) error
 func (a *Auth) RolePermissionRevoke(ctx context.Context, roleName, permissionName string) error

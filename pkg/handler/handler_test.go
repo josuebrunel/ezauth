@@ -689,7 +689,7 @@ func grantAdminRole(t *testing.T, h *Handler, userID string) {
 	if _, err := h.svc.RoleCreate(ctx, role, "test fixture admin role"); err != nil && err.Error() != "role already exists" {
 		t.Fatalf("failed to create %q role: %v", role, err)
 	}
-	if err := h.svc.UserRoleGrant(ctx, userID, role); err != nil {
+	if err := h.svc.UserRoleGrant(ctx, "test-fixture", userID, role); err != nil {
 		t.Fatalf("failed to grant %q role to %s: %v", role, userID, err)
 	}
 }

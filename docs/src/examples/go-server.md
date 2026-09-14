@@ -149,7 +149,7 @@ Beyond session auth, `auth.Service` (or the top-level `auth.*` facade methods) e
 ```go
 // Define a role once, then gate a route with it.
 role, _ := auth.RoleCreate(ctx, "admin", "full dashboard access")
-_ = auth.UserRoleGrant(ctx, user.ID, "admin")
+_ = auth.UserRoleGrant(ctx, callerID, user.ID, "admin") // callerID: the granting admin, recorded on the audit event
 
 r.With(auth.RequireRole("admin")).Get("/admin/settings", adminSettingsHandler)
 ```

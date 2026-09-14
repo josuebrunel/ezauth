@@ -365,15 +365,15 @@ func (e *EzAuth) PermissionCreate(ctx context.Context, name, description string)
 }
 
 // UserRoleGrant grants a role to a user by role name. Idempotent, and
-// records an audit event (models.AuditEventRoleGranted).
-func (e *EzAuth) UserRoleGrant(ctx context.Context, userID, roleName string) error {
-	return e.Service.UserRoleGrant(ctx, userID, roleName)
+// records an audit event (models.AuditEventRoleGranted) attributed to actorID.
+func (e *EzAuth) UserRoleGrant(ctx context.Context, actorID, userID, roleName string) error {
+	return e.Service.UserRoleGrant(ctx, actorID, userID, roleName)
 }
 
 // UserRoleRevoke revokes a role from a user by role name. Idempotent, and
-// records an audit event (models.AuditEventRoleRevoked).
-func (e *EzAuth) UserRoleRevoke(ctx context.Context, userID, roleName string) error {
-	return e.Service.UserRoleRevoke(ctx, userID, roleName)
+// records an audit event (models.AuditEventRoleRevoked) attributed to actorID.
+func (e *EzAuth) UserRoleRevoke(ctx context.Context, actorID, userID, roleName string) error {
+	return e.Service.UserRoleRevoke(ctx, actorID, userID, roleName)
 }
 
 // RolePermissionGrant grants a permission to a role, both identified by name.

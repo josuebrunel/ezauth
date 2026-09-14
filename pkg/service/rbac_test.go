@@ -49,13 +49,13 @@ func TestRBAC(t *testing.T) {
 			t.Error("expected user not to have role before granting")
 		}
 
-		if err := auth.UserRoleGrant(ctx, user.ID, "editor"); err != nil {
+		if err := auth.UserRoleGrant(ctx, "test-admin", user.ID, "editor"); err != nil {
 			t.Fatalf("UserRoleGrant() unexpected error: %v", err)
 		}
 		// Granting again must be a no-op, not an error (idempotent) — and must
 		// not fire a second audit event, since it's a DB-level no-op (RowsAffected
 		// == 0), not a fresh grant.
-		if err := auth.UserRoleGrant(ctx, user.ID, "editor"); err != nil {
+		if err := auth.UserRoleGrant(ctx, "test-admin", user.ID, "editor"); err != nil {
 			t.Fatalf("UserRoleGrant() (repeat) unexpected error: %v", err)
 		}
 
@@ -65,6 +65,9 @@ func TestRBAC(t *testing.T) {
 		}
 		if len(auditResult.Events) != 1 {
 			t.Errorf("expected exactly 1 role.granted audit event after granting the same role twice, got %d", len(auditResult.Events))
+		}
+		if actorID, _ := auditResult.Events[0].Metadata["actor_id"].(string); actorID != "test-admin" {
+			t.Errorf("expected the audit event to record actor_id %q, got %q (metadata: %+v)", "test-admin", actorID, auditResult.Events[0].Metadata)
 		}
 
 		has, err = auth.UserHasRole(ctx, user.ID, "editor")
@@ -124,11 +127,11 @@ func TestRBAC(t *testing.T) {
 	})
 
 	t.Run("UserRoleRevoke_IdempotentAndHasRole", func(t *testing.T) {
-		if err := auth.UserRoleRevoke(ctx, user.ID, "editor"); err != nil {
+		if err := auth.UserRoleRevoke(ctx, "test-admin", user.ID, "editor"); err != nil {
 			t.Fatalf("UserRoleRevoke() unexpected error: %v", err)
 		}
 		// Revoking again must be a no-op, not an error (idempotent).
-		if err := auth.UserRoleRevoke(ctx, user.ID, "editor"); err != nil {
+		if err := auth.UserRoleRevoke(ctx, "test-admin", user.ID, "editor"); err != nil {
 			t.Fatalf("UserRoleRevoke() (repeat) unexpected error: %v", err)
 		}
 
@@ -138,6 +141,17 @@ func TestRBAC(t *testing.T) {
 		}
 		if has {
 			t.Error("expected user not to have role after revoking")
+		}
+
+		auditResult, err := auth.AuditLogs(ctx, user.ID, ListAuditLogsOptions{EventType: models.AuditEventRoleRevoked})
+		if err != nil {
+			t.Fatalf("AuditLogs() unexpected error: %v", err)
+		}
+		if len(auditResult.Events) != 1 {
+			t.Fatalf("expected exactly 1 role.revoked audit event, got %d", len(auditResult.Events))
+		}
+		if actorID, _ := auditResult.Events[0].Metadata["actor_id"].(string); actorID != "test-admin" {
+			t.Errorf("expected the audit event to record actor_id %q, got %q (metadata: %+v)", "test-admin", actorID, auditResult.Events[0].Metadata)
 		}
 	})
 
@@ -150,7 +164,7 @@ func TestRBAC(t *testing.T) {
 		if err != nil {
 			t.Fatalf("PermissionCreate() unexpected error: %v", err)
 		}
-		if err := auth.UserRoleGrant(ctx, user.ID, "temp-role"); err != nil {
+		if err := auth.UserRoleGrant(ctx, "test-admin", user.ID, "temp-role"); err != nil {
 			t.Fatalf("UserRoleGrant() unexpected error: %v", err)
 		}
 		if err := auth.RolePermissionGrant(ctx, "temp-role", "temp:perm"); err != nil {
