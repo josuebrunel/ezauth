@@ -868,3 +868,47 @@ func TestHandler_RejectsOversizedRequestBody(t *testing.T) {
 		t.Errorf("expected 400 for an oversized body (decode fails once MaxBytesReader's limit is hit), got %d: %s", w.Code, w.Body.String())
 	}
 }
+
+func TestHandler_SecureCookies(t *testing.T) {
+	newHandler := func(t *testing.T, baseURL string, forceSecure bool) *Handler {
+		dialect, dsn := util.GetTestDBConfig("handler_secure_cookies_test")
+		cfg := &config.Config{
+			DB:                 config.Database{Dialect: dialect, DSN: dsn},
+			JWTSecret:          "test-secret",
+			Hashing:            config.Hashing{BcryptCost: 4},
+			Addr:               ":8080",
+			ApiKey:             "test-api-key",
+			BaseURL:            baseURL,
+			ForceSecureCookies: forceSecure,
+		}
+		authSvc, err := service.NewFromConfig(cfg, "auth")
+		if err != nil {
+			t.Fatalf("failed to create auth service: %v", err)
+		}
+		if err := ensureMigrated(authSvc.Repo.DB(), dialect, dsn); err != nil {
+			t.Fatalf("failed to run migrations: %v", err)
+		}
+		return New(authSvc, "auth")
+	}
+
+	t.Run("http BaseURL without ForceSecureCookies is not Secure", func(t *testing.T) {
+		h := newHandler(t, "http://localhost:8080", false)
+		if h.Session.Cookie.Secure {
+			t.Error("expected Secure=false for an http:// BaseURL with ForceSecureCookies unset")
+		}
+	})
+
+	t.Run("https BaseURL is Secure regardless of ForceSecureCookies", func(t *testing.T) {
+		h := newHandler(t, "https://example.com", false)
+		if !h.Session.Cookie.Secure {
+			t.Error("expected Secure=true for an https:// BaseURL")
+		}
+	})
+
+	t.Run("ForceSecureCookies overrides an http BaseURL", func(t *testing.T) {
+		h := newHandler(t, "http://localhost:8080", true)
+		if !h.Session.Cookie.Secure {
+			t.Error("expected Secure=true when ForceSecureCookies is set, even with an http:// BaseURL (e.g. behind a TLS-terminating proxy)")
+		}
+	})
+}

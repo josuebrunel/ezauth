@@ -120,11 +120,16 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 		svc:  svc,
 	}
 
+	secureCookies := h.svc.Cfg.ForceSecureCookies || strings.HasPrefix(h.svc.Cfg.BaseURL, "https://")
+	if !secureCookies && !h.svc.Cfg.Debug {
+		xlog.Warn("session/CSRF cookies are not marked Secure: BASE_URL doesn't start with https:// and FORCE_SECURE_COOKIES is unset. If ezauth sits behind a TLS-terminating reverse proxy, set EZAUTH_FORCE_SECURE_COOKIES=true.")
+	}
+
 	// Initialize Session Manager
 	h.Session = scs.New()
 	h.Session.Cookie.Name = "ezauthsess"
 	h.Session.Cookie.HttpOnly = true
-	h.Session.Cookie.Secure = strings.HasPrefix(h.svc.Cfg.BaseURL, "https://")
+	h.Session.Cookie.Secure = secureCookies
 	h.Session.Cookie.Persist = true
 
 	for _, opt := range options {
@@ -168,7 +173,7 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 				xlog.Warn("CSRF_SECRET not set, falling back to JWT_SECRET. Set a dedicated EZAUTH_CSRF_SECRET for proper key separation.")
 				csrfKey = h.svc.Cfg.JWTSecret
 			}
-			r.Use(csrf.Protect([]byte(csrfKey), csrf.Secure(strings.HasPrefix(h.svc.Cfg.BaseURL, "https://"))))
+			r.Use(csrf.Protect([]byte(csrfKey), csrf.Secure(secureCookies)))
 
 			r.Get("/csrf", func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("X-CSRF-Token", csrf.Token(r))

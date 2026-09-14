@@ -250,6 +250,13 @@ type Config struct {
 	BaseURL        string         `json:"base_url" env:"BASE_URL" default:"http://localhost:8080"`
 	ApiKey         string         `json:"api_key" env:"API_KEY" required:"true"`
 	Debug          bool           `json:"debug" env:"DEBUG" default:"false"`
+	// ForceSecureCookies forces the Secure flag on session/CSRF cookies
+	// regardless of BaseURL's scheme. By default, Secure is derived from
+	// strings.HasPrefix(BaseURL, "https://"), which silently omits Secure
+	// if BaseURL is left at its http:// default behind a TLS-terminating
+	// reverse proxy. Set this explicitly in that scenario instead of
+	// relying on BaseURL parsing.
+	ForceSecureCookies bool `json:"force_secure_cookies" env:"FORCE_SECURE_COOKIES" default:"false"`
 	DB             Database       `json:"db"`
 	JWTSecret      string         `json:"jwt_secret" env:"JWT_SECRET" required:"true"`
 	CSRFSecret     string         `json:"csrf_secret" env:"CSRF_SECRET"`
