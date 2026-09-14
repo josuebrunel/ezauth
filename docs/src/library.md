@@ -131,3 +131,10 @@ If your application already has a `*sql.DB` connection, you can use `NewWithDB`:
 ```go
 auth, err := ezauth.NewWithDB(&cfg, myDBConnection, "auth")
 ```
+
+`NewWithDB` applies ezauth's default connection pool limits (25 max open, 5
+max idle, 30 minute max lifetime) to `myDBConnection`, overwriting whatever it
+was configured with. If you need different limits, call
+`myDBConnection.SetMaxOpenConns` / `SetMaxIdleConns` / `SetConnMaxLifetime`
+after `NewWithDB` returns -- they take effect immediately on the same
+connection pool.

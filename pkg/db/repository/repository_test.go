@@ -1,8 +1,11 @@
 package repository
 
 import (
+	"database/sql"
 	"strings"
 	"testing"
+
+	_ "modernc.org/sqlite"
 )
 
 func TestOpen_RejectsUnknownDialect(t *testing.T) {
@@ -24,6 +27,24 @@ func TestOpen_AcceptsSqliteAliases(t *testing.T) {
 			}
 			defer repo.Close()
 		})
+	}
+}
+
+func TestNew_AppliesPoolDefaults(t *testing.T) {
+	db, err := sql.Open("sqlite", "file::memory:?cache=shared")
+	if err != nil {
+		t.Fatalf("sql.Open failed: %v", err)
+	}
+	defer db.Close()
+
+	// database/sql's own default is unlimited open connections -- confirm
+	// New overrides it rather than a caller silently inheriting that default.
+	repo := New(db, "sqlite")
+	defer repo.Close()
+
+	stats := db.Stats()
+	if stats.MaxOpenConnections != defaultMaxOpenConns {
+		t.Errorf("expected MaxOpenConnections %d after New, got %d", defaultMaxOpenConns, stats.MaxOpenConnections)
 	}
 }
 

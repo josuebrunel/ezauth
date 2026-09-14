@@ -163,9 +163,19 @@ type Repository struct {
 }
 
 // New creates a new Repository with the given database connection and dialect.
+//
+// It applies the same connection pool defaults as Open (MaxOpenConns,
+// MaxIdleConns, ConnMaxLifetime) to db, since database/sql's own default of
+// unlimited open connections is rarely what a caller wants. To use different
+// limits, call db.SetMaxOpenConns/SetMaxIdleConns/SetConnMaxLifetime on your
+// own *sql.DB reference after calling New -- they take effect immediately.
 func New(db *sql.DB, dialect string) *Repository {
 	querier := getDialectQuery(dialect)
 	bdb := bob.NewDB(db)
+
+	db.SetMaxOpenConns(defaultMaxOpenConns)
+	db.SetMaxIdleConns(defaultMaxIdleConns)
+	db.SetConnMaxLifetime(defaultConnMaxLifetime)
 
 	return &Repository{
 		db:      db,

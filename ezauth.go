@@ -99,6 +99,9 @@ func New(cfg *config.Config, path string) (*EzAuth, error) {
 
 // NewWithDB creates a new EzAuth instance using an existing database connection.
 // path is the base URL path where the authentication routes will be mounted (e.g., "auth").
+// db's connection pool limits (MaxOpenConns/MaxIdleConns/ConnMaxLifetime) are
+// overwritten with ezauth's defaults; call the corresponding db.SetXxx method
+// on your own *sql.DB reference after NewWithDB returns if you need different limits.
 func NewWithDB(cfg *config.Config, db *sql.DB, path string) (*EzAuth, error) {
 	applyLogLevel(cfg)
 
