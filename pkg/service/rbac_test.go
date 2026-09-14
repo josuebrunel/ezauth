@@ -195,4 +195,39 @@ func TestRBAC(t *testing.T) {
 			t.Fatalf("PermissionDelete() unexpected error: %v", err)
 		}
 	})
+
+	t.Run("RoleDelete_RefusesTheConfiguredAdminRole", func(t *testing.T) {
+		auth.Cfg.AdminRole = "admin"
+		adminRole, err := auth.RoleCreate(ctx, "admin", "full admin access")
+		if err != nil {
+			t.Fatalf("RoleCreate() unexpected error: %v", err)
+		}
+		if err := auth.UserRoleGrant(ctx, "test-admin", user.ID, "admin"); err != nil {
+			t.Fatalf("UserRoleGrant() unexpected error: %v", err)
+		}
+
+		if err := auth.RoleDelete(ctx, adminRole.ID); err != ErrCannotDeleteAdminRole {
+			t.Fatalf("expected ErrCannotDeleteAdminRole, got %v", err)
+		}
+
+		// The role and the grant must both still exist -- the refusal must
+		// not have partially applied.
+		has, err := auth.UserHasRole(ctx, user.ID, "admin")
+		if err != nil {
+			t.Fatalf("UserHasRole() unexpected error: %v", err)
+		}
+		if !has {
+			t.Error("expected the admin grant to survive the refused delete")
+		}
+
+		// A role by any other name deletes normally, even with an
+		// AdminRole configured.
+		other, err := auth.RoleCreate(ctx, "not-admin", "")
+		if err != nil {
+			t.Fatalf("RoleCreate() unexpected error: %v", err)
+		}
+		if err := auth.RoleDelete(ctx, other.ID); err != nil {
+			t.Fatalf("expected a non-admin role to delete normally, got %v", err)
+		}
+	})
 }

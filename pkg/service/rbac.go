@@ -35,9 +35,29 @@ func (a *Auth) RolesList(ctx context.Context) ([]*models.Role, error) {
 	return a.Repo.RolesList(ctx)
 }
 
+// ErrCannotDeleteAdminRole is returned by RoleDelete when asked to delete
+// the role currently configured as Cfg.AdminRole.
+var ErrCannotDeleteAdminRole = errors.New("cannot delete the configured admin role")
+
 // RoleDelete deletes a role. Matching user/role and role/permission
 // assignments are removed via ON DELETE CASCADE.
+//
+// Refuses to delete the role named Cfg.AdminRole: since every admin grant is
+// a row in that cascade, deleting the role itself would silently revoke
+// every admin at once -- including, in the default admin-authz
+// configuration, whichever admin just made this call -- locking the whole
+// admin-gated route subtree with no way back in short of DB surgery or
+// re-running the create-admin CLI bootstrap. Pass a different
+// Cfg.AdminRole (or WithAdminAuthz(nil)/a custom gate) first if this role
+// genuinely needs to go away.
 func (a *Auth) RoleDelete(ctx context.Context, id string) error {
+	role, err := a.Repo.RoleGetByID(ctx, id)
+	if err != nil {
+		return errors.New("role not found")
+	}
+	if role.Name == a.Cfg.AdminRole {
+		return ErrCannotDeleteAdminRole
+	}
 	return a.Repo.RoleDelete(ctx, id)
 }
 
