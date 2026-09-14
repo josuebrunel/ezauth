@@ -226,6 +226,21 @@ func (q *SqliteQuerier) QueryUserSetLockoutState(ctx context.Context, userID str
 	)
 }
 
+// QueryUserIncrementFailedLoginAttempts atomically increments
+// failed_login_attempts (failed_login_attempts = failed_login_attempts + 1)
+// in a single UPDATE, avoiding the read-then-write race a Go-computed
+// "attempts + 1" value written via QueryUserSetLockoutState would have
+// under concurrent failed logins.
+func (q *SqliteQuerier) QueryUserIncrementFailedLoginAttempts(ctx context.Context, userID string) bob.Query {
+	return sqlite.Update(
+		um.Table(models.TableUser),
+		um.Set(sqlite.Raw(models.ColumnFailedLoginAttempts+" = "+models.ColumnFailedLoginAttempts+" + 1")),
+		um.SetCol(models.ColumnUpdatedAt).ToArg(time.Now().UTC()),
+		um.Where(sqlite.Quote("id").EQ(sqlite.Arg(userID))),
+		um.Returning("*"),
+	)
+}
+
 func (q *SqliteQuerier) QueryUserDelete(ctx context.Context, id string) bob.Query {
 	return sqlite.Delete(dm.From(models.TableUser), dm.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))))
 }

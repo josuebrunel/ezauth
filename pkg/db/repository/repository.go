@@ -40,6 +40,7 @@ type UserQuerier interface {
 	QueryUserGetByProvider(ctx context.Context, provider, providerID string) bob.Query
 	QueryUserUpdate(ctx context.Context, user *models.User) bob.Query
 	QueryUserSetLockoutState(ctx context.Context, userID string, attempts int, lockedUntil *time.Time, isActive bool) bob.Query
+	QueryUserIncrementFailedLoginAttempts(ctx context.Context, userID string) bob.Query
 	QueryUserDelete(ctx context.Context, id string) bob.Query
 	QueryUsersList(ctx context.Context, filter models.UserListFilter, limit, offset int) bob.Query
 }
@@ -309,6 +310,32 @@ func (r Repository) UserSetLockoutState(ctx context.Context, userID string, atte
 	updatedUser, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
 	if err != nil {
 		xlog.Error("Failed to set user lockout state", "error", err, "user_id", userID)
+		return nil, err
+	}
+	return updatedUser, nil
+}
+
+// UserIncrementFailedLoginAttempts atomically increments a user's failed
+// login counter (failed_login_attempts = failed_login_attempts + 1) in a
+// single UPDATE statement, so concurrent failed logins against the same
+// account can't race on a stale read-modify-write and undercount attempts
+// the way computing the new value in Go and writing it back via
+// UserSetLockoutState would. Returns the row as it stands after the
+// increment, so the caller can act on the authoritative new count.
+func (r Repository) UserIncrementFailedLoginAttempts(ctx context.Context, userID string) (*models.User, error) {
+	query := r.QueryUserIncrementFailedLoginAttempts(ctx, userID)
+
+	if r.Opts.Dialect == DialectMysql {
+		if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+			xlog.Error("Failed to increment failed login attempts", "error", err, "user_id", userID)
+			return nil, err
+		}
+		return r.UserGetByID(ctx, userID)
+	}
+
+	updatedUser, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
+	if err != nil {
+		xlog.Error("Failed to increment failed login attempts", "error", err, "user_id", userID)
 		return nil, err
 	}
 	return updatedUser, nil

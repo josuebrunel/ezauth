@@ -213,6 +213,21 @@ func (q *PSQLQuerier) QueryUserUpdate(ctx context.Context, user *models.User) bo
 	return psql.Update(qm...)
 }
 
+// QueryUserIncrementFailedLoginAttempts atomically increments
+// failed_login_attempts (failed_login_attempts = failed_login_attempts + 1)
+// in a single UPDATE, avoiding the read-then-write race a Go-computed
+// "attempts + 1" value written via QueryUserSetLockoutState would have
+// under concurrent failed logins.
+func (q *PSQLQuerier) QueryUserIncrementFailedLoginAttempts(ctx context.Context, userID string) bob.Query {
+	return psql.Update(
+		um.Table(psql.Quote(models.TableUser)),
+		um.Set(psql.Raw(models.ColumnFailedLoginAttempts+" = "+models.ColumnFailedLoginAttempts+" + 1")),
+		um.SetCol(models.ColumnUpdatedAt).ToArg(time.Now().UTC()),
+		um.Where(psql.Quote("id").EQ(psql.Arg(userID))),
+		um.Returning("*"),
+	)
+}
+
 func (q *PSQLQuerier) QueryUserCheckPasswordHash(ctx context.Context, email, passwordHash string) bob.Query {
 	return psql.Select(sm.From(psql.Quote(models.TableUser)), sm.Where(psql.Quote(models.ColumnEmail).EQ(psql.Arg(email)).And(psql.Quote(models.ColumnPasswordHash).EQ(psql.Arg(passwordHash)))))
 }

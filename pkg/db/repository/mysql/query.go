@@ -221,6 +221,20 @@ func (q *MysqlQuerier) QueryUserSetLockoutState(ctx context.Context, userID stri
 	)
 }
 
+// QueryUserIncrementFailedLoginAttempts atomically increments
+// failed_login_attempts (failed_login_attempts = failed_login_attempts + 1)
+// in a single UPDATE, avoiding the read-then-write race a Go-computed
+// "attempts + 1" value written via QueryUserSetLockoutState would have
+// under concurrent failed logins.
+func (q *MysqlQuerier) QueryUserIncrementFailedLoginAttempts(ctx context.Context, userID string) bob.Query {
+	return mysql.Update(
+		um.Table(models.TableUser),
+		um.Set(mysql.Raw(models.ColumnFailedLoginAttempts+" = "+models.ColumnFailedLoginAttempts+" + 1")),
+		um.SetCol(models.ColumnUpdatedAt).ToArg(time.Now().UTC()),
+		um.Where(mysql.Quote("id").EQ(mysql.Arg(userID))),
+	)
+}
+
 func (q *MysqlQuerier) QueryUserDelete(ctx context.Context, id string) bob.Query {
 	return mysql.Delete(dm.From(models.TableUser), dm.Where(mysql.Quote("id").EQ(mysql.Arg(id))))
 }

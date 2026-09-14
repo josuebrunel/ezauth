@@ -283,24 +283,30 @@ func (a *Auth) UserAuthenticate(ctx context.Context, req RequestBasicAuth) (*mod
 
 // recordFailedLogin increments a user's failed-login counter and, once it
 // reaches Cfg.AccountLockout.MaxAttempts, locks the account for
-// Cfg.AccountLockout.LockoutDuration.
+// Cfg.AccountLockout.LockoutDuration. The counter is incremented atomically
+// at the DB layer (UserIncrementFailedLoginAttempts) rather than computed
+// here from the already-fetched user and written back, so concurrent failed
+// logins against the same account can't race on a stale read and
+// undercount attempts.
 func (a *Auth) recordFailedLogin(ctx context.Context, user *models.User) {
-	attempts := user.FailedLoginAttempts + 1
-	isActive := true
-	var lockedUntil *time.Time
-	if attempts >= a.Cfg.AccountLockout.MaxAttempts {
-		isActive = false
-		until := time.Now().Add(a.Cfg.AccountLockout.LockoutDuration)
-		lockedUntil = &until
-		xlog.Warn("account locked after too many failed login attempts", "user_id", user.ID, "attempts", attempts)
-	}
-	if _, err := a.Repo.UserSetLockoutState(ctx, user.ID, attempts, lockedUntil, isActive); err != nil {
+	updated, err := a.Repo.UserIncrementFailedLoginAttempts(ctx, user.ID)
+	if err != nil {
 		xlog.Error("failed to record failed login attempt", "user_id", user.ID, "err", err)
+		return
 	}
-	if !isActive {
-		if err := a.Hook.AfterAccountLocked(ctx, user); err != nil {
-			xlog.Error("hook AfterAccountLocked failed", "user_id", user.ID, "err", err)
-		}
+
+	if updated.FailedLoginAttempts < a.Cfg.AccountLockout.MaxAttempts {
+		return
+	}
+
+	until := time.Now().Add(a.Cfg.AccountLockout.LockoutDuration)
+	xlog.Warn("account locked after too many failed login attempts", "user_id", user.ID, "attempts", updated.FailedLoginAttempts)
+	if _, err := a.Repo.UserSetLockoutState(ctx, user.ID, updated.FailedLoginAttempts, &until, false); err != nil {
+		xlog.Error("failed to lock account", "user_id", user.ID, "err", err)
+		return
+	}
+	if err := a.Hook.AfterAccountLocked(ctx, user); err != nil {
+		xlog.Error("hook AfterAccountLocked failed", "user_id", user.ID, "err", err)
 	}
 }
 

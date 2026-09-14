@@ -120,6 +120,43 @@ func TestAccountLockout(t *testing.T) {
 	})
 }
 
+// TestRecordFailedLogin_ConcurrentCallsDoNotUndercount reproduces the race
+// the atomic UserIncrementFailedLoginAttempts fix closes: two concurrent
+// failed-login requests both read the same FailedLoginAttempts snapshot
+// before either writes back. The old implementation computed
+// "user.FailedLoginAttempts + 1" from that (possibly stale) in-memory value
+// and wrote the absolute result, so both calls here would have written back
+// 1, losing an increment. recordFailedLogin no longer reads the passed-in
+// user's counter at all -- it increments atomically at the DB layer -- so
+// calling it repeatedly with the very same stale snapshot must still land
+// every increment.
+func TestRecordFailedLogin_ConcurrentCallsDoNotUndercount(t *testing.T) {
+	auth := setupLockoutTestDB(t, 100, time.Hour) // high threshold: this test isn't about lockout itself
+	ctx := context.Background()
+
+	email := util.UniqueEmail("lockout_race")
+	if _, err := auth.UserCreate(ctx, &RequestBasicAuth{Email: email, Password: "correct-horse-battery"}); err != nil {
+		t.Fatalf("UserCreate failed: %v", err)
+	}
+	staleUser, err := auth.Repo.UserGetByEmail(ctx, email)
+	if err != nil {
+		t.Fatalf("failed to get user: %v", err)
+	}
+
+	const calls = 5
+	for i := 0; i < calls; i++ {
+		auth.recordFailedLogin(ctx, staleUser) // same stale snapshot every time, FailedLoginAttempts=0
+	}
+
+	updated, err := auth.Repo.UserGetByEmail(ctx, email)
+	if err != nil {
+		t.Fatalf("failed to get user: %v", err)
+	}
+	if updated.FailedLoginAttempts != calls {
+		t.Fatalf("expected FailedLoginAttempts=%d after %d calls sharing a stale snapshot, got %d (lost updates -- read-modify-write race)", calls, calls, updated.FailedLoginAttempts)
+	}
+}
+
 func TestAccountLockoutDisabledByDefault(t *testing.T) {
 	auth := setupBasicAuthTestDB(t)
 	ctx := context.Background()
