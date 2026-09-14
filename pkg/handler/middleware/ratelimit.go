@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/josuebrunel/gopkg/xlog"
 )
 
 type windowEntry struct {
@@ -14,9 +16,11 @@ type windowEntry struct {
 }
 
 type RateLimiter struct {
-	mu      sync.Mutex
-	windows map[string]*windowEntry
-	cfg     RateLimitConfig
+	mu        sync.Mutex
+	windows   map[string]*windowEntry
+	cfg       RateLimitConfig
+	done      chan struct{}
+	closeOnce sync.Once
 }
 
 type RateLimitConfig struct {
@@ -30,25 +34,50 @@ func NewRateLimiter(cfg RateLimitConfig) *RateLimiter {
 	rl := &RateLimiter{
 		windows: make(map[string]*windowEntry),
 		cfg:     cfg,
+		done:    make(chan struct{}),
 	}
 	if cfg.Enabled {
-		go rl.cleanupLoop()
+		if cfg.Window <= 0 {
+			// time.NewTicker panics for a non-positive duration; fail
+			// safe instead of crashing the goroutine below with an
+			// uncontrolled panic far from the misconfiguration itself.
+			xlog.Error("rate limiter Window must be positive; cleanup disabled and stale entries will not be pruned", "window", cfg.Window)
+		} else {
+			go rl.cleanupLoop()
+		}
 	}
 	return rl
+}
+
+// Close stops the cleanup goroutine, if one was started. Safe to call more
+// than once, and safe to call even if the limiter was never Enabled (a
+// no-op in that case, since no goroutine was ever started). Callers that
+// construct a RateLimiter outside of Handler's own long-lived singleton
+// (e.g. per-test or per-request) should call this to avoid leaking the
+// goroutine and its ticker.
+func (rl *RateLimiter) Close() {
+	rl.closeOnce.Do(func() {
+		close(rl.done)
+	})
 }
 
 func (rl *RateLimiter) cleanupLoop() {
 	ticker := time.NewTicker(rl.cfg.Window)
 	defer ticker.Stop()
-	for range ticker.C {
-		rl.mu.Lock()
-		now := time.Now()
-		for key, entry := range rl.windows {
-			if now.After(entry.expiresAt) {
-				delete(rl.windows, key)
+	for {
+		select {
+		case <-rl.done:
+			return
+		case <-ticker.C:
+			rl.mu.Lock()
+			now := time.Now()
+			for key, entry := range rl.windows {
+				if now.After(entry.expiresAt) {
+					delete(rl.windows, key)
+				}
 			}
+			rl.mu.Unlock()
 		}
-		rl.mu.Unlock()
 	}
 }
 

@@ -250,3 +250,43 @@ func TestRateLimiter_ByClientIPFalse(t *testing.T) {
 		t.Errorf("second request (different IP, same bucket): expected 429, got %d", rec.Code)
 	}
 }
+
+func TestRateLimiter_ZeroWindowDoesNotPanic(t *testing.T) {
+	// time.NewTicker panics for a non-positive duration; NewRateLimiter must
+	// not start the cleanup goroutine in that case instead of crashing it.
+	rl := NewRateLimiter(RateLimitConfig{Enabled: true, Requests: 5, Window: 0, ByClientIP: true})
+	defer rl.Close()
+
+	handler := rl.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	req := httptest.NewRequest("GET", "/", nil)
+	req.RemoteAddr = "192.0.2.10:12345"
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+}
+
+func TestRateLimiter_CloseStopsCleanupGoroutine(t *testing.T) {
+	rl := NewRateLimiter(RateLimitConfig{Enabled: true, Requests: 5, Window: time.Millisecond, ByClientIP: true})
+
+	rl.Close()
+
+	select {
+	case <-rl.done:
+		// closed, as expected
+	default:
+		t.Fatal("expected rl.done to be closed after Close()")
+	}
+
+	// Must not panic when called again.
+	rl.Close()
+}
+
+func TestRateLimiter_CloseIsSafeWhenNeverEnabled(t *testing.T) {
+	rl := NewRateLimiter(RateLimitConfig{Enabled: false})
+	rl.Close() // no cleanup goroutine was ever started; must not panic
+	rl.Close() // and must still be safe to call twice
+}
