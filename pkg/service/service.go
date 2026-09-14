@@ -14,11 +14,14 @@ import (
 
 // Auth handles the core authentication logic.
 type Auth struct {
-	Cfg               *config.Config
-	Repo              *repository.Repository
-	Mailer            Mailer
-	SMS               SMSSender
-	PathPrefix        string
+	Cfg        *config.Config
+	Repo       *repository.Repository
+	Mailer     Mailer
+	SMS        SMSSender
+	PathPrefix string
+	// Hook is read without synchronization at every request-handling call
+	// site; set it directly or via SetHook only during setup, before Auth
+	// starts serving requests.
 	Hook              Hook
 	WebAuthn          *webauthn.WebAuthn
 	jwtKeys           *jwtKeys
@@ -90,6 +93,12 @@ func New(cfg *config.Config, repo *repository.Repository, pathPrefix string) (*A
 // SetHook registers hook as the consumer-supplied Hook implementation.
 // It's still wrapped with audit-log persistence (see auditHook in hook.go),
 // so replacing the hook never disables built-in audit logging.
+//
+// SetHook must only be called during setup, before Auth starts serving
+// requests (e.g. before calling Handler.Run/ServeHTTP) -- it reassigns Hook
+// with no synchronization, and every request-handling call site reads Hook
+// without a lock for the same reason SetHook itself isn't one: Hook is
+// intended to be configured once, not swapped at runtime under live traffic.
 func (a *Auth) SetHook(hook Hook) {
 	a.Hook = newAuditHook(a, hook)
 }
