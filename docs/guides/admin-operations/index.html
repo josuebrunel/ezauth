@@ -1315,13 +1315,13 @@
 <p>Admin-facing features: impersonation, invitation-based onboarding, user management, the persisted audit log, and the hook system.</p>
 <blockquote>
 <p>[!WARNING]
-These features enforce no role checks themselves — your application must verify the caller is allowed (e.g. <code>caller.HasRole("admin")</code>) before exposing them.</p>
+The <code>service.Auth</code> methods on this page (<code>Impersonate</code>, <code>UsersList</code>, etc.) enforce no role checks themselves — if you call them directly, your application must verify the caller is allowed (e.g. <code>caller.HasRole("admin")</code>) first. If you're using <code>Handler</code>'s built-in HTTP routes instead, that layer <em>does</em> gate this subtree by default (<code>Cfg.AdminRole</code>, defaulting to <code>"admin"</code>, checked via the RBAC tables) — see <a href="../../references/handler/#handleroptions"><code>WithAdminAuthz</code></a> to customize or disable it.</p>
 </blockquote>
 <h2 id="impersonation">Impersonation</h2>
 <p><code>ezauth</code> supports admin impersonation: an authenticated user can act as another user (e.g. for customer support debugging), then swap back to their own session.</p>
 <blockquote>
 <p>[!IMPORTANT]
-<code>ezauth</code> enforces <strong>no authorization</strong> for who may impersonate (same stance as <a href="#invitation-based-onboarding">Invitation-Based Onboarding</a> and <a href="#admin-user-management">Admin User Management</a>). The <code>Impersonate</code> method mints tokens for any target user on behalf of whoever calls it — check <code>adminUser.HasRole("admin")</code> (or equivalent) yourself before calling it.</p>
+The <code>Impersonate</code> <em>service method</em> enforces no authorization for who may impersonate (same stance as <a href="#admin-user-management">Admin User Management</a> below) — it mints tokens for any target user on behalf of whoever calls it, so check <code>adminUser.HasRole("admin")</code> (or equivalent) yourself before calling it directly. <code>Handler</code>'s built-in <code>/impersonate</code> HTTP routes gate this by default instead (<code>Cfg.AdminRole</code>), customizable/disable-able via <code>WithAdminAuthz</code>. <a href="#invitation-based-onboarding">Invitation-Based Onboarding</a> is different: <em>who</em> may invite is still unchecked at both levels, but <em>what roles an invitation can grant</em> is enforced even at the service level (<code>InvitationCreate</code> rejects a role the inviter doesn't hold).</p>
 </blockquote>
 <pre><code class="language-go">// adminUser must already be authenticated; check authorization yourself first.
 if !adminUser.HasRole(&quot;admin&quot;) {
@@ -1401,7 +1401,7 @@ org, err := ezauth.GetSessionOrg(ctx)
 <p>There's no <code>RequireOrgRole</code> middleware — compose <code>OrgLoaderMiddleware</code> with <code>RequireRole</code>/<code>RequirePermission</code> if a route needs to enforce the current org member's role.</p>
 <p>See the <a href="https://github.com/josuebrunel/ezauth#organizations">Organizations section of the README</a> for the standalone-service (JSON API / form) equivalents.</p>
 <h2 id="invitation-based-onboarding">Invitation-Based Onboarding</h2>
-<p>An existing user invites someone by email; the invitee gets a link that pre-fills registration with their email pre-verified and, optionally, a pre-assigned role. <code>ezauth</code> enforces no authorization on who may invite (same stance as <code>Impersonate</code>) — check that yourself before calling it. <code>Roles</code> and <code>Data</code> are opaque to <code>ezauth</code> beyond being carried through to the created account.</p>
+<p>An existing user invites someone by email; the invitee gets a link that pre-fills registration with their email pre-verified and, optionally, a pre-assigned role. <code>ezauth</code> enforces no authorization on <em>who</em> may invite (same stance as <code>Impersonate</code>) — check that yourself before calling it. It does enforce authorization on <em>what roles an invitation can grant</em>: <code>InvitationCreate</code> rejects (<code>service.ErrCannotGrantRole</code>) any role in <code>Roles</code> the inviter doesn't already hold via <code>inviter.HasRole</code>, so an invitation can never grant a role its creator doesn't have. <code>Data</code> remains fully opaque to <code>ezauth</code>, carried through to the created account unchecked.</p>
 <pre><code class="language-go">info, err := auth.Service.InvitationCreate(ctx, inviter, service.RequestInvitation{
     Email: &quot;newperson@example.com&quot;,
     Roles: &quot;member&quot;,
@@ -1419,7 +1419,7 @@ err = auth.Service.InvitationRevoke(ctx, inviter, invitations[0].ID)
 </code></pre>
 <p><code>EZAUTH_INVITATION_TTL</code> (default 7 days) controls how long an invitation stays valid. <code>EZAUTH_INVITATION_ACCEPT_PAGE_URL</code> (<code>Pages.InvitationAccept</code>) is where <code>GET /auth/invitation/accept?token=...</code> redirects, with the token preserved as a query param.</p>
 <h2 id="admin-user-management">Admin User Management</h2>
-<p>Beyond impersonation, <code>ezauth</code> exposes admin-facing methods to list/search/filter users, suspend/reactivate an account, and view a user's auth history. <code>ezauth</code> enforces no authorization on who may call these (same stance as <code>Impersonate</code>) — check that yourself before exposing them.</p>
+<p>Beyond impersonation, <code>ezauth</code> exposes admin-facing methods to list/search/filter users, suspend/reactivate an account, and view a user's auth history. These <em>service methods</em> enforce no authorization on who may call them (same stance as <code>Impersonate</code> above) — check that yourself before calling them directly. <code>Handler</code>'s built-in HTTP routes gate this subtree by default instead (<code>Cfg.AdminRole</code>), customizable/disable-able via <code>WithAdminAuthz</code>.</p>
 <pre><code class="language-go">result, err := auth.Service.UsersList(ctx, service.ListUsersOptions{
     Search: &quot;alice&quot;,
     Status: models.UserStatusSuspended, // &quot;active&quot; | &quot;locked&quot; | &quot;suspended&quot;

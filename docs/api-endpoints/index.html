@@ -2589,7 +2589,7 @@
 <code>POST /auth/admin/users/{id}/suspend</code>, <code>POST /auth/admin/users/{id}/reactivate</code> (Require a logged-in session)
 <code>GET /auth/admin/users/{id}/history</code> (Query param: <code>limit</code>; requires a logged-in session)
 <code>GET /auth/admin/users/{id}/audit-logs</code> (Query params: <code>event_type</code>, <code>since</code>/<code>until</code>, <code>limit</code>/<code>offset</code>; requires a logged-in session)</p>
-<p>ezauth enforces no authorization on who may call these — same stance as impersonation. Protect these routes with your own admin-only check before exposing them.</p>
+<p>By default these routes require the session user hold the RBAC role <code>Cfg.AdminRole</code> (<code>"admin"</code>) — bootstrap your first admin via the <code>ezauthapi create-admin</code> CLI (or <code>UserRoleGrant</code> directly), then grant it to others through <code>POST /admin/users/{id}/roles</code> below. See <code>WithAdminAuthz</code> to customize or disable this check.</p>
 <h3 id="roles-permissions-form">Roles &amp; Permissions (Form)</h3>
 <p><code>POST /auth/admin/roles</code> (fields: <code>name</code>, <code>description</code>; requires a logged-in session)
 <code>GET /auth/admin/roles</code>, <code>DELETE /auth/admin/roles/{id}</code> (Require a logged-in session)
@@ -2599,7 +2599,7 @@
 <code>GET /auth/admin/users/{id}/roles</code>, <code>DELETE /auth/admin/users/{id}/roles/{role_name}</code> (Require a logged-in session)
 <code>POST /auth/admin/roles/{name}/permissions</code> (field: <code>permission_name</code>; requires a logged-in session)
 <code>DELETE /auth/admin/roles/{name}/permissions/{permission_name}</code> (Requires a logged-in session)</p>
-<p>ezauth enforces no authorization on who may call these — same stance as impersonation. Protect these routes with your own admin-only check before exposing them.</p>
+<p>By default these routes require the session user hold the RBAC role <code>Cfg.AdminRole</code> (<code>"admin"</code>) — see the note at the end of <a href="#admin-user-management-form">Admin User Management (Form)</a> above.</p>
 <h3 id="organizations-form">Organizations (Form)</h3>
 <p><code>POST /auth/admin/organizations</code> (field: <code>name</code>; requires a logged-in session)
 <code>GET /auth/admin/organizations</code> (Query params: <code>limit</code>/<code>offset</code>; requires a logged-in session)
@@ -2607,11 +2607,11 @@
 <code>POST /auth/admin/organizations/{id}/members</code> (fields: <code>user_id</code>, <code>role_name</code>; upserts — re-adding an existing member updates their role; requires a logged-in session)
 <code>GET /auth/admin/organizations/{id}/members</code>, <code>DELETE /auth/admin/organizations/{id}/members/{user_id}</code> (Require a logged-in session)
 <code>GET /auth/admin/users/{id}/organizations</code> (Requires a logged-in session)</p>
-<p>ezauth enforces no authorization on who may call these — same stance as impersonation. Protect these routes with your own admin-only check before exposing them.</p>
+<p>By default these routes require the session user hold the RBAC role <code>Cfg.AdminRole</code> (<code>"admin"</code>) — see the note at the end of <a href="#admin-user-management-form">Admin User Management (Form)</a> above.</p>
 <h3 id="impersonation-form">Impersonation (Form)</h3>
 <p><code>POST /auth/impersonate</code> (field: <code>target_user_id</code>; requires a logged-in session; swaps the session cookie over to the target user, stashing the admin's own tokens)
 <code>POST /auth/impersonate/stop</code> (Requires an active impersonation session; restores the admin's own stashed session — no re-login required)</p>
-<p>ezauth enforces no authorization on who may call <code>/auth/impersonate</code> — protect it with your own admin-only check before exposing it.</p>
+<p>By default both routes require the session user hold the RBAC role <code>Cfg.AdminRole</code> (<code>"admin"</code>), redirecting to <code>Pages.Login</code>/<code>Redirects.AfterLogin</code> on failure like every other Form-route error. Unlike the JSON-returning Form admin routes above, this specific check isn't customizable via <code>WithAdminAuthz</code> — only <code>WithAdminAuthz(nil)</code> (disable entirely) affects it. See <code>WithAdminAuthz</code>'s doc comment for why.</p>
 <h3 id="oauth2">OAuth2</h3>
 <p><code>GET /auth/oauth2/{provider}/login</code> (Initiates login)
 <code>GET /auth/oauth2/{provider}/callback</code> (Callback handler. URL: <code>{base_url}/auth/oauth2/{provider}/callback</code>)</p>
@@ -2882,7 +2882,7 @@ Exchange <code>mfa_token</code> via <code>POST /auth/api/mfa/login/verify</code>
 <p>Deletes one of the authenticated user's passkeys, identified by its credential record ID (not the raw WebAuthn credential ID).</p>
 <h3 id="invitation-create">Invitation Create</h3>
 <p><code>POST /auth/api/invitations</code></p>
-<p>Issues a new invitation and emails the invitee a link to accept it. <code>ezauth</code> enforces no authorization on who may invite — check that yourself (e.g. <code>caller.HasRole("admin")</code>) before calling this.</p>
+<p>Issues a new invitation and emails the invitee a link to accept it. <code>ezauth</code> enforces no authorization on <em>who</em> may invite — check that yourself (e.g. <code>caller.HasRole("admin")</code>) before calling this. It does enforce authorization on <em>what roles an invitation can grant</em>: a request whose <code>roles</code> includes anything the caller doesn't already hold (via <code>caller.HasRole</code>) is rejected with <code>403</code>, so a plain user can never self-invite with <code>"roles": "admin"</code> and escalate.</p>
 <p><strong>Request Body:</strong></p>
 <pre><code class="language-json">{
   &quot;email&quot;: &quot;newperson@example.com&quot;,
@@ -2912,7 +2912,7 @@ Exchange <code>mfa_token</code> via <code>POST /auth/api/mfa/login/verify</code>
 <p><strong>Response Data:</strong> the updated user profile (same shape as User Info).</p>
 <h3 id="impersonate">Impersonate</h3>
 <p><code>POST /auth/api/impersonate</code></p>
-<p>Mints a new token pair for a target user on behalf of the authenticated caller (the "admin"). ezauth enforces no authorization on who may call this — protect it with your own admin-only check (e.g. <code>adminUser.HasRole("admin")</code>) before exposing it. Fails with <code>400</code> if the caller is already impersonating someone (stop that session first).</p>
+<p>Mints a new token pair for a target user on behalf of the authenticated caller (the "admin"). By default requires the caller hold the RBAC role <code>Cfg.AdminRole</code> (<code>"admin"</code>) — see <code>WithAdminAuthz</code> to customize or disable this check. Fails with <code>400</code> if the caller is already impersonating someone (stop that session first).</p>
 <p><strong>Request Body:</strong></p>
 <pre><code class="language-json">{
   &quot;target_user_id&quot;: &quot;usr_123&quot;,
@@ -2946,7 +2946,7 @@ Exchange <code>mfa_token</code> via <code>POST /auth/api/mfa/login/verify</code>
 </code></pre>
 <h3 id="admin-listsearch-users">Admin: List/Search Users</h3>
 <p><code>GET /auth/api/admin/users</code></p>
-<p>ezauth enforces no authorization on who may call this — same stance as impersonation. Protect this route with your own admin-only check before exposing it.</p>
+<p>By default requires the caller hold the RBAC role <code>Cfg.AdminRole</code> (<code>"admin"</code>) — bootstrap your first admin via the <code>ezauthapi create-admin</code> CLI, then grant it to others through <code>POST /auth/api/admin/users/{id}/roles</code> below. See <code>WithAdminAuthz</code> to customize or disable this check. This applies to every <code>/auth/api/admin/*</code> route on this page, not just this one.</p>
 <p><strong>Query Parameters:</strong>
 | Param | Description |
 | --- | --- |
@@ -2979,7 +2979,7 @@ Exchange <code>mfa_token</code> via <code>POST /auth/api/mfa/login/verify</code>
 </code></pre>
 <h3 id="admin-audit-logs">Admin: Audit Logs</h3>
 <p><code>GET /auth/api/admin/users/{id}/audit-logs</code></p>
-<p>Lists/filters the user's persisted audit log — real named security events (login success/failure, password reset, impersonation, account lockout, MFA, user create/delete, role granted/revoked), not the token-history proxy above. ezauth enforces no authorization on who may call this — same stance as the rest of Admin User Management.</p>
+<p>Lists/filters the user's persisted audit log — real named security events (login success/failure, password reset, impersonation, account lockout, MFA, user create/delete, role granted/revoked), not the token-history proxy above. Gated the same way as the rest of Admin User Management (see the note under <a href="#admin-listsearch-users">Admin: List/Search Users</a> above).</p>
 <p><strong>Query Parameters:</strong>
 | Param | Description |
 | --- | --- |
@@ -2994,7 +2994,7 @@ Exchange <code>mfa_token</code> via <code>POST /auth/api/mfa/login/verify</code>
 }
 </code></pre>
 <h3 id="admin-roles-permissions-rbac">Admin: Roles &amp; Permissions (RBAC)</h3>
-<p>ezauth enforces no authorization on who may call these — same stance as impersonation. Protect them with your own admin-only check (e.g. <code>RequireRole("admin")</code>) before exposing them. Roles and permissions are identified by <strong>ID</strong> for deletes but by <strong>name</strong> for grant/revoke wiring.</p>
+<p>Gated the same way as <a href="#admin-listsearch-users">Admin: List/Search Users</a> above (<code>Cfg.AdminRole</code>, default <code>"admin"</code>, customizable via <code>WithAdminAuthz</code>). Roles and permissions are identified by <strong>ID</strong> for deletes but by <strong>name</strong> for grant/revoke wiring.</p>
 <p><code>POST /auth/api/admin/roles</code> — creates a role. <strong>Body:</strong> <code>{"name": "editor", "description": "can edit content"}</code>. Returns the created role.
 <code>GET /auth/api/admin/roles</code> — lists all roles.
 <code>DELETE /auth/api/admin/roles/{id}</code> — deletes a role; matching <code>user_roles</code>/<code>role_permissions</code> assignments cascade away. Returns a confirmation message.</p>
@@ -3007,7 +3007,7 @@ Exchange <code>mfa_token</code> via <code>POST /auth/api/mfa/login/verify</code>
 <p><code>POST /auth/api/admin/roles/{name}/permissions</code> — grants a permission to a role. <strong>Body:</strong> <code>{"permission_name": "posts:write"}</code>. Idempotent.
 <code>DELETE /auth/api/admin/roles/{name}/permissions/{permission_name}</code> — revokes a permission from a role.</p>
 <h3 id="admin-organizations">Admin: Organizations</h3>
-<p>Lightweight multi-tenancy; each member's role is drawn from the RBAC role catalog above (an org membership is an <code>ezauth_org_members</code> row mapping <code>(org, user) → role</code>). ezauth enforces no authorization on who may call these — same stance as impersonation. Protect them with your own admin-only check.</p>
+<p>Lightweight multi-tenancy; each member's role is drawn from the RBAC role catalog above (an org membership is an <code>ezauth_org_members</code> row mapping <code>(org, user) → role</code>). Gated the same way as <a href="#admin-listsearch-users">Admin: List/Search Users</a> above (<code>Cfg.AdminRole</code>, default <code>"admin"</code>, customizable via <code>WithAdminAuthz</code>).</p>
 <p><code>POST /auth/api/admin/organizations</code> — creates an organization. <strong>Body:</strong> <code>{"name": "Acme Inc"}</code>. Returns the created organization.
 <code>GET /auth/api/admin/organizations</code> — lists organizations. <strong>Query params:</strong> <code>limit</code> (default 50, max 200), <code>offset</code>.
 <code>GET /auth/api/admin/organizations/{id}</code> — fetches one organization by ID.

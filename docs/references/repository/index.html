@@ -1832,6 +1832,10 @@
 <pre><code class="language-go">func (r Repository) UsersList(ctx context.Context, filter models.UserListFilter, limit, offset int) (users []*models.User, hasMore bool, err error)
 </code></pre>
 <h2 id="token-methods">Token Methods</h2>
+<blockquote>
+<p>[!NOTE]
+<code>Token.Token</code> is stored and looked up as an opaque value at this layer — <code>TokenCreate</code>/<code>TokenGetByToken</code> don't hash it themselves. The <code>service.Auth</code> methods built on top (<code>TokenCreate</code>, <code>APIKeyCreate</code>, <code>InvitationCreate</code>, ...) are what hash it (SHA-256, see <code>util.HashToken</code>) before calling down to these, and hash an incoming raw value the same way before looking it up. Call these repository methods directly (bypassing <code>service.Auth</code>) and you're responsible for that hashing yourself — see <a href="../../guides/account-security/#token-storage">Token Storage</a>.</p>
+</blockquote>
 <h3 id="tokencreate"><code>TokenCreate</code></h3>
 <p>Stores a new refresh token or other temporary token (reset, magic link).</p>
 <pre><code class="language-go">func (r Repository) TokenCreate(ctx context.Context, token *models.Token) (*models.Token, error)

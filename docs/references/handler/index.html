@@ -838,6 +838,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#handleroptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HandlerOptions
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1375,6 +1386,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#handleroptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HandlerOptions
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1682,6 +1704,13 @@
 <li><strong>path</strong>: The base path for the auth routes (e.g., "/auth").</li>
 <li><strong>options</strong>: Functional options for configuration.</li>
 </ul>
+<h3 id="handleroptions">HandlerOptions</h3>
+<pre><code class="language-go">func WithRouter(r *chi.Mux) HandlerOption
+</code></pre>
+<p>Mounts routes on a caller-supplied <code>chi.Mux</code> instead of a fresh one <code>New()</code> creates. Skips the default middleware chain (logger, rate limiter, recoverer, ...) — a caller supplying their own router is assumed to also want to control its middleware stack.</p>
+<pre><code class="language-go">func WithAdminAuthz(mw func(http.Handler) http.Handler) HandlerOption
+</code></pre>
+<p>Sets the middleware gating the admin/RBAC/org route subtree (JSON + Form) — see <a href="#admin-user-management">Admin User Management</a> below. Without this option, <code>New()</code> defaults to <code>RequireRole(svc, Cfg.AdminRole)</code> (<code>Cfg.AdminRole</code> defaults to <code>"admin"</code>). Pass a custom middleware for a different scheme (e.g. <code>RequirePermission</code>), or <code>nil</code> to disable the gate entirely (restoring the pre-#132 fully-open behavior) — only do this if you're gating this subtree yourself in front of ezauth. Impersonation's Form routes (<code>FormImpersonate</code>/<code>FormStopImpersonation</code>) are the one exception: they always enforce <code>Cfg.AdminRole</code> with no customization point (only <code>nil</code> affects them), since they redirect rather than return JSON on every other error path and a generic middleware can't match that automatically.</p>
 <h2 id="methods">Methods</h2>
 <h3 id="run"><code>Run</code></h3>
 <p>Starts the HTTP server on the address configured in <code>service.Config</code>, with conservative <code>ReadHeaderTimeout</code>/<code>ReadTimeout</code>/<code>WriteTimeout</code>/<code>IdleTimeout</code>. Blocks until it receives <code>SIGINT</code>/<code>SIGTERM</code>, at which point it stops accepting new connections and drains in-flight requests (up to a 15s grace period) before returning.</p>
@@ -1732,7 +1761,7 @@
 <li><code>PasswordlessLogin(w, r)</code>: Login via magic link</li>
 </ul>
 <h3 id="impersonation">Impersonation</h3>
-<p><code>ezauth</code> enforces no authorization here — protect these with your own admin-only check.
+<p><code>New()</code>'s default route wiring requires the caller hold the RBAC role <code>Cfg.AdminRole</code> (default <code>"admin"</code>) — grant it via <code>RoleCreate</code>/<code>UserRoleGrant</code>, or the <code>ezauthapi create-admin</code> CLI. See <a href="#handleroptions"><code>HandlerOptions</code></a> above (<code>WithAdminAuthz</code>) to customize the check or disable it.
 -   <code>Impersonate(w, r)</code>: Start impersonating a target user (JSON)
 -   <code>StopImpersonation(w, r)</code>: End an impersonation session (JSON)
 -   <code>FormImpersonate(w, r)</code>: Start impersonating (form; swaps the session cookie)
@@ -1769,7 +1798,7 @@
 <li><code>FormSMSOTPRequest(w, r)</code>, <code>FormSMSOTPVerify(w, r)</code>: Form equivalents</li>
 </ul>
 <h3 id="invitation-based-onboarding">Invitation-Based Onboarding</h3>
-<p><code>ezauth</code> enforces no authorization on who may invite — same stance as impersonation.
+<p><code>ezauth</code> enforces no authorization on <em>who</em> may invite — same stance as impersonation. It does enforce authorization on <em>what roles an invitation can grant</em>: <code>InvitationCreate</code> rejects (<code>service.ErrCannotGrantRole</code>, <code>403</code>) any requested role the inviter doesn't already hold.
 -   <code>InvitationCreate(w, r)</code>, <code>InvitationsList(w, r)</code>, <code>InvitationRevoke(w, r)</code>: Manage invitations (JSON; require a logged-in caller)
 -   <code>InvitationPreview(w, r)</code>: Look up invite details by token, no auth required (JSON)
 -   <code>InvitationAccept(w, r)</code>: Accept an invite and set a password (JSON)
@@ -1781,21 +1810,21 @@
 <li><code>FormEmailChangeRequest(w, r)</code>, <code>FormEmailChangeConfirm(w, r)</code>: Form equivalents</li>
 </ul>
 <h3 id="admin-user-management">Admin User Management</h3>
-<p><code>ezauth</code> enforces no authorization on who may call these — same stance as impersonation.
+<p>Gated the same way as <a href="#impersonation">Impersonation</a> above: <code>Cfg.AdminRole</code> by default, customizable/disable-able via <code>WithAdminAuthz</code>.
 -   <code>AdminUsersList(w, r)</code>: Search/filter/paginate users (JSON)
 -   <code>AdminUserSuspend(w, r)</code>, <code>AdminUserReactivate(w, r)</code>: Suspend/reactivate an account (JSON)
 -   <code>AdminUserAuthHistory(w, r)</code>: View a user's auth history (JSON)
 -   <code>AdminUserAuditLogsList(w, r)</code>: List/filter a user's persisted audit log (JSON)
 -   <code>FormAdminUsersList(w, r)</code>, <code>FormAdminUserSuspend(w, r)</code>, <code>FormAdminUserReactivate(w, r)</code>, <code>FormAdminUserAuthHistory(w, r)</code>, <code>FormAdminUserAuditLogsList(w, r)</code>: Form equivalents</p>
 <h3 id="roles-permissions-rbac">Roles &amp; Permissions (RBAC)</h3>
-<p><code>ezauth</code> enforces no authorization on who may call these — same stance as impersonation. See <a href="../../guides/admin-operations/#roles-permissions-rbac">Roles &amp; Permissions (RBAC)</a>.
+<p>Gated the same way as <a href="#impersonation">Impersonation</a> above: <code>Cfg.AdminRole</code> by default, customizable/disable-able via <code>WithAdminAuthz</code>. See <a href="../../guides/admin-operations/#roles-permissions-rbac">Roles &amp; Permissions (RBAC)</a>.
 -   <code>RoleCreate(w, r)</code>, <code>RolesList(w, r)</code>, <code>RoleDelete(w, r)</code>: Manage roles (JSON)
 -   <code>PermissionCreate(w, r)</code>, <code>PermissionsList(w, r)</code>, <code>PermissionDelete(w, r)</code>: Manage permissions (JSON)
 -   <code>UserRoleGrant(w, r)</code>, <code>UserRolesList(w, r)</code>, <code>UserRoleRevoke(w, r)</code>: Grant/list/revoke a user's roles (JSON)
 -   <code>RolePermissionGrant(w, r)</code>, <code>RolePermissionRevoke(w, r)</code>: Grant/revoke a permission on a role (JSON)
 -   <code>FormRoleCreate(w, r)</code>, <code>FormRolesList(w, r)</code>, <code>FormRoleDelete(w, r)</code>, <code>FormPermissionCreate(w, r)</code>, <code>FormPermissionsList(w, r)</code>, <code>FormPermissionDelete(w, r)</code>, <code>FormUserRoleGrant(w, r)</code>, <code>FormUserRolesList(w, r)</code>, <code>FormUserRoleRevoke(w, r)</code>, <code>FormRolePermissionGrant(w, r)</code>, <code>FormRolePermissionRevoke(w, r)</code>: Form equivalents</p>
 <h3 id="organizations">Organizations</h3>
-<p><code>ezauth</code> enforces no authorization on who may call these — same stance as impersonation. See <a href="../../guides/admin-operations/#organizations">Organizations</a>.
+<p>Gated the same way as <a href="#impersonation">Impersonation</a> above: <code>Cfg.AdminRole</code> by default, customizable/disable-able via <code>WithAdminAuthz</code>. See <a href="../../guides/admin-operations/#organizations">Organizations</a>.
 -   <code>OrganizationCreate(w, r)</code>, <code>OrganizationsList(w, r)</code>, <code>OrganizationGetByID(w, r)</code>, <code>OrganizationDelete(w, r)</code>: Manage organizations (JSON; <code>OrganizationsList</code> paginated via <code>limit</code>/<code>offset</code>)
 -   <code>OrgMemberAdd(w, r)</code>, <code>OrgMembersList(w, r)</code>, <code>OrgMemberRemove(w, r)</code>: Manage an organization's members (JSON; <code>OrgMemberAdd</code> upserts)
 -   <code>UserOrganizationsList(w, r)</code>: List the organizations a user belongs to (JSON)

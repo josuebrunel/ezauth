@@ -664,6 +664,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#token-storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Token Storage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#multi-factor-authentication-totp" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1160,6 +1171,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#token-storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Token Storage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#multi-factor-authentication-totp" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1281,6 +1303,8 @@
 
 <h1 id="account-security">Account Security</h1>
 <p>Second-factor and hardening features: MFA, session revocation, account lockout, guarded email changes, and asymmetric JWT signing.</p>
+<h2 id="token-storage">Token Storage</h2>
+<p>Every bearer-style token <code>ezauth</code> issues — refresh tokens, password-reset and passwordless magic links, API keys, MFA pre-auth tokens, MFA recovery codes, SMS OTP codes, trusted-device tokens, invitations, and email-change confirmation links — is stored and looked up by its SHA-256 hash (see <code>util.HashToken</code>), never the raw value. These are high-entropy random values, not passwords, so an unsalted hash is sufficient. A database-read compromise therefore doesn't hand over directly usable credentials. This is transparent to callers — <code>APIKeyCreate</code>, <code>TokenCreate</code>, <code>InvitationCreate</code>, etc. still return/email the raw value exactly as before, only the stored representation changed. See the <a href="https://github.com/josuebrunel/ezauth#token-storage">README's Token Storage section</a> for more.</p>
 <h2 id="multi-factor-authentication-totp">Multi-Factor Authentication (TOTP)</h2>
 <p><code>ezauth</code> supports TOTP-based MFA (RFC 6238). Once enabled for a user, <code>CompleteBasicLogin</code> (used internally by <code>Login</code>/<code>FormLogin</code>) returns a short-lived <code>mfa_token</code> instead of session tokens; the caller exchanges it for a real session via <code>MFALoginVerify</code> with a TOTP or recovery code.</p>
 <pre><code class="language-go">// Enrollment (user already authenticated):
