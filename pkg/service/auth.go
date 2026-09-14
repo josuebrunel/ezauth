@@ -545,7 +545,9 @@ func (a *Auth) PasswordlessLogin(ctx context.Context, tokenValue string) (*Token
 	}
 
 	if time.Now().After(token.ExpiresAt) || token.Revoked {
-		a.Repo.TokenRevoke(ctx, token.ID)
+		if err := a.Repo.TokenRevoke(ctx, token.ID); err != nil {
+			xlog.Error("failed to revoke expired/already-revoked passwordless token", "token_id", token.ID, "err", err)
+		}
 		xlog.Debug("passwordless token expired or revoked", "token_id", token.ID)
 		return nil, errors.New("magic link expired")
 	}

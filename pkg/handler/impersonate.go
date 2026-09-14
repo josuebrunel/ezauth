@@ -224,7 +224,9 @@ func (h *Handler) FormStopImpersonation(w http.ResponseWriter, r *http.Request) 
 
 	if tokens, ok := h.GetSessionTokens(r.Context()); ok {
 		if refreshToken, ok := tokens["refresh_token"]; ok && refreshToken != "" {
-			_ = h.svc.StopImpersonating(r.Context(), adminID, refreshToken)
+			if err := h.svc.StopImpersonating(r.Context(), adminID, refreshToken); err != nil {
+				xlog.Error("failed to revoke impersonation token on stop", "admin_id", adminID, "err", err)
+			}
 		}
 	}
 

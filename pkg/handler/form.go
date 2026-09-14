@@ -519,7 +519,9 @@ func (h *Handler) FormLogout(w http.ResponseWriter, r *http.Request) {
 	if userErr == nil {
 		if tokens, ok := h.GetSessionTokens(r.Context()); ok {
 			if refreshToken, ok := tokens["refresh_token"]; ok && refreshToken != "" {
-				_ = h.svc.TokenRevoke(r.Context(), user.ID, refreshToken)
+				if err := h.svc.TokenRevoke(r.Context(), user.ID, refreshToken); err != nil {
+					xlog.Error("failed to revoke refresh token on logout", "user_id", user.ID, "err", err)
+				}
 			}
 		}
 		if err := h.svc.Hook.AfterUserSignedOut(r.Context(), user); err != nil {
