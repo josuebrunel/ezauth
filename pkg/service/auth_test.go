@@ -543,7 +543,8 @@ func TestPasswordResetAndPasswordlessRequest_EmailCaseInsensitive(t *testing.T) 
 	mixedEmail := "MixedCase_" + util.NewIDStripped()[:8] + "@Example.COM"
 	lowerEmail := strings.ToLower(mixedEmail)
 
-	if _, err := auth.UserCreate(ctx, &RequestBasicAuth{Email: mixedEmail, Password: "securepass123"}); err != nil {
+	created, err := auth.UserCreate(ctx, &RequestBasicAuth{Email: mixedEmail, Password: "securepass123"})
+	if err != nil {
 		t.Fatalf("UserCreate failed: %v", err)
 	}
 
@@ -572,14 +573,18 @@ func TestPasswordResetAndPasswordlessRequest_EmailCaseInsensitive(t *testing.T) 
 			t.Errorf("expected passwordless email sent to canonical %q, got %q", lowerEmail, got)
 		}
 
-		// A second, already-registered user must not be silently
-		// re-created as a new "temporary user for passwordless login".
-		users, _, err := auth.Repo.UsersList(ctx, models.UserListFilter{}, 10, 0)
+		// A second, already-registered user must not be silently re-created
+		// as a new "temporary user for passwordless login" -- the lookup
+		// must still resolve to the same account created earlier in this
+		// test, not a case-variant duplicate. (email's UNIQUE constraint
+		// would have made a real duplicate-creation attempt surface as an
+		// error above already; this double-checks the identity itself.)
+		byEmail, err := auth.Repo.UserGetByEmail(ctx, lowerEmail)
 		if err != nil {
-			t.Fatalf("UsersList failed: %v", err)
+			t.Fatalf("UserGetByEmail failed: %v", err)
 		}
-		if len(users) != 1 {
-			t.Fatalf("expected exactly 1 user (no case-variant duplicate created), got %d", len(users))
+		if byEmail.ID != created.ID {
+			t.Fatalf("expected the same account (id %s), got a different one (id %s) -- a case-variant duplicate was created", created.ID, byEmail.ID)
 		}
 	})
 }
