@@ -233,6 +233,58 @@ func TestBasicAuthOperations(t *testing.T) {
 		createdUser = updatedUser
 	})
 }
+
+// TestEmailCaseNormalization proves email is normalized to lowercase at the
+// repository layer (UserCreate/UserGetByEmail/UserUpdate), so lookups
+// behave the same regardless of a DB dialect's default collation --
+// previously User@Example.com and user@example.com were treated as
+// distinct accounts on postgres/sqlite (case-sensitive by default) but the
+// same account on mysql (case-insensitive by default).
+func TestEmailCaseNormalization(t *testing.T) {
+	auth := setupBasicAuthTestDB(t)
+	ctx := context.Background()
+
+	mixedCaseEmail := "MixedCase_" + util.NewIDStripped()[:8] + "@Example.COM"
+	lowerCaseEmail := strings.ToLower(mixedCaseEmail)
+	password := "securepass123"
+
+	t.Run("UserCreate stores email lowercased", func(t *testing.T) {
+		user, err := auth.UserCreate(ctx, &RequestBasicAuth{Email: mixedCaseEmail, Password: password})
+		if err != nil {
+			t.Fatalf("UserCreate failed: %v", err)
+		}
+		if user.Email != lowerCaseEmail {
+			t.Fatalf("expected stored email %q, got %q", lowerCaseEmail, user.Email)
+		}
+	})
+
+	t.Run("UserGetByEmail finds it regardless of input casing", func(t *testing.T) {
+		user, err := auth.Repo.UserGetByEmail(ctx, mixedCaseEmail)
+		if err != nil {
+			t.Fatalf("UserGetByEmail with original mixed-case input failed: %v", err)
+		}
+		if user.Email != lowerCaseEmail {
+			t.Fatalf("expected %q, got %q", lowerCaseEmail, user.Email)
+		}
+	})
+
+	t.Run("UserAuthenticate succeeds regardless of input casing", func(t *testing.T) {
+		user, err := auth.UserAuthenticate(ctx, RequestBasicAuth{Email: strings.ToUpper(mixedCaseEmail), Password: password})
+		if err != nil {
+			t.Fatalf("UserAuthenticate with upper-cased email failed: %v", err)
+		}
+		if user.Email != lowerCaseEmail {
+			t.Fatalf("expected %q, got %q", lowerCaseEmail, user.Email)
+		}
+	})
+
+	t.Run("a second registration with a different-case duplicate is rejected", func(t *testing.T) {
+		if _, err := auth.UserCreate(ctx, &RequestBasicAuth{Email: strings.ToUpper(mixedCaseEmail), Password: password}); err == nil {
+			t.Fatal("expected a case-variant duplicate email to be rejected, got nil error")
+		}
+	})
+}
+
 func TestPasswordless(t *testing.T) {
 	auth := setupTestDB(t)
 	ctx := context.Background()

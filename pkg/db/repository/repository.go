@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
@@ -197,8 +198,19 @@ func (r *Repository) Close() error {
 	return r.bdb.Close()
 }
 
+// normalizeEmail lowercases and trims an email address before it's stored
+// or queried, so lookups behave the same across dialects regardless of
+// each DB's default collation (case-sensitive on postgres/sqlite,
+// case-insensitive on mysql by default) -- without it, the exact same
+// application code silently allowed case-variant duplicate accounts
+// (User@example.com vs user@example.com) on postgres/sqlite but not mysql.
+func normalizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
+}
+
 // UserCreate creates a new user in the database.
 func (r Repository) UserCreate(ctx context.Context, user *models.User) (*models.User, error) {
+	user.Email = normalizeEmail(user.Email)
 	query := r.QueryUserInsert(ctx, user)
 
 	if r.Opts.Dialect == DialectMysql {
@@ -230,6 +242,7 @@ func (r Repository) UserGetByProvider(ctx context.Context, provider, providerID 
 
 // UserGetByEmail retrieves a user by their email address.
 func (r Repository) UserGetByEmail(ctx context.Context, email string) (*models.User, error) {
+	email = normalizeEmail(email)
 	query := r.QueryUserGetByEmail(ctx, email)
 	user, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
 	if err != nil {
@@ -274,6 +287,9 @@ func (r Repository) UserGetByID(ctx context.Context, id string) (*models.User, e
 
 // UserUpdate updates an existing user in the database.
 func (r Repository) UserUpdate(ctx context.Context, user *models.User) (*models.User, error) {
+	if user.Email != "" {
+		user.Email = normalizeEmail(user.Email)
+	}
 	query := r.QueryUserUpdate(ctx, user)
 
 	if r.Opts.Dialect == DialectMysql {
