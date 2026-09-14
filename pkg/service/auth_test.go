@@ -330,7 +330,7 @@ func TestPasswordless(t *testing.T) {
 		t.Error("expected email to be verified")
 	}
 
-	token, err := auth.Repo.TokenGetByToken(ctx, tokenValue)
+	token, err := auth.Repo.TokenGetByToken(ctx, util.HashToken(tokenValue))
 	if err != nil {
 		t.Fatalf("failed to get token: %v", err)
 	}
@@ -576,7 +576,7 @@ func TestPasswordReset(t *testing.T) {
 		t.Errorf("expected user id %s, got %s", createdUser.ID, authenticatedUser.ID)
 	}
 
-	storedToken, err := auth.Repo.TokenGetByToken(ctx, tokenValue)
+	storedToken, err := auth.Repo.TokenGetByToken(ctx, util.HashToken(tokenValue))
 	if err != nil {
 		t.Fatalf("failed to get token: %v", err)
 	}
@@ -662,7 +662,7 @@ func TestTokenOperations(t *testing.T) {
 
 		refreshToken = resp.RefreshToken
 
-		storedToken, err := auth.Repo.TokenGetByToken(ctx, refreshToken)
+		storedToken, err := auth.Repo.TokenGetByToken(ctx, util.HashToken(refreshToken))
 		if err != nil {
 			t.Fatalf("failed to get token from db: %v", err)
 		}
@@ -685,7 +685,7 @@ func TestTokenOperations(t *testing.T) {
 			t.Error("expected new refresh token (rotation), got the same one")
 		}
 
-		storedOldToken, err := auth.Repo.TokenGetByToken(ctx, oldRefreshToken)
+		storedOldToken, err := auth.Repo.TokenGetByToken(ctx, util.HashToken(oldRefreshToken))
 		if err != nil {
 			t.Fatalf("failed to get old token: %v", err)
 		}
@@ -702,7 +702,7 @@ func TestTokenOperations(t *testing.T) {
 			t.Fatalf("TokenRevoke() unexpected error: %v", err)
 		}
 
-		storedToken, err := auth.Repo.TokenGetByToken(ctx, refreshToken)
+		storedToken, err := auth.Repo.TokenGetByToken(ctx, util.HashToken(refreshToken))
 		if err != nil {
 			t.Fatalf("failed to get token from db after revoke: %v", err)
 		}
@@ -774,7 +774,7 @@ func TestTokenOperations(t *testing.T) {
 			t.Errorf("expected error '%s', got '%v'", expectedErr, err)
 		}
 
-		storedC, err := auth.Repo.TokenGetByToken(ctx, tokenC)
+		storedC, err := auth.Repo.TokenGetByToken(ctx, util.HashToken(tokenC))
 		if err != nil {
 			t.Fatalf("failed to get token C: %v", err)
 		}
@@ -782,7 +782,7 @@ func TestTokenOperations(t *testing.T) {
 			t.Error("expected token C to be revoked by the family reuse cascade")
 		}
 
-		storedOther, err := auth.Repo.TokenGetByToken(ctx, otherResp.RefreshToken)
+		storedOther, err := auth.Repo.TokenGetByToken(ctx, util.HashToken(otherResp.RefreshToken))
 		if err != nil {
 			t.Fatalf("failed to get unrelated token: %v", err)
 		}
@@ -921,7 +921,7 @@ func TestImpersonation(t *testing.T) {
 			t.Errorf("expected act.sub claim %s, got %v", admin.ID, act["sub"])
 		}
 
-		storedToken, err := auth.Repo.TokenGetByToken(ctx, resp.RefreshToken)
+		storedToken, err := auth.Repo.TokenGetByToken(ctx, util.HashToken(resp.RefreshToken))
 		if err != nil {
 			t.Fatalf("failed to get impersonation refresh token: %v", err)
 		}
@@ -976,7 +976,7 @@ func TestImpersonation(t *testing.T) {
 			t.Fatalf("StopImpersonating() unexpected error: %v", err)
 		}
 
-		storedToken, err := auth.Repo.TokenGetByToken(ctx, impersonationRefreshToken)
+		storedToken, err := auth.Repo.TokenGetByToken(ctx, util.HashToken(impersonationRefreshToken))
 		if err != nil {
 			t.Fatalf("failed to get token after stop: %v", err)
 		}

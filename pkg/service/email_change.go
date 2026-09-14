@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/ezauth/pkg/util"
 	"github.com/josuebrunel/gopkg/xlog"
 )
 
@@ -55,7 +56,7 @@ func (a *Auth) EmailChangeRequest(ctx context.Context, user *models.User, req Re
 
 	token := &models.Token{
 		UserID:    user.ID,
-		Token:     tokenValue,
+		Token:     util.HashToken(tokenValue),
 		TokenType: models.TokenTypeEmailChange,
 		ExpiresAt: time.Now().Add(emailChangeTokenTTL),
 		CreatedAt: time.Now(),
@@ -101,7 +102,7 @@ func (a *Auth) EmailChangeRequest(ctx context.Context, user *models.User, req Re
 // completed email change is as sensitive as a password reset — revokes all of
 // the user's other sessions so they must re-authenticate everywhere.
 func (a *Auth) EmailChangeConfirm(ctx context.Context, tokenValue string) (*models.User, error) {
-	tok, err := a.Repo.TokenGetByToken(ctx, tokenValue)
+	tok, err := a.Repo.TokenGetByToken(ctx, util.HashToken(tokenValue))
 	if err != nil || tok.TokenType != models.TokenTypeEmailChange {
 		xlog.Debug("email change confirm failed: token not found or wrong type", "err", err)
 		return nil, ErrInvalidOrExpiredEmailChangeToken

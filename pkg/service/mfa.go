@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/ezauth/pkg/util"
 	"github.com/josuebrunel/gopkg/xlog"
 	"github.com/pquerna/otp/totp"
 )
@@ -75,7 +76,7 @@ func (a *Auth) mfaIssuePreAuthToken(ctx context.Context, user *models.User) (str
 
 	token := &models.Token{
 		UserID:    user.ID,
-		Token:     tokenValue,
+		Token:     util.HashToken(tokenValue),
 		TokenType: models.TokenTypeMFAPreAuth,
 		ExpiresAt: time.Now().Add(mfaPreAuthTokenTTL),
 		CreatedAt: time.Now(),
@@ -192,7 +193,7 @@ func (a *Auth) MFADisable(ctx context.Context, user *models.User, code string) e
 // token locks the account instead of being limited only by the (optional,
 // IP-keyed) global rate limiter.
 func (a *Auth) MFALoginVerify(ctx context.Context, mfaToken, code string, rememberDevice bool) (user *models.User, tokens *TokenResponse, deviceToken string, err error) {
-	token, err := a.Repo.TokenGetByToken(ctx, mfaToken)
+	token, err := a.Repo.TokenGetByToken(ctx, util.HashToken(mfaToken))
 	if err != nil || token.TokenType != models.TokenTypeMFAPreAuth {
 		xlog.Debug("mfa login verify failed: token not found or wrong type", "err", err)
 		return nil, nil, "", ErrInvalidOrExpiredMFAToken

@@ -122,7 +122,7 @@ func TestEmailChangeFlow(t *testing.T) {
 			t.Fatal("expected the old email to no longer resolve to the user")
 		}
 
-		tok, err := auth.Repo.TokenGetByToken(ctx, refreshToken)
+		tok, err := auth.Repo.TokenGetByToken(ctx, util.HashToken(refreshToken))
 		if err != nil {
 			t.Fatalf("failed to get pre-existing refresh token: %v", err)
 		}

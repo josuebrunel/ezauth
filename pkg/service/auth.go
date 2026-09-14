@@ -388,7 +388,7 @@ func (a *Auth) PasswordResetRequest(ctx context.Context, req RequestPasswordRese
 
 	token := &models.Token{
 		UserID:    user.ID,
-		Token:     tokenValue,
+		Token:     util.HashToken(tokenValue),
 		TokenType: models.TokenTypePasswordReset,
 		ExpiresAt: time.Now().Add(1 * time.Hour),
 		CreatedAt: time.Now(),
@@ -423,7 +423,7 @@ func (a *Auth) PasswordResetRequest(ctx context.Context, req RequestPasswordRese
 
 // PasswordResetConfirm completes the password reset flow.
 func (a *Auth) PasswordResetConfirm(ctx context.Context, req RequestPasswordResetConfirm) error {
-	token, err := a.Repo.TokenGetByToken(ctx, req.Token)
+	token, err := a.Repo.TokenGetByToken(ctx, util.HashToken(req.Token))
 	if err != nil {
 		return errors.New("invalid or expired token")
 	}
@@ -490,7 +490,7 @@ func (a *Auth) PasswordlessRequest(ctx context.Context, req RequestPasswordless)
 
 	token := &models.Token{
 		UserID:    user.ID,
-		Token:     tokenValue,
+		Token:     util.HashToken(tokenValue),
 		TokenType: models.TokenTypePasswordless,
 		ExpiresAt: time.Now().Add(15 * time.Minute),
 		CreatedAt: time.Now(),
@@ -530,7 +530,7 @@ func (a *Auth) PasswordlessRequest(ctx context.Context, req RequestPasswordless)
 // PasswordlessLogin completes the passwordless login flow.
 func (a *Auth) PasswordlessLogin(ctx context.Context, tokenValue string) (*TokenResponse, error) {
 	xlog.Debug("processing passwordless login")
-	token, err := a.Repo.TokenGetByToken(ctx, tokenValue)
+	token, err := a.Repo.TokenGetByToken(ctx, util.HashToken(tokenValue))
 	if err != nil {
 		xlog.Debug("passwordless token not found", "err", err)
 		return nil, errors.New("invalid or expired magic link")
@@ -726,7 +726,7 @@ func (a *Auth) tokenCreateForActor(ctx context.Context, user *models.User, actor
 	now := time.Now()
 	token := &models.Token{
 		UserID:    user.ID,
-		Token:     refreshToken,
+		Token:     util.HashToken(refreshToken),
 		TokenType: models.TokenTypeRefresh,
 		ExpiresAt: now.Add(30 * 24 * time.Hour),
 		CreatedAt: now,
@@ -786,7 +786,7 @@ func (a *Auth) Impersonate(ctx context.Context, adminUser *models.User, targetUs
 // StopImpersonating revokes an impersonation refresh token, ending that impersonation
 // session server-side.
 func (a *Auth) StopImpersonating(ctx context.Context, impersonationRefreshToken string) error {
-	token, err := a.Repo.TokenGetByToken(ctx, impersonationRefreshToken)
+	token, err := a.Repo.TokenGetByToken(ctx, util.HashToken(impersonationRefreshToken))
 	if err != nil {
 		xlog.Debug("stop impersonation failed: token not found", "err", err)
 		return errors.New("invalid impersonation token")
@@ -805,7 +805,7 @@ func (a *Auth) StopImpersonating(ctx context.Context, impersonationRefreshToken 
 // TokenRefresh refreshes the access and refresh tokens using a valid refresh token.
 func (a *Auth) TokenRefresh(ctx context.Context, refreshToken string) (*TokenResponse, error) {
 	xlog.Debug("refreshing token")
-	token, err := a.Repo.TokenGetByToken(ctx, refreshToken)
+	token, err := a.Repo.TokenGetByToken(ctx, util.HashToken(refreshToken))
 	if err != nil {
 		xlog.Debug("refresh token not found", "err", err)
 		return nil, errors.New("invalid refresh token")
@@ -853,7 +853,7 @@ func (a *Auth) revokeTokenFamily(ctx context.Context, userID, familyID string) {
 // TokenRevoke revokes the given refresh token.
 func (a *Auth) TokenRevoke(ctx context.Context, refreshToken string) error {
 	xlog.Info("revoking token")
-	token, err := a.Repo.TokenGetByToken(ctx, refreshToken)
+	token, err := a.Repo.TokenGetByToken(ctx, util.HashToken(refreshToken))
 	if err != nil {
 		xlog.Debug("token to revoke not found", "err", err)
 		return err

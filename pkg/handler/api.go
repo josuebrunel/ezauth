@@ -9,6 +9,7 @@ import (
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	ezmiddleware "github.com/josuebrunel/ezauth/pkg/handler/middleware"
 	"github.com/josuebrunel/ezauth/pkg/service"
+	"github.com/josuebrunel/ezauth/pkg/util"
 	"github.com/josuebrunel/gopkg/xlog"
 )
 
@@ -336,7 +337,7 @@ func (h *Handler) PasswordResetConfirm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch the user for the hook (silently ignore if not found)
-	if token, err := h.svc.Repo.TokenGetByToken(r.Context(), req.Token); err == nil {
+	if token, err := h.svc.Repo.TokenGetByToken(r.Context(), util.HashToken(req.Token)); err == nil {
 		if user, err := h.svc.Repo.UserGetByID(r.Context(), token.UserID); err == nil {
 			if err := h.svc.Hook.AfterPasswordResetConfirmed(r.Context(), user); err != nil {
 				xlog.Error("hook AfterPasswordResetConfirmed failed", "user_id", user.ID, "err", err)
@@ -399,7 +400,7 @@ func (h *Handler) PasswordlessLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch the user for the hook (silently ignore if not found)
-	if tokenRecord, err := h.svc.Repo.TokenGetByToken(r.Context(), token); err == nil {
+	if tokenRecord, err := h.svc.Repo.TokenGetByToken(r.Context(), util.HashToken(token)); err == nil {
 		if user, err := h.svc.Repo.UserGetByID(r.Context(), tokenRecord.UserID); err == nil {
 			if err := h.svc.Hook.AfterUserSignedIn(r.Context(), user); err != nil {
 				xlog.Error("hook AfterUserSignedIn failed for passwordless", "err", err)

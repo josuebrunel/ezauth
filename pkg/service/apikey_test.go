@@ -37,7 +37,7 @@ func TestAPIKeys(t *testing.T) {
 			t.Error("expected an unscoped key to have access to any scope")
 		}
 
-		stored, err := auth.Repo.TokenGetByToken(ctx, token.Token)
+		stored, err := auth.Repo.TokenGetByToken(ctx, util.HashToken(token.Token))
 		if err != nil {
 			t.Fatalf("failed to get api key from db: %v", err)
 		}
@@ -62,7 +62,7 @@ func TestAPIKeys(t *testing.T) {
 		}
 
 		// Confirm the scope survives a DB round-trip (Metadata becomes []any after Scan).
-		stored, err := auth.Repo.TokenGetByToken(ctx, token.Token)
+		stored, err := auth.Repo.TokenGetByToken(ctx, util.HashToken(token.Token))
 		if err != nil {
 			t.Fatalf("failed to get api key from db: %v", err)
 		}
@@ -99,7 +99,7 @@ func TestAPIKeys(t *testing.T) {
 			t.Fatalf("APIKeyRevoke() unexpected error: %v", err)
 		}
 
-		stored, err := auth.Repo.TokenGetByToken(ctx, token.Token)
+		stored, err := auth.Repo.TokenGetByToken(ctx, util.HashToken(token.Token))
 		if err != nil {
 			t.Fatalf("failed to get api key from db: %v", err)
 		}
@@ -127,7 +127,7 @@ func TestAPIKeys(t *testing.T) {
 			t.Fatalf("expected ErrAPIKeyNotFound revoking another user's key, got %v", err)
 		}
 
-		stored, err := auth.Repo.TokenGetByToken(ctx, token.Token)
+		stored, err := auth.Repo.TokenGetByToken(ctx, util.HashToken(token.Token))
 		if err != nil {
 			t.Fatalf("failed to get api key from db: %v", err)
 		}

@@ -12,6 +12,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/ezauth/pkg/util"
 )
 
 var errCheckerFailed = errors.New("checker failed")
@@ -20,9 +21,14 @@ var errCheckerFailed = errors.New("checker failed")
 type MockTokenGetter struct {
 	Token *models.Token
 	Err   error
+
+	// ReceivedToken records the value the caller looked up with, so tests
+	// can assert on it (e.g. that it was hashed, not the raw value).
+	ReceivedToken string
 }
 
 func (m *MockTokenGetter) TokenGetByToken(ctx context.Context, token string) (*models.Token, error) {
+	m.ReceivedToken = token
 	return m.Token, m.Err
 }
 
@@ -168,6 +174,35 @@ func TestAPIKeyMiddleware(t *testing.T) {
 	mwDB(nextCheckScopes).ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
 		t.Errorf("expected 200 with db key, got %d", w.Code)
+	}
+}
+
+// TestAPIKeyMiddleware_LooksUpByHash proves APIKeyMiddleware hashes the
+// X-API-Key header value before looking it up (see util.HashToken), not the
+// raw key -- API keys are stored hashed, so a plaintext lookup would never
+// match.
+func TestAPIKeyMiddleware_LooksUpByHash(t *testing.T) {
+	mockRepo := &MockTokenGetter{
+		Token: &models.Token{TokenType: models.TokenTypeApiKey, ExpiresAt: time.Now().Add(time.Hour)},
+	}
+	mw := APIKeyMiddleware("config-key", mockRepo)
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
+
+	rawKey := "some-raw-db-api-key-value"
+	req := httptest.NewRequest("GET", "/", nil)
+	req.Header.Set("X-API-Key", rawKey)
+	w := httptest.NewRecorder()
+
+	mw(next).ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	if mockRepo.ReceivedToken == rawKey {
+		t.Fatal("APIKeyMiddleware looked up the raw key value instead of its hash")
+	}
+	if want := util.HashToken(rawKey); mockRepo.ReceivedToken != want {
+		t.Fatalf("expected lookup with hash %q, got %q", want, mockRepo.ReceivedToken)
 	}
 }
 

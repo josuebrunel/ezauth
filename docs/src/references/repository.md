@@ -100,6 +100,9 @@ func (r Repository) UsersList(ctx context.Context, filter models.UserListFilter,
 
 ## Token Methods
 
+> [!NOTE]
+> `Token.Token` is stored and looked up as an opaque value at this layer — `TokenCreate`/`TokenGetByToken` don't hash it themselves. The `service.Auth` methods built on top (`TokenCreate`, `APIKeyCreate`, `InvitationCreate`, ...) are what hash it (SHA-256, see `util.HashToken`) before calling down to these, and hash an incoming raw value the same way before looking it up. Call these repository methods directly (bypassing `service.Auth`) and you're responsible for that hashing yourself — see [Token Storage](../guides/account-security.md#token-storage).
+
 ### `TokenCreate`
 Stores a new refresh token or other temporary token (reset, magic link).
 

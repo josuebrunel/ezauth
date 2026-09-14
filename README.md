@@ -24,6 +24,7 @@ Simple and easy to use authentication library for Golang.
   - [SMS OTP](#sms-otp)
   - [WebAuthn / Passkeys](#webauthn--passkeys)
 - [Account Security](#account-security)
+  - [Token Storage](#token-storage)
   - [Multi-Factor Authentication (TOTP)](#multi-factor-authentication-totp)
   - [Sessions](#sessions)
   - [Account Lockout](#account-lockout)
@@ -592,6 +593,12 @@ The cookie-mode equivalents live at `/auth/webauthn/register/begin`, `/auth/weba
 ## Account Security
 
 Second-factor and hardening features: MFA, session revocation, lockout, guarded email changes, and asymmetric JWT signing.
+
+### Token Storage
+
+Every bearer-style token `ezauth` issues — refresh tokens, password-reset and passwordless magic links, API keys, MFA pre-auth tokens, MFA recovery codes, SMS OTP codes, trusted-device tokens, invitations, and email-change confirmation links — is stored and looked up by its SHA-256 hash, never the raw value. These are all high-entropy random values (not passwords), so an unsalted hash is sufficient: there's no meaningful dictionary/rainbow-table attack surface once the input space is that large. This means a database-read compromise (a backup leak, a misconfigured read replica, an overprivileged reporting user, ...) doesn't hand over directly usable credentials for every user — an attacker would need the raw value itself, which only ever appears in the response/email/link sent to its owner and is never recoverable from what's stored.
+
+This is transparent to callers: `APIKeyCreate`, `TokenCreate`, `InvitationCreate`, etc. still return/email the raw value exactly as before — only the on-disk representation changed. If you're reading `ezauth_tokens.token` directly (e.g. for an admin tool or a data migration of your own), keep in mind it's a hash, not the original value.
 
 ### Multi-Factor Authentication (TOTP)
 

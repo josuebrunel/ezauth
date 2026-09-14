@@ -8,6 +8,7 @@ import (
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	ezmiddleware "github.com/josuebrunel/ezauth/pkg/handler/middleware"
 	"github.com/josuebrunel/ezauth/pkg/service"
+	"github.com/josuebrunel/ezauth/pkg/util"
 	"github.com/josuebrunel/gopkg/xlog"
 )
 
@@ -233,7 +234,7 @@ func (h *Handler) GetSessionUser(ctx context.Context) (*models.User, error) {
 		return nil, errors.New("not authenticated")
 	}
 
-	token, err := h.svc.Repo.TokenGetByToken(ctx, tks["refresh_token"])
+	token, err := h.svc.Repo.TokenGetByToken(ctx, util.HashToken(tks["refresh_token"]))
 	if err != nil {
 
 		xlog.Debug("failed to get refresh token from session", "error", err)

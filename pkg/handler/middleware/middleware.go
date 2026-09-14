@@ -10,6 +10,7 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/ezauth/pkg/util"
 )
 
 // Common errors are now in errors.go
@@ -101,8 +102,10 @@ func APIKeyMiddleware(configApiKey string, tokenRepo TokenGetter) func(http.Hand
 				return
 			}
 
-			// Check against database
-			token, err := tokenRepo.TokenGetByToken(r.Context(), apiKey)
+			// Check against database. Stored/looked-up by hash, not the raw
+			// key (see util.HashToken) -- a DB-read compromise shouldn't
+			// hand over directly usable API keys.
+			token, err := tokenRepo.TokenGetByToken(r.Context(), util.HashToken(apiKey))
 			if err != nil {
 				WriteJSONResponseError(w, http.StatusUnauthorized, ErrInvalidAPIKey)
 				return

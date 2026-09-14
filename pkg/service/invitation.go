@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/ezauth/pkg/util"
 	"github.com/josuebrunel/gopkg/xlog"
 )
 
@@ -115,7 +116,7 @@ func (a *Auth) InvitationCreate(ctx context.Context, inviter *models.User, req R
 	now := time.Now()
 	token := &models.Token{
 		UserID:    inviter.ID,
-		Token:     tokenValue,
+		Token:     util.HashToken(tokenValue),
 		TokenType: models.TokenTypeInvitation,
 		ExpiresAt: now.Add(a.Cfg.Invitation.TTL),
 		CreatedAt: now,
@@ -159,7 +160,7 @@ func (a *Auth) InvitationPreview(ctx context.Context, tokenValue string) (*Invit
 }
 
 func (a *Auth) getValidInvitationToken(ctx context.Context, tokenValue string) (*models.Token, error) {
-	tok, err := a.Repo.TokenGetByToken(ctx, tokenValue)
+	tok, err := a.Repo.TokenGetByToken(ctx, util.HashToken(tokenValue))
 	if err != nil || tok.TokenType != models.TokenTypeInvitation {
 		return nil, ErrInvalidOrExpiredInvitation
 	}

@@ -234,7 +234,7 @@ func TestHandler_ApiKeyFromDB(t *testing.T) {
 	apiKeyToken := util.RandomString(16)
 	_, err = h.svc.Repo.TokenCreate(ctx, &models.Token{
 		UserID:    user.ID,
-		Token:     apiKeyToken,
+		Token:     util.HashToken(apiKeyToken),
 		TokenType: models.TokenTypeApiKey,
 		ExpiresAt: time.Now().Add(1 * time.Hour),
 	})

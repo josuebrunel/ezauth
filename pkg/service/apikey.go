@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/ezauth/pkg/util"
 	"github.com/josuebrunel/gopkg/xlog"
 )
 
@@ -17,9 +18,9 @@ var ErrAPIKeyNotFound = errors.New("api key not found")
 // those actions (checked via RequireAPIKeyScope middleware); an empty/nil
 // scopes list creates an unscoped key with full account access, matching
 // every API key issued before per-key scoping existed. The returned
-// Token's Token field is the raw key value — it is stored and looked up
-// verbatim (like refresh tokens), so surface it to the caller now, since
-// it can't be recovered later.
+// Token's Token field is the raw key value — only its hash is stored/looked
+// up (see util.HashToken), so surface the raw value to the caller now,
+// since it can't be recovered later.
 func (a *Auth) APIKeyCreate(ctx context.Context, userID string, scopes []string) (*models.Token, error) {
 	key, err := a.generateRefreshToken()
 	if err != nil {
@@ -34,7 +35,7 @@ func (a *Auth) APIKeyCreate(ctx context.Context, userID string, scopes []string)
 
 	token := &models.Token{
 		UserID:    userID,
-		Token:     key,
+		Token:     util.HashToken(key),
 		TokenType: models.TokenTypeApiKey,
 		// API keys don't expire by default. A zero time.Time would be the
 		// obvious "never" sentinel, but ezauth_tokens.expires_at is
@@ -52,6 +53,10 @@ func (a *Auth) APIKeyCreate(ctx context.Context, userID string, scopes []string)
 		xlog.Error("failed to create api key", "user_id", userID, "err", err)
 		return nil, err
 	}
+	// created.Token is the hash just stored -- restore the raw value the
+	// caller actually needs to display (it's never recoverable from the
+	// hash once this returns).
+	created.Token = key
 	xlog.Info("api key created", "user_id", userID, "token_id", created.ID, "scoped", len(scopes) > 0)
 	return created, nil
 }

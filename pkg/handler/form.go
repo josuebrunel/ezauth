@@ -709,7 +709,7 @@ func (h *Handler) FormPasswordResetConfirm(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Fetch the user for the hook (silently ignore if not found)
-	if token, err := h.svc.Repo.TokenGetByToken(r.Context(), req.Token); err == nil {
+	if token, err := h.svc.Repo.TokenGetByToken(r.Context(), util.HashToken(req.Token)); err == nil {
 		if user, err := h.svc.Repo.UserGetByID(r.Context(), token.UserID); err == nil {
 			if err := h.svc.Hook.AfterPasswordResetConfirmed(r.Context(), user); err != nil {
 				xlog.Error("hook AfterPasswordResetConfirmed failed", "user_id", user.ID, "err", err)

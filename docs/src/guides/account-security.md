@@ -2,6 +2,10 @@
 
 Second-factor and hardening features: MFA, session revocation, account lockout, guarded email changes, and asymmetric JWT signing.
 
+## Token Storage
+
+Every bearer-style token `ezauth` issues — refresh tokens, password-reset and passwordless magic links, API keys, MFA pre-auth tokens, MFA recovery codes, SMS OTP codes, trusted-device tokens, invitations, and email-change confirmation links — is stored and looked up by its SHA-256 hash (see `util.HashToken`), never the raw value. These are high-entropy random values, not passwords, so an unsalted hash is sufficient. A database-read compromise therefore doesn't hand over directly usable credentials. This is transparent to callers — `APIKeyCreate`, `TokenCreate`, `InvitationCreate`, etc. still return/email the raw value exactly as before, only the stored representation changed. See the [README's Token Storage section](https://github.com/josuebrunel/ezauth#token-storage) for more.
+
 ## Multi-Factor Authentication (TOTP)
 
 `ezauth` supports TOTP-based MFA (RFC 6238). Once enabled for a user, `CompleteBasicLogin` (used internally by `Login`/`FormLogin`) returns a short-lived `mfa_token` instead of session tokens; the caller exchanges it for a real session via `MFALoginVerify` with a TOTP or recovery code.

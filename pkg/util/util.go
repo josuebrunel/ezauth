@@ -2,6 +2,7 @@ package util
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -119,4 +120,20 @@ func RedactDSN(dsn string) string {
 	dsn = dsnUserInfoRE.ReplaceAllString(dsn, "$1:***@")
 	dsn = dsnPasswordKVR.ReplaceAllString(dsn, "$1=***")
 	return dsn
+}
+
+// HashToken returns the SHA-256 hex digest of a bearer-style token value
+// (refresh token, password-reset/passwordless/invitation/email-change/
+// trusted-device/MFA-pre-auth token, API key, ...), for storage and lookup.
+// These are high-entropy random values (see RandomString and similar
+// generators), so SHA-256 with no salt is sufficient -- unlike a password,
+// there's no meaningful dictionary/rainbow-table attack surface once the
+// input space is that large. Storing the hash instead of the raw value
+// means a DB-read compromise (backup leak, replica misconfiguration, ...)
+// doesn't hand over directly usable credentials. Callers must still return
+// the original raw value to whoever needs to present it back (a link, an
+// Authorization header, ...) -- only the stored/looked-up copy is hashed.
+func HashToken(raw string) string {
+	sum := sha256.Sum256([]byte(raw))
+	return hex.EncodeToString(sum[:])
 }

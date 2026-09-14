@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	ezmiddleware "github.com/josuebrunel/ezauth/pkg/handler/middleware"
+	"github.com/josuebrunel/ezauth/pkg/util"
 	"github.com/josuebrunel/gopkg/xlog"
 )
 
@@ -140,7 +141,7 @@ func (h *Handler) StopImpersonation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch the token for hook context (silently ignore if unavailable).
-	if token, err := h.svc.Repo.TokenGetByToken(r.Context(), req.RefreshToken); err == nil {
+	if token, err := h.svc.Repo.TokenGetByToken(r.Context(), util.HashToken(req.RefreshToken)); err == nil {
 		actorID, _ := token.Metadata["actor_id"].(string)
 		target, targetErr := h.svc.Repo.UserGetByID(r.Context(), token.UserID)
 		admin, adminErr := h.svc.Repo.UserGetByID(r.Context(), actorID)

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/ezauth/pkg/util"
 	"github.com/josuebrunel/gopkg/xlog"
 )
 
@@ -25,7 +26,7 @@ func (a *Auth) TrustDevice(ctx context.Context, user *models.User, name string) 
 
 	token := &models.Token{
 		UserID:    user.ID,
-		Token:     deviceToken,
+		Token:     util.HashToken(deviceToken),
 		TokenType: models.TokenTypeTrustedDevice,
 		ExpiresAt: time.Now().Add(a.Cfg.TrustedDevice.TTL),
 		CreatedAt: time.Now(),
@@ -45,7 +46,7 @@ func (a *Auth) IsTrustedDevice(ctx context.Context, user *models.User, deviceTok
 	if deviceToken == "" {
 		return false
 	}
-	tok, err := a.Repo.TokenGetByToken(ctx, deviceToken)
+	tok, err := a.Repo.TokenGetByToken(ctx, util.HashToken(deviceToken))
 	if err != nil {
 		return false
 	}

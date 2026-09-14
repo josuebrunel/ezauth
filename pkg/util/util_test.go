@@ -64,3 +64,22 @@ func TestEscapeLikePattern(t *testing.T) {
 		}
 	}
 }
+
+func TestHashToken(t *testing.T) {
+	const raw = "some-high-entropy-refresh-token-value"
+
+	got := HashToken(raw)
+
+	if got == raw {
+		t.Fatal("HashToken returned the input unchanged")
+	}
+	if len(got) != 64 { // 32-byte SHA-256 digest, hex-encoded
+		t.Fatalf("expected a 64-char hex digest, got %d chars: %q", len(got), got)
+	}
+	if got2 := HashToken(raw); got != got2 {
+		t.Fatalf("HashToken is not deterministic: %q != %q", got, got2)
+	}
+	if HashToken("a-different-value") == got {
+		t.Fatal("expected different inputs to hash differently")
+	}
+}
