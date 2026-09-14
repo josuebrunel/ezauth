@@ -313,6 +313,35 @@ func TestUsernameCaseNormalization(t *testing.T) {
 			t.Fatalf("expected %q, got %q", lowerCaseUsername, user.Username)
 		}
 	})
+
+	t.Run("a second registration with a different-case duplicate is rejected", func(t *testing.T) {
+		if _, err := auth.UserCreate(ctx, &RequestBasicAuth{Email: util.UniqueEmail("usernamecase2"), Username: strings.ToUpper(mixedCaseUsername), Password: password}); err == nil {
+			t.Fatal("expected a case-variant duplicate username to be rejected, got nil error")
+		}
+	})
+}
+
+func TestUserUsernameUniqueness(t *testing.T) {
+	auth := setupBasicAuthTestDB(t)
+	ctx := context.Background()
+	username := "unique_" + util.NewIDStripped()[:8]
+
+	if _, err := auth.Repo.UserCreate(ctx, &models.User{Email: util.UniqueEmail("usernameowner1"), Username: username, Provider: "local"}); err != nil {
+		t.Fatalf("failed to create first user: %v", err)
+	}
+
+	if _, err := auth.Repo.UserCreate(ctx, &models.User{Email: util.UniqueEmail("usernameowner2"), Username: username, Provider: "local"}); err == nil {
+		t.Fatal("expected duplicate username to be rejected")
+	}
+
+	// Multiple users with an empty (unset) username must still be allowed --
+	// only non-empty usernames are unique.
+	if _, err := auth.Repo.UserCreate(ctx, &models.User{Email: util.UniqueEmail("nousername1"), Provider: "local"}); err != nil {
+		t.Fatalf("failed to create first user with no username: %v", err)
+	}
+	if _, err := auth.Repo.UserCreate(ctx, &models.User{Email: util.UniqueEmail("nousername2"), Provider: "local"}); err != nil {
+		t.Fatalf("failed to create second user with no username: %v", err)
+	}
 }
 
 func TestPasswordless(t *testing.T) {
