@@ -2,6 +2,26 @@ package util
 
 import "testing"
 
+func TestRandomString(t *testing.T) {
+	s, err := RandomString(32)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(s) != 32 {
+		t.Fatalf("expected a 32-char hex string, got %d chars: %q", len(s), s)
+	}
+	if _, err := RandomString(31); err != nil {
+		t.Fatalf("unexpected error for odd length: %v", err)
+	}
+	s2, err := RandomString(32)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if s == s2 {
+		t.Fatal("expected two calls to produce different random values")
+	}
+}
+
 func TestRedactDSN(t *testing.T) {
 	cases := []struct {
 		name string

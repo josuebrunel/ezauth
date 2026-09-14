@@ -28,12 +28,18 @@ func Deref[T any](t *T) T {
 	return *t
 }
 
-func RandomString(n int) string {
+// RandomString returns a random hex string of length n (n/2 random bytes).
+// Unlike an earlier version, a crypto/rand failure is returned as an error
+// rather than silently producing "" -- a caller comparing that against an
+// expected value with a constant-time compare would otherwise treat two
+// empty strings as a match, turning an RNG failure into a fail-open check
+// (see OAuth2Login's state cookie, this function's one production caller).
+func RandomString(n int) (string, error) {
 	b := make([]byte, n/2)
 	if _, err := rand.Read(b); err != nil {
-		return ""
+		return "", fmt.Errorf("random string: %w", err)
 	}
-	return hex.EncodeToString(b)
+	return hex.EncodeToString(b), nil
 }
 
 // NewID generates a new V4 UUID

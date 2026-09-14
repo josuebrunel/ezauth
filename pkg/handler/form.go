@@ -754,7 +754,12 @@ func (h *Handler) OAuth2Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	state := util.RandomString(32)
+	state, err := util.RandomString(32)
+	if err != nil {
+		xlog.Error("failed to generate oauth state", "provider", provider, "err", err)
+		WriteJSONResponseError(w, http.StatusInternalServerError, fmt.Errorf("could not start oauth2 login"))
+		return
+	}
 	http.SetCookie(w, &http.Cookie{
 		Name:     "oauth_state",
 		Value:    state,

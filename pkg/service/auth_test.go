@@ -414,7 +414,7 @@ func TestOAuth2Authenticate(t *testing.T) {
 	auth := setupOAuth2AuthTestDB(t)
 	ctx := context.Background()
 
-	providerID := util.RandomString(16)
+	providerID := util.Must(util.RandomString(16))
 
 	t.Run("NewUser", func(t *testing.T) {
 		userInfo := &OAuth2UserInfo{
@@ -470,7 +470,7 @@ func TestOAuth2Authenticate(t *testing.T) {
 			Password: "password",
 		})
 
-		githubProviderID := util.RandomString(16)
+		githubProviderID := util.Must(util.RandomString(16))
 		userInfo := &OAuth2UserInfo{
 			ID:            githubProviderID,
 			Email:         localEmail,
@@ -499,7 +499,7 @@ func TestOAuth2Authenticate(t *testing.T) {
 			Password: "password",
 		})
 
-		unverifiedProviderID := util.RandomString(16)
+		unverifiedProviderID := util.Must(util.RandomString(16))
 		userInfo := &OAuth2UserInfo{
 			ID:            unverifiedProviderID,
 			Email:         localEmail,
@@ -795,13 +795,13 @@ func TestTokenOperations(t *testing.T) {
 		// Create multiple tokens for the user
 		token1 := &models.Token{
 			UserID:    createdUser.ID,
-			Token:     util.RandomString(32),
+			Token:     util.Must(util.RandomString(32)),
 			TokenType: models.TokenTypeRefresh,
 			ExpiresAt: time.Now().Add(24 * time.Hour),
 		}
 		token2 := &models.Token{
 			UserID:    createdUser.ID,
-			Token:     util.RandomString(32),
+			Token:     util.Must(util.RandomString(32)),
 			TokenType: models.TokenTypeRefresh,
 			ExpiresAt: time.Now().Add(24 * time.Hour),
 		}
