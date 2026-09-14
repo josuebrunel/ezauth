@@ -10,6 +10,7 @@ import (
 	"github.com/josuebrunel/ezauth"
 	"github.com/josuebrunel/ezauth/pkg/config"
 	"github.com/josuebrunel/ezauth/pkg/service"
+	"github.com/josuebrunel/ezauth/pkg/util"
 	"github.com/josuebrunel/gopkg/xlog"
 )
 
@@ -57,6 +58,18 @@ func serve(cfg *config.Config) {
 	auth.Handler.Run()
 }
 
+// confirmDestructiveMigration refuses the down action (which resets the
+// schema to version 0 -- every ezauth table is dropped, with no way to
+// recover the data short of a backup) unless yes is set. Without this, a
+// bare `ezauthapi migrate down` (one easy typo away from `up`, or a
+// copy-pasted command against the wrong DSN) would run immediately.
+func confirmDestructiveMigration(action string, yes bool, dialect, dsn string) error {
+	if action != "down" || yes {
+		return nil
+	}
+	return fmt.Errorf("refusing to run migrate down without -yes: this drops every ezauth table on %s (dialect=%s). Re-run with -yes to confirm.", util.RedactDSN(dsn), dialect)
+}
+
 // migrate runs a one-shot migration action against the configured database,
 // then exits -- for deploy pipelines that want migrations as a separate step
 // from starting the server.
@@ -70,6 +83,7 @@ func migrate(cfg *config.Config, args []string) {
 	dialect := fs.String("dialect", "", "database dialect, overrides EZAUTH_DB_DIALECT")
 	dsn := fs.String("dsn", "", "database DSN, overrides EZAUTH_DB_DSN")
 	schema := fs.String("schema", "", "database schema (postgres only), overrides EZAUTH_DB_SCHEMA")
+	yes := fs.Bool("yes", false, "required for the down action: confirms you intend to drop every ezauth table")
 	fs.Parse(args[1:])
 
 	if *dialect != "" {
@@ -80,6 +94,10 @@ func migrate(cfg *config.Config, args []string) {
 	}
 	if *schema != "" {
 		cfg.DB.Schema = *schema
+	}
+
+	if err := confirmDestructiveMigration(action, *yes, cfg.DB.Dialect, cfg.DB.DSN); err != nil {
+		log.Fatal(err)
 	}
 
 	auth, err := ezauth.New(cfg, "auth")

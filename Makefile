@@ -45,8 +45,11 @@ migration-create:
 		goose -dir $(DIR) $(DRIVER) $(DSN) create $$name sql
 
 # ACTION is one of up|down|revert, e.g. `make migrate ACTION=revert`.
+# -yes confirms the destructive `down` action (dev-only DSN here); it's a
+# no-op for up/revert. Typing out `make migrate ACTION=down` is itself the
+# confirmation for this local dev target.
 migrate:
-	EZAUTH_API_KEY=dev-cli EZAUTH_JWT_SECRET=dev-cli-migrate-secret-at-least-32-chars EZAUTH_DB_DIALECT=$(DRIVER) EZAUTH_DB_DSN=$(DSN) go run ./cmd/ezauthapi migrate $(ACTION)
+	EZAUTH_API_KEY=dev-cli EZAUTH_JWT_SECRET=dev-cli-migrate-secret-at-least-32-chars EZAUTH_DB_DIALECT=$(DRIVER) EZAUTH_DB_DSN=$(DSN) go run ./cmd/ezauthapi migrate $(ACTION) -yes
 
 test:
 	go test -failfast ./... -v -p=1 -count=1 -coverprofile .coverage.txt

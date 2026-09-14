@@ -286,6 +286,12 @@ func (e *EzAuth) Migrate() error {
 }
 
 // MigrateDown rolls back every migration, resetting the schema to version 0.
+//
+// WARNING: this drops every ezauth table. There is no confirmation gate at
+// this layer -- it runs immediately, exactly like every other exported
+// method here. The ezauthapi CLI's own "migrate down" subcommand requires
+// an explicit -yes flag before calling this; build the same kind of gate
+// in front of it if you call this directly from your own code/tooling.
 func (e *EzAuth) MigrateDown() error {
 	return migrations.MigrateDownWithDBConn(e.Repo.DB(), e.Repo.Opts.Dialect)
 }

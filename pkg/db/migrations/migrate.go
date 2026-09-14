@@ -28,6 +28,11 @@ func MigrateUp(dsn, dialect, schema string) error {
 	return runMigration(dsn, dialect, schema, "up")
 }
 
+// MigrateDown rolls back every migration, resetting the schema to version
+// 0 -- every ezauth table is dropped, with no way to recover the data short
+// of a backup. Runs immediately, with no confirmation gate at this layer;
+// callers (e.g. ezauthapi's "migrate down" subcommand) are responsible for
+// confirming intent before calling this.
 func MigrateDown(dsn, dialect, schema string) error {
 	return runMigration(dsn, dialect, schema, "down")
 }
@@ -43,6 +48,9 @@ func MigrateUpWithDBConn(db *sql.DB, dialect string) error {
 	return execGooseMigration(db, dialect, "up")
 }
 
+// MigrateDownWithDBConn is the *sql.DB-based equivalent of MigrateDown --
+// same warning applies: it drops every ezauth table with no confirmation
+// gate at this layer.
 func MigrateDownWithDBConn(db *sql.DB, dialect string) error {
 	return execGooseMigration(db, dialect, "down")
 }
