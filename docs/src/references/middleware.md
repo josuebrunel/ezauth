@@ -58,7 +58,7 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler
 
 ### `APIKeyMiddleware`
 
-Validates the `X-API-Key` header. It checks against the configured Master API Key or looks up an API Key token in the database.
+Validates the `X-API-Key` header. It checks against the configured Master API Key (and, during a rotation, `Cfg.PreviousApiKey` too — see [Scoped API Keys](../guides/account-security.md#scoped-api-keys)) or looks up an API Key token in the database.
 
 ```go
 func (h *Handler) APIKeyMiddleware(next http.Handler) http.Handler
@@ -125,7 +125,7 @@ implementation.
 // Same logic as the Handler methods above, taking explicit dependencies
 // (a RoleChecker, TokenGetter, etc.) instead of a *Handler.
 func AuthMiddleware(keyFunc jwt.Keyfunc, validMethods []string, userRepo UserActiveGetter, extraOpts ...jwt.ParserOption) func(http.Handler) http.Handler
-func APIKeyMiddleware(configApiKey string, tokenRepo TokenGetter, userRepo UserActiveGetter) func(http.Handler) http.Handler
+func APIKeyMiddleware(configApiKey, previousApiKey string, tokenRepo TokenGetter, userRepo UserActiveGetter) func(http.Handler) http.Handler
 func RequireAPIKeyScope(scope string) func(http.Handler) http.Handler
 func RequireRole(checker RoleChecker, role string) func(http.Handler) http.Handler
 func RequirePermission(checker PermissionChecker, permission string) func(http.Handler) http.Handler

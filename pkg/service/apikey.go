@@ -14,14 +14,23 @@ import (
 // belong to the caller, or isn't actually an API key.
 var ErrAPIKeyNotFound = errors.New("api key not found")
 
+// defaultAPIKeyTTL backstops Cfg.APIKeyDefaultTTL for a hand-built
+// config.Config{} that bypasses LoadConfig's default:"87600h" env tag
+// (common in tests, or a caller loading config another way) -- a zero TTL
+// would otherwise mint a key that's already expired.
+const defaultAPIKeyTTL = 10 * 365 * 24 * time.Hour
+
 // APIKeyCreate mints a new API key for userID. scopes limits the key to
 // those actions (checked via RequireAPIKeyScope middleware); an empty/nil
 // scopes list creates an unscoped key with full account access, matching
-// every API key issued before per-key scoping existed. The returned
+// every API key issued before per-key scoping existed. ttl bounds how long
+// the key is valid for; pass 0 to use Cfg.APIKeyDefaultTTL (10 years by
+// default, matching every prior release -- API keys are meant for
+// long-lived machine-to-machine use, not short sessions). The returned
 // Token's Token field is the raw key value — only its hash is stored/looked
 // up (see util.HashToken), so surface the raw value to the caller now,
 // since it can't be recovered later.
-func (a *Auth) APIKeyCreate(ctx context.Context, userID string, scopes []string) (*models.Token, error) {
+func (a *Auth) APIKeyCreate(ctx context.Context, userID string, scopes []string, ttl time.Duration) (*models.Token, error) {
 	key, err := a.generateRefreshToken()
 	if err != nil {
 		xlog.Error("failed to generate api key", "user_id", userID, "err", err)
@@ -33,17 +42,18 @@ func (a *Auth) APIKeyCreate(ctx context.Context, userID string, scopes []string)
 		metadata["scopes"] = scopes
 	}
 
+	if ttl <= 0 {
+		ttl = a.Cfg.APIKeyDefaultTTL
+	}
+	if ttl <= 0 {
+		ttl = defaultAPIKeyTTL
+	}
+
 	token := &models.Token{
 		UserID:    userID,
 		Token:     util.HashToken(key),
 		TokenType: models.TokenTypeApiKey,
-		// API keys don't expire by default. A zero time.Time would be the
-		// obvious "never" sentinel, but ezauth_tokens.expires_at is
-		// NOT NULL and MySQL's strict mode rejects the zero-date
-		// ('0000-00-00') that a zero time.Time serializes to — so use the
-		// same far-future-date idiom already used for "effectively never
-		// expires" elsewhere (see mfaGenerateRecoveryCodes).
-		ExpiresAt: time.Now().AddDate(10, 0, 0),
+		ExpiresAt: time.Now().Add(ttl),
 		Revoked:   false,
 		Metadata:  metadata,
 	}

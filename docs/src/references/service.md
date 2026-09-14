@@ -99,10 +99,10 @@ func (a *Auth) TokenRevoke(ctx context.Context, refreshToken string) error
 
 ## API Keys
 
-Scopes are stored as a plain string array in the `Token`'s existing `Metadata` column — no separate table. An empty/nil scopes list means unscoped/full access. See [Scoped API Keys](../guides/account-security.md#scoped-api-keys).
+Scopes are stored as a plain string array in the `Token`'s existing `Metadata` column — no separate table. An empty/nil scopes list means unscoped/full access. `ttl` bounds the key's lifetime; pass `0` to use `Cfg.APIKeyDefaultTTL` (10 years by default). See [Scoped API Keys](../guides/account-security.md#scoped-api-keys).
 
 ```go
-func (a *Auth) APIKeyCreate(ctx context.Context, userID string, scopes []string) (*models.Token, error)
+func (a *Auth) APIKeyCreate(ctx context.Context, userID string, scopes []string, ttl time.Duration) (*models.Token, error)
 func (a *Auth) APIKeyRevoke(ctx context.Context, userID, id string) error // ErrAPIKeyNotFound if id isn't userID's
 func (a *Auth) APIKeysList(ctx context.Context, userID string) ([]APIKeyInfo, error) // raw key omitted, see APIKeyCreate
 ```

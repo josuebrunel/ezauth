@@ -1231,7 +1231,7 @@ const docTemplate = `{
                 "summary": "Create an API key",
                 "parameters": [
                     {
-                        "description": "Optional scopes",
+                        "description": "Optional scopes and TTL",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -3534,6 +3534,10 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "ttl_seconds": {
+                    "description": "TTLSeconds bounds how long the key is valid for; omit or pass 0 to\nuse Cfg.APIKeyDefaultTTL (10 years by default).",
+                    "type": "integer"
                 }
             }
         },

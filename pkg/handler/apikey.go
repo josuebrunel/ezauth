@@ -3,6 +3,8 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -10,6 +12,9 @@ import (
 // createAPIKeyRequest is the request body for APIKeyCreate.
 type createAPIKeyRequest struct {
 	Scopes []string `json:"scopes"`
+	// TTLSeconds bounds how long the key is valid for; omit or pass 0 to
+	// use Cfg.APIKeyDefaultTTL (10 years by default).
+	TTLSeconds int `json:"ttl_seconds"`
 }
 
 // APIKeyCreate creates a new API key for the authenticated user, optionally
@@ -22,7 +27,7 @@ type createAPIKeyRequest struct {
 // @Tags api-keys
 // @Accept json
 // @Produce json
-// @Param request body createAPIKeyRequest true "Optional scopes"
+// @Param request body createAPIKeyRequest true "Optional scopes and TTL"
 // @Security BearerAuth
 // @Security ApiKeyAuth
 // @Success 200 {object} ApiResponse[models.Token]
@@ -43,7 +48,7 @@ func (h *Handler) APIKeyCreate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	key, err := h.svc.APIKeyCreate(r.Context(), userID, req.Scopes)
+	key, err := h.svc.APIKeyCreate(r.Context(), userID, req.Scopes, time.Duration(req.TTLSeconds)*time.Second)
 	if err != nil {
 		WriteJSONResponseError(w, http.StatusBadRequest, err)
 		return
@@ -63,10 +68,13 @@ func (h *Handler) FormAPIKeyCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// ttl_seconds is optional; omit or pass 0 to use Cfg.APIKeyDefaultTTL.
+	ttlSeconds, _ := strconv.Atoi(r.FormValue("ttl_seconds"))
+
 	// Repeat the "scopes" field to request more than one, e.g.
 	// scopes=posts:write&scopes=posts:read. Omit it entirely for an
 	// unscoped, full-access key.
-	key, err := h.svc.APIKeyCreate(r.Context(), user.ID, r.Form["scopes"])
+	key, err := h.svc.APIKeyCreate(r.Context(), user.ID, r.Form["scopes"], time.Duration(ttlSeconds)*time.Second)
 	if err != nil {
 		WriteJSONResponseError(w, http.StatusBadRequest, err)
 		return

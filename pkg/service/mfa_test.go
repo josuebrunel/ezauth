@@ -127,7 +127,7 @@ func TestMFATokenRevocationIsScopedByType(t *testing.T) {
 	ctx := context.Background()
 	user := mfaTestUser(t, auth, ctx)
 
-	apiKey, err := auth.APIKeyCreate(ctx, user.ID, nil)
+	apiKey, err := auth.APIKeyCreate(ctx, user.ID, nil, 0)
 	if err != nil {
 		t.Fatalf("APIKeyCreate failed: %v", err)
 	}

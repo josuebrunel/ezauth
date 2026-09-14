@@ -21,9 +21,11 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 	return middleware.AuthMiddleware(h.svc.JWTKeyFunc(), h.svc.JWTSigningMethods(), h.svc.Repo, opts...)(next)
 }
 
-// APIKeyMiddleware checks for a valid API key in the X-API-Key header.
+// APIKeyMiddleware checks for a valid API key in the X-API-Key header. When
+// Cfg.PreviousApiKey is set, it's accepted alongside Cfg.ApiKey for the
+// duration of a master-key rotation (see #210).
 func (h *Handler) APIKeyMiddleware(next http.Handler) http.Handler {
-	return middleware.APIKeyMiddleware(h.svc.Cfg.ApiKey, h.svc.Repo, h.svc.Repo)(next)
+	return middleware.APIKeyMiddleware(h.svc.Cfg.ApiKey, h.svc.Cfg.PreviousApiKey, h.svc.Repo, h.svc.Repo)(next)
 }
 
 // RequireAPIKeyScope is a middleware that requires the API key used to

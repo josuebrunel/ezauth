@@ -288,6 +288,11 @@ definitions:
         items:
           type: string
         type: array
+      ttl_seconds:
+        description: |-
+          TTLSeconds bounds how long the key is valid for; omit or pass 0 to
+          use Cfg.APIKeyDefaultTTL (10 years by default).
+        type: integer
     type: object
   handler.createOrganizationRequest:
     properties:
@@ -1928,7 +1933,7 @@ paths:
       consumes:
       - application/json
       parameters:
-      - description: Optional scopes
+      - description: Optional scopes and TTL
         in: body
         name: request
         required: true

@@ -153,7 +153,7 @@ func TestAuthMiddleware_ImpersonatorContextKey(t *testing.T) {
 
 func TestAPIKeyMiddleware(t *testing.T) {
 	apiKey := "config-key"
-	mw := APIKeyMiddleware(apiKey, &MockTokenGetter{}, &MockUserActiveGetter{})
+	mw := APIKeyMiddleware(apiKey, "", &MockTokenGetter{}, &MockUserActiveGetter{})
 
 	// Test Config Key -- also confirm it sets APIKeyScopesContextKey (to an
 	// explicit unscoped []string{}) like the DB-key path does, so
@@ -185,7 +185,7 @@ func TestAPIKeyMiddleware(t *testing.T) {
 			Metadata:  models.JSONMap{"scopes": []string{"posts:write"}},
 		},
 	}
-	mwDB := APIKeyMiddleware(apiKey, mockRepo, &MockUserActiveGetter{})
+	mwDB := APIKeyMiddleware(apiKey, "", mockRepo, &MockUserActiveGetter{})
 	nextCheckScopes := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		scopes, ok := r.Context().Value(APIKeyScopesContextKey).([]string)
 		if !ok || len(scopes) != 1 || scopes[0] != "posts:write" {
@@ -212,7 +212,7 @@ func TestAPIKeyMiddleware_LooksUpByHash(t *testing.T) {
 	mockRepo := &MockTokenGetter{
 		Token: &models.Token{TokenType: models.TokenTypeApiKey, ExpiresAt: time.Now().Add(time.Hour)},
 	}
-	mw := APIKeyMiddleware("config-key", mockRepo, &MockUserActiveGetter{})
+	mw := APIKeyMiddleware("config-key", "", mockRepo, &MockUserActiveGetter{})
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
 
 	rawKey := "some-raw-db-api-key-value"
@@ -231,6 +231,48 @@ func TestAPIKeyMiddleware_LooksUpByHash(t *testing.T) {
 	if want := util.HashToken(rawKey); mockRepo.ReceivedToken != want {
 		t.Fatalf("expected lookup with hash %q, got %q", want, mockRepo.ReceivedToken)
 	}
+}
+
+// TestAPIKeyMiddleware_MasterKeyRotation proves the outgoing master key
+// keeps authenticating (mirroring JWT_PREVIOUS_PUBLIC_KEY's rotation
+// pattern) when passed as previousApiKey, that the new key also works, and
+// that an unrelated key is still rejected -- and that omitting
+// previousApiKey (the no-rotation-in-progress default) rejects the old key
+// as before. See #210.
+func TestAPIKeyMiddleware_MasterKeyRotation(t *testing.T) {
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
+	doRequest := func(mw func(http.Handler) http.Handler, key string) int {
+		req := httptest.NewRequest("GET", "/", nil)
+		req.Header.Set("X-API-Key", key)
+		w := httptest.NewRecorder()
+		mw(next).ServeHTTP(w, req)
+		return w.Code
+	}
+
+	t.Run("rotation in progress: both keys work, unrelated key doesn't", func(t *testing.T) {
+		mw := APIKeyMiddleware("new-key", "old-key", &MockTokenGetter{Err: errCheckerFailed}, &MockUserActiveGetter{})
+
+		if code := doRequest(mw, "new-key"); code != http.StatusOK {
+			t.Errorf("expected 200 for the new key, got %d", code)
+		}
+		if code := doRequest(mw, "old-key"); code != http.StatusOK {
+			t.Errorf("expected 200 for the outgoing key during rotation, got %d", code)
+		}
+		if code := doRequest(mw, "unrelated-key"); code != http.StatusUnauthorized {
+			t.Errorf("expected 401 for an unrelated key, got %d", code)
+		}
+	})
+
+	t.Run("no rotation in progress: old key is rejected", func(t *testing.T) {
+		mw := APIKeyMiddleware("new-key", "", &MockTokenGetter{Err: errCheckerFailed}, &MockUserActiveGetter{})
+
+		if code := doRequest(mw, "new-key"); code != http.StatusOK {
+			t.Errorf("expected 200 for the current key, got %d", code)
+		}
+		if code := doRequest(mw, "old-key"); code != http.StatusUnauthorized {
+			t.Errorf("expected 401 for a key that was never configured, got %d", code)
+		}
+	})
 }
 
 // TestAuthMiddleware_RejectsInactiveUser proves a Bearer token with a valid
@@ -353,7 +395,7 @@ func TestAPIKeyMiddleware_RejectsInactiveUser(t *testing.T) {
 	mockRepo := &MockTokenGetter{
 		Token: &models.Token{UserID: "user1", TokenType: models.TokenTypeApiKey, ExpiresAt: time.Now().Add(time.Hour)},
 	}
-	mw := APIKeyMiddleware("config-key", mockRepo, &MockUserActiveGetter{
+	mw := APIKeyMiddleware("config-key", "", mockRepo, &MockUserActiveGetter{
 		User: &models.User{ID: "user1", IsActive: false},
 	})
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -376,7 +418,7 @@ func TestAPIKeyMiddleware_RejectsInactiveUser(t *testing.T) {
 // though UserActiveGetter would reject any real user ID -- the check only
 // applies to DB-backed, user-owned keys.
 func TestAPIKeyMiddleware_MasterKeyBypassesUserCheck(t *testing.T) {
-	mw := APIKeyMiddleware("config-key", &MockTokenGetter{}, &MockUserActiveGetter{
+	mw := APIKeyMiddleware("config-key", "", &MockTokenGetter{}, &MockUserActiveGetter{
 		Err: errCheckerFailed,
 	})
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })

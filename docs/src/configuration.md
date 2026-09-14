@@ -8,6 +8,8 @@
 | ------------------- | --------------------------------------------------- | ----------------------- |
 | `EZAUTH_ADDR`       | The address the server listens on.                  | `:8080`                 |
 | `EZAUTH_API_KEY`    | Master API Key for protecting endpoints.            |                         |
+| `EZAUTH_PREVIOUS_API_KEY` | Outgoing master API key, accepted alongside `EZAUTH_API_KEY` for the duration of a rotation (mirrors `EZAUTH_JWT_PREVIOUS_PUBLIC_KEY`'s pattern). Unset means no rotation is in progress. |  |
+| `EZAUTH_API_KEY_DEFAULT_TTL` | Default lifetime for a newly created API key (`APIKeyCreate`'s `ttl` parameter, when `0`). | `87600h` (10 years) |
 | `EZAUTH_BASE_URL`   | The base URL of the auth service (used for emails). | `http://localhost:8080` |
 | `EZAUTH_DEBUG`      | Enable debug logging.                               | `false`                 |
 | `EZAUTH_FORCE_SECURE_COOKIES` | Force the `Secure` flag on every cookie ezauth sets (session, oauth_state, trusted-device) regardless of `BASE_URL`'s scheme. Set `true` when ezauth sits behind a TLS-terminating reverse proxy and `BASE_URL` can't be `https://`. | `false` |

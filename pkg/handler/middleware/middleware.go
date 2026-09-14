@@ -103,12 +103,16 @@ func AuthMiddleware(keyFunc jwt.Keyfunc, validMethods []string, userRepo UserAct
 }
 
 // APIKeyMiddleware checks for a valid API key in the X-API-Key header.
-// userRepo re-checks the key owner's status on every request: a DB-backed
-// key's own type/revoked/expiry fields say nothing about whether the
-// account it belongs to is still active, so without this a suspended user's
-// still-valid API key keeps working indefinitely. Not applicable to the
-// shared config master key (configApiKey), which has no owning user.
-func APIKeyMiddleware(configApiKey string, tokenRepo TokenGetter, userRepo UserActiveGetter) func(http.Handler) http.Handler {
+// previousApiKey is accepted alongside configApiKey during a rotation
+// window -- mirroring JWT_PREVIOUS_PUBLIC_KEY's pattern -- so callers still
+// presenting the outgoing master key keep working while it's being rotated
+// out; pass "" when no rotation is in progress. userRepo re-checks the key
+// owner's status on every request: a DB-backed key's own type/revoked/
+// expiry fields say nothing about whether the account it belongs to is
+// still active, so without this a suspended user's still-valid API key
+// keeps working indefinitely. Not applicable to the shared config master
+// key(s), which have no owning user.
+func APIKeyMiddleware(configApiKey, previousApiKey string, tokenRepo TokenGetter, userRepo UserActiveGetter) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			apiKey := r.Header.Get("X-API-Key")
@@ -117,8 +121,14 @@ func APIKeyMiddleware(configApiKey string, tokenRepo TokenGetter, userRepo UserA
 				return
 			}
 
-			// Check against config first (constant-time comparison)
-			if subtle.ConstantTimeCompare([]byte(apiKey), []byte(configApiKey)) == 1 {
+			// Check against config first (constant-time comparison). Both
+			// current and (if a rotation is in progress) previous master
+			// keys are checked unconditionally -- not short-circuited on
+			// the first match -- so this takes the same time regardless of
+			// which one (if either) matches.
+			matchesConfigKey := subtle.ConstantTimeCompare([]byte(apiKey), []byte(configApiKey)) == 1
+			matchesPreviousKey := previousApiKey != "" && subtle.ConstantTimeCompare([]byte(apiKey), []byte(previousApiKey)) == 1
+			if matchesConfigKey || matchesPreviousKey {
 				// The master config key has no associated Token/scopes at
 				// all -- explicitly record "authenticated, unscoped" so
 				// RequireAPIKeyScope can tell it apart from a request that

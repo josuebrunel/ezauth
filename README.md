@@ -757,7 +757,7 @@ set := auth.JWKS() // service.JWKSet{Keys: []service.JWK} — empty for the defa
 By default an API key (via `APIKeyMiddleware`) grants the same access as the full account. `APIKeyCreate` can limit a key to a specific set of scopes, enforced per-route with `RequireAPIKeyScope`, layered on top of `APIKeyMiddleware`'s existing all-or-nothing group-level gate.
 
 ```go
-token, err := auth.APIKeyCreate(ctx, user.ID, []string{"posts:write"})
+token, err := auth.APIKeyCreate(ctx, user.ID, []string{"posts:write"}, 0) // ttl 0 = Cfg.APIKeyDefaultTTL (10 years by default)
 // token.Token is the raw key value — store/display it now, it can't be recovered later.
 
 keys, err := auth.APIKeysList(ctx, user.ID) // []service.APIKeyInfo — raw key omitted, shown only once above
@@ -770,16 +770,20 @@ r.With(auth.RequireAPIKeyScope("posts:write")).Post("/posts", createPostHandler)
 ```
 
 > [!WARNING]
-> **An unscoped key has full access, not restricted access.** `APIKeyCreate(ctx, userID, nil)` (or `{"scopes": []}` over the API) does **not** create a key with no permissions — it creates a key that passes every `RequireAPIKeyScope` check unconditionally, identically to a key issued before scoping existed. If you want a key restricted to nothing, don't gate the routes it should never reach behind `RequireAPIKeyScope` at all — put them behind `APIKeyMiddleware` only for keys that are meant to be unrestricted, and always pass an explicit non-empty `scopes` list for any key that should be limited. The master `EZAUTH_API_KEY` config key has no associated `Token` at all, so it's always unscoped/full-access too, regardless of any `RequireAPIKeyScope` check.
+> **An unscoped key has full access, not restricted access.** `APIKeyCreate(ctx, userID, nil, 0)` (or `{"scopes": []}` over the API) does **not** create a key with no permissions — it creates a key that passes every `RequireAPIKeyScope` check unconditionally, identically to a key issued before scoping existed. If you want a key restricted to nothing, don't gate the routes it should never reach behind `RequireAPIKeyScope` at all — put them behind `APIKeyMiddleware` only for keys that are meant to be unrestricted, and always pass an explicit non-empty `scopes` list for any key that should be limited. The master `EZAUTH_API_KEY` config key has no associated `Token` at all, so it's always unscoped/full-access too, regardless of any `RequireAPIKeyScope` check.
+
+**Key lifetime and master-key rotation**: `APIKeyCreate`'s `ttl` parameter (`0` = `EZAUTH_API_KEY_DEFAULT_TTL`, 10 years by default) bounds an individual key's lifetime. The shared `EZAUTH_API_KEY` config key itself has no per-key expiry, but `APIKeyMiddleware` also accepts `EZAUTH_PREVIOUS_API_KEY` during a rotation window — mirroring `EZAUTH_JWT_PREVIOUS_PUBLIC_KEY`'s pattern: move the outgoing master key there and set `EZAUTH_API_KEY` to the new one, then drop `EZAUTH_PREVIOUS_API_KEY` once nothing outstanding still needs it.
 
 #### Standalone-service Mode
 
 Self-service, like Sessions: keys are always scoped to the caller's own account, no admin path or `{id}`-for-whose param.
 
 ```bash
-# Create a key (requires the user's own Bearer token) — scopes is optional, omit/empty for unscoped:
+# Create a key (requires the user's own Bearer token) — scopes and ttl_seconds
+# are both optional; omit/empty scopes for unscoped, omit/0 ttl_seconds for the
+# EZAUTH_API_KEY_DEFAULT_TTL default (10 years):
 curl -X POST https://your-host/auth/api/api-keys -H "Authorization: Bearer <access-token>" -H "X-API-Key: your-api-key" \
-  -H "Content-Type: application/json" -d '{"scopes": ["posts:write"]}'
+  -H "Content-Type: application/json" -d '{"scopes": ["posts:write"], "ttl_seconds": 2592000}'
 # -> the response's "token" field is the raw key value — store/display it now, it can't be recovered later.
 
 # List your own keys:

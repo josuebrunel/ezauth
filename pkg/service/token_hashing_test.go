@@ -67,7 +67,7 @@ func TestBearerTokensAreStoredHashed(t *testing.T) {
 	})
 
 	t.Run("api key", func(t *testing.T) {
-		tok, err := auth.APIKeyCreate(ctx, user.ID, nil)
+		tok, err := auth.APIKeyCreate(ctx, user.ID, nil, 0)
 		if err != nil {
 			t.Fatalf("APIKeyCreate failed: %v", err)
 		}

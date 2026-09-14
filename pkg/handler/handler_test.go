@@ -432,6 +432,63 @@ func TestHandler_Passwordless(t *testing.T) {
 	}
 }
 
+// TestHandler_APIKeyCreate_HonorsTTLSeconds proves the JSON API's
+// APIKeyCreate honors an explicit ttl_seconds, and defaults to the
+// long-lived Cfg.APIKeyDefaultTTL when omitted. See #210.
+func TestHandler_APIKeyCreate_HonorsTTLSeconds(t *testing.T) {
+	h := setupTestHandler(t)
+	email := util.UniqueEmail("apikeyttl")
+	password := "password123"
+
+	regBody, _ := json.Marshal(map[string]any{"email": email, "password": password})
+	req := httptest.NewRequest(http.MethodPost, "/auth/api/register", bytes.NewBuffer(regBody))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-api-key")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+	var regResp testResponse[service.TokenResponse]
+	json.NewDecoder(w.Body).Decode(&regResp)
+	accessToken := regResp.Data.AccessToken
+
+	createKey := func(ttlSeconds int) *models.Token {
+		body, _ := json.Marshal(map[string]any{"ttl_seconds": ttlSeconds})
+		req := httptest.NewRequest(http.MethodPost, "/auth/api/api-keys", bytes.NewBuffer(body))
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-API-Key", "test-api-key")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		}
+		var resp testResponse[models.Token]
+		json.NewDecoder(w.Body).Decode(&resp)
+		return &resp.Data
+	}
+
+	t.Run("explicit ttl_seconds is honored", func(t *testing.T) {
+		key := createKey(3600)
+		gotTTL := time.Until(key.ExpiresAt)
+		// Upper bound allows for MySQL's DATETIME columns (no
+		// fractional-seconds precision) rounding a written timestamp up to
+		// the nearest second on read-back.
+		if gotTTL < 55*time.Minute || gotTTL > time.Hour+2*time.Second {
+			t.Errorf("expected TTL close to the requested 1h, got %v", gotTTL)
+		}
+	})
+
+	t.Run("omitted ttl_seconds falls back to the long-lived default", func(t *testing.T) {
+		key := createKey(0)
+		gotTTL := time.Until(key.ExpiresAt)
+		if gotTTL < 24*time.Hour {
+			t.Errorf("expected a long-lived default TTL, got %v", gotTTL)
+		}
+	})
+}
+
 // TestHandler_PasswordlessLogin_AcceptsPOSTJSONBody proves the JSON API's
 // PasswordlessLogin accepts the token in a POST body, not just the GET
 // query string -- the safer option, since a query-string token lands in

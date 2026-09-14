@@ -278,7 +278,20 @@ type Config struct {
 	Addr    string `json:"addr" env:"ADDR" default:":8080"`
 	BaseURL string `json:"base_url" env:"BASE_URL" default:"http://localhost:8080"`
 	ApiKey  string `json:"-" env:"API_KEY" required:"true"`
-	Debug   bool   `json:"debug" env:"DEBUG" default:"false"`
+	// PreviousApiKey is accepted by APIKeyMiddleware alongside ApiKey during
+	// a rotation window, mirroring JWT_PREVIOUS_PUBLIC_KEY's pattern for
+	// asymmetric key rotation: move the outgoing master key here and set
+	// ApiKey to the new one, so callers still presenting the old key keep
+	// working until you drop PreviousApiKey once nothing outstanding still
+	// needs it. Unset (the default) means no rotation is in progress.
+	PreviousApiKey string `json:"-" env:"PREVIOUS_API_KEY"`
+	// APIKeyDefaultTTL bounds how long a newly created API key (via
+	// APIKeyCreate) is valid for by default. Kept long by default (10
+	// years) to match every prior release's behavior -- API keys are
+	// meant for long-lived machine-to-machine use, not short sessions --
+	// but callers can pass an explicit shorter TTL per key.
+	APIKeyDefaultTTL time.Duration `json:"api_key_default_ttl" env:"API_KEY_DEFAULT_TTL" default:"87600h"`
+	Debug            bool          `json:"debug" env:"DEBUG" default:"false"`
 	// ForceSecureCookies forces the Secure flag on session/CSRF cookies
 	// regardless of BaseURL's scheme. By default, Secure is derived from
 	// strings.HasPrefix(BaseURL, "https://"), which silently omits Secure

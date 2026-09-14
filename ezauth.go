@@ -18,6 +18,7 @@ import (
 	"html/template"
 	"net/http"
 	"strings"
+	"time"
 
 	csrf "filippo.io/csrf/gorilla"
 	"github.com/go-webauthn/webauthn/protocol"
@@ -426,9 +427,10 @@ func (e *EzAuth) RequirePermission(permission string) func(http.Handler) http.Ha
 
 // APIKeyCreate mints a new API key for userID, optionally limited to scopes
 // (see RequireAPIKeyScope) — an empty scopes list creates an unscoped,
-// full-access key.
-func (e *EzAuth) APIKeyCreate(ctx context.Context, userID string, scopes []string) (*models.Token, error) {
-	return e.Service.APIKeyCreate(ctx, userID, scopes)
+// full-access key. ttl bounds how long the key is valid for; pass 0 to use
+// Cfg.APIKeyDefaultTTL (10 years by default).
+func (e *EzAuth) APIKeyCreate(ctx context.Context, userID string, scopes []string, ttl time.Duration) (*models.Token, error) {
+	return e.Service.APIKeyCreate(ctx, userID, scopes, ttl)
 }
 
 // APIKeyRevoke revokes one of userID's API keys by its token ID (see

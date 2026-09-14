@@ -123,7 +123,7 @@ See the [Asymmetric JWT Signing section of the README](https://github.com/josueb
 By default an API key (via `APIKeyMiddleware`) grants the same access as the full account. `APIKeyCreate` can limit a key to a specific set of scopes, enforced per-route with `RequireAPIKeyScope`, layered on top of `APIKeyMiddleware`'s existing all-or-nothing group-level gate.
 
 ```go
-token, err := auth.Service.APIKeyCreate(ctx, user.ID, []string{"posts:write"})
+token, err := auth.Service.APIKeyCreate(ctx, user.ID, []string{"posts:write"}, 0) // ttl 0 = Cfg.APIKeyDefaultTTL (10 years by default)
 // token.Token is the raw key value — store/display it now, it can't be recovered later.
 
 keys, err := auth.Service.APIKeysList(ctx, user.ID) // []service.APIKeyInfo — raw key omitted, shown only once above
@@ -135,6 +135,10 @@ r.Use(auth.Handler.APIKeyMiddleware) // group-level gate: any valid key gets pas
 r.With(auth.RequireAPIKeyScope("posts:write")).Post("/posts", createPostHandler)
 ```
 
-> **Warning:** an unscoped key has full access, not restricted access. `APIKeyCreate(ctx, userID, nil)` does **not** create a key with no permissions — it creates a key that passes every `RequireAPIKeyScope` check unconditionally, identically to a key issued before scoping existed. Always pass an explicit non-empty scopes list for any key that should be limited. The master `EZAUTH_API_KEY` config key has no associated `Token` at all, so it's always unscoped/full-access too, regardless of any `RequireAPIKeyScope` check.
+> **Warning:** an unscoped key has full access, not restricted access. `APIKeyCreate(ctx, userID, nil, 0)` does **not** create a key with no permissions — it creates a key that passes every `RequireAPIKeyScope` check unconditionally, identically to a key issued before scoping existed. Always pass an explicit non-empty scopes list for any key that should be limited. The master `EZAUTH_API_KEY` config key has no associated `Token` at all, so it's always unscoped/full-access too, regardless of any `RequireAPIKeyScope` check.
+
+**Key lifetime**: `APIKeyCreate`'s `ttl` parameter bounds how long a specific key is valid for (pass `0` to fall back to `EZAUTH_API_KEY_DEFAULT_TTL`, 10 years by default — API keys are meant for long-lived machine-to-machine use, not short sessions). Set a shorter `ttl` per key for anything that should expire sooner.
+
+**Master key rotation**: the shared `EZAUTH_API_KEY` config key has no per-key expiry or built-in rotation of its own, but `APIKeyMiddleware` also accepts `EZAUTH_PREVIOUS_API_KEY` for the duration of a rotation — mirroring `EZAUTH_JWT_PREVIOUS_PUBLIC_KEY`'s pattern for JWT key rotation. Move the outgoing master key to `EZAUTH_PREVIOUS_API_KEY` and set `EZAUTH_API_KEY` to the new one; callers still presenting the old key keep working until you drop `EZAUTH_PREVIOUS_API_KEY` once nothing outstanding still needs it.
 
 See the [Scoped API Keys section of the README](https://github.com/josuebrunel/ezauth#scoped-api-keys) for more.
