@@ -39,6 +39,25 @@ func MockUserLoader(user *models.User, err error) UserLoader {
 	}
 }
 
+// MockUserActiveGetter mocks the UserActiveGetter interface. Defaults (zero
+// value) to an active user unless User/Err are set, so existing tests that
+// don't care about this check can use &MockUserActiveGetter{} and still get
+// an IsActive user back.
+type MockUserActiveGetter struct {
+	User *models.User
+	Err  error
+}
+
+func (m *MockUserActiveGetter) UserGetByID(ctx context.Context, id string) (*models.User, error) {
+	if m.Err != nil {
+		return nil, m.Err
+	}
+	if m.User != nil {
+		return m.User, nil
+	}
+	return &models.User{ID: id, IsActive: true}, nil
+}
+
 // hs256KeyFunc returns a jwt.Keyfunc that always resolves to secret, for
 // testing AuthMiddleware against HS256-signed tokens.
 func hs256KeyFunc(secret string) jwt.Keyfunc {
@@ -47,7 +66,7 @@ func hs256KeyFunc(secret string) jwt.Keyfunc {
 
 func TestAuthMiddleware(t *testing.T) {
 	secret := "secret"
-	mw := AuthMiddleware(hs256KeyFunc(secret), []string{"HS256"})
+	mw := AuthMiddleware(hs256KeyFunc(secret), []string{"HS256"}, &MockUserActiveGetter{})
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := r.Context().Value(UserContextKey).(string)
 		if !ok || userID != "user1" {
@@ -75,7 +94,7 @@ func TestAuthMiddleware(t *testing.T) {
 
 func TestAuthMiddleware_ImpersonatorContextKey(t *testing.T) {
 	secret := "secret"
-	mw := AuthMiddleware(hs256KeyFunc(secret), []string{"HS256"})
+	mw := AuthMiddleware(hs256KeyFunc(secret), []string{"HS256"}, &MockUserActiveGetter{})
 
 	t.Run("sets impersonator id when act claim present", func(t *testing.T) {
 		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -134,7 +153,7 @@ func TestAuthMiddleware_ImpersonatorContextKey(t *testing.T) {
 
 func TestAPIKeyMiddleware(t *testing.T) {
 	apiKey := "config-key"
-	mw := APIKeyMiddleware(apiKey, &MockTokenGetter{})
+	mw := APIKeyMiddleware(apiKey, &MockTokenGetter{}, &MockUserActiveGetter{})
 
 	// Test Config Key -- also confirm it sets APIKeyScopesContextKey (to an
 	// explicit unscoped []string{}) like the DB-key path does, so
@@ -166,7 +185,7 @@ func TestAPIKeyMiddleware(t *testing.T) {
 			Metadata:  models.JSONMap{"scopes": []string{"posts:write"}},
 		},
 	}
-	mwDB := APIKeyMiddleware(apiKey, mockRepo)
+	mwDB := APIKeyMiddleware(apiKey, mockRepo, &MockUserActiveGetter{})
 	nextCheckScopes := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		scopes, ok := r.Context().Value(APIKeyScopesContextKey).([]string)
 		if !ok || len(scopes) != 1 || scopes[0] != "posts:write" {
@@ -193,7 +212,7 @@ func TestAPIKeyMiddleware_LooksUpByHash(t *testing.T) {
 	mockRepo := &MockTokenGetter{
 		Token: &models.Token{TokenType: models.TokenTypeApiKey, ExpiresAt: time.Now().Add(time.Hour)},
 	}
-	mw := APIKeyMiddleware("config-key", mockRepo)
+	mw := APIKeyMiddleware("config-key", mockRepo, &MockUserActiveGetter{})
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
 
 	rawKey := "some-raw-db-api-key-value"
@@ -211,6 +230,106 @@ func TestAPIKeyMiddleware_LooksUpByHash(t *testing.T) {
 	}
 	if want := util.HashToken(rawKey); mockRepo.ReceivedToken != want {
 		t.Fatalf("expected lookup with hash %q, got %q", want, mockRepo.ReceivedToken)
+	}
+}
+
+// TestAuthMiddleware_RejectsInactiveUser proves a Bearer token with a valid
+// signature and unexpired claims still fails once the owning user has been
+// suspended -- before #202/#203, only signature/expiry/algorithm were
+// checked, so a suspended account kept Bearer access until the access
+// token's own natural expiry.
+func TestAuthMiddleware_RejectsInactiveUser(t *testing.T) {
+	secret := "secret"
+	mw := AuthMiddleware(hs256KeyFunc(secret), []string{"HS256"}, &MockUserActiveGetter{
+		User: &models.User{ID: "user1", IsActive: false},
+	})
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("expected the suspended user's token to be rejected before reaching next")
+	})
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{"sub": "user1"})
+	tokenString, _ := token.SignedString([]byte(secret))
+
+	req := httptest.NewRequest("GET", "/", nil)
+	req.Header.Set("Authorization", "Bearer "+tokenString)
+	w := httptest.NewRecorder()
+
+	mw(next).ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for a suspended user, got %d", w.Code)
+	}
+}
+
+// TestAuthMiddleware_RejectsWhenUserLookupFails proves a token for a
+// since-deleted user (UserGetByID errors, e.g. sql.ErrNoRows) is rejected
+// rather than treated as still authenticated.
+func TestAuthMiddleware_RejectsWhenUserLookupFails(t *testing.T) {
+	secret := "secret"
+	mw := AuthMiddleware(hs256KeyFunc(secret), []string{"HS256"}, &MockUserActiveGetter{
+		Err: errCheckerFailed,
+	})
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("expected the lookup failure to reject before reaching next")
+	})
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{"sub": "deleted-user"})
+	tokenString, _ := token.SignedString([]byte(secret))
+
+	req := httptest.NewRequest("GET", "/", nil)
+	req.Header.Set("Authorization", "Bearer "+tokenString)
+	w := httptest.NewRecorder()
+
+	mw(next).ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 when the user lookup fails, got %d", w.Code)
+	}
+}
+
+// TestAPIKeyMiddleware_RejectsInactiveUser proves a still-valid (unrevoked,
+// unexpired) DB-backed API key stops working once its owning user is
+// suspended -- before #203, only the token row's own fields were checked.
+func TestAPIKeyMiddleware_RejectsInactiveUser(t *testing.T) {
+	mockRepo := &MockTokenGetter{
+		Token: &models.Token{UserID: "user1", TokenType: models.TokenTypeApiKey, ExpiresAt: time.Now().Add(time.Hour)},
+	}
+	mw := APIKeyMiddleware("config-key", mockRepo, &MockUserActiveGetter{
+		User: &models.User{ID: "user1", IsActive: false},
+	})
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("expected the suspended user's API key to be rejected before reaching next")
+	})
+
+	req := httptest.NewRequest("GET", "/", nil)
+	req.Header.Set("X-API-Key", "db-key")
+	w := httptest.NewRecorder()
+
+	mw(next).ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for a suspended user's API key, got %d", w.Code)
+	}
+}
+
+// TestAPIKeyMiddleware_MasterKeyBypassesUserCheck proves the shared config
+// master key (which has no owning user at all) still authenticates even
+// though UserActiveGetter would reject any real user ID -- the check only
+// applies to DB-backed, user-owned keys.
+func TestAPIKeyMiddleware_MasterKeyBypassesUserCheck(t *testing.T) {
+	mw := APIKeyMiddleware("config-key", &MockTokenGetter{}, &MockUserActiveGetter{
+		Err: errCheckerFailed,
+	})
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
+
+	req := httptest.NewRequest("GET", "/", nil)
+	req.Header.Set("X-API-Key", "config-key")
+	w := httptest.NewRecorder()
+
+	mw(next).ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected the master key to bypass the per-user check, got %d", w.Code)
 	}
 }
 

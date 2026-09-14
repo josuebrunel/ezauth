@@ -41,8 +41,12 @@ type OrgLoader func(context.Context) (*models.Organization, error)
 // keyFunc resolves the verification key for a token (see jwt.Keyfunc — e.g. by its
 // "kid" header, to support asymmetric key rotation); validMethods restricts which
 // signing algorithms are accepted (e.g. []string{"HS256"} or []string{"RS256"}),
-// guarding against algorithm-confusion attacks.
-func AuthMiddleware(keyFunc jwt.Keyfunc, validMethods []string) func(http.Handler) http.Handler {
+// guarding against algorithm-confusion attacks. userRepo re-checks the
+// token's subject on every request: a valid signature and unexpired claims
+// only prove the token was genuinely issued, not that the account is still
+// active -- without this, a suspended/disabled/deleted user keeps Bearer
+// access until the access token's own natural expiry.
+func AuthMiddleware(keyFunc jwt.Keyfunc, validMethods []string, userRepo UserActiveGetter) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")
@@ -75,6 +79,13 @@ func AuthMiddleware(keyFunc jwt.Keyfunc, validMethods []string) func(http.Handle
 				WriteJSONResponseError(w, http.StatusUnauthorized, ErrInvalidTokenClaims)
 				return
 			}
+
+			user, err := userRepo.UserGetByID(r.Context(), userID)
+			if err != nil || !user.IsActive {
+				WriteJSONResponseError(w, http.StatusUnauthorized, ErrInvalidToken)
+				return
+			}
+
 			ctx := context.WithValue(r.Context(), UserContextKey, userID)
 			if act, ok := claims["act"].(map[string]any); ok {
 				if actorID, ok := act["sub"].(string); ok && actorID != "" {
@@ -87,7 +98,12 @@ func AuthMiddleware(keyFunc jwt.Keyfunc, validMethods []string) func(http.Handle
 }
 
 // APIKeyMiddleware checks for a valid API key in the X-API-Key header.
-func APIKeyMiddleware(configApiKey string, tokenRepo TokenGetter) func(http.Handler) http.Handler {
+// userRepo re-checks the key owner's status on every request: a DB-backed
+// key's own type/revoked/expiry fields say nothing about whether the
+// account it belongs to is still active, so without this a suspended user's
+// still-valid API key keeps working indefinitely. Not applicable to the
+// shared config master key (configApiKey), which has no owning user.
+func APIKeyMiddleware(configApiKey string, tokenRepo TokenGetter, userRepo UserActiveGetter) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			apiKey := r.Header.Get("X-API-Key")
@@ -127,6 +143,12 @@ func APIKeyMiddleware(configApiKey string, tokenRepo TokenGetter) func(http.Hand
 			}
 
 			if !token.ExpiresAt.IsZero() && token.ExpiresAt.Before(time.Now()) {
+				WriteJSONResponseError(w, http.StatusUnauthorized, ErrInvalidAPIKey)
+				return
+			}
+
+			user, err := userRepo.UserGetByID(r.Context(), token.UserID)
+			if err != nil || !user.IsActive {
 				WriteJSONResponseError(w, http.StatusUnauthorized, ErrInvalidAPIKey)
 				return
 			}

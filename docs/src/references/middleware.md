@@ -115,8 +115,8 @@ implementation.
 ```go
 // Same logic as the Handler methods above, taking explicit dependencies
 // (a RoleChecker, TokenGetter, etc.) instead of a *Handler.
-func AuthMiddleware(keyFunc jwt.Keyfunc, validMethods []string) func(http.Handler) http.Handler
-func APIKeyMiddleware(configApiKey string, tokenRepo TokenGetter) func(http.Handler) http.Handler
+func AuthMiddleware(keyFunc jwt.Keyfunc, validMethods []string, userRepo UserActiveGetter) func(http.Handler) http.Handler
+func APIKeyMiddleware(configApiKey string, tokenRepo TokenGetter, userRepo UserActiveGetter) func(http.Handler) http.Handler
 func RequireAPIKeyScope(scope string) func(http.Handler) http.Handler
 func RequireRole(checker RoleChecker, role string) func(http.Handler) http.Handler
 func RequirePermission(checker PermissionChecker, permission string) func(http.Handler) http.Handler
