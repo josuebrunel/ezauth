@@ -747,7 +747,8 @@ r.Use(auth.Handler.APIKeyMiddleware) // group-level gate: any valid key gets pas
 r.With(auth.RequireAPIKeyScope("posts:write")).Post("/posts", createPostHandler)
 ```
 
-An **unscoped** key — `APIKeyCreate(ctx, userID, nil)`, or any key issued before this feature existed — has full access to every `RequireAPIKeyScope` check; only a key created with a non-empty scopes list is actually restricted. The master `EZAUTH_API_KEY` config key has no associated `Token` at all, so it's always unscoped/full-access too.
+> [!WARNING]
+> **An unscoped key has full access, not restricted access.** `APIKeyCreate(ctx, userID, nil)` (or `{"scopes": []}` over the API) does **not** create a key with no permissions — it creates a key that passes every `RequireAPIKeyScope` check unconditionally, identically to a key issued before scoping existed. If you want a key restricted to nothing, don't gate the routes it should never reach behind `RequireAPIKeyScope` at all — put them behind `APIKeyMiddleware` only for keys that are meant to be unrestricted, and always pass an explicit non-empty `scopes` list for any key that should be limited. The master `EZAUTH_API_KEY` config key has no associated `Token` at all, so it's always unscoped/full-access too, regardless of any `RequireAPIKeyScope` check.
 
 #### Standalone-service Mode
 

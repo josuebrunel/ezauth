@@ -131,10 +131,17 @@ func APIKeyMiddleware(configApiKey string, tokenRepo TokenGetter) func(http.Hand
 
 // RequireAPIKeyScope is a middleware that requires the API key used to
 // authenticate the request (via APIKeyMiddleware, which must run upstream)
-// to include the given scope. An unscoped key — including the master
-// config API key, which never has an associated Token/scopes — has full
-// access, matching the behavior of every API key issued before per-key
-// scoping existed.
+// to include the given scope.
+//
+// WARNING: an unscoped key — one created with a nil/empty scopes list, or
+// any key issued before per-key scoping existed, or the master config API
+// key (which never has an associated Token/scopes at all) — passes this
+// check unconditionally. "No scopes" means "full access", not "no access".
+// This is intentional for backward compatibility (every key predating
+// scoping must keep working), but it's a footgun: a key created without an
+// explicit scopes list is NOT a restricted key. Always pass a non-empty
+// scopes list for any key that should be limited; see the "Scoped API Keys"
+// section of the README for the full explanation.
 func RequireAPIKeyScope(scope string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
