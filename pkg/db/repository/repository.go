@@ -55,6 +55,7 @@ type TokenQuerier interface {
 	QueryTokenListByUserID(ctx context.Context, userID string, limit int) bob.Query
 	QueryTokenRevoke(ctx context.Context, id string) bob.Query
 	QueryTokenRevokeAllByUserID(ctx context.Context, userID string) bob.Query
+	QueryTokenRevokeAllByUserIDAndType(ctx context.Context, userID, tokenType string) bob.Query
 	QueryTokenRevokeFamily(ctx context.Context, userID, familyID string) bob.Query
 	QueryTokenRevokeSessions(ctx context.Context, userID, exceptID string) bob.Query
 	QueryTokenDelete(ctx context.Context, id string) bob.Query
@@ -526,11 +527,29 @@ func (r Repository) TokenRevoke(ctx context.Context, id string) error {
 	return nil
 }
 
-// TokenRevokeAllByUserID revokes all non-revoked tokens for a given user.
+// TokenRevokeAllByUserID revokes all non-revoked tokens for a given user,
+// regardless of type -- refresh sessions, API keys, MFA recovery codes,
+// trusted devices, everything. Most callers mean to revoke only one class of
+// token (e.g. MFA recovery codes on re-enrollment, sessions on email
+// change); use TokenRevokeAllByUserIDAndType for those. This blanket form is
+// for cases where revoking literally everything is the intended policy
+// (e.g. PasswordResetConfirm).
 func (r Repository) TokenRevokeAllByUserID(ctx context.Context, userID string) error {
 	query := r.QueryTokenRevokeAllByUserID(ctx, userID)
 	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
 		xlog.Error("Failed to revoke all tokens for user", "error", err, "user_id", userID)
+		return err
+	}
+	return nil
+}
+
+// TokenRevokeAllByUserIDAndType revokes all non-revoked tokens of the given
+// type for a user, leaving every other token type (other sessions, API
+// keys, etc.) untouched.
+func (r Repository) TokenRevokeAllByUserIDAndType(ctx context.Context, userID, tokenType string) error {
+	query := r.QueryTokenRevokeAllByUserIDAndType(ctx, userID, tokenType)
+	if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+		xlog.Error("Failed to revoke tokens by type for user", "error", err, "user_id", userID, "token_type", tokenType)
 		return err
 	}
 	return nil

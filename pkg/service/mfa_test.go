@@ -117,6 +117,66 @@ func TestMFAEnrollAndConfirm(t *testing.T) {
 	})
 }
 
+// TestMFATokenRevocationIsScopedByType proves MFA enrollment/re-enrollment
+// and disabling only revoke MFA-related tokens (recovery codes, pre-auth
+// tokens) -- not the user's unrelated API keys and refresh sessions, which
+// TokenRevokeAllByUserID (with no type filter) used to collaterally wipe
+// out as a side effect of a security feature the user opted into.
+func TestMFATokenRevocationIsScopedByType(t *testing.T) {
+	auth := setupMFATestDB(t)
+	ctx := context.Background()
+	user := mfaTestUser(t, auth, ctx)
+
+	apiKey, err := auth.APIKeyCreate(ctx, user.ID, nil)
+	if err != nil {
+		t.Fatalf("APIKeyCreate failed: %v", err)
+	}
+	refreshTokens, err := auth.TokenCreate(ctx, user)
+	if err != nil {
+		t.Fatalf("TokenCreate failed: %v", err)
+	}
+
+	assertNotRevoked := func(t *testing.T, label, tokenID string) {
+		t.Helper()
+		tok, err := auth.Repo.TokenGetByID(ctx, tokenID)
+		if err != nil {
+			t.Fatalf("TokenGetByID(%s) failed: %v", label, err)
+		}
+		if tok.Revoked {
+			t.Errorf("expected %s to remain unrevoked, but it was revoked", label)
+		}
+	}
+
+	enrollResp, err := auth.MFAEnroll(ctx, user)
+	if err != nil {
+		t.Fatalf("MFAEnroll failed: %v", err)
+	}
+	code, err := totp.GenerateCode(enrollResp.Secret, time.Now())
+	if err != nil {
+		t.Fatalf("failed to generate totp code: %v", err)
+	}
+	if _, err := auth.MFAConfirm(ctx, user, code); err != nil {
+		t.Fatalf("MFAConfirm failed: %v", err)
+	}
+	assertNotRevoked(t, "api key after MFAConfirm", apiKey.ID)
+
+	sessionRow, err := auth.Repo.TokenGetByToken(ctx, util.HashToken(refreshTokens.RefreshToken))
+	if err != nil {
+		t.Fatalf("TokenGetByToken failed: %v", err)
+	}
+	assertNotRevoked(t, "session after MFAConfirm", sessionRow.ID)
+
+	code2, err := totp.GenerateCode(*user.MfaSecret, time.Now())
+	if err != nil {
+		t.Fatalf("failed to generate totp code: %v", err)
+	}
+	if err := auth.MFADisable(ctx, user, code2); err != nil {
+		t.Fatalf("MFADisable failed: %v", err)
+	}
+	assertNotRevoked(t, "api key after MFADisable", apiKey.ID)
+	assertNotRevoked(t, "session after MFADisable", sessionRow.ID)
+}
+
 func TestMFALoginStepUp(t *testing.T) {
 	auth := setupMFATestDB(t)
 	ctx := context.Background()

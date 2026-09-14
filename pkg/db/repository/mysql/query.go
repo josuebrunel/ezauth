@@ -411,6 +411,15 @@ func (q *MysqlQuerier) QueryTokenRevokeAllByUserID(ctx context.Context, userID s
 	)
 }
 
+func (q *MysqlQuerier) QueryTokenRevokeAllByUserIDAndType(ctx context.Context, userID, tokenType string) bob.Query {
+	return mysql.Update(
+		um.Table(models.TableToken),
+		um.SetCol(models.ColumnRevoked).ToArg(true),
+		um.Where(mysql.Quote(models.ColumnUserID).EQ(mysql.Arg(userID))),
+		um.Where(mysql.Quote(models.ColumnTokenType).EQ(mysql.Arg(tokenType))),
+	)
+}
+
 // QueryTokenRevokeFamily bulk-revokes every active refresh token sharing
 // family_id (stored in the JSON Metadata column, see #118) in one UPDATE,
 // instead of listing tokens and revoking them one at a time.

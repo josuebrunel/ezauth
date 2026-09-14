@@ -213,8 +213,14 @@ func (a *Auth) MFADisable(ctx context.Context, user *models.User, code string) e
 		return err
 	}
 
-	if err := a.Repo.TokenRevokeAllByUserID(ctx, user.ID); err != nil {
-		xlog.Warn("failed to revoke recovery/preauth tokens after mfa disable", "user_id", user.ID, "err", err)
+	// Scoped to recovery/pre-auth tokens specifically -- disabling MFA
+	// shouldn't collaterally revoke the user's sessions, API keys, or
+	// trusted devices.
+	if err := a.Repo.TokenRevokeAllByUserIDAndType(ctx, user.ID, models.TokenTypeMFARecovery); err != nil {
+		xlog.Warn("failed to revoke recovery tokens after mfa disable", "user_id", user.ID, "err", err)
+	}
+	if err := a.Repo.TokenRevokeAllByUserIDAndType(ctx, user.ID, models.TokenTypeMFAPreAuth); err != nil {
+		xlog.Warn("failed to revoke preauth tokens after mfa disable", "user_id", user.ID, "err", err)
 	}
 
 	xlog.Info("mfa disabled", "user_id", user.ID)
@@ -351,9 +357,11 @@ func mfaHashRecoveryCode(userID, code string) string {
 
 func (a *Auth) mfaGenerateRecoveryCodes(ctx context.Context, user *models.User) ([]string, error) {
 	// Any previously issued, still-unused recovery codes are invalidated by
-	// re-enrollment so old codes can't be replayed against a new secret.
-	if err := a.Repo.TokenRevokeAllByUserID(ctx, user.ID); err != nil {
-		xlog.Warn("failed to revoke old mfa tokens before issuing new recovery codes", "user_id", user.ID, "err", err)
+	// re-enrollment so old codes can't be replayed against a new secret --
+	// scoped to recovery codes specifically, so this doesn't collaterally
+	// revoke the user's sessions/API keys/trusted devices.
+	if err := a.Repo.TokenRevokeAllByUserIDAndType(ctx, user.ID, models.TokenTypeMFARecovery); err != nil {
+		xlog.Warn("failed to revoke old mfa recovery codes before issuing new ones", "user_id", user.ID, "err", err)
 	}
 
 	codes := make([]string, 0, mfaRecoveryCodeCount)

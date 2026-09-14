@@ -139,10 +139,17 @@ func (r Repository) TokenRevoke(ctx context.Context, id string) error
 ```
 
 ### `TokenRevokeAllByUserID`
-Revokes every active token for a user (e.g. all sessions, after a confirmed email change).
+Revokes *every* active token for a user, regardless of type — sessions, API keys, MFA recovery codes, trusted devices, everything. Used where that blanket behavior is the intended policy (e.g. `PasswordResetConfirm`, on the theory that a password reset should force re-auth everywhere). Most callers mean to revoke only one class of token; use `TokenRevokeAllByUserIDAndType` for those, so e.g. confirming MFA enrollment doesn't collaterally revoke the user's API keys.
 
 ```go
 func (r Repository) TokenRevokeAllByUserID(ctx context.Context, userID string) error
+```
+
+### `TokenRevokeAllByUserIDAndType`
+Revokes every active token of the given type for a user, leaving other token types untouched — e.g. `models.TokenTypeRefresh` after a confirmed email change (sessions only, not API keys), or `models.TokenTypeMFARecovery` when MFA re-enrollment invalidates old recovery codes.
+
+```go
+func (r Repository) TokenRevokeAllByUserIDAndType(ctx context.Context, userID, tokenType string) error
 ```
 
 ### `TokenRevokeFamily`

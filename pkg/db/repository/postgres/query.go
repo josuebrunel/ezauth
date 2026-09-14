@@ -410,6 +410,15 @@ func (q *PSQLQuerier) QueryTokenRevokeAllByUserID(ctx context.Context, userID st
 	)
 }
 
+func (q *PSQLQuerier) QueryTokenRevokeAllByUserIDAndType(ctx context.Context, userID, tokenType string) bob.Query {
+	return psql.Update(
+		um.Table(psql.Quote(models.TableToken)),
+		um.SetCol(models.ColumnRevoked).To(true),
+		um.Where(psql.Quote(models.ColumnUserID).EQ(psql.Arg(userID))),
+		um.Where(psql.Quote(models.ColumnTokenType).EQ(psql.Arg(tokenType))),
+	)
+}
+
 // QueryTokenRevokeFamily bulk-revokes every active refresh token sharing
 // family_id (stored in the JSONB Metadata column, see #118) in one UPDATE,
 // instead of listing tokens and revoking them one at a time.

@@ -141,7 +141,9 @@ func (a *Auth) EmailChangeConfirm(ctx context.Context, tokenValue string) (*mode
 		xlog.Warn("failed to revoke email change token", "token_id", tok.ID, "err", err)
 	}
 
-	if err := a.Repo.TokenRevokeAllByUserID(ctx, updated.ID); err != nil {
+	// Scoped to refresh sessions specifically -- forcing re-auth on other
+	// sessions shouldn't collaterally revoke the user's API keys.
+	if err := a.Repo.TokenRevokeAllByUserIDAndType(ctx, updated.ID, models.TokenTypeRefresh); err != nil {
 		xlog.Error("failed to revoke sessions after email change", "user_id", updated.ID, "err", err)
 	}
 
