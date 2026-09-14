@@ -23,7 +23,7 @@ func (a *Auth) recordAuditEvent(ctx context.Context, userID, eventType string, m
 		return
 	}
 	if _, err := a.Repo.AuditLogCreate(ctx, &models.AuditLog{
-		UserID:    userID,
+		UserID:    &userID,
 		EventType: eventType,
 		Metadata:  metadata,
 	}); err != nil {

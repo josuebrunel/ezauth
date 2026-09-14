@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 	"time"
 
@@ -152,6 +153,41 @@ func TestAuditLog(t *testing.T) {
 		}
 		if len(result.Events) != 1 {
 			t.Fatalf("expected audit logging to still run alongside the custom hook, got %d events", len(result.Events))
+		}
+	})
+
+	// TestAuditLog_SurvivesUserDeletion proves an audit-log row survives its
+	// user being deleted, with user_id set to NULL instead of the row being
+	// cascade-deleted along with the account -- undoing that would erase the
+	// audit trail of what happened to (or via) an account right as it's
+	// deleted, exactly the moment that trail matters most. See #212.
+	t.Run("audit log row survives user deletion with user_id set to NULL", func(t *testing.T) {
+		auth := setupAuditTestDB(t, 5, time.Minute)
+		user := auditTestUser(t, auth, ctx)
+
+		created, err := auth.Repo.AuditLogCreate(ctx, &models.AuditLog{
+			UserID:    &user.ID,
+			EventType: models.AuditEventLoginSucceeded,
+		})
+		if err != nil {
+			t.Fatalf("AuditLogCreate failed: %v", err)
+		}
+
+		if err := auth.Repo.UserDelete(ctx, user.ID); err != nil {
+			t.Fatalf("UserDelete failed: %v", err)
+		}
+
+		placeholder := "?"
+		if auth.Repo.Opts.Dialect != "sqlite" && auth.Repo.Opts.Dialect != "mysql" {
+			placeholder = "$1"
+		}
+		var gotUserID sql.NullString
+		row := auth.Repo.DB().QueryRowContext(ctx, "SELECT user_id FROM ezauth_audit_logs WHERE id = "+placeholder, created.ID)
+		if err := row.Scan(&gotUserID); err != nil {
+			t.Fatalf("expected the audit log row to survive user deletion, but it's gone: %v", err)
+		}
+		if gotUserID.Valid {
+			t.Errorf("expected user_id to be NULL after the user was deleted, got %q", gotUserID.String)
 		}
 	})
 }

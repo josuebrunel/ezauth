@@ -27,10 +27,12 @@ const (
 )
 
 // AuditLog represents one persisted security-relevant event for a user
-// (see the AuditEvent* constants).
+// (see the AuditEvent* constants). UserID is nullable: the row survives its
+// user being deleted (ON DELETE SET NULL, not CASCADE -- see #212), so the
+// audit trail isn't erased at exactly the moment it matters most.
 type AuditLog struct {
 	ID        string    `db:"id" json:"id"`
-	UserID    string    `db:"user_id" json:"user_id"`
+	UserID    *string   `db:"user_id" json:"user_id"`
 	EventType string    `db:"event_type" json:"event_type"`
 	Metadata  JSONMap   `db:"metadata" json:"metadata,omitempty"`
 	CreatedAt time.Time `db:"created_at" json:"created_at"`

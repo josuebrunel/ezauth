@@ -26,21 +26,44 @@ func TestEzAuth(t *testing.T) {
 		}
 		defer db.Close()
 
+		// Every table any migration has ever created. This list must stay
+		// exhaustive: leaving a table out means it survives this reset (and,
+		// on postgres/mysql, keeps a shared CI database dirty for the next
+		// package's ensureMigrated cycle) while ezauth_goose_db_version and
+		// its FK targets (ezauth_users) get dropped -- CREATE TABLE IF NOT
+		// EXISTS then silently skips recreating the survivor, so it re-enters
+		// the next Up() missing whatever that table's init migration would
+		// have (re-)established, e.g. a FK stripped by an upstream CASCADE.
+		tables := []string{
+			"ezauth_audit_logs",
+			"ezauth_org_members",
+			"ezauth_organizations",
+			"ezauth_role_permissions",
+			"ezauth_user_roles",
+			"ezauth_permissions",
+			"ezauth_roles",
+			"ezauth_webauthn_challenges",
+			"ezauth_webauthn_credentials",
+			"ezauth_tokens",
+			"ezauth_users",
+			"ezauth_goose_db_version",
+		}
+
 		switch dialect {
 		case "postgres":
-			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_tokens CASCADE")
-			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_users CASCADE")
-			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_goose_db_version")
+			for _, table := range tables {
+				_, _ = db.Exec("DROP TABLE IF EXISTS " + table + " CASCADE")
+			}
 		case "mysql":
 			_, _ = db.Exec("SET FOREIGN_KEY_CHECKS=0")
-			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_tokens")
-			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_users")
-			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_goose_db_version")
+			for _, table := range tables {
+				_, _ = db.Exec("DROP TABLE IF EXISTS " + table)
+			}
 			_, _ = db.Exec("SET FOREIGN_KEY_CHECKS=1")
 		case "sqlite", "sqlite3":
-			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_tokens")
-			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_users")
-			_, _ = db.Exec("DROP TABLE IF EXISTS ezauth_goose_db_version")
+			for _, table := range tables {
+				_, _ = db.Exec("DROP TABLE IF EXISTS " + table)
+			}
 		}
 	})
 

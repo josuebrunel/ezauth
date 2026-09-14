@@ -935,7 +935,7 @@ Safe to call regardless of transport: the session-manager middleware always runs
 ### Roles & Permissions (RBAC)
 
 > [!WARNING]
-> **SQLite deployments only, upgrading from an earlier version**: `ezauth` now enables SQLite's `foreign_keys` pragma (it's off by default per-connection in SQLite, unlike postgres/mysql). This is what makes the cascading deletes below actually work — but it also means **every** `ON DELETE CASCADE` in the schema, not just the new RBAC/organization tables, now really fires: deleting a user really cascades to their tokens/audit logs/webauthn credentials, etc., where before this fix that cascade was a silent no-op on SQLite specifically. If your SQLite database has accumulated rows that would now get cascade-deleted (or, less likely, orphaned rows that were only surviving because cascades weren't enforced), audit your data before deploying this version. Postgres and MySQL always enforced foreign keys and are unaffected.
+> **SQLite deployments only, upgrading from an earlier version**: `ezauth` now enables SQLite's `foreign_keys` pragma (it's off by default per-connection in SQLite, unlike postgres/mysql). This is what makes the cascading deletes below actually work — but it also means **every** `ON DELETE CASCADE`/`SET NULL` in the schema, not just the new RBAC/organization tables, now really fires: deleting a user really cascades to their tokens/webauthn credentials, etc. (audit logs are the one exception — see [Audit Log](#audit-log)), where before this fix that cascade was a silent no-op on SQLite specifically. If your SQLite database has accumulated rows that would now get cascade-deleted (or, less likely, orphaned rows that were only surviving because cascades weren't enforced), audit your data before deploying this version. Postgres and MySQL always enforced foreign keys and are unaffected.
 
 `ezauth` also has real RBAC: `roles`/`permissions` tables (many-to-many, via `role_permissions`/`user_roles` join tables) plus `RequireRole`/`RequirePermission` middleware that enforce against them. This is a fully separate, additive system from the legacy comma-separated `User.Roles` field and its `HasRole`/`AddRole`/`RemoveRole`/etc. helpers — those keep working exactly as before, but `RequireRole`/`RequirePermission` consult the RBAC tables, not that field. Use whichever fits: the string field for a quick, ungoverned tag on a user; the tables when you need actual enforcement, an audit trail of grants/revokes, or permissions distinct from roles.
 
@@ -1138,8 +1138,10 @@ result, err := auth.Service.AuditLogs(ctx, targetUserID, service.ListAuditLogsOp
     Since:     &since,                       // optional, RFC3339
     Limit:     50,
 })
-// result.Events ([]*models.AuditLog: event_type, metadata, created_at), result.HasMore
+// result.Events ([]*models.AuditLog: user_id, event_type, metadata, created_at), result.HasMore
 ```
+
+`AuditLog.UserID` is `*string`, not `string`: unlike every other user-owned table, deleting a user does **not** cascade-delete their audit-log rows — the foreign key is `ON DELETE SET NULL`, so the row survives with `UserID` set to `nil`. The event still happened and is still evidence, even once the account itself is gone; erasing it at exactly the moment an account is deleted would defeat the point of an audit trail.
 
 Event types are the `models.AuditEvent*` constants (e.g. `AuditEventLoginSucceeded`, `AuditEventAccountLocked`, `AuditEventRoleGranted`/`AuditEventRoleRevoked`). Login failures and account lockouts each get their own hook method — `AfterLoginFailed` and `AfterAccountLocked` (they're part of the `Hook` interface, so embed `DefaultHook` and override only what you need to react to them). "Email verification" isn't recorded yet since ezauth doesn't have an email-verification-confirm flow.
 

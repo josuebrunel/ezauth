@@ -338,8 +338,9 @@ func TestPSQLQuerier_AuditLogOperations(t *testing.T) {
 	querier := &PSQLQuerier{}
 	ctx := context.Background()
 
+	userID := "user-123"
 	log := &models.AuditLog{
-		UserID:    "user-123",
+		UserID:    &userID,
 		EventType: models.AuditEventLoginSucceeded,
 	}
 
@@ -361,7 +362,7 @@ func TestPSQLQuerier_AuditLogOperations(t *testing.T) {
 	})
 
 	t.Run("ListByUserID", func(t *testing.T) {
-		q := querier.QueryAuditLogListByUserID(ctx, log.UserID, models.AuditLogFilter{}, 20, 0)
+		q := querier.QueryAuditLogListByUserID(ctx, userID, models.AuditLogFilter{}, 20, 0)
 		sql, args, err := bob.Build(ctx, q)
 		if err != nil {
 			t.Fatalf("failed to build query: %v", err)
@@ -372,7 +373,7 @@ func TestPSQLQuerier_AuditLogOperations(t *testing.T) {
 		if !strings.Contains(sql, "\"user_id\" = $1") {
 			t.Errorf("expected user_id condition, got %s", sql)
 		}
-		if len(args) != 1 || args[0] != log.UserID {
+		if len(args) != 1 || args[0] != userID {
 			t.Errorf("unexpected args: %v", args)
 		}
 	})
@@ -381,7 +382,7 @@ func TestPSQLQuerier_AuditLogOperations(t *testing.T) {
 		since := time.Now().Add(-24 * time.Hour)
 		until := time.Now()
 		filter := models.AuditLogFilter{EventType: models.AuditEventLoginFailed, Since: &since, Until: &until}
-		q := querier.QueryAuditLogListByUserID(ctx, log.UserID, filter, 20, 0)
+		q := querier.QueryAuditLogListByUserID(ctx, userID, filter, 20, 0)
 		sql, args, err := bob.Build(ctx, q)
 		if err != nil {
 			t.Fatalf("failed to build query: %v", err)
