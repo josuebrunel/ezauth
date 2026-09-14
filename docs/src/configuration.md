@@ -30,6 +30,9 @@
 | `EZAUTH_JWT_KEY_ID`                   | Explicit `kid` for the signing key; auto-derived from the public key if unset. |     |
 | `EZAUTH_JWT_PREVIOUS_PUBLIC_KEY`      | Outgoing key's public key, kept for verification during rotation. |         |
 | `EZAUTH_JWT_PREVIOUS_KEY_ID`          | Outgoing key's `kid`; auto-derived from `EZAUTH_JWT_PREVIOUS_PUBLIC_KEY` if unset. |  |
+| `EZAUTH_JWT_ACCESS_TOKEN_TTL`         | How long a Bearer access token stays valid before needing a refresh. | `15m`   |
+| `EZAUTH_JWT_ISSUER`                   | Stamped into access tokens as `iss` and enforced by `AuthMiddleware`; unset means no `iss` claim and no enforcement. |  |
+| `EZAUTH_JWT_AUDIENCE`                 | Stamped into access tokens as `aud` and enforced by `AuthMiddleware`; unset means no `aud` claim and no enforcement. Useful when multiple services share a signing key, so a token minted for one can't authenticate to another. |  |
 
 ## WebAuthn/Passkey Settings
 

@@ -112,9 +112,11 @@ By default `ezauth` signs access tokens with symmetric HS256 (`EZAUTH_JWT_SECRET
 set := auth.JWKS() // service.JWKSet{Keys: []service.JWK} — empty for the default HS256 mode
 ```
 
-**Key rotation**: each key gets a `kid`, either explicit (`EZAUTH_JWT_KEY_ID`) or auto-derived from the public key. To rotate without invalidating already-issued tokens, move the outgoing key's public key/kid to `EZAUTH_JWT_PREVIOUS_PUBLIC_KEY`/`EZAUTH_JWT_PREVIOUS_KEY_ID` and point `EZAUTH_JWT_PRIVATE_KEY`/`PUBLIC_KEY`/`KEY_ID` at the new key — new tokens sign under the new key while tokens already signed under the previous one keep verifying (both are published in the JWKS) until they expire naturally (access tokens are short-lived, 1 hour).
+**Key rotation**: each key gets a `kid`, either explicit (`EZAUTH_JWT_KEY_ID`) or auto-derived from the public key. To rotate without invalidating already-issued tokens, move the outgoing key's public key/kid to `EZAUTH_JWT_PREVIOUS_PUBLIC_KEY`/`EZAUTH_JWT_PREVIOUS_KEY_ID` and point `EZAUTH_JWT_PRIVATE_KEY`/`PUBLIC_KEY`/`KEY_ID` at the new key — new tokens sign under the new key while tokens already signed under the previous one keep verifying (both are published in the JWKS) until they expire naturally (access tokens are short-lived — `EZAUTH_JWT_ACCESS_TOKEN_TTL`, 15 minutes by default).
 
 See the [Asymmetric JWT Signing section of the README](https://github.com/josuebrunel/ezauth#asymmetric-jwt-signing-jwks) for a full config example.
+
+**Claims**: every access token carries a `jti` (a random unique ID, the prerequisite for any future denylist-based revocation) alongside the usual `sub`/`email`/`exp`/`iat`. Set `EZAUTH_JWT_ISSUER`/`EZAUTH_JWT_AUDIENCE` to also stamp `iss`/`aud` and have `AuthMiddleware` enforce them (`jwt.WithIssuer`/`jwt.WithAudience`) — useful when multiple services share a signing key, so a token minted for one can't authenticate to another. Both are unset by default: no claims added, no enforcement, matching every prior release.
 
 ## Scoped API Keys
 

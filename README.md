@@ -736,11 +736,13 @@ EZAUTH_JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----
 
 Both keys are PEM encoded (PKCS8 for the private key, PKIX for the public key — the two files `openssl genpkey`/`openssl pkey` produce by default). `EdDSA` (Ed25519) works the same way. A resource server fetches the JWKS and verifies the `RS256`/`EdDSA`-signed token itself — no call back to `ezauth` needed. The JWKS route is mounted on the `ezauth` handler's router root (it's not inside the `/auth` route group): in standalone mode that's the conventional `GET /.well-known/jwks.json` at your server root; in library mode it sits under wherever you mounted the handler — e.g. `GET /auth/.well-known/jwks.json` if you `r.Mount("/auth", auth.Handler)`.
 
-**Key rotation**: each key gets a `kid` (key ID) — either an explicit `EZAUTH_JWT_KEY_ID`, or, left unset, a stable hash `ezauth` derives from the public key automatically. To rotate without invalidating tokens already issued under the outgoing key, move its public key/kid to `EZAUTH_JWT_PREVIOUS_PUBLIC_KEY`/`EZAUTH_JWT_PREVIOUS_KEY_ID` and set `EZAUTH_JWT_PRIVATE_KEY`/`PUBLIC_KEY`/`KEY_ID` to the new key: new tokens sign under the new key, while tokens already signed under the previous one keep verifying (and both keys are published in the JWKS) until they naturally expire (access tokens are short-lived — 1 hour). Drop `PREVIOUS_*` once nothing outstanding still needs it.
+**Key rotation**: each key gets a `kid` (key ID) — either an explicit `EZAUTH_JWT_KEY_ID`, or, left unset, a stable hash `ezauth` derives from the public key automatically. To rotate without invalidating tokens already issued under the outgoing key, move its public key/kid to `EZAUTH_JWT_PREVIOUS_PUBLIC_KEY`/`EZAUTH_JWT_PREVIOUS_KEY_ID` and set `EZAUTH_JWT_PRIVATE_KEY`/`PUBLIC_KEY`/`KEY_ID` to the new key: new tokens sign under the new key, while tokens already signed under the previous one keep verifying (and both keys are published in the JWKS) until they naturally expire (access tokens are short-lived — `EZAUTH_JWT_ACCESS_TOKEN_TTL`, 15 minutes by default). Drop `PREVIOUS_*` once nothing outstanding still needs it.
 
 ```go
 set := auth.JWKS() // service.JWKSet{Keys: []service.JWK} — empty for the default HS256 mode
 ```
+
+**Claims**: every access token carries a `jti` (a random unique ID, the prerequisite for any future denylist-based revocation) alongside the usual `sub`/`email`/`exp`/`iat`. Set `EZAUTH_JWT_ISSUER`/`EZAUTH_JWT_AUDIENCE` to also stamp `iss`/`aud` and have `AuthMiddleware` enforce them (`jwt.WithIssuer`/`jwt.WithAudience`) — useful when multiple services share a signing key, so a token minted for one can't authenticate to another. Both are unset by default: no claims added, no enforcement, matching every prior release.
 
 ### Scoped API Keys
 

@@ -45,8 +45,13 @@ type OrgLoader func(context.Context) (*models.Organization, error)
 // token's subject on every request: a valid signature and unexpired claims
 // only prove the token was genuinely issued, not that the account is still
 // active -- without this, a suspended/disabled/deleted user keeps Bearer
-// access until the access token's own natural expiry.
-func AuthMiddleware(keyFunc jwt.Keyfunc, validMethods []string, userRepo UserActiveGetter) func(http.Handler) http.Handler {
+// access until the access token's own natural expiry. extraOpts are appended
+// to the parser's own options -- e.g. jwt.WithIssuer/jwt.WithAudience, to
+// additionally constrain which service a token was minted for when
+// Cfg.JWT.Issuer/Audience are configured (see #207); omit for no additional
+// constraints, matching every prior release's behavior.
+func AuthMiddleware(keyFunc jwt.Keyfunc, validMethods []string, userRepo UserActiveGetter, extraOpts ...jwt.ParserOption) func(http.Handler) http.Handler {
+	parserOpts := append([]jwt.ParserOption{jwt.WithValidMethods(validMethods)}, extraOpts...)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")
@@ -61,7 +66,7 @@ func AuthMiddleware(keyFunc jwt.Keyfunc, validMethods []string, userRepo UserAct
 				return
 			}
 
-			token, err := jwt.Parse(tokenString, keyFunc, jwt.WithValidMethods(validMethods))
+			token, err := jwt.Parse(tokenString, keyFunc, parserOpts...)
 
 			if err != nil {
 				WriteJSONResponseError(w, http.StatusUnauthorized, ErrInvalidToken)

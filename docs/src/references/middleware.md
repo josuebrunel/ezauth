@@ -50,7 +50,7 @@ func (h *Handler) LoadUserMiddleware(next http.Handler) http.Handler
 
 ### `AuthMiddleware` (Bearer)
 
-Validates the `Authorization: Bearer <token>` header. It parses the JWT, verifies the signature against the configured signing key (`EZAUTH_JWT_SECRET` for the default HS256 mode, or the asymmetric key(s) under `EZAUTH_JWT_*` — see [Asymmetric JWT Signing (JWKS)](../guides/account-security.md#asymmetric-jwt-signing-jwks)), and sets the user ID in the context.
+Validates the `Authorization: Bearer <token>` header. It parses the JWT, verifies the signature against the configured signing key (`EZAUTH_JWT_SECRET` for the default HS256 mode, or the asymmetric key(s) under `EZAUTH_JWT_*` — see [Asymmetric JWT Signing (JWKS)](../guides/account-security.md#asymmetric-jwt-signing-jwks)), re-checks the token's subject is still an active user, and sets the user ID in the context. When `EZAUTH_JWT_ISSUER`/`EZAUTH_JWT_AUDIENCE` are configured, the token's `iss`/`aud` claims must also match.
 
 ```go
 func (h *Handler) AuthMiddleware(next http.Handler) http.Handler
@@ -124,7 +124,7 @@ implementation.
 ```go
 // Same logic as the Handler methods above, taking explicit dependencies
 // (a RoleChecker, TokenGetter, etc.) instead of a *Handler.
-func AuthMiddleware(keyFunc jwt.Keyfunc, validMethods []string, userRepo UserActiveGetter) func(http.Handler) http.Handler
+func AuthMiddleware(keyFunc jwt.Keyfunc, validMethods []string, userRepo UserActiveGetter, extraOpts ...jwt.ParserOption) func(http.Handler) http.Handler
 func APIKeyMiddleware(configApiKey string, tokenRepo TokenGetter, userRepo UserActiveGetter) func(http.Handler) http.Handler
 func RequireAPIKeyScope(scope string) func(http.Handler) http.Handler
 func RequireRole(checker RoleChecker, role string) func(http.Handler) http.Handler

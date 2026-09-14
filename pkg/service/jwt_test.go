@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/josuebrunel/ezauth/pkg/config"
@@ -296,4 +297,120 @@ func TestAuth_RejectsWrongAlgorithm(t *testing.T) {
 	if _, err := jwt.Parse(hsToken, rsAuth.JWTKeyFunc(), jwt.WithValidMethods(rsAuth.JWTSigningMethods())); err == nil {
 		t.Fatal("expected an HS256-signed token to be rejected by an RS256-configured verifier")
 	}
+}
+
+// TestGenerateAccessToken_Claims proves access tokens carry a jti (needed
+// for any future denylist-based revocation -- structurally impossible
+// without one), and iss/aud only when Cfg.JWT.Issuer/Audience are
+// configured -- an unconfigured deployment sees no new claims at all,
+// preserving prior-release token shape. See #207.
+func TestGenerateAccessToken_Claims(t *testing.T) {
+	claimsOf := func(t *testing.T, auth *Auth, tokenString string) jwt.MapClaims {
+		t.Helper()
+		parsed, err := jwt.Parse(tokenString, auth.JWTKeyFunc(), jwt.WithValidMethods(auth.JWTSigningMethods()))
+		if err != nil {
+			t.Fatalf("failed to parse generated token: %v", err)
+		}
+		claims, ok := parsed.Claims.(jwt.MapClaims)
+		if !ok {
+			t.Fatal("expected jwt.MapClaims")
+		}
+		return claims
+	}
+	user := &models.User{ID: "user-1", Email: "user1@example.com"}
+
+	t.Run("jti present, iss/aud absent when unconfigured", func(t *testing.T) {
+		auth, err := New(&config.Config{JWTSecret: "test-secret-0123456789-0123456789"}, nil, "auth")
+		if err != nil {
+			t.Fatalf("New failed: %v", err)
+		}
+		tokenString, _, err := auth.generateAccessToken(user, "")
+		if err != nil {
+			t.Fatalf("generateAccessToken failed: %v", err)
+		}
+		claims := claimsOf(t, auth, tokenString)
+
+		jti, _ := claims["jti"].(string)
+		if jti == "" {
+			t.Error("expected a non-empty jti claim")
+		}
+		if _, ok := claims["iss"]; ok {
+			t.Error("expected no iss claim when Cfg.JWT.Issuer is unset")
+		}
+		if _, ok := claims["aud"]; ok {
+			t.Error("expected no aud claim when Cfg.JWT.Audience is unset")
+		}
+	})
+
+	t.Run("iss/aud present and distinct jti per token when configured", func(t *testing.T) {
+		auth, err := New(&config.Config{
+			JWTSecret: "test-secret-0123456789-0123456789",
+			JWT:       config.JWT{Issuer: "https://auth.example.com", Audience: "example-api"},
+		}, nil, "auth")
+		if err != nil {
+			t.Fatalf("New failed: %v", err)
+		}
+		token1, _, err := auth.generateAccessToken(user, "")
+		if err != nil {
+			t.Fatalf("generateAccessToken failed: %v", err)
+		}
+		token2, _, err := auth.generateAccessToken(user, "")
+		if err != nil {
+			t.Fatalf("generateAccessToken failed: %v", err)
+		}
+
+		claims1 := claimsOf(t, auth, token1)
+		claims2 := claimsOf(t, auth, token2)
+
+		if claims1["iss"] != "https://auth.example.com" {
+			t.Errorf("expected iss %q, got %v", "https://auth.example.com", claims1["iss"])
+		}
+		if claims1["aud"] != "example-api" {
+			t.Errorf("expected aud %q, got %v", "example-api", claims1["aud"])
+		}
+		if claims1["jti"] == claims2["jti"] {
+			t.Error("expected distinct jti values across separately-minted tokens")
+		}
+	})
+}
+
+// TestGenerateAccessToken_TTL proves Cfg.JWT.AccessTokenTTL controls the
+// token's expiry, and a zero value (a hand-built config.Config{} bypassing
+// LoadConfig's default:"15m" env tag) falls back to a sane default instead
+// of minting a token that expires the instant it's issued.
+func TestGenerateAccessToken_TTL(t *testing.T) {
+	user := &models.User{ID: "user-1", Email: "user1@example.com"}
+
+	t.Run("zero TTL falls back to defaultAccessTokenTTL", func(t *testing.T) {
+		auth, err := New(&config.Config{JWTSecret: "test-secret-0123456789-0123456789"}, nil, "auth")
+		if err != nil {
+			t.Fatalf("New failed: %v", err)
+		}
+		_, exp, err := auth.generateAccessToken(user, "")
+		if err != nil {
+			t.Fatalf("generateAccessToken failed: %v", err)
+		}
+		gotTTL := time.Until(exp)
+		if gotTTL < defaultAccessTokenTTL-time.Minute || gotTTL > defaultAccessTokenTTL {
+			t.Errorf("expected TTL close to the %v default, got %v", defaultAccessTokenTTL, gotTTL)
+		}
+	})
+
+	t.Run("configured TTL is honored", func(t *testing.T) {
+		auth, err := New(&config.Config{
+			JWTSecret: "test-secret-0123456789-0123456789",
+			JWT:       config.JWT{AccessTokenTTL: 5 * time.Minute},
+		}, nil, "auth")
+		if err != nil {
+			t.Fatalf("New failed: %v", err)
+		}
+		_, exp, err := auth.generateAccessToken(user, "")
+		if err != nil {
+			t.Fatalf("generateAccessToken failed: %v", err)
+		}
+		gotTTL := time.Until(exp)
+		if gotTTL < 4*time.Minute || gotTTL > 5*time.Minute {
+			t.Errorf("expected TTL close to the configured 5m, got %v", gotTTL)
+		}
+	})
 }

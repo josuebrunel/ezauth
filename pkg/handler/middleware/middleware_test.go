@@ -287,6 +287,65 @@ func TestAuthMiddleware_RejectsWhenUserLookupFails(t *testing.T) {
 	}
 }
 
+// TestAuthMiddleware_IssuerAudience proves the extraOpts passed to
+// AuthMiddleware (jwt.WithIssuer/jwt.WithAudience, as Handler's own wrapper
+// supplies when Cfg.JWT.Issuer/Audience are configured -- see #207) are
+// actually enforced by the parser: a token missing/mismatching either claim
+// is rejected, and omitting extraOpts entirely preserves the
+// no-constraints behavior of every prior release.
+func TestAuthMiddleware_IssuerAudience(t *testing.T) {
+	secret := "secret"
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
+	sign := func(claims jwt.MapClaims) string {
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		s, _ := token.SignedString([]byte(secret))
+		return s
+	}
+	doRequest := func(mw func(http.Handler) http.Handler, tokenString string) int {
+		req := httptest.NewRequest("GET", "/", nil)
+		req.Header.Set("Authorization", "Bearer "+tokenString)
+		w := httptest.NewRecorder()
+		mw(next).ServeHTTP(w, req)
+		return w.Code
+	}
+
+	t.Run("no extraOpts: token without iss/aud still accepted", func(t *testing.T) {
+		mw := AuthMiddleware(hs256KeyFunc(secret), []string{"HS256"}, &MockUserActiveGetter{})
+		code := doRequest(mw, sign(jwt.MapClaims{"sub": "user1"}))
+		if code != http.StatusOK {
+			t.Fatalf("expected 200 with no issuer/audience constraints configured, got %d", code)
+		}
+	})
+
+	t.Run("configured issuer: matching token accepted, wrong/missing issuer rejected", func(t *testing.T) {
+		mw := AuthMiddleware(hs256KeyFunc(secret), []string{"HS256"}, &MockUserActiveGetter{}, jwt.WithIssuer("https://auth.example.com"))
+
+		if code := doRequest(mw, sign(jwt.MapClaims{"sub": "user1", "iss": "https://auth.example.com"})); code != http.StatusOK {
+			t.Errorf("expected 200 for a matching issuer, got %d", code)
+		}
+		if code := doRequest(mw, sign(jwt.MapClaims{"sub": "user1", "iss": "https://evil.example.com"})); code != http.StatusUnauthorized {
+			t.Errorf("expected 401 for a mismatched issuer, got %d", code)
+		}
+		if code := doRequest(mw, sign(jwt.MapClaims{"sub": "user1"})); code != http.StatusUnauthorized {
+			t.Errorf("expected 401 for a missing issuer when one is required, got %d", code)
+		}
+	})
+
+	t.Run("configured audience: matching token accepted, wrong/missing audience rejected", func(t *testing.T) {
+		mw := AuthMiddleware(hs256KeyFunc(secret), []string{"HS256"}, &MockUserActiveGetter{}, jwt.WithAudience("example-api"))
+
+		if code := doRequest(mw, sign(jwt.MapClaims{"sub": "user1", "aud": "example-api"})); code != http.StatusOK {
+			t.Errorf("expected 200 for a matching audience, got %d", code)
+		}
+		if code := doRequest(mw, sign(jwt.MapClaims{"sub": "user1", "aud": "other-api"})); code != http.StatusUnauthorized {
+			t.Errorf("expected 401 for a mismatched audience, got %d", code)
+		}
+		if code := doRequest(mw, sign(jwt.MapClaims{"sub": "user1"})); code != http.StatusUnauthorized {
+			t.Errorf("expected 401 for a missing audience when one is required, got %d", code)
+		}
+	})
+}
+
 // TestAPIKeyMiddleware_RejectsInactiveUser proves a still-valid (unrevoked,
 // unexpired) DB-backed API key stops working once its owning user is
 // suspended -- before #203, only the token row's own fields were checked.

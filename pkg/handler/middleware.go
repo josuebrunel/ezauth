@@ -3,12 +3,22 @@ package handler
 import (
 	"net/http"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/josuebrunel/ezauth/pkg/handler/middleware"
 )
 
 // AuthMiddleware is a middleware that authenticates requests using a JWT bearer token.
+// When Cfg.JWT.Issuer/Audience are configured, tokens are additionally
+// required to carry a matching iss/aud claim (see #207).
 func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
-	return middleware.AuthMiddleware(h.svc.JWTKeyFunc(), h.svc.JWTSigningMethods(), h.svc.Repo)(next)
+	var opts []jwt.ParserOption
+	if h.svc.Cfg.JWT.Issuer != "" {
+		opts = append(opts, jwt.WithIssuer(h.svc.Cfg.JWT.Issuer))
+	}
+	if h.svc.Cfg.JWT.Audience != "" {
+		opts = append(opts, jwt.WithAudience(h.svc.Cfg.JWT.Audience))
+	}
+	return middleware.AuthMiddleware(h.svc.JWTKeyFunc(), h.svc.JWTSigningMethods(), h.svc.Repo, opts...)(next)
 }
 
 // APIKeyMiddleware checks for a valid API key in the X-API-Key header.

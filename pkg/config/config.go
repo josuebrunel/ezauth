@@ -248,6 +248,21 @@ type JWT struct {
 	KeyID             string `json:"key_id" env:"JWT_KEY_ID"`
 	PreviousPublicKey string `json:"previous_public_key" env:"JWT_PREVIOUS_PUBLIC_KEY"`
 	PreviousKeyID     string `json:"previous_key_id" env:"JWT_PREVIOUS_KEY_ID"`
+	// Issuer/Audience, when set, are stamped into access tokens as
+	// iss/aud and enforced by AuthMiddleware (jwt.WithIssuer/
+	// jwt.WithAudience) -- constraining which service a token was minted
+	// for in a deployment where multiple services share a signing key.
+	// Left unset (the default), neither claim is added or checked, so
+	// existing deployments upgrading see no behavior change.
+	Issuer   string `json:"issuer" env:"JWT_ISSUER"`
+	Audience string `json:"audience" env:"JWT_AUDIENCE"`
+	// AccessTokenTTL bounds how long a Bearer access token stays valid
+	// without needing the refresh flow. Kept short by default: refresh
+	// rotation already exists to cover the gap, and a shorter TTL bounds
+	// the exposure window of a leaked access token, and of AuthMiddleware's
+	// per-request user-status re-check (see #203) lagging behind an
+	// account being suspended mid-token-lifetime.
+	AccessTokenTTL time.Duration `json:"access_token_ttl" env:"JWT_ACCESS_TOKEN_TTL" default:"15m"`
 }
 
 // AuditLog defines the persisted audit-log settings. When Enabled, ezauth

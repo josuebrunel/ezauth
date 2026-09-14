@@ -1032,13 +1032,34 @@ func (a *Auth) TokenRevoke(ctx context.Context, userID, refreshToken string) err
 	return err
 }
 
+// defaultAccessTokenTTL backstops Cfg.JWT.AccessTokenTTL for a hand-built
+// config.Config{} that bypasses LoadConfig's default:"15m" env tag (common
+// in tests, or a caller loading config another way) -- a zero TTL would
+// otherwise mint access tokens that expire the instant they're issued.
+const defaultAccessTokenTTL = 15 * time.Minute
+
 func (a *Auth) generateAccessToken(user *models.User, actorID string) (string, time.Time, error) {
-	exp := time.Now().Add(1 * time.Hour)
+	ttl := a.Cfg.JWT.AccessTokenTTL
+	if ttl <= 0 {
+		ttl = defaultAccessTokenTTL
+	}
+	exp := time.Now().Add(ttl)
 	claims := jwt.MapClaims{
 		"sub":   user.ID,
 		"email": user.Email,
-		"exp":   jwt.NewNumericDate(exp),
-		"iat":   jwt.NewNumericDate(time.Now()),
+		// jti gives a denylist-based revocation mechanism something to key
+		// on -- structurally impossible without it. iss/aud are omitted
+		// entirely (not just left empty) when unconfigured, rather than
+		// stamping a value nothing will ever check.
+		"jti": util.NewIDStripped(),
+		"exp": jwt.NewNumericDate(exp),
+		"iat": jwt.NewNumericDate(time.Now()),
+	}
+	if a.Cfg.JWT.Issuer != "" {
+		claims["iss"] = a.Cfg.JWT.Issuer
+	}
+	if a.Cfg.JWT.Audience != "" {
+		claims["aud"] = a.Cfg.JWT.Audience
 	}
 	if actorID != "" {
 		claims["act"] = map[string]any{"sub": actorID}

@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestLoadConfig_RequiredJWTSecret(t *testing.T) {
@@ -34,6 +35,9 @@ func TestLoadConfig_Success(t *testing.T) {
 	}
 	if !cfg.RateLimit.Enabled {
 		t.Error("expected RateLimit.Enabled to default to true (secure by default)")
+	}
+	if cfg.JWT.AccessTokenTTL != 15*time.Minute {
+		t.Errorf("expected JWT.AccessTokenTTL to default to 15m, got %v", cfg.JWT.AccessTokenTTL)
 	}
 }
 
