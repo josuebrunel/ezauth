@@ -107,8 +107,21 @@ func (a *Auth) EmailChangeConfirm(ctx context.Context, tokenValue string) (*mode
 		xlog.Debug("email change confirm failed: token not found or wrong type", "err", err)
 		return nil, ErrInvalidOrExpiredEmailChangeToken
 	}
-	if tok.Revoked || time.Now().After(tok.ExpiresAt) {
-		xlog.Debug("email change confirm failed: token expired or revoked", "token_id", tok.ID)
+	if time.Now().After(tok.ExpiresAt) {
+		xlog.Debug("email change confirm failed: token expired", "token_id", tok.ID)
+		return nil, ErrInvalidOrExpiredEmailChangeToken
+	}
+
+	// The consume itself is the guard, not a separate read-then-write --
+	// see TokenRefresh's identical comment in auth.go. Without this,
+	// concurrent confirmations of the same token could all observe
+	// revoked=false and all succeed (see #206).
+	consumed, err := a.Repo.TokenConsume(ctx, tok.ID)
+	if err != nil {
+		return nil, err
+	}
+	if !consumed {
+		xlog.Debug("email change confirm failed: token already used", "token_id", tok.ID)
 		return nil, ErrInvalidOrExpiredEmailChangeToken
 	}
 
@@ -137,10 +150,6 @@ func (a *Auth) EmailChangeConfirm(ctx context.Context, tokenValue string) (*mode
 	if err != nil {
 		xlog.Error("failed to mark new email verified", "user_id", user.ID, "err", err)
 		return nil, err
-	}
-
-	if err := a.Repo.TokenRevoke(ctx, tok.ID); err != nil {
-		xlog.Warn("failed to revoke email change token", "token_id", tok.ID, "err", err)
 	}
 
 	// Scoped to refresh sessions specifically -- forcing re-auth on other

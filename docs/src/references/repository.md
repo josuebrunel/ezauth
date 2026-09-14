@@ -161,6 +161,13 @@ Marks a token as revoked.
 func (r Repository) TokenRevoke(ctx context.Context, id string) error
 ```
 
+### `TokenConsume`
+Atomically revokes a single-use token (`UPDATE ... WHERE id = ? AND revoked = false`), making the update itself the concurrency guard instead of a separate read-then-write. `consumed` is `false` if the token was already revoked -- by a prior legitimate use, or a concurrent caller that won the race -- which callers should treat as reuse, not silently ignore. Used by every single-use-token flow (`TokenRefresh`, `PasswordResetConfirm`, `PasswordlessLogin`, `EmailChangeConfirm`, `InvitationAccept`, `MFALoginVerify`, `SMSOTPVerify`, MFA recovery codes) in place of a plain `TokenRevoke`.
+
+```go
+func (r Repository) TokenConsume(ctx context.Context, id string) (consumed bool, err error)
+```
+
 ### `TokenRevokeAllByUserID`
 Revokes *every* active token for a user, regardless of type — sessions, API keys, MFA recovery codes, trusted devices, everything. Used where that blanket behavior is the intended policy (e.g. `PasswordResetConfirm`, on the theory that a password reset should force re-auth everywhere). Most callers mean to revoke only one class of token; use `TokenRevokeAllByUserIDAndType` for those, so e.g. confirming MFA enrollment doesn't collaterally revoke the user's API keys.
 

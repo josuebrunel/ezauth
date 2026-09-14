@@ -441,6 +441,19 @@ func (q *MysqlQuerier) QueryTokenRevoke(ctx context.Context, id string) bob.Quer
 	)
 }
 
+// QueryTokenConsume atomically revokes a single-use token: the WHERE clause
+// on revoked=false makes the UPDATE itself the concurrency guard, so
+// Repository.TokenConsume's affected-row count tells the caller whether
+// this call was the one that actually consumed it. See #206.
+func (q *MysqlQuerier) QueryTokenConsume(ctx context.Context, id string) bob.Query {
+	return mysql.Update(
+		um.Table(models.TableToken),
+		um.SetCol(models.ColumnRevoked).ToArg(true),
+		um.Where(mysql.Quote("id").EQ(mysql.Arg(id))),
+		um.Where(mysql.Quote(models.ColumnRevoked).EQ(mysql.Arg(false))),
+	)
+}
+
 func (q *MysqlQuerier) QueryTokenRevokeAllByUserID(ctx context.Context, userID string) bob.Query {
 	return mysql.Update(
 		um.Table(models.TableToken),

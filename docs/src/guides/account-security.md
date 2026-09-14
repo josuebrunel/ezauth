@@ -63,6 +63,8 @@ For the JSON API: `GET /auth/api/sessions` lists sessions, `DELETE /auth/api/ses
 
 Needs no code or configuration — it's automatic. Every refresh token is tagged with a rotation `family_id`, carried forward across `TokenRefresh` rotations. If an already-rotated-out (revoked) refresh token is ever replayed, that's a strong signal it was stolen and the legitimate client has since rotated past it — so `TokenRefresh` responds by revoking every other active token in that family in one bulk operation, not just rejecting the replayed one. In practice: if an attacker steals a refresh token and uses it after the real client already refreshed past it, both the attacker's and the legitimate client's sessions get logged out, forcing a fresh login.
 
+The redemption itself is the guard, not a separate read-then-write: `TokenRefresh` (and every other single-use-token flow — password reset, passwordless, email change, invitation acceptance, MFA/SMS-OTP verification) revokes via `Repository.TokenConsume`'s conditional `UPDATE ... WHERE revoked = false`, so concurrent redemptions of the same token can't all observe `revoked = false` and all succeed — exactly the scenario reuse detection above depends on actually being triggered.
+
 ## Account Lockout
 
 `UserAuthenticate` enforces `IsActive` as a login gate and counts consecutive failed attempts, locking the account (clearing `IsActive`) for `EZAUTH_ACCOUNT_LOCKOUT_DURATION` after `EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS` in a row; it auto-unlocks on the first login attempt after that window passes, but the failed-attempt counter itself carries over. A successful login is what resets the counter (and the backoff below) back to zero.

@@ -227,9 +227,20 @@ func (a *Auth) SMSOTPVerify(ctx context.Context, req RequestSMSOTPVerify) (*Toke
 		}
 	}
 
-	if err := a.Repo.TokenRevoke(ctx, token.ID); err != nil {
-		xlog.Error("failed to revoke sms otp token", "token_id", token.ID, "err", err)
+	// The consume itself is the guard, not a separate read-then-write --
+	// see TokenRefresh's identical comment in auth.go. Placed after code
+	// matching (not before) so a wrong code doesn't burn the still-live
+	// OTP token; only a *correct* code consumes it, and concurrent requests
+	// both presenting the correct code can now only mint one session
+	// between them (see #206).
+	consumed, err := a.Repo.TokenConsume(ctx, token.ID)
+	if err != nil {
+		xlog.Error("failed to consume sms otp token", "token_id", token.ID, "err", err)
 		return nil, err
+	}
+	if !consumed {
+		xlog.Debug("sms otp verify: code already consumed by a concurrent request", "token_id", token.ID)
+		return nil, ErrInvalidOrExpiredSMSCode
 	}
 
 	resp, err := a.TokenCreate(ctx, user)

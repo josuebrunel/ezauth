@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -13,6 +14,8 @@ import (
 	"golang.org/x/oauth2/google"
 
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -1107,6 +1110,84 @@ func TestTokenOperations(t *testing.T) {
 			t.Errorf("expected token2 to be revoked, but it was not")
 		}
 	})
+}
+
+// TestTokenRefresh_ConcurrentRedemptionOnlySucceedsOnce reproduces #206's
+// exact scenario: N goroutines redeeming the same refresh token
+// concurrently. Before the fix (a stale-read revoked check followed by an
+// unconditional revoke), every goroutine observed revoked=false and all of
+// them succeeded; TokenConsume's atomic "UPDATE ... WHERE revoked = false"
+// makes the redemption itself the guard, so exactly one must win.
+func TestTokenRefresh_ConcurrentRedemptionOnlySucceedsOnce(t *testing.T) {
+	auth := setupTestDB(t)
+	ctx := context.Background()
+
+	user, err := auth.UserCreate(ctx, &RequestBasicAuth{Email: util.UniqueEmail("concurrentrefresh"), Password: "securepass123"})
+	if err != nil {
+		t.Fatalf("UserCreate failed: %v", err)
+	}
+	initial, err := auth.TokenCreate(ctx, user)
+	if err != nil {
+		t.Fatalf("TokenCreate failed: %v", err)
+	}
+
+	const goroutines = 8
+	var wg sync.WaitGroup
+	var successes atomic.Int32
+	for range goroutines {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if _, err := auth.TokenRefresh(ctx, initial.RefreshToken); err == nil {
+				successes.Add(1)
+			}
+		}()
+	}
+	wg.Wait()
+
+	if got := successes.Load(); got != 1 {
+		t.Fatalf("expected exactly 1 of %d concurrent redemptions of the same refresh token to succeed, got %d", goroutines, got)
+	}
+}
+
+// TestPasswordResetConfirm_ConcurrentRedemptionOnlySucceedsOnce mirrors
+// TestTokenRefresh_ConcurrentRedemptionOnlySucceedsOnce for the
+// early-consume single-shot pattern (no retry-before-success semantics):
+// concurrent confirmations of the same reset token must not all be able to
+// set the password.
+func TestPasswordResetConfirm_ConcurrentRedemptionOnlySucceedsOnce(t *testing.T) {
+	auth := setupTestDB(t)
+	ctx := context.Background()
+
+	email := util.UniqueEmail("concurrentreset")
+	if _, err := auth.UserCreate(ctx, &RequestBasicAuth{Email: email, Password: "securepass123"}); err != nil {
+		t.Fatalf("UserCreate failed: %v", err)
+	}
+	if err := auth.PasswordResetRequest(ctx, RequestPasswordReset{Email: email}); err != nil {
+		t.Fatalf("PasswordResetRequest failed: %v", err)
+	}
+	mockMailer := auth.Mailer.(*MockMailer)
+	sentBody := mockMailer.SentEmails[len(mockMailer.SentEmails)-1]["body"]
+	tokenValue := sentBody[len(sentBody)-64:]
+
+	const goroutines = 8
+	var wg sync.WaitGroup
+	var successes atomic.Int32
+	for i := range goroutines {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			req := RequestPasswordResetConfirm{Token: tokenValue, Password: fmt.Sprintf("newpassword%d", i)}
+			if err := auth.PasswordResetConfirm(ctx, req); err == nil {
+				successes.Add(1)
+			}
+		}(i)
+	}
+	wg.Wait()
+
+	if got := successes.Load(); got != 1 {
+		t.Fatalf("expected exactly 1 of %d concurrent confirmations of the same reset token to succeed, got %d", goroutines, got)
+	}
 }
 
 func TestImpersonation(t *testing.T) {

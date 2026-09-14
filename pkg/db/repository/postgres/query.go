@@ -443,6 +443,19 @@ func (q *PSQLQuerier) QueryTokenRevoke(ctx context.Context, id string) bob.Query
 	)
 }
 
+// QueryTokenConsume atomically revokes a single-use token: the WHERE clause
+// on revoked=false makes the UPDATE itself the concurrency guard, so
+// Repository.TokenConsume's affected-row count tells the caller whether
+// this call was the one that actually consumed it. See #206.
+func (q *PSQLQuerier) QueryTokenConsume(ctx context.Context, id string) bob.Query {
+	return psql.Update(
+		um.Table(psql.Quote(models.TableToken)),
+		um.SetCol(models.ColumnRevoked).To(true),
+		um.Where(psql.Quote("id").EQ(psql.Arg(id))),
+		um.Where(psql.Quote(models.ColumnRevoked).EQ(psql.Arg(false))),
+	)
+}
+
 func (q *PSQLQuerier) QueryTokenRevokeAllByUserID(ctx context.Context, userID string) bob.Query {
 	return psql.Update(
 		um.Table(psql.Quote(models.TableToken)),

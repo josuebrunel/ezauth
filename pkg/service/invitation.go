@@ -189,6 +189,23 @@ func (a *Auth) InvitationAccept(ctx context.Context, req RequestInvitationAccept
 		return nil, nil, err
 	}
 
+	// The consume itself is the guard, not a separate read-then-write --
+	// see TokenRefresh's identical comment in auth.go. Without this,
+	// concurrent acceptances of the same invitation could both pass the
+	// (stale-read) validity check and both proceed to create an account
+	// (see #206). Consumed here, before any of the account-creation work
+	// below, rather than at the end where the original unconditional
+	// revoke sat: by the time an unconditional revoke ran, a race-losing
+	// request would already have created a user and granted roles, with
+	// nothing left to safely undo.
+	consumed, err := a.Repo.TokenConsume(ctx, tok.ID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if !consumed {
+		return nil, nil, ErrInvalidOrExpiredInvitation
+	}
+
 	email, _ := tok.Metadata["email"].(string)
 	roles, _ := tok.Metadata["roles"].(string)
 	inviterID, _ := tok.Metadata["inviter_id"].(string)
@@ -240,10 +257,6 @@ func (a *Auth) InvitationAccept(ctx context.Context, req RequestInvitationAccept
 			xlog.Error("failed to grant invitation role", "invitation_id", tok.ID, "user_id", created.ID, "role", role, "err", err)
 			return nil, nil, err
 		}
-	}
-
-	if err := a.Repo.TokenRevoke(ctx, tok.ID); err != nil {
-		xlog.Warn("failed to revoke accepted invitation", "invitation_id", tok.ID, "err", err)
 	}
 
 	tokens, err := a.TokenCreate(ctx, created)

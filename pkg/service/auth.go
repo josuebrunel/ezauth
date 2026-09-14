@@ -523,12 +523,21 @@ func (a *Auth) PasswordResetConfirm(ctx context.Context, req RequestPasswordRese
 		return errors.New("invalid token type")
 	}
 
-	if token.Revoked {
-		return errors.New("token already used")
-	}
-
 	if time.Now().After(token.ExpiresAt) {
 		return errors.New("token expired")
+	}
+
+	// The consume itself is the guard, not a separate read-then-write --
+	// see TokenRefresh's identical comment. Without this, two concurrent
+	// confirmations of the same reset token could both pass the
+	// (stale-read) revoked check and both set the password, with whichever
+	// write lands last silently winning (see #206).
+	consumed, err := a.Repo.TokenConsume(ctx, token.ID)
+	if err != nil {
+		return err
+	}
+	if !consumed {
+		return errors.New("token already used")
 	}
 
 	user, err := a.Repo.UserGetByID(ctx, token.UserID)
@@ -545,7 +554,7 @@ func (a *Auth) PasswordResetConfirm(ctx context.Context, req RequestPasswordRese
 		return err
 	}
 
-	return a.Repo.TokenRevoke(ctx, token.ID)
+	return nil
 }
 
 // RequestPasswordless defines the parameters for requesting a magic link.
@@ -640,11 +649,22 @@ func (a *Auth) PasswordlessLogin(ctx context.Context, tokenValue string) (*Token
 		return nil, errors.New("invalid token type")
 	}
 
-	if time.Now().After(token.ExpiresAt) || token.Revoked {
-		if err := a.Repo.TokenRevoke(ctx, token.ID); err != nil {
-			xlog.Error("failed to revoke expired/already-revoked passwordless token", "token_id", token.ID, "err", err)
-		}
-		xlog.Debug("passwordless token expired or revoked", "token_id", token.ID)
+	if time.Now().After(token.ExpiresAt) {
+		xlog.Debug("passwordless token expired", "token_id", token.ID)
+		return nil, errors.New("magic link expired")
+	}
+
+	// The consume itself is the guard, not a separate read-then-write --
+	// see TokenRefresh's identical comment. Without this, concurrent uses
+	// of the same magic link could all observe revoked=false and all mint
+	// a session (see #206).
+	consumed, err := a.Repo.TokenConsume(ctx, token.ID)
+	if err != nil {
+		xlog.Error("failed to consume passwordless token", "token_id", token.ID, "err", err)
+		return nil, err
+	}
+	if !consumed {
+		xlog.Debug("passwordless token already used", "token_id", token.ID)
 		return nil, errors.New("magic link expired")
 	}
 
@@ -659,11 +679,6 @@ func (a *Auth) PasswordlessLogin(ctx context.Context, tokenValue string) (*Token
 			xlog.Error("failed to update user email verification", "user_id", user.ID, "err", err)
 			return nil, err
 		}
-	}
-
-	if err := a.Repo.TokenRevoke(ctx, token.ID); err != nil {
-		xlog.Error("failed to revoke passwordless token", "token_id", token.ID, "err", err)
-		return nil, err
 	}
 
 	resp, err := a.TokenCreate(ctx, user)
@@ -949,8 +964,25 @@ func (a *Auth) TokenRefresh(ctx context.Context, refreshToken string) (*TokenRes
 		return nil, errors.New("invalid refresh token")
 	}
 
-	if token.Revoked {
-		xlog.Warn("attempt to use revoked token", "token_id", token.ID, "user_id", token.UserID)
+	if time.Now().After(token.ExpiresAt) {
+		xlog.Debug("refresh token expired", "token_id", token.ID, "user_id", token.UserID)
+		return nil, errors.New("token expired")
+	}
+
+	// The consume itself is the guard (UPDATE ... WHERE revoked = false),
+	// not a separate read-then-write: without this, concurrent redemptions
+	// of the same refresh token could all observe revoked=false and all
+	// succeed, defeating the reuse detection below entirely (see #206).
+	// consumed=false covers both a legitimate prior use and a concurrent
+	// racer that won -- either way it's the reuse signal revokeTokenFamily
+	// exists to act on.
+	consumed, err := a.Repo.TokenConsume(ctx, token.ID)
+	if err != nil {
+		xlog.Error("failed to consume refresh token", "token_id", token.ID, "err", err)
+		return nil, err
+	}
+	if !consumed {
+		xlog.Warn("attempt to use already-consumed refresh token", "token_id", token.ID, "user_id", token.UserID)
 		if familyID, ok := token.Metadata["family_id"].(string); ok && familyID != "" {
 			xlog.Error("refresh token reuse detected, revoking token family", "token_id", token.ID, "user_id", token.UserID, "family_id", familyID)
 			a.revokeTokenFamily(ctx, token.UserID, familyID)
@@ -958,19 +990,9 @@ func (a *Auth) TokenRefresh(ctx context.Context, refreshToken string) (*TokenRes
 		return nil, errors.New("token revoked")
 	}
 
-	if time.Now().After(token.ExpiresAt) {
-		xlog.Debug("refresh token expired", "token_id", token.ID, "user_id", token.UserID)
-		return nil, errors.New("token expired")
-	}
-
 	user, err := a.Repo.UserGetByID(ctx, token.UserID)
 	if err != nil {
 		xlog.Error("failed to get user for refresh token", "user_id", token.UserID, "err", err)
-		return nil, err
-	}
-
-	if err := a.Repo.TokenRevoke(ctx, token.ID); err != nil {
-		xlog.Error("failed to revoke old refresh token", "token_id", token.ID, "err", err)
 		return nil, err
 	}
 

@@ -443,6 +443,19 @@ func (q *SqliteQuerier) QueryTokenRevoke(ctx context.Context, id string) bob.Que
 	)
 }
 
+// QueryTokenConsume atomically revokes a single-use token: the WHERE clause
+// on revoked=false makes the UPDATE itself the concurrency guard, so
+// Repository.TokenConsume's affected-row count tells the caller whether
+// this call was the one that actually consumed it. See #206.
+func (q *SqliteQuerier) QueryTokenConsume(ctx context.Context, id string) bob.Query {
+	return sqlite.Update(
+		um.Table(models.TableToken),
+		um.SetCol(models.ColumnRevoked).ToArg(true),
+		um.Where(sqlite.Quote("id").EQ(sqlite.Arg(id))),
+		um.Where(sqlite.Quote(models.ColumnRevoked).EQ(sqlite.Arg(false))),
+	)
+}
+
 func (q *SqliteQuerier) QueryTokenRevokeAllByUserID(ctx context.Context, userID string) bob.Query {
 	return sqlite.Update(
 		um.Table(models.TableToken),

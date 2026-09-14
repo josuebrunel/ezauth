@@ -57,6 +57,7 @@ type TokenQuerier interface {
 	QueryTokenListByUserIDAndType(ctx context.Context, userID, tokenType string) bob.Query
 	QueryTokenListByUserID(ctx context.Context, userID string, limit int) bob.Query
 	QueryTokenRevoke(ctx context.Context, id string) bob.Query
+	QueryTokenConsume(ctx context.Context, id string) bob.Query
 	QueryTokenRevokeAllByUserID(ctx context.Context, userID string) bob.Query
 	QueryTokenRevokeAllByUserIDAndType(ctx context.Context, userID, tokenType string) bob.Query
 	QueryTokenRevokeFamily(ctx context.Context, userID, familyID string) bob.Query
@@ -594,6 +595,30 @@ func (r Repository) TokenRevoke(ctx context.Context, id string) error {
 		return err
 	}
 	return nil
+}
+
+// TokenConsume atomically revokes a single-use token, making the UPDATE
+// itself the guard (WHERE id = ? AND revoked = false) instead of a
+// separate read-then-write: consumed is true only for the caller that
+// actually flipped it, so concurrent redemptions of the same token can't
+// all observe revoked=false and all succeed. consumed false means the
+// token was already revoked -- by a prior legitimate use, or a concurrent
+// request that won the race -- which callers should treat as the reuse
+// signal it is (see revokeTokenFamily for refresh tokens), not silently
+// ignore.
+func (r Repository) TokenConsume(ctx context.Context, id string) (consumed bool, err error) {
+	query := r.QueryTokenConsume(ctx, id)
+	result, err := bob.Exec(ctx, r.bdb, query)
+	if err != nil {
+		xlog.Error("Failed to consume token", "error", err, "id", id)
+		return false, err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		xlog.Error("Failed to read rows affected consuming token", "error", err, "id", id)
+		return false, err
+	}
+	return affected > 0, nil
 }
 
 // TokenRevokeAllByUserID revokes all non-revoked tokens for a given user,

@@ -282,9 +282,22 @@ func (a *Auth) MFALoginVerify(ctx context.Context, mfaToken, code string, rememb
 		}
 	}
 
-	if err := a.Repo.TokenRevoke(ctx, token.ID); err != nil {
-		xlog.Error("failed to revoke mfa pre-auth token", "token_id", token.ID, "err", err)
+	// The consume itself is the guard, not a separate read-then-write --
+	// see TokenRefresh's identical comment in auth.go. Placed after code
+	// validation (unlike the single-shot tokens elsewhere in this file) so
+	// a wrong code on one attempt doesn't burn the pre-auth token and force
+	// restarting the login from the password step -- only a *correct* code
+	// consumes it, and concurrent requests both presenting a correct code
+	// for the same pre-auth token can now only mint one session between
+	// them (see #206).
+	consumed, err := a.Repo.TokenConsume(ctx, token.ID)
+	if err != nil {
+		xlog.Error("failed to consume mfa pre-auth token", "token_id", token.ID, "err", err)
 		return nil, nil, "", err
+	}
+	if !consumed {
+		xlog.Debug("mfa login verify: pre-auth token already consumed by a concurrent request", "token_id", token.ID)
+		return nil, nil, "", ErrInvalidOrExpiredMFAToken
 	}
 
 	if rememberDevice {
@@ -407,11 +420,16 @@ func (a *Auth) mfaConsumeRecoveryCode(ctx context.Context, user *models.User, co
 	if subtle.ConstantTimeCompare([]byte(token.Token), []byte(hashed)) != 1 {
 		return false
 	}
-	if token.Revoked {
+	// The consume itself is the guard, not a separate read-then-write --
+	// see TokenRefresh's identical comment in auth.go. Without this,
+	// concurrent uses of the same recovery code could all observe
+	// revoked=false and all succeed (see #206).
+	consumed, err := a.Repo.TokenConsume(ctx, token.ID)
+	if err != nil {
+		xlog.Error("failed to consume mfa recovery code", "token_id", token.ID, "err", err)
 		return false
 	}
-	if err := a.Repo.TokenRevoke(ctx, token.ID); err != nil {
-		xlog.Error("failed to revoke used mfa recovery code", "token_id", token.ID, "err", err)
+	if !consumed {
 		return false
 	}
 	xlog.Info("mfa recovery code used", "user_id", user.ID)
