@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/josuebrunel/gopkg/xlog"
@@ -55,7 +56,7 @@ func (a *Auth) RoleDelete(ctx context.Context, id string) error {
 	if err != nil {
 		return errors.New("role not found")
 	}
-	if role.Name == a.Cfg.AdminRole {
+	if strings.EqualFold(role.Name, a.Cfg.AdminRole) {
 		return ErrCannotDeleteAdminRole
 	}
 	return a.Repo.RoleDelete(ctx, id)
@@ -182,8 +183,14 @@ func (a *Auth) UserHasRole(ctx context.Context, userID, roleName string) (bool, 
 	if err != nil {
 		return false, err
 	}
+	// Compared case-insensitively, matching the normalization RoleCreate/
+	// RoleGetByName apply at the DB layer: r.Name is always the stored
+	// (lowercased) form, but roleName here comes straight from the caller
+	// (e.g. RequireRole(svc, Cfg.AdminRole), where an operator could set
+	// EZAUTH_ADMIN_ROLE="Admin") with no normalization of its own.
+	roleName = strings.ToLower(strings.TrimSpace(roleName))
 	for _, r := range roles {
-		if r.Name == roleName {
+		if strings.ToLower(r.Name) == roleName {
 			return true, nil
 		}
 	}

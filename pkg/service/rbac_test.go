@@ -31,6 +31,49 @@ func TestRBAC(t *testing.T) {
 		}
 	})
 
+	// Role names are normalized case-insensitively so the same application
+	// code behaves the same regardless of the DB dialect's default
+	// collation (case-insensitive on MySQL, case-sensitive on
+	// postgres/sqlite by default) -- without this, "Manager" and "manager"
+	// would silently collide on MySQL but not on postgres/sqlite. Uses its
+	// own disposable role name/user (not "editor"/user, reused by the
+	// idempotency tests below, which assert an exact audit-event count).
+	t.Run("RoleNames_AreCaseInsensitive", func(t *testing.T) {
+		if _, err := auth.RoleCreate(ctx, "Manager", "different case, same role"); err != nil {
+			t.Fatalf("RoleCreate() unexpected error: %v", err)
+		}
+		if _, err := auth.RoleCreate(ctx, "manager", "duplicate via different case"); err == nil {
+			t.Error("expected creating \"manager\" to collide with the existing \"Manager\" role, got nil")
+		}
+
+		role, err := auth.Repo.RoleGetByName(ctx, "MANAGER")
+		if err != nil {
+			t.Fatalf("expected a case-insensitive lookup to find the role, got %v", err)
+		}
+		if role.Name != "manager" {
+			t.Errorf("expected the stored role name to be normalized to lowercase, got %q", role.Name)
+		}
+
+		caseUser, err := auth.Repo.UserCreate(ctx, &models.User{
+			Email:        util.UniqueEmail("rbac-case"),
+			PasswordHash: "some-hash",
+			Provider:     "local",
+		})
+		if err != nil {
+			t.Fatalf("failed to create test user: %v", err)
+		}
+		if err := auth.UserRoleGrant(ctx, "test-admin", caseUser.ID, "MANAGER"); err != nil {
+			t.Fatalf("expected granting via a different case to work, got %v", err)
+		}
+		has, err := auth.UserHasRole(ctx, caseUser.ID, "Manager")
+		if err != nil {
+			t.Fatalf("UserHasRole() unexpected error: %v", err)
+		}
+		if !has {
+			t.Error("expected UserHasRole to match regardless of casing")
+		}
+	})
+
 	t.Run("PermissionCreate_Duplicate", func(t *testing.T) {
 		if _, err := auth.PermissionCreate(ctx, "posts:write", "write posts"); err != nil {
 			t.Fatalf("PermissionCreate() unexpected error: %v", err)

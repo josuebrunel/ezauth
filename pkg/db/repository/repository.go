@@ -208,6 +208,16 @@ func normalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
 }
 
+// normalizeRoleName lowercases and trims an RBAC role name before it's
+// stored or queried, the same reasoning as normalizeEmail: MySQL's default
+// collation makes "Admin" and "admin" collide there while comparing
+// distinctly on postgres/sqlite, so the exact same application code (e.g.
+// RequireRole(svc, "Admin")) would behave differently depending on the
+// deployed dialect without this.
+func normalizeRoleName(name string) string {
+	return strings.ToLower(strings.TrimSpace(name))
+}
+
 // UserCreate creates a new user in the database.
 func (r Repository) UserCreate(ctx context.Context, user *models.User) (*models.User, error) {
 	user.Email = normalizeEmail(user.Email)
@@ -685,6 +695,7 @@ func (r Repository) AuditLogListByUserID(ctx context.Context, userID string, fil
 
 // RoleCreate creates a new RBAC role.
 func (r Repository) RoleCreate(ctx context.Context, role *models.Role) (*models.Role, error) {
+	role.Name = normalizeRoleName(role.Name)
 	query := r.QueryRoleInsert(ctx, role)
 
 	if r.Opts.Dialect == DialectMysql {
@@ -716,6 +727,7 @@ func (r Repository) RoleGetByID(ctx context.Context, id string) (*models.Role, e
 
 // RoleGetByName retrieves a role by its unique name.
 func (r Repository) RoleGetByName(ctx context.Context, name string) (*models.Role, error) {
+	name = normalizeRoleName(name)
 	query := r.QueryRoleGetByName(ctx, name)
 	role, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.Role]())
 	if err != nil {
