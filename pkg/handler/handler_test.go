@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -826,4 +827,28 @@ func TestHandler_Impersonation_JSON(t *testing.T) {
 			t.Errorf("expected status 401, got %d", w.Code)
 		}
 	})
+}
+
+func TestHandlerRun_GracefulShutdown(t *testing.T) {
+	h := setupTestHandler(t)
+	h.svc.Cfg.Addr = "127.0.0.1:0"
+
+	done := make(chan struct{})
+	go func() {
+		h.Run()
+		close(done)
+	}()
+
+	// Give Run()'s goroutine a moment to call ListenAndServe.
+	time.Sleep(100 * time.Millisecond)
+
+	if err := syscall.Kill(syscall.Getpid(), syscall.SIGINT); err != nil {
+		t.Fatalf("failed to send SIGINT: %v", err)
+	}
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("Run() did not return after SIGINT within the shutdown timeout")
+	}
 }

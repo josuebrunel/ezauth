@@ -2,11 +2,16 @@
 package handler
 
 import (
+	"context"
 	"encoding/gob"
+	"errors"
 	"log"
 	"net/http"
 	"net/url"
+	"os/signal"
 	"strings"
+	"syscall"
+	"time"
 
 	csrf "filippo.io/csrf/gorilla"
 	"github.com/alexedwards/scs/v2"
@@ -17,6 +22,19 @@ import (
 	"github.com/josuebrunel/ezauth/pkg/service"
 	"github.com/josuebrunel/gopkg/xlog"
 	httpSwagger "github.com/swaggo/http-swagger"
+)
+
+// HTTP server timeouts and shutdown grace period for Run(). Not exposed via
+// config: these are conservative, generally-safe defaults for an auth
+// service; callers who need different values can build their own
+// *http.Server around Handler (it implements http.Handler) instead of
+// calling Run().
+const (
+	defaultReadHeaderTimeout = 5 * time.Second
+	defaultReadTimeout       = 15 * time.Second
+	defaultWriteTimeout      = 30 * time.Second
+	defaultIdleTimeout       = 60 * time.Second
+	defaultShutdownTimeout   = 15 * time.Second
 )
 
 // LoadUserMiddleware is a middleware that loads the authenticated user into the context.
@@ -309,11 +327,47 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 	return h
 }
 
-// Run starts the HTTP server.
+// Run starts the HTTP server with conservative timeouts and blocks until it
+// receives SIGINT/SIGTERM, at which point it stops accepting new connections
+// and drains in-flight requests (up to defaultShutdownTimeout) before
+// returning.
 func (h *Handler) Run() {
-	xlog.Info("server started", "addr", h.svc.Cfg.Addr)
-	if err := http.ListenAndServe(h.svc.Cfg.Addr, h.r); err != nil {
-		log.Fatal(err)
+	srv := &http.Server{
+		Addr:              h.svc.Cfg.Addr,
+		Handler:           h.r,
+		ReadHeaderTimeout: defaultReadHeaderTimeout,
+		ReadTimeout:       defaultReadTimeout,
+		WriteTimeout:      defaultWriteTimeout,
+		IdleTimeout:       defaultIdleTimeout,
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	serveErr := make(chan error, 1)
+	go func() {
+		xlog.Info("server started", "addr", h.svc.Cfg.Addr)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			serveErr <- err
+			return
+		}
+		serveErr <- nil
+	}()
+
+	select {
+	case err := <-serveErr:
+		if err != nil {
+			log.Fatal(err)
+		}
+	case <-ctx.Done():
+		stop()
+		xlog.Info("shutdown signal received, draining in-flight requests")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), defaultShutdownTimeout)
+		defer cancel()
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			xlog.Error("graceful shutdown failed", "error", err)
+		}
+		<-serveErr
 	}
 }
 
