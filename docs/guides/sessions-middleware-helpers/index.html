@@ -1427,6 +1427,10 @@
 
 <h1 id="sessions-middleware-and-helpers">Sessions, Middleware and Helpers</h1>
 <p>The core building blocks for form-based (cookie) auth: managing the session, retrieving the authenticated user, surfacing flash messages, CSRF protection, the route-protection middlewares, and the package-level helper functions for handlers and templates.</p>
+<blockquote>
+<p>[!NOTE]
+<code>Handler.Session</code> defaults to <code>scs</code>'s in-memory store: sessions don't survive a process restart, and aren't shared across nodes in a multi-node/load-balanced deployment. Fine for a single instance or local development; for anything else, swap in one of <a href="https://github.com/alexedwards/scs?tab=readme-ov-file#session-stores"><code>scs</code>'s pluggable external stores</a> (Redis, Postgres, MySQL, ...) by setting <code>auth.Session.Store</code> after constructing the handler (<code>auth.Session.Store = redisstore.New(pool)</code>, or any other <code>scs.Store</code> implementation). The rate limiter (<code>EZAUTH_RATE_LIMIT_*</code>) has no pluggable store and is single-instance by design — each node in a multi-node deployment enforces its own independent budget; put a shared rate limit in front of <code>ezauth</code> at the load balancer/gateway layer if you need one.</p>
+</blockquote>
 <h2 id="retrieving-authenticated-user">Retrieving Authenticated User</h2>
 <p>To retrieve the authenticated user from the session cookies, you <strong>must</strong> mount the session middleware.</p>
 <pre><code class="language-go">// 1. Mount session middleware

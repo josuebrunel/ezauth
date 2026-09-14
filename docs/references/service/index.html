@@ -2452,8 +2452,8 @@
 <pre><code class="language-go">func (a *Auth) TokenRevoke(ctx context.Context, refreshToken string) error
 </code></pre>
 <h2 id="api-keys">API Keys</h2>
-<p>Scopes are stored as a plain string array in the <code>Token</code>'s existing <code>Metadata</code> column — no separate table. An empty/nil scopes list means unscoped/full access. See <a href="../../guides/account-security/#scoped-api-keys">Scoped API Keys</a>.</p>
-<pre><code class="language-go">func (a *Auth) APIKeyCreate(ctx context.Context, userID string, scopes []string) (*models.Token, error)
+<p>Scopes are stored as a plain string array in the <code>Token</code>'s existing <code>Metadata</code> column — no separate table. An empty/nil scopes list means unscoped/full access. <code>ttl</code> bounds the key's lifetime; pass <code>0</code> to use <code>Cfg.APIKeyDefaultTTL</code> (10 years by default). See <a href="../../guides/account-security/#scoped-api-keys">Scoped API Keys</a>.</p>
+<pre><code class="language-go">func (a *Auth) APIKeyCreate(ctx context.Context, userID string, scopes []string, ttl time.Duration) (*models.Token, error)
 func (a *Auth) APIKeyRevoke(ctx context.Context, userID, id string) error // ErrAPIKeyNotFound if id isn't userID's
 func (a *Auth) APIKeysList(ctx context.Context, userID string) ([]APIKeyInfo, error) // raw key omitted, see APIKeyCreate
 </code></pre>

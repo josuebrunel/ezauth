@@ -1554,6 +1554,16 @@
 <td></td>
 </tr>
 <tr>
+<td><code>EZAUTH_PREVIOUS_API_KEY</code></td>
+<td>Outgoing master API key, accepted alongside <code>EZAUTH_API_KEY</code> for the duration of a rotation (mirrors <code>EZAUTH_JWT_PREVIOUS_PUBLIC_KEY</code>'s pattern). Unset means no rotation is in progress.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_API_KEY_DEFAULT_TTL</code></td>
+<td>Default lifetime for a newly created API key (<code>APIKeyCreate</code>'s <code>ttl</code> parameter, when <code>0</code>).</td>
+<td><code>87600h</code> (10 years)</td>
+</tr>
+<tr>
 <td><code>EZAUTH_BASE_URL</code></td>
 <td>The base URL of the auth service (used for emails).</td>
 <td><code>http://localhost:8080</code></td>
@@ -1586,6 +1596,11 @@
 <tr>
 <td><code>EZAUTH_CSRF_SECRET</code></td>
 <td>Not currently used: CSRF protection (<code>filippo.io/csrf</code>) validates request headers, not an HMAC-signed token, so there's no key for this to provide. Accepted for config-shape compatibility only.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>EZAUTH_CSRF_TRUSTED_ORIGINS</code></td>
+<td>Comma-separated <code>Origin</code> values (e.g. <code>https://app.example.com</code>) exempted from the CSRF cross-origin check. Only needed when the frontend is served from a different origin than ezauth itself — see <a href="https://github.com/josuebrunel/ezauth#csrf-protection">CSRF Protection</a> in the README.</td>
 <td></td>
 </tr>
 <tr>
