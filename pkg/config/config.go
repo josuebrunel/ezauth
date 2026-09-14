@@ -346,6 +346,21 @@ func LoadConfig() (Config, error) {
 		return cfg, err
 	}
 
+	if cfg.AccountLockout == (AccountLockout{}) {
+		// AccountLockout's own env defaults (default:"true"/"5"/"15m") mean
+		// this can only be the zero value if every one of
+		// EZAUTH_ACCOUNT_LOCKOUT_ENABLED/MAX_ATTEMPTS/DURATION was
+		// explicitly set to a zero-ish value -- a misconfigured deployment
+		// silently running with brute-force lockout disabled, not a
+		// legitimate default. Fail fast rather than warn, since (unlike
+		// service.New, which many hand-built Configs -- tests included --
+		// go through without ever touching AccountLockout) every caller of
+		// LoadConfig is a real deployment reading real environment variables.
+		err := fmt.Errorf("EZAUTH_ACCOUNT_LOCKOUT_ENABLED/MAX_ATTEMPTS/DURATION all resolved to zero, disabling brute-force lockout entirely -- set EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS/EZAUTH_ACCOUNT_LOCKOUT_DURATION to real values if this is intentional")
+		xlog.Error("failed to load config", "err", err)
+		return cfg, err
+	}
+
 	return cfg, nil
 }
 

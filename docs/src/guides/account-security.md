@@ -75,7 +75,7 @@ case errors.Is(err, service.ErrAccountDisabled):
 }
 ```
 
-Set `EZAUTH_ACCOUNT_LOCKOUT_ENABLED=false` to stop counting/locking on failed attempts while still enforcing `IsActive` for accounts disabled some other way.
+Set `EZAUTH_ACCOUNT_LOCKOUT_ENABLED=false` to stop counting/locking on failed attempts while still enforcing `IsActive` for accounts disabled some other way; `MAX_ATTEMPTS`/`DURATION` keep their normal defaults regardless, so this alone is enough. `config.LoadConfig()` fails at startup if `ENABLED`/`MAX_ATTEMPTS`/`DURATION` *all* resolve to zero, since that combination can only come from a misconfigured deployment, never a deliberate choice to disable lockout.
 
 ## Guarded Email Change
 

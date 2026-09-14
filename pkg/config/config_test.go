@@ -61,6 +61,28 @@ func TestLoadConfig_JWTSecretLengthNotEnforcedForAsymmetricAlgorithms(t *testing
 	}
 }
 
+func TestLoadConfig_FailsFastOnFullyDisabledAccountLockout(t *testing.T) {
+	const secret = "super-secret-at-least-32-characters-long"
+	os.Setenv("EZAUTH_API_KEY", "test-api-key")
+	os.Setenv("EZAUTH_JWT_SECRET", secret)
+	os.Setenv("EZAUTH_ACCOUNT_LOCKOUT_ENABLED", "false")
+	os.Setenv("EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS", "0")
+	os.Setenv("EZAUTH_ACCOUNT_LOCKOUT_DURATION", "0s")
+	defer os.Unsetenv("EZAUTH_API_KEY")
+	defer os.Unsetenv("EZAUTH_JWT_SECRET")
+	defer os.Unsetenv("EZAUTH_ACCOUNT_LOCKOUT_ENABLED")
+	defer os.Unsetenv("EZAUTH_ACCOUNT_LOCKOUT_MAX_ATTEMPTS")
+	defer os.Unsetenv("EZAUTH_ACCOUNT_LOCKOUT_DURATION")
+
+	_, err := LoadConfig()
+	if err == nil {
+		t.Fatal("expected an error when AccountLockout resolves to its fully zero value, got nil")
+	}
+	if !strings.Contains(err.Error(), "ACCOUNT_LOCKOUT") {
+		t.Errorf("expected the error to name AccountLockout, got: %v", err)
+	}
+}
+
 func TestConfig_Sanitized(t *testing.T) {
 	cfg := Config{
 		JWTSecret: "real-jwt-secret",

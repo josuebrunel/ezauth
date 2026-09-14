@@ -55,9 +55,14 @@ func New(cfg *config.Config, repo *repository.Repository, pathPrefix string) (*A
 	if cfg.AccountLockout == (config.AccountLockout{}) {
 		// A fully zero-value AccountLockout means either it was never set
 		// (config.Config{} built by hand, bypassing LoadConfig's
-		// default:"true" env tag) or Enabled was deliberately left false
-		// alongside untouched MaxAttempts/LockoutDuration -- these two cases
-		// are indistinguishable from a bool alone, so warn either way.
+		// default:"true" env tag -- common in tests and for callers who
+		// load their own config another way) or Enabled was deliberately
+		// left false alongside untouched MaxAttempts/LockoutDuration --
+		// these two cases are indistinguishable from a bool alone, so warn
+		// either way. config.LoadConfig() itself fails fast on this instead,
+		// since it's the one path where the zero value can only mean a
+		// misconfigured production deployment, never a deliberately minimal
+		// hand-built Config.
 		xlog.Warn("AccountLockout is unset (brute-force lockout disabled): call config.LoadConfig() to get its default:\"true\" enablement, or set Cfg.AccountLockout explicitly if this is intentional")
 	}
 
