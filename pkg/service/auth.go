@@ -418,7 +418,17 @@ func (a *Auth) checkResendCooldown(ctx context.Context, userID, tokenType string
 		if time.Now().After(tok.ExpiresAt) {
 			continue
 		}
-		if time.Since(tok.CreatedAt) < otpResendCooldown {
+		// elapsed is clamped to 0 rather than compared directly: MySQL's
+		// DATETIME columns (no fractional-seconds precision) round
+		// CreatedAt to the nearest second on write, which can make it read
+		// back as slightly in the future and produce a negative duration
+		// here. Without the clamp, that negative value satisfies "< cooldown"
+		// even once the real cooldown has fully elapsed.
+		elapsed := time.Since(tok.CreatedAt)
+		if elapsed < 0 {
+			elapsed = 0
+		}
+		if elapsed < otpResendCooldown {
 			return ErrResendTooSoon
 		}
 	}
