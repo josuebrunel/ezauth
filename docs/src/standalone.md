@@ -31,17 +31,17 @@ Running `ezauth` as a standalone service allows you to offload authentication lo
 
     `-dialect`/`-dsn`/`-schema` flags (placed after the action) override the corresponding `EZAUTH_DB_*` env vars for that one invocation — useful for targeting a different database without changing your environment, e.g. `./ezauthapi migrate up -dsn="postgres://.../other_db"`.
 
-5.  **Start the Service**:
-    ```bash
-    ./ezauthapi
-    ```
-
-6.  **Create an Admin User** (optional):
-    Bootstraps a user (creating it if it doesn't already exist) and grants it an RBAC role — by default `admin` — so it passes `RequireRole("admin")`-gated routes. Safe to run more than once; re-running with the same email just ensures the role is granted.
+5.  **Create an Admin User**:
+    `Handler`'s admin/RBAC/org/impersonation routes (`/auth/api/admin/*`, `/auth/api/impersonate`, and their Form equivalents) require the caller hold an RBAC role — `Cfg.AdminRole`, `admin` by default — so do this before you need any of them; nothing else in the standalone service depends on it, but every one of those routes 401s/403s without it. Bootstraps a user (creating it if it doesn't already exist) and grants it that role. Safe to run more than once, including on an already-running deployment — re-running with the same email just ensures the role is granted.
     ```bash
     ./ezauthapi create-admin -email=admin@example.com -password=<a-strong-password>
     ```
-    Use `-role=<name>` to grant a different role instead of the default `admin`.
+    Use `-role=<name>` to grant a different role instead of the default `admin`. See [Admin Authorization](https://github.com/josuebrunel/ezauth#admin-authorization) in the README for how to customize or disable this gate (`handler.WithAdminAuthz`) if you're embedding `ezauth` as a library instead of running this binary directly.
+
+6.  **Start the Service**:
+    ```bash
+    ./ezauthapi
+    ```
 
 ## Using Docker
 

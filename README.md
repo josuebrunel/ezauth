@@ -249,6 +249,7 @@ You can run `ezauth` as a separate service that handles authentication for your 
    ./ezauthapi migrate up      # or run migrations as their own step; also `down` (roll back everything) / `revert` (roll back one)
    ./ezauthapi create-admin -email=admin@example.com -password=<a-strong-password>   # bootstrap an admin user (idempotent, -role defaults to "admin")
    ```
+   Run `create-admin` before you need any admin/RBAC/org/impersonation route (`/auth/api/admin/*`, `/auth/api/impersonate`, ...) — by default `Handler` denies all of them (`401`/`403`) until at least one user holds the `admin` RBAC role. See [Admin Authorization](#admin-authorization).
 
 ## Sessions, Middleware and Helpers
 
