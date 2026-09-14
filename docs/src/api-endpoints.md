@@ -69,7 +69,7 @@ POST requests to these endpoints are automatically protected by `filippo.io/csrf
 
 ### Passwordless (Form)
 `POST /auth/passwordless/request`
-`GET /auth/passwordless/login?token=...`
+`GET /auth/passwordless/login?token=...` (also accepts `POST` with `token` as a form field -- safer, since a query-string token lands in access logs/history/Referer headers; both responses set `Referrer-Policy: no-referrer`)
 
 ### SMS OTP (Form)
 `POST /auth/sms-otp/request` (field: `phone`)
@@ -107,7 +107,7 @@ Like `GET /auth/csrf`, these return JSON rather than redirecting — WebAuthn ce
 
 ### Email Change (Form)
 `POST /auth/email-change/request` (fields: `current_password`, `new_email`; requires a logged-in session)
-`GET /auth/email-change/confirm?token=...` (No auth required; applies the change, clears the session, and redirects to `Pages.Login`)
+`GET /auth/email-change/confirm?token=...` (No auth required; applies the change, clears the session, and redirects to `Pages.Login`; also accepts `POST` with `token` as a form field -- see the passwordless-login entry above for why)
 
 ### Admin User Management (Form)
 `GET /auth/admin/users` (Query params: `search`, `status`, `created_after`/`created_before`, `last_active_after`/`last_active_before`, `limit`/`offset`; requires a logged-in session)
@@ -264,7 +264,7 @@ Sends a magic login link to the user's email.
 ```
 
 ### Passwordless Login
-`GET /auth/api/passwordless/login?token=...`
+`GET /auth/api/passwordless/login?token=...` (also accepts `POST` with `{"token": "..."}` -- safer, since a query-string token lands in access logs/history/Referer headers; both responses set `Referrer-Policy: no-referrer`)
 
 Authenticates a user using a magic link token.
 
@@ -570,7 +570,7 @@ Requires the current password to confirm intent, then emails a verification link
 ```
 
 ### Email Change Confirm
-`GET /auth/api/email-change/confirm?token=...`
+`GET /auth/api/email-change/confirm?token=...` (also accepts `POST` with `{"token": "..."}` -- see the Passwordless Login section above for why)
 
 Applies the requested email change and revokes every other session. No authentication required (the token itself is the credential).
 

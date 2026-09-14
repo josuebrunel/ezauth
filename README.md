@@ -807,9 +807,17 @@ curl -X POST https://your-host/auth/api/email-change/request -H "Authorization: 
 
 # Confirm from the link sent to the new address (no auth required):
 curl "https://your-host/auth/api/email-change/confirm?token=<token>" -H "X-API-Key: your-api-key"
+
+# Or, safer -- POST with the token in the body instead of the URL, since a
+# query-string token lands in access logs, browser history, and Referer
+# headers. Use this if you control the confirmation flow yourself (e.g. an
+# intermediate page that extracts ?token=... from its own URL and POSTs it)
+# rather than just forwarding the emailed GET link directly:
+curl -X POST https://your-host/auth/api/email-change/confirm -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" -d '{"token": "<token>"}'
 ```
 
-For form-based (cookie) clients, `POST /auth/email-change/request` (fields `current_password`, `new_email`) works the same way against the logged-in session user, and `GET /auth/email-change/confirm?token=...` applies the change, clears the session (since it was just revoked along with every other one), and redirects to `Pages.Login`.
+For form-based (cookie) clients, `POST /auth/email-change/request` (fields `current_password`, `new_email`) works the same way against the logged-in session user, and `GET /auth/email-change/confirm?token=...` applies the change, clears the session (since it was just revoked along with every other one), and redirects to `Pages.Login` -- or `POST /auth/email-change/confirm` with `token` as a form field, for the same reason as above. Both responses set `Referrer-Policy: no-referrer`.
 
 Set `EZAUTH_EMAIL_CHANGE_SUBJECT`/`EZAUTH_EMAIL_CHANGE_BODY` to customize the verification email sent to the new address, and `EZAUTH_EMAIL_CHANGE_NOTIFY_SUBJECT`/`EZAUTH_EMAIL_CHANGE_NOTIFY_BODY` to customize the notice sent to the old one.
 
@@ -1251,7 +1259,7 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 | POST   | `/auth/password-reset/request`     | Request password reset link                                                 |
 | POST   | `/auth/password-reset/confirm`     | Confirm password reset                                                      |
 | POST   | `/auth/passwordless/request`       | Request magic link                                                          |
-| GET    | `/auth/passwordless/login`         | Login via magic link                                                        |
+| GET    | `/auth/passwordless/login`         | Login via magic link (also accepts `POST` with `token` in the body -- safer, since a query-string token lands in access logs/history/Referer headers; both responses set `Referrer-Policy: no-referrer`) |
 | GET    | `/auth/oauth2/{provider}/login`    | Login via OAuth2 provider                                                   |
 | GET    | `/auth/oauth2/{provider}/callback` | OAuth2 provider callback. URL: `{base_url}/auth/oauth2/{provider}/callback` |
 | POST   | `/auth/sms-otp/request`            | Request an SMS one-time login code (see [SMS OTP](#sms-otp))                |
@@ -1282,7 +1290,7 @@ These endpoints accept `application/x-www-form-urlencoded`, set secure cookies, 
 | DELETE | `/auth/invitations/{id}`           | Revoke one of the logged-in session user's invitations                     |
 | GET    | `/auth/invitations/preview`        | Preview a pending invitation by its token (no auth required)               |
 | POST   | `/auth/email-change/request`       | Request an email change as the logged-in session user (see [Guarded Email Change](#guarded-email-change)) |
-| GET    | `/auth/email-change/confirm`       | Confirm an email change, clear the session, and redirect to `Pages.Login`  |
+| GET    | `/auth/email-change/confirm`       | Confirm an email change, clear the session, and redirect to `Pages.Login` (also accepts `POST` with `token` in the body -- see the passwordless-login row above for why) |
 | GET    | `/auth/admin/users`                | List/search/filter users as the logged-in session user (see [Admin User Management](#admin-user-management)) |
 | POST   | `/auth/admin/users/{id}/suspend`   | Suspend a user's account                                                    |
 | POST   | `/auth/admin/users/{id}/reactivate`| Reactivate a user's account                                                 |
@@ -1323,7 +1331,7 @@ RBAC and organization endpoints for the logged-in session user (same paths as th
 | `/auth/password-reset/request` | `email`                                 |                                                                                                                   |
 | `/auth/password-reset/confirm` | `token`, `password`                     |                                                                                                                   |
 | `/auth/passwordless/request`   | `email`                                 |                                                                                                                   |
-| `/auth/passwordless/login`     | `token` (query param)                   |                                                                                                                   |
+| `/auth/passwordless/login`     | `token` (query param on `GET`, form field on `POST`) |                                                                                                      |
 | `/auth/sms-otp/request`        | `phone`                                 |                                                                                                                   |
 | `/auth/sms-otp/verify`         | `phone`, `code`                         |                                                                                                                   |
 | `/auth/mfa/login/verify`       | `code`                                  |                                                                                                                   |
@@ -1349,7 +1357,7 @@ These endpoints accept `application/json` and return JSON responses. Endpoints m
 | POST   | `/auth/api/password-reset/request` | Request password reset link       |
 | POST   | `/auth/api/password-reset/confirm` | Confirm password reset            |
 | POST   | `/auth/api/passwordless/request`   | Request magic link                |
-| GET    | `/auth/api/passwordless/login`     | Login via magic link              |
+| GET    | `/auth/api/passwordless/login`     | Login via magic link (also accepts `POST` with `{"token": "..."}` -- safer, since a query-string token lands in access logs/history/Referer headers; both responses set `Referrer-Policy: no-referrer`) |
 | POST   | `/auth/api/sms-otp/request`        | Request an SMS one-time login code (see [SMS OTP](#sms-otp)) |
 | POST   | `/auth/api/sms-otp/verify`         | Login via SMS one-time code       |
 | GET    | `/auth/api/userinfo`               | Get current user info (Protected) |
@@ -1381,7 +1389,7 @@ These endpoints accept `application/json` and return JSON responses. Endpoints m
 | GET    | `/auth/api/invitations/preview`    | Preview a pending invitation by its token |
 | POST   | `/auth/api/invitations/accept`     | Complete registration from an invitation and receive tokens |
 | POST   | `/auth/api/email-change/request`   | Request an email change (Protected, see [Guarded Email Change](#guarded-email-change)) |
-| GET    | `/auth/api/email-change/confirm`   | Confirm an email change |
+| GET    | `/auth/api/email-change/confirm`   | Confirm an email change (also accepts `POST` with `{"token": "..."}` -- see the passwordless-login row above for why) |
 | GET    | `/auth/api/admin/users`            | List/search/filter users (Protected, see [Admin User Management](#admin-user-management)) |
 | POST   | `/auth/api/admin/users/{id}/suspend` | Suspend a user's account (Protected) |
 | POST   | `/auth/api/admin/users/{id}/reactivate` | Reactivate a user's account (Protected) |

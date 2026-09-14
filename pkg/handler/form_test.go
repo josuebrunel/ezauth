@@ -461,3 +461,95 @@ func TestFormPasswordlessLogin_CallsAfterUserSignedInHook(t *testing.T) {
 		t.Errorf("expected AfterUserSignedIn to be called, got %v", hook.calls)
 	}
 }
+
+// TestFormPasswordlessLogin_AcceptsPOSTToken proves the token can be
+// submitted via a form-encoded POST body, not just the GET query string --
+// the safer option, since a query-string token lands in access logs,
+// browser history, and Referer headers (see #208). Also confirms the
+// Referrer-Policy: no-referrer response header, set regardless of method.
+func TestFormPasswordlessLogin_AcceptsPOSTToken(t *testing.T) {
+	h := setupFormTestHandler(t)
+	email := util.UniqueEmail("form-passwordless-post")
+
+	if err := h.svc.PasswordlessRequest(context.Background(), service.RequestPasswordless{Email: email}); err != nil {
+		t.Fatalf("PasswordlessRequest failed: %v", err)
+	}
+	mockMailer := h.svc.Mailer.(*service.MockMailer)
+	sentBody := mockMailer.SentEmails[len(mockMailer.SentEmails)-1]["body"]
+	tokenStart := strings.Index(sentBody, "token=")
+	if tokenStart == -1 {
+		t.Fatalf("could not find token in email body: %s", sentBody)
+	}
+	tokenValue := sentBody[tokenStart+len("token="):]
+
+	form := url.Values{"token": {tokenValue}}
+	req := httptest.NewRequest(http.MethodPost, "/auth/passwordless/login", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected 302 after POST passwordless login, got %d: %s", w.Code, w.Body.String())
+	}
+	if got := w.Header().Get("Referrer-Policy"); got != "no-referrer" {
+		t.Errorf("expected Referrer-Policy: no-referrer, got %q", got)
+	}
+	if loc := w.Header().Get("Location"); loc != h.svc.Cfg.Redirects.AfterLogin {
+		t.Errorf("expected redirect to %q, got %q", h.svc.Cfg.Redirects.AfterLogin, loc)
+	}
+}
+
+// TestFormEmailChangeConfirm_AcceptsPOSTToken mirrors
+// TestFormPasswordlessLogin_AcceptsPOSTToken for the email-change
+// confirmation flow.
+func TestFormEmailChangeConfirm_AcceptsPOSTToken(t *testing.T) {
+	h := setupFormTestHandler(t)
+	h.svc.Cfg.EmailTemplates.EmailChangeSubject = "Confirm your new email address"
+	h.svc.Cfg.EmailTemplates.EmailChangeBody = "Click the following link to confirm your new email address: {{.Link}}"
+	ctx := context.Background()
+	password := "securepass123"
+	user, err := h.svc.UserCreate(ctx, &service.RequestBasicAuth{Email: util.UniqueEmail("form-emailchange-post"), Password: password})
+	if err != nil {
+		t.Fatalf("UserCreate failed: %v", err)
+	}
+	newEmail := util.UniqueEmail("form-emailchange-post-new")
+	if err := h.svc.EmailChangeRequest(ctx, user, service.RequestEmailChange{CurrentPassword: password, NewEmail: newEmail}); err != nil {
+		t.Fatalf("EmailChangeRequest failed: %v", err)
+	}
+	// EmailChangeRequest sends two emails: a confirmation link to newEmail
+	// (the one carrying the token), and a notice to the old address --
+	// grab the confirmation one specifically, not just the most recent.
+	mockMailer := h.svc.Mailer.(*service.MockMailer)
+	var sentBody string
+	for _, e := range mockMailer.SentEmails {
+		if e["to"] == newEmail {
+			sentBody = e["body"]
+		}
+	}
+	tokenStart := strings.Index(sentBody, "token=")
+	if tokenStart == -1 {
+		t.Fatalf("could not find token in email body: %s", sentBody)
+	}
+	tokenValue := sentBody[tokenStart+len("token="):]
+
+	form := url.Values{"token": {tokenValue}}
+	req := httptest.NewRequest(http.MethodPost, "/auth/email-change/confirm", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected 302 after POST email change confirm, got %d: %s", w.Code, w.Body.String())
+	}
+	if got := w.Header().Get("Referrer-Policy"); got != "no-referrer" {
+		t.Errorf("expected Referrer-Policy: no-referrer, got %q", got)
+	}
+
+	updated, err := h.svc.Repo.UserGetByID(ctx, user.ID)
+	if err != nil {
+		t.Fatalf("UserGetByID failed: %v", err)
+	}
+	if updated.Email != newEmail {
+		t.Errorf("expected email to be updated to %q, got %q", newEmail, updated.Email)
+	}
+}

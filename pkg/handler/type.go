@@ -71,3 +71,26 @@ func WriteJSONResponseError(w http.ResponseWriter, status int, err error) {
 	// Error field, and echoing the raw error into Data would defeat that.
 	WriteJSONResponse[string](w, status, "", err)
 }
+
+// capabilityTokenFromRequest reads a single-use capability token (e.g. an
+// email-change or passwordless-login token) from the query string, or --
+// for a POST -- from a "token" field in a JSON request body. Query-string
+// support stays for backward compatibility (email/magic-link clients issue
+// a plain GET when a link is clicked; that isn't going away), but embedding
+// the token in a URL leaks it into access logs, browser history, and
+// Referer headers, so POST-with-body is the safer option for any caller
+// that isn't just following an emailed link. See #208.
+func capabilityTokenFromRequest(r *http.Request) string {
+	if token := r.URL.Query().Get("token"); token != "" {
+		return token
+	}
+	if r.Method == http.MethodPost && r.ContentLength != 0 {
+		var body struct {
+			Token string `json:"token"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err == nil {
+			return body.Token
+		}
+	}
+	return ""
+}

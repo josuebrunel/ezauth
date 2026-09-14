@@ -380,19 +380,25 @@ func (h *Handler) PasswordlessRequest(w http.ResponseWriter, r *http.Request) {
 	WriteJSONResponse(w, http.StatusOK, map[string]string{"message": "magic link sent"}, nil)
 }
 
-// PasswordlessLogin handles login using a magic link token.
+// PasswordlessLogin handles login using a magic link token. Accepts the
+// token either as a "token" query parameter (GET, for a clicked magic
+// link) or in a JSON request body (POST, the safer option since a
+// query-string token lands in access logs, browser history, and Referer
+// headers -- see #208).
 // @Summary Magic link login
 // @Description Authenticate using the token from the magic link
 // @Tags auth
 // @Produce json
-// @Param token query string true "Magic Link Token"
+// @Param token query string false "Magic Link Token (GET) -- or pass 'token' in a POST body instead"
 // @Security ApiKeyAuth
 // @Success 200 {object} ApiResponse[service.TokenResponse]
 // @Failure 400 {object} ApiResponse[string]
 // @Failure 401 {object} ApiResponse[string]
 // @Router /auth/api/passwordless/login [get]
+// @Router /auth/api/passwordless/login [post]
 func (h *Handler) PasswordlessLogin(w http.ResponseWriter, r *http.Request) {
-	token := r.URL.Query().Get("token")
+	w.Header().Set("Referrer-Policy", "no-referrer")
+	token := capabilityTokenFromRequest(r)
 	if token == "" {
 		WriteJSONResponseError(w, http.StatusBadRequest, ErrTokenRequired)
 		return

@@ -432,6 +432,109 @@ func TestHandler_Passwordless(t *testing.T) {
 	}
 }
 
+// TestHandler_PasswordlessLogin_AcceptsPOSTJSONBody proves the JSON API's
+// PasswordlessLogin accepts the token in a POST body, not just the GET
+// query string -- the safer option, since a query-string token lands in
+// access logs, browser history, and Referer headers (see #208). Also
+// confirms the Referrer-Policy: no-referrer response header.
+func TestHandler_PasswordlessLogin_AcceptsPOSTJSONBody(t *testing.T) {
+	h := setupTestHandler(t)
+	email := util.UniqueEmail("magic-post")
+
+	reqBody := map[string]any{"email": email}
+	body, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest(http.MethodPost, "/auth/api/passwordless/request", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-api-key")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	mockMailer := h.svc.Mailer.(*service.MockMailer)
+	sentBody := mockMailer.SentEmails[len(mockMailer.SentEmails)-1]["body"]
+	tokenStart := strings.Index(sentBody, "token=")
+	if tokenStart == -1 {
+		t.Fatalf("could not find token in email body: %s", sentBody)
+	}
+	tokenValue := sentBody[tokenStart+6:]
+
+	loginBody, _ := json.Marshal(map[string]string{"token": tokenValue})
+	req = httptest.NewRequest(http.MethodPost, "/auth/api/passwordless/login", bytes.NewBuffer(loginBody))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-api-key")
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 for POST passwordless login, got %d: %s", w.Code, w.Body.String())
+	}
+	if got := w.Header().Get("Referrer-Policy"); got != "no-referrer" {
+		t.Errorf("expected Referrer-Policy: no-referrer, got %q", got)
+	}
+	var resp testResponse[service.TokenResponse]
+	json.NewDecoder(w.Body).Decode(&resp)
+	if resp.Data.AccessToken == "" {
+		t.Error("expected access token")
+	}
+}
+
+// TestHandler_EmailChangeConfirm_AcceptsPOSTJSONBody mirrors
+// TestHandler_PasswordlessLogin_AcceptsPOSTJSONBody for the email-change
+// confirmation flow.
+func TestHandler_EmailChangeConfirm_AcceptsPOSTJSONBody(t *testing.T) {
+	h := setupTestHandler(t)
+	ctx := context.Background()
+	h.svc.Cfg.EmailTemplates.EmailChangeSubject = "Confirm your new email address"
+	h.svc.Cfg.EmailTemplates.EmailChangeBody = "Click the following link to confirm your new email address: {{.Link}}"
+
+	password := "securepass123"
+	user, err := h.svc.UserCreate(ctx, &service.RequestBasicAuth{Email: util.UniqueEmail("api-emailchange-post"), Password: password})
+	if err != nil {
+		t.Fatalf("UserCreate failed: %v", err)
+	}
+	newEmail := util.UniqueEmail("api-emailchange-post-new")
+	if err := h.svc.EmailChangeRequest(ctx, user, service.RequestEmailChange{CurrentPassword: password, NewEmail: newEmail}); err != nil {
+		t.Fatalf("EmailChangeRequest failed: %v", err)
+	}
+
+	mockMailer := h.svc.Mailer.(*service.MockMailer)
+	var sentBody string
+	for _, e := range mockMailer.SentEmails {
+		if e["to"] == newEmail {
+			sentBody = e["body"]
+		}
+	}
+	tokenStart := strings.Index(sentBody, "token=")
+	if tokenStart == -1 {
+		t.Fatalf("could not find token in email body: %s", sentBody)
+	}
+	tokenValue := sentBody[tokenStart+6:]
+
+	confirmBody, _ := json.Marshal(map[string]string{"token": tokenValue})
+	req := httptest.NewRequest(http.MethodPost, "/auth/api/email-change/confirm", bytes.NewBuffer(confirmBody))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-api-key")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 for POST email change confirm, got %d: %s", w.Code, w.Body.String())
+	}
+	if got := w.Header().Get("Referrer-Policy"); got != "no-referrer" {
+		t.Errorf("expected Referrer-Policy: no-referrer, got %q", got)
+	}
+
+	updated, err := h.svc.Repo.UserGetByID(ctx, user.ID)
+	if err != nil {
+		t.Fatalf("UserGetByID failed: %v", err)
+	}
+	if updated.Email != newEmail {
+		t.Errorf("expected email to be updated to %q, got %q", newEmail, updated.Email)
+	}
+}
+
 // testHook records which hooks were called for test verification.
 type testHook struct {
 	service.DefaultHook

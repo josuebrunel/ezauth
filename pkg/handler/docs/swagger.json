@@ -1309,10 +1309,46 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Email change token",
+                        "description": "Email change token (GET) -- or pass 'token' in a POST body instead",
                         "name": "token",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-models_User"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Applies the requested email change and revokes other sessions",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Confirm an email change",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Email change token (GET) -- or pass 'token' in a POST body instead",
+                        "name": "token",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -2116,10 +2152,52 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Magic Link Token",
+                        "description": "Magic Link Token (GET) -- or pass 'token' in a POST body instead",
                         "name": "token",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-service_TokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApiResponse-string"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Authenticate using the token from the magic link",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Magic link login",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Magic Link Token (GET) -- or pass 'token' in a POST body instead",
+                        "name": "token",
+                        "in": "query"
                     }
                 ],
                 "responses": {

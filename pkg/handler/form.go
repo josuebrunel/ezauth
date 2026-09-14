@@ -549,9 +549,19 @@ func (h *Handler) FormPasswordlessRequest(w http.ResponseWriter, r *http.Request
 	h.redirectWithSuccess(w, r, h.svc.Cfg.Pages.Login, "magic link sent")
 }
 
-// FormPasswordlessLogin handles login using a magic link token.
+// FormPasswordlessLogin handles login using a magic link token. Accepts the
+// token from the query string (GET, for a clicked magic link) or a
+// form-encoded POST body -- the safer option, since a query-string token
+// lands in access logs, browser history, and Referer headers (see #208):
+// r.FormValue reads the POST body when present, falling back to the URL
+// query string, so a GET request's behavior is unchanged.
 func (h *Handler) FormPasswordlessLogin(w http.ResponseWriter, r *http.Request) {
-	token := r.URL.Query().Get("token")
+	w.Header().Set("Referrer-Policy", "no-referrer")
+	if err := r.ParseForm(); err != nil {
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrInvalidRequestBody.Error())
+		return
+	}
+	token := r.FormValue("token")
 	if token == "" {
 		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrTokenRequired.Error())
 		return
@@ -687,8 +697,18 @@ func (h *Handler) FormEmailChangeRequest(w http.ResponseWriter, r *http.Request)
 // FormEmailChangeConfirm completes a guarded email change via the emailed
 // link. Since confirming revokes every session (including the one following
 // this link), it clears auth cookies and sends the user back to log in again.
+// Accepts the token from the query string (GET, for a clicked email link)
+// or a form-encoded POST body -- the safer option, since a query-string
+// token lands in access logs, browser history, and Referer headers (see
+// #208): r.FormValue reads the POST body when present, falling back to the
+// URL query string, so a GET request's behavior is unchanged.
 func (h *Handler) FormEmailChangeConfirm(w http.ResponseWriter, r *http.Request) {
-	token := r.URL.Query().Get("token")
+	w.Header().Set("Referrer-Policy", "no-referrer")
+	if err := r.ParseForm(); err != nil {
+		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrInvalidRequestBody.Error())
+		return
+	}
+	token := r.FormValue("token")
 	if token == "" {
 		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrTokenRequired.Error())
 		return
