@@ -132,8 +132,20 @@ func (a *Auth) MFAConfirm(ctx context.Context, user *models.User, code string) (
 	if user.MfaSecret == nil || *user.MfaSecret == "" {
 		return nil, ErrMFAEnrollmentNotStarted
 	}
+
+	if a.Cfg.AccountLockout.Enabled {
+		var err error
+		if user, err = a.checkAccountActive(ctx, user); err != nil {
+			xlog.Debug("mfa confirm failed: account locked", "user_id", user.ID, "err", err)
+			return nil, err
+		}
+	}
+
 	if !totp.Validate(code, *user.MfaSecret) {
 		xlog.Debug("mfa enrollment confirmation failed: invalid code", "user_id", user.ID)
+		if a.Cfg.AccountLockout.Enabled {
+			a.recordFailedLogin(ctx, user)
+		}
 		return nil, ErrInvalidMFACode
 	}
 
@@ -149,6 +161,12 @@ func (a *Auth) MFAConfirm(ctx context.Context, user *models.User, code string) (
 		return nil, err
 	}
 
+	if user.FailedLoginAttempts > 0 {
+		if _, err := a.Repo.UserSetLockoutState(ctx, user.ID, 0, nil, true); err != nil {
+			xlog.Warn("failed to reset failed login attempt counter after mfa confirm success", "user_id", user.ID, "err", err)
+		}
+	}
+
 	xlog.Info("mfa enabled", "user_id", user.ID)
 	return codes, nil
 }
@@ -160,9 +178,28 @@ func (a *Auth) MFADisable(ctx context.Context, user *models.User, code string) e
 		return ErrMFANotEnabled
 	}
 
+	if a.Cfg.AccountLockout.Enabled {
+		var err error
+		if user, err = a.checkAccountActive(ctx, user); err != nil {
+			xlog.Debug("mfa disable failed: account locked", "user_id", user.ID, "err", err)
+			return err
+		}
+	}
+
 	if !a.mfaValidateAnyCode(ctx, user, code) {
 		xlog.Debug("mfa disable failed: invalid code", "user_id", user.ID)
+		if a.Cfg.AccountLockout.Enabled {
+			a.recordFailedLogin(ctx, user)
+		}
 		return ErrInvalidMFACode
+	}
+
+	if user.FailedLoginAttempts > 0 {
+		if reset, err := a.Repo.UserSetLockoutState(ctx, user.ID, 0, nil, true); err != nil {
+			xlog.Warn("failed to reset failed login attempt counter after mfa disable success", "user_id", user.ID, "err", err)
+		} else {
+			user = reset
+		}
 	}
 
 	user.MfaEnabled = false

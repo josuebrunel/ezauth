@@ -212,26 +212,7 @@ func TestMFALoginStepUp(t *testing.T) {
 // against a still-valid pre-auth token lock the account, instead of being
 // limited only by the (optional, off by default) global rate limiter.
 func TestMFALoginVerify_BruteForceLockout(t *testing.T) {
-	dialect, dsn := util.GetTestDBConfig("mfa_lockout_test")
-	cfg := &config.Config{
-		DB:            config.Database{Dialect: dialect, DSN: dsn},
-		JWTSecret:     "test-secret-0123456789-0123456789",
-		Hashing:       config.Hashing{BcryptCost: 4},
-		MFAIssuer:     "EzAuthTest",
-		TrustedDevice: config.TrustedDevice{TTL: 720 * time.Hour},
-		AccountLockout: config.AccountLockout{
-			Enabled:         true,
-			MaxAttempts:     3,
-			LockoutDuration: time.Hour,
-		},
-	}
-	auth, err := NewFromConfig(cfg, "auth")
-	if err != nil {
-		t.Fatalf("failed to create auth service: %v", err)
-	}
-	if err := ensureMigrated(auth.Repo.DB(), dialect, dsn); err != nil {
-		t.Fatalf("failed to run migrations: %v", err)
-	}
+	auth := newMFALockoutTestAuth(t, "mfa_lockout_test")
 
 	ctx := context.Background()
 	user := mfaTestUser(t, auth, ctx)
@@ -302,5 +283,111 @@ func TestGenerateRecoveryCode_Entropy(t *testing.T) {
 	}
 	if code == code2 {
 		t.Fatal("expected two calls to produce different codes")
+	}
+}
+
+func newMFALockoutTestAuth(t *testing.T, name string) *Auth {
+	t.Helper()
+	dialect, dsn := util.GetTestDBConfig(name)
+	cfg := &config.Config{
+		DB:            config.Database{Dialect: dialect, DSN: dsn},
+		JWTSecret:     "test-secret-0123456789-0123456789",
+		Hashing:       config.Hashing{BcryptCost: 4},
+		MFAIssuer:     "EzAuthTest",
+		TrustedDevice: config.TrustedDevice{TTL: 720 * time.Hour},
+		AccountLockout: config.AccountLockout{
+			Enabled:         true,
+			MaxAttempts:     3,
+			LockoutDuration: time.Hour,
+		},
+	}
+	auth, err := NewFromConfig(cfg, "auth")
+	if err != nil {
+		t.Fatalf("failed to create auth service: %v", err)
+	}
+	if err := ensureMigrated(auth.Repo.DB(), dialect, dsn); err != nil {
+		t.Fatalf("failed to run migrations: %v", err)
+	}
+	return auth
+}
+
+// TestMFAConfirm_BruteForceLockout proves repeated wrong codes against
+// MFAEnroll's pending secret lock the account, the same as guessing against
+// MFALoginVerify's pre-auth token does -- MFAConfirm previously validated
+// the code with no lockout-counter interaction at all.
+func TestMFAConfirm_BruteForceLockout(t *testing.T) {
+	auth := newMFALockoutTestAuth(t, "mfa_confirm_lockout_test")
+	ctx := context.Background()
+	user := mfaTestUser(t, auth, ctx)
+
+	if _, err := auth.MFAEnroll(ctx, user); err != nil {
+		t.Fatalf("MFAEnroll failed: %v", err)
+	}
+
+	for i := 0; i < 3; i++ {
+		if _, err := auth.MFAConfirm(ctx, user, "000000"); err == nil {
+			t.Fatal("expected error for wrong code")
+		}
+	}
+
+	locked, err := auth.Repo.UserGetByID(ctx, user.ID)
+	if err != nil {
+		t.Fatalf("failed to get user: %v", err)
+	}
+	if locked.IsActive || locked.LockedUntil == nil {
+		t.Fatalf("expected account locked after 3 wrong mfa confirm codes, got IsActive=%v lockedUntil=%v", locked.IsActive, locked.LockedUntil)
+	}
+
+	// Even the correct code is now rejected, since the account itself is locked.
+	validCode, err := totp.GenerateCode(*locked.MfaSecret, time.Now())
+	if err != nil {
+		t.Fatalf("failed to generate totp code: %v", err)
+	}
+	if _, err := auth.MFAConfirm(ctx, locked, validCode); err != ErrAccountLocked {
+		t.Fatalf("expected ErrAccountLocked even with the correct code once locked, got %v", err)
+	}
+}
+
+// TestMFADisable_BruteForceLockout proves repeated wrong codes against
+// MFADisable lock the account -- MFADisable previously validated the code
+// with no lockout-counter interaction at all, unlike MFALoginVerify.
+func TestMFADisable_BruteForceLockout(t *testing.T) {
+	auth := newMFALockoutTestAuth(t, "mfa_disable_lockout_test")
+	ctx := context.Background()
+	user := mfaTestUser(t, auth, ctx)
+
+	enrollResp, err := auth.MFAEnroll(ctx, user)
+	if err != nil {
+		t.Fatalf("MFAEnroll failed: %v", err)
+	}
+	code, err := totp.GenerateCode(enrollResp.Secret, time.Now())
+	if err != nil {
+		t.Fatalf("failed to generate totp code: %v", err)
+	}
+	if _, err := auth.MFAConfirm(ctx, user, code); err != nil {
+		t.Fatalf("MFAConfirm failed: %v", err)
+	}
+
+	for i := 0; i < 3; i++ {
+		if err := auth.MFADisable(ctx, user, "000000"); err == nil {
+			t.Fatal("expected error for wrong code")
+		}
+	}
+
+	locked, err := auth.Repo.UserGetByID(ctx, user.ID)
+	if err != nil {
+		t.Fatalf("failed to get user: %v", err)
+	}
+	if locked.IsActive || locked.LockedUntil == nil {
+		t.Fatalf("expected account locked after 3 wrong mfa disable codes, got IsActive=%v lockedUntil=%v", locked.IsActive, locked.LockedUntil)
+	}
+
+	// Even the correct code is now rejected, since the account itself is locked.
+	validCode, err := totp.GenerateCode(*locked.MfaSecret, time.Now())
+	if err != nil {
+		t.Fatalf("failed to generate totp code: %v", err)
+	}
+	if err := auth.MFADisable(ctx, locked, validCode); err != ErrAccountLocked {
+		t.Fatalf("expected ErrAccountLocked even with the correct code once locked, got %v", err)
 	}
 }
