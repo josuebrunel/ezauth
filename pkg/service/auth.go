@@ -115,7 +115,10 @@ func (a *Auth) UserCreate(ctx context.Context, req *RequestBasicAuth) (*models.U
 	}
 	u, err := a.Repo.UserCreate(ctx, user)
 	if err != nil {
-		xlog.Error("failed to create user", "email", req.Email, "err", err)
+		// user.ID is already populated here even on failure: the
+		// repository layer assigns it client-side before attempting the
+		// insert, and user is the same struct pointer passed through.
+		xlog.Error("failed to create user", "user_id", user.ID, "err", err)
 		return nil, err
 	}
 	xlog.Info("user created", "id", u.ID, "email", u.Email)

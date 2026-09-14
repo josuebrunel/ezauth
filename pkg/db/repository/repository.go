@@ -215,7 +215,10 @@ func (r Repository) UserCreate(ctx context.Context, user *models.User) (*models.
 
 	if r.Opts.Dialect == DialectMysql {
 		if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
-			xlog.Error("Failed to create user", "error", err, "email", user.Email)
+			// user.ID is already populated here: QueryUserInsert (above)
+			// assigns it client-side before the query runs, regardless of
+			// whether the insert itself succeeds.
+			xlog.Error("Failed to create user", "error", err, "user_id", user.ID)
 			return nil, err
 		}
 		return r.UserGetByID(ctx, user.ID)
@@ -223,7 +226,7 @@ func (r Repository) UserCreate(ctx context.Context, user *models.User) (*models.
 
 	createdUser, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
 	if err != nil {
-		xlog.Error("Failed to create user", "error", err, "email", user.Email)
+		xlog.Error("Failed to create user", "error", err, "user_id", user.ID)
 		return nil, err
 	}
 	return createdUser, nil
