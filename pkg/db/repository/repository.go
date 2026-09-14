@@ -11,6 +11,7 @@ import (
 	"github.com/josuebrunel/ezauth/pkg/db/repository/mysql"
 	"github.com/josuebrunel/ezauth/pkg/db/repository/postgres"
 	"github.com/josuebrunel/ezauth/pkg/db/repository/sqlite"
+	"github.com/josuebrunel/ezauth/pkg/util"
 	"github.com/josuebrunel/gopkg/xlog"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/scan"
@@ -1013,7 +1014,7 @@ func getDBConnection(opts Opts) (*sql.DB, error) {
 	}
 
 	if err != nil {
-		xlog.Error("failed to open connection", "error", err, "dsn", opts.DSN)
+		xlog.Error("failed to open connection", "error", err, "dsn", util.RedactDSN(opts.DSN))
 		return nil, err
 	}
 

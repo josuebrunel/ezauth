@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -102,4 +103,20 @@ func EscapeLikePattern(s string) string {
 		"_", LikeEscapeChar+"_",
 	)
 	return r.Replace(s)
+}
+
+var (
+	dsnUserInfoRE  = regexp.MustCompile(`([^:@/\s]+):([^@/\s]+)@`)
+	dsnPasswordKVR = regexp.MustCompile(`(?i)(password|pwd)=\S+`)
+)
+
+// RedactDSN masks credentials embedded in a database connection string so it
+// is safe to include in logs. It handles URL-style DSNs
+// (postgres://user:pass@host/db), the MySQL driver's user:pass@tcp(host)/db
+// form, and libpq key=value DSNs (password=... / pwd=...). Strings with no
+// recognizable credentials (e.g. a SQLite file path) are returned unchanged.
+func RedactDSN(dsn string) string {
+	dsn = dsnUserInfoRE.ReplaceAllString(dsn, "$1:***@")
+	dsn = dsnPasswordKVR.ReplaceAllString(dsn, "$1=***")
+	return dsn
 }
