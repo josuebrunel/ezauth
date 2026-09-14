@@ -20,7 +20,7 @@ func setupFlashTestHandler(t *testing.T) *Handler {
 			Dialect: dialect,
 			DSN:     dsn,
 		},
-		JWTSecret: "test-secret",
+		JWTSecret: "test-secret-0123456789-0123456789",
 		Addr:      ":8080",
 		ApiKey:    "test-api-key",
 		Pages: config.Pages{

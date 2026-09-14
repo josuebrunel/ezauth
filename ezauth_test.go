@@ -49,7 +49,7 @@ func TestEzAuth(t *testing.T) {
 			Dialect: dialect,
 			DSN:     dsn,
 		},
-		JWTSecret: "test-secret",
+		JWTSecret: "test-secret-0123456789-0123456789",
 	}
 
 	t.Run("New", func(t *testing.T) {

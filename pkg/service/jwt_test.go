@@ -51,7 +51,7 @@ func generateEdKeyPair(t *testing.T) (privPEM, pubPEM string) {
 }
 
 func TestNewJWTKeys_HS256Default(t *testing.T) {
-	keys, err := newJWTKeys(&config.Config{JWTSecret: "test-secret"})
+	keys, err := newJWTKeys(&config.Config{JWTSecret: "test-secret-0123456789-0123456789"})
 	if err != nil {
 		t.Fatalf("newJWTKeys failed: %v", err)
 	}
@@ -66,6 +66,23 @@ func TestNewJWTKeys_HS256Default(t *testing.T) {
 func TestNewJWTKeys_MissingSecret(t *testing.T) {
 	if _, err := newJWTKeys(&config.Config{}); err == nil {
 		t.Fatal("expected error for missing JWTSecret under default HS256")
+	}
+}
+
+// TestNewJWTKeys_ShortSecretRejected proves the config.MinJWTSecretLength
+// floor is enforced here too, not just in config.LoadConfig -- a hand-built
+// config.Config{} (tests, or a library consumer constructing one directly)
+// bypasses LoadConfig entirely, and previously got a brute-forceable HS256
+// key with no error.
+func TestNewJWTKeys_ShortSecretRejected(t *testing.T) {
+	short := strings.Repeat("a", config.MinJWTSecretLength-1)
+	if _, err := newJWTKeys(&config.Config{JWTSecret: short}); err == nil {
+		t.Fatalf("expected error for a %d-char secret (floor is %d)", len(short), config.MinJWTSecretLength)
+	}
+
+	exact := strings.Repeat("a", config.MinJWTSecretLength)
+	if _, err := newJWTKeys(&config.Config{JWTSecret: exact}); err != nil {
+		t.Fatalf("expected a %d-char secret (exactly the floor) to be accepted: %v", len(exact), err)
 	}
 }
 
@@ -154,7 +171,7 @@ func TestAuth_AsymmetricSigningAndVerification(t *testing.T) {
 }
 
 func TestJWKS_EmptyForHS256(t *testing.T) {
-	auth, err := New(&config.Config{JWTSecret: "test-secret"}, nil, "auth")
+	auth, err := New(&config.Config{JWTSecret: "test-secret-0123456789-0123456789"}, nil, "auth")
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
@@ -257,7 +274,7 @@ func TestAuth_KeyRotation(t *testing.T) {
 }
 
 func TestAuth_RejectsWrongAlgorithm(t *testing.T) {
-	hsAuth, err := New(&config.Config{JWTSecret: "test-secret"}, nil, "auth")
+	hsAuth, err := New(&config.Config{JWTSecret: "test-secret-0123456789-0123456789"}, nil, "auth")
 	if err != nil {
 		t.Fatalf("New (HS256) failed: %v", err)
 	}

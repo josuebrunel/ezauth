@@ -33,7 +33,7 @@ func setupTestHandler(t *testing.T) *Handler {
 			Dialect: dialect,
 			DSN:     dsn,
 		},
-		JWTSecret: "test-secret",
+		JWTSecret: "test-secret-0123456789-0123456789",
 		Hashing:   config.Hashing{BcryptCost: 4}, // bcrypt.MinCost: correctness doesn't need real cost-14 hashing
 		Addr:      ":8080",
 		ApiKey:    "test-api-key",
@@ -943,7 +943,7 @@ func TestHandler_SecureCookies(t *testing.T) {
 		dialect, dsn := util.GetTestDBConfig("handler_secure_cookies_test")
 		cfg := &config.Config{
 			DB:                 config.Database{Dialect: dialect, DSN: dsn},
-			JWTSecret:          "test-secret",
+			JWTSecret:          "test-secret-0123456789-0123456789",
 			Hashing:            config.Hashing{BcryptCost: 4},
 			Addr:               ":8080",
 			ApiKey:             "test-api-key",
@@ -1015,7 +1015,7 @@ func TestHandler_RateLimiterProxyHeaderTrust(t *testing.T) {
 		dialect, dsn := util.GetTestDBConfig("handler_ratelimit_proxy_test")
 		cfg := &config.Config{
 			DB:        config.Database{Dialect: dialect, DSN: dsn},
-			JWTSecret: "test-secret",
+			JWTSecret: "test-secret-0123456789-0123456789",
 			Hashing:   config.Hashing{BcryptCost: 4},
 			Addr:      ":8080",
 			ApiKey:    "test-api-key",

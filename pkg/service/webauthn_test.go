@@ -34,7 +34,7 @@ func setupWebauthnTestDB(t *testing.T, withWebauthn bool) *Auth {
 			Dialect: dialect,
 			DSN:     dsn,
 		},
-		JWTSecret: "test-secret",
+		JWTSecret: "test-secret-0123456789-0123456789",
 		Hashing:   config.Hashing{BcryptCost: 4}, // bcrypt.MinCost: correctness doesn't need real cost-14 hashing
 	}
 	if withWebauthn {

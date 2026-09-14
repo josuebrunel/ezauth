@@ -23,7 +23,7 @@ func setupSMSTestDB(t *testing.T) *Auth {
 			Dialect: dialect,
 			DSN:     dsn,
 		},
-		JWTSecret: "test-secret",
+		JWTSecret: "test-secret-0123456789-0123456789",
 		Hashing:   config.Hashing{BcryptCost: 4}, // bcrypt.MinCost: correctness doesn't need real cost-14 hashing
 		SMSTemplates: config.SMSTemplates{
 			OTPBody: "Your verification code is: {{.Code}}",
@@ -102,7 +102,7 @@ func TestSMSOTPVerify_BruteForceLockout(t *testing.T) {
 	dialect, dsn := util.GetTestDBConfig("sms_otp_lockout_test")
 	cfg := &config.Config{
 		DB:        config.Database{Dialect: dialect, DSN: dsn},
-		JWTSecret: "test-secret",
+		JWTSecret: "test-secret-0123456789-0123456789",
 		Hashing:   config.Hashing{BcryptCost: 4},
 		SMSTemplates: config.SMSTemplates{
 			OTPBody: "Your verification code is: {{.Code}}",

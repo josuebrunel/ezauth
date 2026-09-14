@@ -44,6 +44,13 @@ func newJWTKeys(cfg *config.Config) (*jwtKeys, error) {
 		if cfg.JWTSecret == "" {
 			return nil, errors.New("JWT_SECRET is required for HS256 signing")
 		}
+		if len(cfg.JWTSecret) < config.MinJWTSecretLength {
+			// LoadConfig already enforces this, but a hand-built
+			// config.Config{} (tests, or a library consumer constructing
+			// one directly) bypasses that check entirely -- enforce the
+			// same floor here so it can't be skipped.
+			return nil, fmt.Errorf("JWT_SECRET must be at least %d characters long for HS256 signing (got %d)", config.MinJWTSecretLength, len(cfg.JWTSecret))
+		}
 		secret := []byte(cfg.JWTSecret)
 		return &jwtKeys{
 			method:        jwt.SigningMethodHS256,

@@ -19,7 +19,7 @@ func setupMFATestDB(t *testing.T) *Auth {
 			Dialect: dialect,
 			DSN:     dsn,
 		},
-		JWTSecret:     "test-secret",
+		JWTSecret:     "test-secret-0123456789-0123456789",
 		Hashing:       config.Hashing{BcryptCost: 4}, // bcrypt.MinCost: correctness doesn't need real cost-14 hashing
 		MFAIssuer:     "EzAuthTest",
 		TrustedDevice: config.TrustedDevice{TTL: 720 * time.Hour},
@@ -213,7 +213,7 @@ func TestMFALoginVerify_BruteForceLockout(t *testing.T) {
 	dialect, dsn := util.GetTestDBConfig("mfa_lockout_test")
 	cfg := &config.Config{
 		DB:            config.Database{Dialect: dialect, DSN: dsn},
-		JWTSecret:     "test-secret",
+		JWTSecret:     "test-secret-0123456789-0123456789",
 		Hashing:       config.Hashing{BcryptCost: 4},
 		MFAIssuer:     "EzAuthTest",
 		TrustedDevice: config.TrustedDevice{TTL: 720 * time.Hour},

@@ -160,7 +160,6 @@ You can run `ezauth` as a separate service that handles authentication for your 
    export EZAUTH_DB_DSN="auth.db"      # for mysql: "user:pass@tcp(localhost:3306)/dbname?parseTime=true"
    export EZAUTH_DB_SCHEMA="public"    # Optional: Database schema (PostgreSQL only)
    export EZAUTH_JWT_SECRET="super-secret-key-at-least-32-characters-long"  # HS256 requires >= 32 chars
-   export EZAUTH_CSRF_SECRET="your-csrf-secret"  # Optional; defaults to JWT_SECRET if not set
    export EZAUTH_HASHING_ALGORITHM="bcrypt"      # Optional; "bcrypt" or "argon2id"
    export EZAUTH_RATE_LIMIT_ENABLED="false"       # Optional; enable rate limiting on auth endpoints
    export EZAUTH_FORCE_SECURE_COOKIES="false"    # Optional; force Secure on session/CSRF cookies regardless of BASE_URL's scheme (set true behind a TLS-terminating reverse proxy)
@@ -316,7 +315,7 @@ r.Get("/login", func(w http.ResponseWriter, r *http.Request) {
 
 #### CSRF Protection
 
-When using the form-based handlers (e.g., `POST /auth/login`), `ezauth` automatically enforces CSRF protection using `filippo.io/csrf/gorilla` and the `EZAUTH_CSRF_SECRET` (falls back to `EZAUTH_JWT_SECRET` with a warning if not set). It is strongly recommended to set a dedicated `EZAUTH_CSRF_SECRET` to keep CSRF and JWT keys separate.
+When using the form-based handlers (e.g., `POST /auth/login`), `ezauth` automatically enforces CSRF protection using `filippo.io/csrf/gorilla`. Unlike the classic HMAC-signed-token CSRF pattern, this library needs no secret key at all (see below) — `EZAUTH_CSRF_SECRET` is accepted for config-shape compatibility but currently has no effect on CSRF protection.
 
 **Note on Tokens vs Headers:** 
 This library relies entirely on modern browser **Fetch Metadata headers** (e.g. `Sec-Fetch-Site`, `Origin`) to enforce same-origin requests dynamically, mirroring the upcoming Go 1.25 standard library CSRF protections.

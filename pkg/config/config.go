@@ -272,9 +272,15 @@ type Config struct {
 	// the default admin/RBAC/org/impersonation authorization gate (see
 	// handler.WithAdminAuthz). Change this if "admin" collides with a role
 	// name your application already uses for something else.
-	AdminRole      string         `json:"admin_role" env:"ADMIN_ROLE" default:"admin"`
-	DB             Database       `json:"db"`
-	JWTSecret      string         `json:"jwt_secret" env:"JWT_SECRET" required:"true"`
+	AdminRole string   `json:"admin_role" env:"ADMIN_ROLE" default:"admin"`
+	DB        Database `json:"db"`
+	JWTSecret string   `json:"jwt_secret" env:"JWT_SECRET" required:"true"`
+	// CSRFSecret is not currently used: ezauth's CSRF protection
+	// (filippo.io/csrf) validates the Sec-Fetch-Site/Origin request headers
+	// against Host, not an HMAC-signed token, so there is no key for this
+	// value to provide. Kept (and still redacted by Sanitized()) only so a
+	// future CSRF implementation change has a config slot to reuse without
+	// another env var migration.
 	CSRFSecret     string         `json:"csrf_secret" env:"CSRF_SECRET"`
 	Hashing        Hashing        `json:"hashing"`
 	RateLimit      RateLimit      `json:"rate_limit"`
@@ -316,11 +322,15 @@ func (c Config) Sanitized() Config {
 	return c
 }
 
-// minJWTSecretLength is the floor enforced on JWTSecret by LoadConfig when
-// signing HS256 (the default algorithm): roughly 256 bits, in line with the
-// HMAC-SHA256 key size RFC 7518 recommends. A shorter secret is
-// brute-forceable offline once an attacker has even one valid token.
-const minJWTSecretLength = 32
+// MinJWTSecretLength is the floor enforced on JWTSecret when signing HS256
+// (the default algorithm): roughly 256 bits, in line with the HMAC-SHA256
+// key size RFC 7518 recommends. A shorter secret is brute-forceable offline
+// once an attacker has even one valid token. Enforced both here (for
+// LoadConfig-built configs) and in service.newJWTKeys (for hand-built
+// config.Config{} values that bypass LoadConfig entirely, e.g. tests or a
+// library consumer constructing one directly) -- exported so both call
+// sites check the same floor instead of two independently-maintained ones.
+const MinJWTSecretLength = 32
 
 func LoadConfig() (Config, error) {
 	var cfg Config
@@ -330,8 +340,8 @@ func LoadConfig() (Config, error) {
 		return cfg, err
 	}
 
-	if (cfg.JWT.Algorithm == "" || cfg.JWT.Algorithm == "HS256") && len(cfg.JWTSecret) < minJWTSecretLength {
-		err := fmt.Errorf("EZAUTH_JWT_SECRET must be at least %d characters long for HS256 signing (got %d); generate one with e.g. `openssl rand -base64 32`", minJWTSecretLength, len(cfg.JWTSecret))
+	if (cfg.JWT.Algorithm == "" || cfg.JWT.Algorithm == "HS256") && len(cfg.JWTSecret) < MinJWTSecretLength {
+		err := fmt.Errorf("EZAUTH_JWT_SECRET must be at least %d characters long for HS256 signing (got %d); generate one with e.g. `openssl rand -base64 32`", MinJWTSecretLength, len(cfg.JWTSecret))
 		xlog.Error("failed to load config", "err", err)
 		return cfg, err
 	}

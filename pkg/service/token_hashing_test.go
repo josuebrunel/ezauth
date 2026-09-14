@@ -152,7 +152,7 @@ func TestEmailChangeTokenIsStoredHashed(t *testing.T) {
 	dialect, dsn := util.GetTestDBConfig("email_change_hashcheck_test")
 	cfg := &config.Config{
 		DB:        config.Database{Dialect: dialect, DSN: dsn},
-		JWTSecret: "test-secret",
+		JWTSecret: "test-secret-0123456789-0123456789",
 		Hashing:   config.Hashing{BcryptCost: 4},
 		EmailTemplates: config.EmailTemplates{
 			EmailChangeSubject:       "Confirm your new email address",

@@ -308,16 +308,17 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 
 		// Form handlers (HTML Forms)
 		r.Group(func(r chi.Router) {
-			// CSRF Middleware
-			csrfKey := h.svc.Cfg.CSRFSecret
-			if csrfKey == "" {
-				// Logged at Error, not Warn: this is a silent security
-				// downgrade (CSRF and JWT signing share a key) that's easy
-				// to miss at Warn level in production log pipelines.
-				xlog.Error("CSRF_SECRET not set, falling back to JWT_SECRET -- this reuses the JWT signing key for CSRF protection, weakening key separation. Set a dedicated EZAUTH_CSRF_SECRET.")
-				csrfKey = h.svc.Cfg.JWTSecret
-			}
-			r.Use(csrf.Protect([]byte(csrfKey), csrf.Secure(secureCookies)))
+			// CSRF Middleware. filippo.io/csrf/gorilla.Protect's authKey and
+			// every Option except ErrorHandler/TrustedOrigins are ignored --
+			// per its own doc comments ("authKey is ignored and can be
+			// nil"; Secure is "Deprecated: ... does not rely on cookies").
+			// The underlying filippo.io/csrf.Protection validates
+			// Sec-Fetch-Site/Origin against Host, not an HMAC-signed token,
+			// so there is no key to derive or separate from JWTSecret here
+			// -- Cfg.CSRFSecret is accepted (and still redacted by
+			// Sanitized()) only in case a future CSRF implementation swap
+			// needs it again.
+			r.Use(csrf.Protect(nil))
 
 			r.Get("/csrf", func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("X-CSRF-Token", csrf.Token(r))

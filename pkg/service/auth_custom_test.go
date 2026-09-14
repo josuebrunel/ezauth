@@ -22,7 +22,7 @@ func TestCustomOAuth2ProviderRegistry(t *testing.T) {
 			},
 		},
 	}
-	auth, err := New(&config.Config{JWTSecret: "test-secret"}, nil, "auth")
+	auth, err := New(&config.Config{JWTSecret: "test-secret-0123456789-0123456789"}, nil, "auth")
 	if err != nil {
 		t.Fatalf("failed to create auth service: %v", err)
 	}

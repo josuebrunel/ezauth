@@ -18,7 +18,7 @@ func setupInvitationTestDB(t *testing.T) *Auth {
 			Dialect: dialect,
 			DSN:     dsn,
 		},
-		JWTSecret: "test-secret",
+		JWTSecret: "test-secret-0123456789-0123456789",
 		Hashing:   config.Hashing{BcryptCost: 4}, // bcrypt.MinCost: correctness doesn't need real cost-14 hashing
 		EmailTemplates: config.EmailTemplates{
 			InvitationSubject: "You've been invited",
