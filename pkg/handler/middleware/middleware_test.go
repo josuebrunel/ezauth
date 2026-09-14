@@ -135,16 +135,24 @@ func TestAuthMiddleware_ImpersonatorContextKey(t *testing.T) {
 func TestAPIKeyMiddleware(t *testing.T) {
 	apiKey := "config-key"
 	mw := APIKeyMiddleware(apiKey, &MockTokenGetter{})
-	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+	// Test Config Key -- also confirm it sets APIKeyScopesContextKey (to an
+	// explicit unscoped []string{}) like the DB-key path does, so
+	// RequireAPIKeyScope downstream can tell "authenticated, unscoped" apart
+	// from "APIKeyMiddleware never ran".
+	nextCheckMasterKeyScopes := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		scopes, ok := r.Context().Value(APIKeyScopesContextKey).([]string)
+		if !ok || len(scopes) != 0 {
+			t.Errorf("expected an explicit empty scopes slice in context for the master key, got %v (ok: %v)", scopes, ok)
+		}
 		w.WriteHeader(http.StatusOK)
 	})
 
-	// Test Config Key
 	req := httptest.NewRequest("GET", "/", nil)
 	req.Header.Set("X-API-Key", apiKey)
 	w := httptest.NewRecorder()
 
-	mw(next).ServeHTTP(w, req)
+	mw(nextCheckMasterKeyScopes).ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
 		t.Errorf("expected 200 with config key, got %d", w.Code)
 	}
@@ -347,17 +355,19 @@ func TestRequireAPIKeyScope(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	t.Run("NoAPIKeyContext_Passthrough", func(t *testing.T) {
-		// Defensive case: in practice APIKeyMiddleware always runs first and
-		// sets this context key for DB-backed keys (the master config key
-		// never has one, and is always full-access).
+	t.Run("NoAPIKeyContext_RejectsClosed", func(t *testing.T) {
+		// A missing context value means APIKeyMiddleware never ran on this
+		// route at all (e.g. a custom router wired without it) -- there is
+		// no authentication whatsoever, so this must fail closed rather than
+		// wave the request through. APIKeyMiddleware itself always sets this
+		// key on success now, including the master config key path.
 		mw := RequireAPIKeyScope("posts:write")
 		req := httptest.NewRequest("GET", "/", nil)
 		w := httptest.NewRecorder()
 
 		mw(next).ServeHTTP(w, req)
-		if w.Code != http.StatusOK {
-			t.Errorf("expected 200 with no api key scopes in context, got %d", w.Code)
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("expected 401 with no api key scopes in context, got %d", w.Code)
 		}
 	})
 

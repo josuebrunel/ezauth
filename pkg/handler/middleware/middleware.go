@@ -98,7 +98,12 @@ func APIKeyMiddleware(configApiKey string, tokenRepo TokenGetter) func(http.Hand
 
 			// Check against config first (constant-time comparison)
 			if subtle.ConstantTimeCompare([]byte(apiKey), []byte(configApiKey)) == 1 {
-				next.ServeHTTP(w, r)
+				// The master config key has no associated Token/scopes at
+				// all -- explicitly record "authenticated, unscoped" so
+				// RequireAPIKeyScope can tell it apart from a request that
+				// never went through this middleware.
+				ctx := context.WithValue(r.Context(), APIKeyScopesContextKey, []string{})
+				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
 
@@ -133,23 +138,33 @@ func APIKeyMiddleware(configApiKey string, tokenRepo TokenGetter) func(http.Hand
 }
 
 // RequireAPIKeyScope is a middleware that requires the API key used to
-// authenticate the request (via APIKeyMiddleware, which must run upstream)
-// to include the given scope.
+// authenticate the request (via APIKeyMiddleware, which MUST run upstream --
+// on every dialect of success, including the master config key, it sets
+// APIKeyScopesContextKey) to include the given scope.
 //
-// WARNING: an unscoped key — one created with a nil/empty scopes list, or
-// any key issued before per-key scoping existed, or the master config API
-// key (which never has an associated Token/scopes at all) — passes this
-// check unconditionally. "No scopes" means "full access", not "no access".
-// This is intentional for backward compatibility (every key predating
-// scoping must keep working), but it's a footgun: a key created without an
-// explicit scopes list is NOT a restricted key. Always pass a non-empty
-// scopes list for any key that should be limited; see the "Scoped API Keys"
-// section of the README for the full explanation.
+// A missing context value means APIKeyMiddleware never ran on this route at
+// all (e.g. a custom router wired without it) -- there is no authentication
+// on the request whatsoever, so this rejects with 401 rather than failing
+// open.
+//
+// WARNING: an unscoped key — one created with a nil/empty scopes list, any
+// key issued before per-key scoping existed, or the master config API key —
+// passes this check unconditionally once authenticated. "No scopes" means
+// "full access", not "no access". This is intentional for backward
+// compatibility (every key predating scoping must keep working), but it's a
+// footgun: a key created without an explicit scopes list is NOT a restricted
+// key. Always pass a non-empty scopes list for any key that should be
+// limited; see the "Scoped API Keys" section of the README for the full
+// explanation.
 func RequireAPIKeyScope(scope string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			scopes, ok := r.Context().Value(APIKeyScopesContextKey).([]string)
-			if !ok || len(scopes) == 0 {
+			if !ok {
+				WriteJSONResponseError(w, http.StatusUnauthorized, ErrAPIKeyRequired)
+				return
+			}
+			if len(scopes) == 0 {
 				next.ServeHTTP(w, r)
 				return
 			}
