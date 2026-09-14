@@ -127,13 +127,15 @@ func (a *Auth) EmailChangeConfirm(ctx context.Context, tokenValue string) (*mode
 		return nil, err
 	}
 
-	now := time.Now()
 	user.Email = newEmail
-	user.EmailVerified = true
-	user.EmailVerifiedAt = &now
-	updated, err := a.Repo.UserUpdate(ctx, user)
-	if err != nil {
+	if _, err := a.Repo.UserUpdate(ctx, user); err != nil {
 		xlog.Error("failed to update user email", "user_id", user.ID, "err", err)
+		return nil, err
+	}
+
+	updated, err := a.Repo.UserSetEmailVerified(ctx, user.ID, true)
+	if err != nil {
+		xlog.Error("failed to mark new email verified", "user_id", user.ID, "err", err)
 		return nil, err
 	}
 

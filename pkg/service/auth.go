@@ -559,10 +559,7 @@ func (a *Auth) PasswordlessLogin(ctx context.Context, tokenValue string) (*Token
 	}
 
 	if !user.EmailVerified {
-		now := time.Now()
-		user.EmailVerified = true
-		user.EmailVerifiedAt = &now
-		if _, err := a.Repo.UserUpdate(ctx, user); err != nil {
+		if _, err := a.Repo.UserSetEmailVerified(ctx, user.ID, true); err != nil {
 			xlog.Error("failed to update user email verification", "user_id", user.ID, "err", err)
 			return nil, err
 		}

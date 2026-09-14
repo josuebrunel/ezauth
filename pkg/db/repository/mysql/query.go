@@ -124,6 +124,14 @@ func (q *MysqlQuerier) QueryUserGetByProvider(ctx context.Context, provider, pro
 	)
 }
 
+// QueryUserUpdate deliberately never touches email_verified, phone_verified,
+// is_active, or mfa_enabled, unlike every other field here -- a bool has no
+// "not set" zero value distinguishable from "set to false", so unconditionally
+// SETting them from whatever the caller's struct happens to carry would let a
+// partial models.User (e.g. fetched by ID and email only) silently deactivate
+// the account and disable MFA. Repository.UserSetEmailVerified/
+// UserSetPhoneVerified/UserSetMFAEnabled/UserSetLockoutState own those
+// fields instead.
 func (q *MysqlQuerier) QueryUserUpdate(ctx context.Context, user *models.User) bob.Query {
 	qm := []bob.Mod[*dialect.UpdateQuery]{
 		um.Table(models.TableUser),
@@ -150,8 +158,6 @@ func (q *MysqlQuerier) QueryUserUpdate(ctx context.Context, user *models.User) b
 	if user.ProviderID != nil {
 		qm = append(qm, um.SetCol(models.ColumnProviderID).ToArg(user.ProviderID))
 	}
-
-	qm = append(qm, um.SetCol(models.ColumnEmailVerified).ToArg(user.EmailVerified))
 
 	if user.AppMetadata != nil {
 		qm = append(qm, um.SetCol(models.ColumnAppMetadata).ToArg(user.AppMetadata))
@@ -193,10 +199,6 @@ func (q *MysqlQuerier) QueryUserUpdate(ctx context.Context, user *models.User) b
 		qm = append(qm, um.SetCol(models.ColumnPhone).ToArg(user.Phone))
 	}
 
-	qm = append(qm, um.SetCol(models.ColumnPhoneVerified).ToArg(user.PhoneVerified))
-
-	qm = append(qm, um.SetCol(models.ColumnIsActive).ToArg(user.IsActive))
-
 	if user.AvatarURL != "" {
 		qm = append(qm, um.SetCol(models.ColumnAvatarURL).ToArg(user.AvatarURL))
 	}
@@ -217,8 +219,6 @@ func (q *MysqlQuerier) QueryUserUpdate(ctx context.Context, user *models.User) b
 		qm = append(qm, um.SetCol(models.ColumnMFALastTOTPCounter).ToArg(user.MFALastTOTPCounter))
 	}
 
-	qm = append(qm, um.SetCol(models.ColumnMfaEnabled).ToArg(user.MfaEnabled))
-
 	return mysql.Update(qm...)
 }
 
@@ -228,6 +228,44 @@ func (q *MysqlQuerier) QueryUserSetLockoutState(ctx context.Context, userID stri
 		um.SetCol(models.ColumnFailedLoginAttempts).ToArg(attempts),
 		um.SetCol(models.ColumnLockedUntil).ToArg(lockedUntil),
 		um.SetCol(models.ColumnIsActive).ToArg(isActive),
+		um.SetCol(models.ColumnUpdatedAt).ToArg(time.Now().UTC()),
+		um.Where(mysql.Quote("id").EQ(mysql.Arg(userID))),
+	)
+}
+
+// QueryUserSetEmailVerified sets email_verified (and, when verified is
+// true, email_verified_at to now) for a single user, independent of
+// QueryUserUpdate -- see its doc comment for why.
+func (q *MysqlQuerier) QueryUserSetEmailVerified(ctx context.Context, userID string, verified bool) bob.Query {
+	qm := []bob.Mod[*dialect.UpdateQuery]{
+		um.Table(models.TableUser),
+		um.SetCol(models.ColumnEmailVerified).ToArg(verified),
+		um.SetCol(models.ColumnUpdatedAt).ToArg(time.Now().UTC()),
+		um.Where(mysql.Quote("id").EQ(mysql.Arg(userID))),
+	}
+	if verified {
+		qm = append(qm, um.SetCol(models.ColumnEmailVerifiedAt).ToArg(time.Now().UTC()))
+	}
+	return mysql.Update(qm...)
+}
+
+// QueryUserSetPhoneVerified sets phone_verified for a single user,
+// independent of QueryUserUpdate -- see its doc comment for why.
+func (q *MysqlQuerier) QueryUserSetPhoneVerified(ctx context.Context, userID string, verified bool) bob.Query {
+	return mysql.Update(
+		um.Table(models.TableUser),
+		um.SetCol(models.ColumnPhoneVerified).ToArg(verified),
+		um.SetCol(models.ColumnUpdatedAt).ToArg(time.Now().UTC()),
+		um.Where(mysql.Quote("id").EQ(mysql.Arg(userID))),
+	)
+}
+
+// QueryUserSetMFAEnabled sets mfa_enabled for a single user, independent of
+// QueryUserUpdate -- see its doc comment for why.
+func (q *MysqlQuerier) QueryUserSetMFAEnabled(ctx context.Context, userID string, enabled bool) bob.Query {
+	return mysql.Update(
+		um.Table(models.TableUser),
+		um.SetCol(models.ColumnMfaEnabled).ToArg(enabled),
 		um.SetCol(models.ColumnUpdatedAt).ToArg(time.Now().UTC()),
 		um.Where(mysql.Quote("id").EQ(mysql.Arg(userID))),
 	)

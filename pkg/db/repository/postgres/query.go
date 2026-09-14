@@ -117,6 +117,14 @@ func (q *PSQLQuerier) QueryUserGetByProvider(ctx context.Context, provider, prov
 	)
 }
 
+// QueryUserUpdate deliberately never touches email_verified, phone_verified,
+// is_active, or mfa_enabled, unlike every other field here -- a bool has no
+// "not set" zero value distinguishable from "set to false", so unconditionally
+// SETting them from whatever the caller's struct happens to carry would let a
+// partial models.User (e.g. fetched by ID and email only) silently deactivate
+// the account and disable MFA. Repository.UserSetEmailVerified/
+// UserSetPhoneVerified/UserSetMFAEnabled/UserSetLockoutState own those
+// fields instead.
 func (q *PSQLQuerier) QueryUserUpdate(ctx context.Context, user *models.User) bob.Query {
 	qm := []bob.Mod[*dialect.UpdateQuery]{
 		um.Table(psql.Quote(models.TableUser)),
@@ -143,8 +151,6 @@ func (q *PSQLQuerier) QueryUserUpdate(ctx context.Context, user *models.User) bo
 	if user.ProviderID != nil {
 		qm = append(qm, um.SetCol(models.ColumnProviderID).ToArg(user.ProviderID))
 	}
-
-	qm = append(qm, um.SetCol(models.ColumnEmailVerified).ToArg(user.EmailVerified))
 
 	if user.AppMetadata != nil {
 		qm = append(qm, um.SetCol(models.ColumnAppMetadata).ToArg(user.AppMetadata))
@@ -186,10 +192,6 @@ func (q *PSQLQuerier) QueryUserUpdate(ctx context.Context, user *models.User) bo
 		qm = append(qm, um.SetCol(models.ColumnPhone).ToArg(user.Phone))
 	}
 
-	qm = append(qm, um.SetCol(models.ColumnPhoneVerified).ToArg(user.PhoneVerified))
-
-	qm = append(qm, um.SetCol(models.ColumnIsActive).ToArg(user.IsActive))
-
 	if user.AvatarURL != "" {
 		qm = append(qm, um.SetCol(models.ColumnAvatarURL).ToArg(user.AvatarURL))
 	}
@@ -209,8 +211,6 @@ func (q *PSQLQuerier) QueryUserUpdate(ctx context.Context, user *models.User) bo
 	if user.MFALastTOTPCounter != nil {
 		qm = append(qm, um.SetCol(models.ColumnMFALastTOTPCounter).ToArg(user.MFALastTOTPCounter))
 	}
-
-	qm = append(qm, um.SetCol(models.ColumnMfaEnabled).ToArg(user.MfaEnabled))
 
 	qm = append(qm, um.Returning("*"))
 
@@ -238,6 +238,47 @@ func (q *PSQLQuerier) QueryUserSetLockoutState(ctx context.Context, userID strin
 		um.SetCol(models.ColumnFailedLoginAttempts).ToArg(attempts),
 		um.SetCol(models.ColumnLockedUntil).ToArg(lockedUntil),
 		um.SetCol(models.ColumnIsActive).ToArg(isActive),
+		um.SetCol(models.ColumnUpdatedAt).ToArg(time.Now().UTC()),
+		um.Where(psql.Quote("id").EQ(psql.Arg(userID))),
+		um.Returning("*"),
+	)
+}
+
+// QueryUserSetEmailVerified sets email_verified (and, when verified is
+// true, email_verified_at to now) for a single user, independent of
+// QueryUserUpdate -- see its doc comment for why.
+func (q *PSQLQuerier) QueryUserSetEmailVerified(ctx context.Context, userID string, verified bool) bob.Query {
+	qm := []bob.Mod[*dialect.UpdateQuery]{
+		um.Table(psql.Quote(models.TableUser)),
+		um.SetCol(models.ColumnEmailVerified).ToArg(verified),
+		um.SetCol(models.ColumnUpdatedAt).ToArg(time.Now().UTC()),
+		um.Where(psql.Quote("id").EQ(psql.Arg(userID))),
+		um.Returning("*"),
+	}
+	if verified {
+		qm = append(qm, um.SetCol(models.ColumnEmailVerifiedAt).ToArg(time.Now().UTC()))
+	}
+	return psql.Update(qm...)
+}
+
+// QueryUserSetPhoneVerified sets phone_verified for a single user,
+// independent of QueryUserUpdate -- see its doc comment for why.
+func (q *PSQLQuerier) QueryUserSetPhoneVerified(ctx context.Context, userID string, verified bool) bob.Query {
+	return psql.Update(
+		um.Table(psql.Quote(models.TableUser)),
+		um.SetCol(models.ColumnPhoneVerified).ToArg(verified),
+		um.SetCol(models.ColumnUpdatedAt).ToArg(time.Now().UTC()),
+		um.Where(psql.Quote("id").EQ(psql.Arg(userID))),
+		um.Returning("*"),
+	)
+}
+
+// QueryUserSetMFAEnabled sets mfa_enabled for a single user, independent of
+// QueryUserUpdate -- see its doc comment for why.
+func (q *PSQLQuerier) QueryUserSetMFAEnabled(ctx context.Context, userID string, enabled bool) bob.Query {
+	return psql.Update(
+		um.Table(psql.Quote(models.TableUser)),
+		um.SetCol(models.ColumnMfaEnabled).ToArg(enabled),
 		um.SetCol(models.ColumnUpdatedAt).ToArg(time.Now().UTC()),
 		um.Where(psql.Quote("id").EQ(psql.Arg(userID))),
 		um.Returning("*"),

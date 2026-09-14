@@ -344,6 +344,63 @@ func TestUserUsernameUniqueness(t *testing.T) {
 	}
 }
 
+// TestUserUpdate_DoesNotTouchVerificationOrActiveOrMFAFlags proves a partial
+// models.User (e.g. fetched by ID and email only, or hand-built by a library
+// consumer with just the fields they mean to change) can't accidentally
+// deactivate the account, un-verify email/phone, or disable MFA through
+// UserUpdate -- those four fields are bools with no "not set" zero value
+// distinguishable from "set to false", so UserUpdate deliberately never
+// touches them; UserSetEmailVerified/UserSetPhoneVerified/UserSetMFAEnabled/
+// UserSetLockoutState own them instead.
+func TestUserUpdate_DoesNotTouchVerificationOrActiveOrMFAFlags(t *testing.T) {
+	auth := setupBasicAuthTestDB(t)
+	ctx := context.Background()
+
+	secret := "some-mfa-secret"
+	created, err := auth.Repo.UserCreate(ctx, &models.User{
+		Email:         util.UniqueEmail("partialupdate"),
+		Provider:      "local",
+		EmailVerified: true,
+		PhoneVerified: true,
+		MfaSecret:     &secret,
+		MfaEnabled:    true,
+	})
+	if err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+	if !created.IsActive {
+		t.Fatal("expected a newly created user to be active")
+	}
+
+	// A caller who only fetched/built a partial User (ID and a field they
+	// actually mean to change) must not collaterally flip these four flags
+	// to their Go zero value (false).
+	partial := &models.User{ID: created.ID, FirstName: "Updated"}
+	if _, err := auth.Repo.UserUpdate(ctx, partial); err != nil {
+		t.Fatalf("UserUpdate failed: %v", err)
+	}
+
+	fetched, err := auth.Repo.UserGetByID(ctx, created.ID)
+	if err != nil {
+		t.Fatalf("UserGetByID failed: %v", err)
+	}
+	if fetched.FirstName != "Updated" {
+		t.Errorf("expected FirstName to be updated, got %q", fetched.FirstName)
+	}
+	if !fetched.EmailVerified {
+		t.Error("expected EmailVerified to remain true after an unrelated UserUpdate")
+	}
+	if !fetched.PhoneVerified {
+		t.Error("expected PhoneVerified to remain true after an unrelated UserUpdate")
+	}
+	if !fetched.IsActive {
+		t.Error("expected IsActive to remain true after an unrelated UserUpdate")
+	}
+	if !fetched.MfaEnabled {
+		t.Error("expected MfaEnabled to remain true after an unrelated UserUpdate")
+	}
+}
+
 // TestLocaleTimezoneAvatarURLAcceptLongValues guards against the columns
 // drifting back to a fixed-width type on any one dialect: mysql used to cap
 // locale/timezone/avatar_url at VARCHAR(10)/VARCHAR(50)/VARCHAR(500), so a

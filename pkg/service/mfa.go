@@ -153,7 +153,7 @@ func (a *Auth) MFAConfirm(ctx context.Context, user *models.User, code string) (
 	}
 
 	user.MfaEnabled = true
-	if _, err := a.Repo.UserUpdate(ctx, user); err != nil {
+	if _, err := a.Repo.UserSetMFAEnabled(ctx, user.ID, true); err != nil {
 		xlog.Error("failed to enable mfa", "user_id", user.ID, "err", err)
 		return nil, err
 	}
@@ -205,10 +205,14 @@ func (a *Auth) MFADisable(ctx context.Context, user *models.User, code string) e
 		}
 	}
 
-	user.MfaEnabled = false
 	empty := ""
 	user.MfaSecret = &empty
 	if _, err := a.Repo.UserUpdate(ctx, user); err != nil {
+		xlog.Error("failed to clear mfa secret", "user_id", user.ID, "err", err)
+		return err
+	}
+	user.MfaEnabled = false
+	if _, err := a.Repo.UserSetMFAEnabled(ctx, user.ID, false); err != nil {
 		xlog.Error("failed to disable mfa", "user_id", user.ID, "err", err)
 		return err
 	}

@@ -41,6 +41,9 @@ type UserQuerier interface {
 	QueryUserGetByProvider(ctx context.Context, provider, providerID string) bob.Query
 	QueryUserUpdate(ctx context.Context, user *models.User) bob.Query
 	QueryUserSetLockoutState(ctx context.Context, userID string, attempts int, lockedUntil *time.Time, isActive bool) bob.Query
+	QueryUserSetEmailVerified(ctx context.Context, userID string, verified bool) bob.Query
+	QueryUserSetPhoneVerified(ctx context.Context, userID string, verified bool) bob.Query
+	QueryUserSetMFAEnabled(ctx context.Context, userID string, enabled bool) bob.Query
 	QueryUserIncrementFailedLoginAttempts(ctx context.Context, userID string) bob.Query
 	QueryUserDelete(ctx context.Context, id string) bob.Query
 	QueryUsersList(ctx context.Context, filter models.UserListFilter, limit, offset int) bob.Query
@@ -379,6 +382,72 @@ func (r Repository) UserSetLockoutState(ctx context.Context, userID string, atte
 	updatedUser, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
 	if err != nil {
 		xlog.Error("Failed to set user lockout state", "error", err, "user_id", userID)
+		return nil, err
+	}
+	return updatedUser, nil
+}
+
+// UserSetEmailVerified sets email_verified (and, when verified is true,
+// email_verified_at to now) for a single user, independent of UserUpdate's
+// partial-update semantics -- see QueryUserUpdate's doc comment for why.
+func (r Repository) UserSetEmailVerified(ctx context.Context, userID string, verified bool) (*models.User, error) {
+	query := r.QueryUserSetEmailVerified(ctx, userID, verified)
+
+	if r.Opts.Dialect == DialectMysql {
+		if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+			xlog.Error("Failed to set user email_verified", "error", err, "user_id", userID)
+			return nil, err
+		}
+		return r.UserGetByID(ctx, userID)
+	}
+
+	updatedUser, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
+	if err != nil {
+		xlog.Error("Failed to set user email_verified", "error", err, "user_id", userID)
+		return nil, err
+	}
+	return updatedUser, nil
+}
+
+// UserSetPhoneVerified sets phone_verified for a single user, independent
+// of UserUpdate's partial-update semantics -- see QueryUserUpdate's doc
+// comment for why.
+func (r Repository) UserSetPhoneVerified(ctx context.Context, userID string, verified bool) (*models.User, error) {
+	query := r.QueryUserSetPhoneVerified(ctx, userID, verified)
+
+	if r.Opts.Dialect == DialectMysql {
+		if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+			xlog.Error("Failed to set user phone_verified", "error", err, "user_id", userID)
+			return nil, err
+		}
+		return r.UserGetByID(ctx, userID)
+	}
+
+	updatedUser, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
+	if err != nil {
+		xlog.Error("Failed to set user phone_verified", "error", err, "user_id", userID)
+		return nil, err
+	}
+	return updatedUser, nil
+}
+
+// UserSetMFAEnabled sets mfa_enabled for a single user, independent of
+// UserUpdate's partial-update semantics -- see QueryUserUpdate's doc
+// comment for why.
+func (r Repository) UserSetMFAEnabled(ctx context.Context, userID string, enabled bool) (*models.User, error) {
+	query := r.QueryUserSetMFAEnabled(ctx, userID, enabled)
+
+	if r.Opts.Dialect == DialectMysql {
+		if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+			xlog.Error("Failed to set user mfa_enabled", "error", err, "user_id", userID)
+			return nil, err
+		}
+		return r.UserGetByID(ctx, userID)
+	}
+
+	updatedUser, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
+	if err != nil {
+		xlog.Error("Failed to set user mfa_enabled", "error", err, "user_id", userID)
 		return nil, err
 	}
 	return updatedUser, nil

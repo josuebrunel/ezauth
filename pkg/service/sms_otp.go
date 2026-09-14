@@ -180,8 +180,7 @@ func (a *Auth) SMSOTPVerify(ctx context.Context, req RequestSMSOTPVerify) (*Toke
 	}
 
 	if !user.PhoneVerified {
-		user.PhoneVerified = true
-		if _, err := a.Repo.UserUpdate(ctx, user); err != nil {
+		if _, err := a.Repo.UserSetPhoneVerified(ctx, user.ID, true); err != nil {
 			xlog.Error("failed to update user phone verification", "user_id", user.ID, "err", err)
 			return nil, err
 		}

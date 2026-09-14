@@ -57,7 +57,7 @@ func (a *Auth) UserUpdatePassword(ctx context.Context, user *models.User, passwo
 
 ### `UserUpdate`
 
-Updates user profile information.
+Updates user profile information, using partial-update semantics (see [`Repository.UserUpdate`](./repository.md#userupdate)). `EmailVerified`, `PhoneVerified`, `IsActive`, and `MfaEnabled` are never touched here regardless of what `user` carries -- use `Repo.UserSetEmailVerified`/`UserSetPhoneVerified`/`UserSetMFAEnabled`/`UserSetLockoutState` to change those.
 
 ```go
 func (a *Auth) UserUpdate(ctx context.Context, user *models.User) (*models.User, error)

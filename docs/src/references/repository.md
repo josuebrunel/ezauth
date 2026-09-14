@@ -71,7 +71,9 @@ func (r Repository) UserGetByPhone(ctx context.Context, phone string) (*models.U
 ```
 
 ### `UserUpdate`
-Updates an existing user record. Automatically updates `UpdatedAt` to the current UTC time.
+Updates an existing user record using partial-update semantics: a zero-valued field (`""`, `nil`) is left untouched rather than overwritten, so a caller can pass a partially-populated `models.User` and only change the fields they set. Automatically updates `UpdatedAt` to the current UTC time.
+
+**`EmailVerified`, `PhoneVerified`, `IsActive`, and `MfaEnabled` are the exception: `UserUpdate` never touches them, regardless of what the struct carries.** A bool has no "not set" zero value distinguishable from "set to false" the way `""`/`nil` work for other fields, so honoring these four the same way every other field is honored would mean any partial `models.User` (e.g. fetched by ID and email only) silently deactivates the account and disables MFA. Use `UserSetEmailVerified`/`UserSetPhoneVerified`/`UserSetMFAEnabled`/`UserSetLockoutState` to change them instead.
 
 ```go
 func (r Repository) UserUpdate(ctx context.Context, user *models.User) (*models.User, error)
@@ -82,6 +84,27 @@ Sets the failed-attempt counter, an optional lockout expiry, and `IsActive` in o
 
 ```go
 func (r Repository) UserSetLockoutState(ctx context.Context, userID string, attempts int, lockedUntil *time.Time, isActive bool) (*models.User, error)
+```
+
+### `UserSetEmailVerified`
+Sets `EmailVerified` for a single user; when set to `true`, also stamps `EmailVerifiedAt` to now.
+
+```go
+func (r Repository) UserSetEmailVerified(ctx context.Context, userID string, verified bool) (*models.User, error)
+```
+
+### `UserSetPhoneVerified`
+Sets `PhoneVerified` for a single user.
+
+```go
+func (r Repository) UserSetPhoneVerified(ctx context.Context, userID string, verified bool) (*models.User, error)
+```
+
+### `UserSetMFAEnabled`
+Sets `MfaEnabled` for a single user.
+
+```go
+func (r Repository) UserSetMFAEnabled(ctx context.Context, userID string, enabled bool) (*models.User, error)
 ```
 
 ### `UserDelete`
