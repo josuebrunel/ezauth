@@ -228,10 +228,6 @@ func (q *PSQLQuerier) QueryUserIncrementFailedLoginAttempts(ctx context.Context,
 	)
 }
 
-func (q *PSQLQuerier) QueryUserCheckPasswordHash(ctx context.Context, email, passwordHash string) bob.Query {
-	return psql.Select(sm.From(psql.Quote(models.TableUser)), sm.Where(psql.Quote(models.ColumnEmail).EQ(psql.Arg(email)).And(psql.Quote(models.ColumnPasswordHash).EQ(psql.Arg(passwordHash)))))
-}
-
 func (q *PSQLQuerier) QueryUserSetLockoutState(ctx context.Context, userID string, attempts int, lockedUntil *time.Time, isActive bool) bob.Query {
 	return psql.Update(
 		um.Table(psql.Quote(models.TableUser)),
