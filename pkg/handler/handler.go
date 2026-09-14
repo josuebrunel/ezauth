@@ -122,6 +122,13 @@ type Handler struct {
 	// default middleware chain. (Historically that check was len(options)
 	// == 0, which broke the moment a second HandlerOption was introduced.)
 	customRouter bool
+
+	// swaggerAuthz gates /swagger/* (see WithSwaggerAuth). nil and
+	// swaggerDisabled both false is the default: the route stays open,
+	// matching every prior release. WithSwaggerAuth(nil) sets
+	// swaggerDisabled instead, removing the route entirely.
+	swaggerAuthz    func(http.Handler) http.Handler
+	swaggerDisabled bool
 }
 
 // HandlerOption defines a functional option for configuring the Handler.
@@ -174,6 +181,18 @@ func WithAdminAuthz(mw func(http.Handler) http.Handler) HandlerOption {
 	return func(h *Handler) {
 		h.adminAuthz = mw
 		h.adminAuthzDisabled = mw == nil
+	}
+}
+
+// WithSwaggerAuth gates /swagger/* with mw. Without this option, the swagger
+// UI (the full API surface/schema) is served with no authentication at all,
+// matching every prior release -- set this in any deployment where that
+// exposure isn't an explicit, intentional choice. Pass nil to remove the
+// route entirely instead of gating it.
+func WithSwaggerAuth(mw func(http.Handler) http.Handler) HandlerOption {
+	return func(h *Handler) {
+		h.swaggerAuthz = mw
+		h.swaggerDisabled = mw == nil
 	}
 }
 
@@ -261,7 +280,13 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 	}
 
 	h.r.Get("/ping", h.Ping)
-	h.r.Get("/swagger/*", httpSwagger.WrapHandler)
+	if !h.swaggerDisabled {
+		if h.swaggerAuthz != nil {
+			h.r.With(h.swaggerAuthz).Get("/swagger/*", httpSwagger.WrapHandler)
+		} else {
+			h.r.Get("/swagger/*", httpSwagger.WrapHandler)
+		}
+	}
 	h.r.Get("/.well-known/jwks.json", h.JWKS)
 
 	// Initialize routes
