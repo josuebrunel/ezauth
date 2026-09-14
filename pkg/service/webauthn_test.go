@@ -350,3 +350,63 @@ func httpPostJSON(body []byte) *http.Request {
 	r.Header.Set("Content-Type", "application/json")
 	return r
 }
+
+// TestWebauthnFinishLogin_RejectsClonedAuthenticatorCounter proves a login
+// whose assertion counter doesn't exceed the credential's last stored
+// SignCount -- the signal a cloned/duplicated authenticator produces -- is
+// rejected, instead of being silently accepted with the sign count
+// overwritten to the (non-increasing) new value.
+func TestWebauthnFinishLogin_RejectsClonedAuthenticatorCounter(t *testing.T) {
+	auth := setupWebauthnTestDB(t, true)
+	ctx := context.Background()
+	user := webauthnTestUser(t, auth, ctx)
+	authenticator := newVirtualAuthenticator(t)
+
+	creation, sessionKey, err := auth.WebauthnBeginRegistration(ctx, user)
+	if err != nil {
+		t.Fatalf("WebauthnBeginRegistration failed: %v", err)
+	}
+	challenge := creation.Response.Challenge.String()
+	if _, err := auth.WebauthnFinishRegistration(ctx, user, sessionKey, authenticator.registrationRequest(t, challenge), "Test Authenticator"); err != nil {
+		t.Fatalf("WebauthnFinishRegistration failed: %v", err)
+	}
+
+	login := func() (uint32, error) {
+		assertion, sessionKey, err := auth.WebauthnBeginLogin(ctx)
+		if err != nil {
+			t.Fatalf("WebauthnBeginLogin failed: %v", err)
+		}
+		challenge := assertion.Response.Challenge.String()
+		before := authenticator.signCount
+		_, _, err = auth.WebauthnFinishLogin(ctx, sessionKey, authenticator.assertionRequest(t, challenge, []byte(user.ID)))
+		return before + 1, err
+	}
+
+	// A legitimate first login: counter goes 0 -> 1, strictly greater than
+	// the credential's just-registered SignCount (0). Must succeed.
+	if _, err := login(); err != nil {
+		t.Fatalf("expected the first login to succeed, got %v", err)
+	}
+
+	// Simulate a cloned authenticator: reset the (attacker's copy of the)
+	// counter back down so the next assertion reproduces a value the
+	// credential has already seen (1, same as just stored) instead of
+	// advancing past it.
+	authenticator.signCount = 0
+	if _, err := login(); err != ErrWebauthnCloneDetected {
+		t.Fatalf("expected ErrWebauthnCloneDetected for a non-increasing counter, got %v", err)
+	}
+
+	// go-webauthn's UpdateCounter never clears CloneWarning once set (it
+	// returns early without even updating SignCount) -- ezauth persists and
+	// reloads that flag on every login, so once a clone is suspected, this
+	// specific credential stays rejected on every subsequent attempt too,
+	// even with a properly-advancing counter. That's the correct,
+	// conservative posture (the RP can no longer trust which physical
+	// device is genuine): the user must re-register the credential, not
+	// have it silently start working again.
+	authenticator.signCount = 5
+	if _, err := login(); err != ErrWebauthnCloneDetected {
+		t.Fatalf("expected the credential to stay permanently rejected after a clone warning, got %v", err)
+	}
+}

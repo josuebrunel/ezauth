@@ -21,6 +21,7 @@ var (
 	ErrWebAuthnNotConfigured           = errors.New("webauthn is not configured; set EZAUTH_WEBAUTHN_RP_ID and EZAUTH_WEBAUTHN_RP_ORIGINS")
 	ErrInvalidOrExpiredWebauthnSession = errors.New("invalid or expired webauthn session")
 	ErrWebauthnCredentialNotFound      = errors.New("webauthn credential not found")
+	ErrWebauthnCloneDetected           = errors.New("webauthn authenticator clone suspected; login rejected")
 )
 
 // webauthnUser adapts a models.User and its stored credentials to the webauthn.User
@@ -264,6 +265,14 @@ func (a *Auth) WebauthnFinishLogin(ctx context.Context, sessionKey string, r *ht
 		xlog.Warn("failed to delete webauthn login challenge", "challenge_id", tok.ID, "err", err)
 	}
 
+	// go-webauthn's ValidateLogin already ran the spec's clone-detection
+	// check (UpdateCounter, called internally by FinishPasskeyLogin above):
+	// CloneWarning is set when the assertion's counter isn't strictly
+	// greater than the last one this credential recorded -- the signal a
+	// cloned/duplicated authenticator produces. Persist the (now-flagged)
+	// record for visibility, but reject the login outright rather than
+	// silently accepting it, which is what happened before this check
+	// existed.
 	if rec, err := a.Repo.WebauthnCredentialGetByCredentialID(ctx, webauthnCredentialID(cred.ID)); err == nil {
 		dataMap, err := webauthnCredentialToJSONMap(cred)
 		if err == nil {
@@ -275,6 +284,11 @@ func (a *Auth) WebauthnFinishLogin(ctx context.Context, sessionKey string, r *ht
 				xlog.Warn("failed to persist updated webauthn sign count", "credential_record_id", rec.ID, "err", err)
 			}
 		}
+	}
+
+	if cred.Authenticator.CloneWarning {
+		xlog.Error("webauthn clone warning: authenticator counter did not increase, possible cloned credential", "user_id", user.ID, "credential_id", cred.ID)
+		return nil, nil, ErrWebauthnCloneDetected
 	}
 
 	tokens, err := a.TokenCreate(ctx, user)
