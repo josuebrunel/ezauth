@@ -1021,7 +1021,7 @@ Each of the above has a form-based (cookie) equivalent at the same path minus th
 
 ### Invitation-Based Onboarding
 
-Any authenticated user can invite someone by email; the invitee gets a link that pre-fills registration with their email pre-verified and, optionally, a pre-assigned role. `ezauth` enforces no authorization on *who* may invite — check that yourself (e.g. `inviter.HasRole("admin")`) before calling it if you want to restrict invitation-sending itself. It does enforce authorization on *what roles an invitation can grant*, though: `InvitationCreate` rejects (`service.ErrCannotGrantRole`) any requested role the inviter doesn't already hold via `inviter.HasRole(role)`, so a plain user can never self-invite with `roles:"admin"` and escalate — an invitation can't grant a role its creator doesn't have. `Data` remains fully opaque to `ezauth`, carried through to the created account unchecked, so a multi-tenancy layer built on top can put an org ID there without `ezauth` needing to know what it means.
+Any authenticated user can invite someone by email; the invitee gets a link that pre-fills registration with their email pre-verified and, optionally, a pre-assigned role. `ezauth` enforces no authorization on *who* may invite — check that yourself (e.g. `auth.Service.UserHasRole(ctx, inviter.ID, "admin")`) before calling it if you want to restrict invitation-sending itself. It does enforce authorization on *what roles an invitation can grant*, though: `InvitationCreate` rejects (`service.ErrCannotGrantRole`) any requested role the inviter doesn't already hold via the RBAC roles/permissions tables (`UserHasRole` — the same source of truth `RequireRole` checks, not the legacy `User.Roles` field), so a plain user can never self-invite with `roles:"admin"` and escalate — an invitation can't grant a role its creator doesn't have. `InvitationAccept` grants the invited roles the same way (`UserRoleGrant`, attributed to the original inviter), rather than writing the legacy field. `Data` remains fully opaque to `ezauth`, carried through to the created account unchecked, so a multi-tenancy layer built on top can put an org ID there without `ezauth` needing to know what it means.
 
 ```go
 // inviter must already be authenticated; check authorization yourself first.
@@ -1036,7 +1036,8 @@ user, tokens, err := auth.Service.InvitationAccept(ctx, service.RequestInvitatio
     Token:    tokenFromLink,
     Password: "their-chosen-password",
 })
-// user.EmailVerified is already true, and user.Roles == "member".
+// user.EmailVerified is already true, and the "member" role has already
+// been granted via RBAC -- auth.Service.UserHasRole(ctx, user.ID, "member").
 
 // Managing invitations:
 invitations, err := auth.Service.Invitations(ctx, inviter.ID)

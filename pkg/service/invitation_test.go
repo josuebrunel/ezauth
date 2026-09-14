@@ -43,14 +43,19 @@ func TestInvitationFlow(t *testing.T) {
 	inviter, err := auth.Repo.UserCreate(ctx, &models.User{
 		Email:    util.UniqueEmail("inviter"),
 		Provider: "local",
-		// InvitationCreate only allows granting roles the inviter already
-		// holds (see "rejects granting a role the inviter doesn't hold"
-		// below) -- the inviter needs "member" itself to invite others as
-		// "member" in the happy-path tests.
-		Roles: "member",
 	})
 	if err != nil {
 		t.Fatalf("failed to create inviter: %v", err)
+	}
+	// InvitationCreate only allows granting roles the inviter already holds,
+	// checked via RBAC (see "rejects granting a role the inviter doesn't
+	// hold" below) -- the inviter needs "member" itself to invite others as
+	// "member" in the happy-path tests.
+	if _, err := auth.RoleCreate(ctx, "member", "member role"); err != nil {
+		t.Fatalf("failed to create member role: %v", err)
+	}
+	if err := auth.UserRoleGrant(ctx, "test-setup", inviter.ID, "member"); err != nil {
+		t.Fatalf("failed to grant member role to inviter: %v", err)
 	}
 
 	inviteeEmail := util.UniqueEmail("invitee")
@@ -121,8 +126,11 @@ func TestInvitationFlow(t *testing.T) {
 		if err != nil {
 			t.Fatalf("InvitationAccept failed: %v", err)
 		}
-		if user.Email != inviteeEmail || !user.EmailVerified || user.Roles != "member" {
+		if user.Email != inviteeEmail || !user.EmailVerified {
 			t.Fatalf("unexpected user: %+v", user)
+		}
+		if has, err := auth.UserHasRole(ctx, user.ID, "member"); err != nil || !has {
+			t.Fatalf("expected the invited role to be granted via RBAC, has=%v err=%v", has, err)
 		}
 		if tokens.AccessToken == "" {
 			t.Fatal("expected access token")
@@ -160,8 +168,8 @@ func TestInvitationFlow(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to create plain user: %v", err)
 		}
-		if plainUser.HasRole("admin") {
-			t.Fatal("test setup: plainUser should not hold admin")
+		if has, err := auth.UserHasRole(ctx, plainUser.ID, "admin"); err != nil || has {
+			t.Fatalf("test setup: plainUser should not hold admin via RBAC, has=%v err=%v", has, err)
 		}
 
 		if _, err := auth.InvitationCreate(ctx, plainUser, RequestInvitation{

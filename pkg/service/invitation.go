@@ -18,11 +18,12 @@ var (
 	ErrEmailAlreadyRegistered     = errors.New("an account with this email already exists")
 
 	// ErrCannotGrantRole is returned by InvitationCreate when the inviter
-	// requests a role they don't themselves hold (via the legacy
-	// User.Roles/HasRole field ezauth's own documented admin-check pattern
-	// uses -- e.g. caller.HasRole("admin")). Without this check, any
-	// authenticated user could self-invite with roles:"admin" and be
-	// treated as admin by any app following that pattern.
+	// requests a role they don't themselves hold, per the RBAC roles/
+	// permissions tables (UserHasRole) -- the same source of truth every
+	// admin gate (RequireRole/RequirePermission) checks. Without this
+	// check, any authenticated user could self-invite with roles:"admin"
+	// and be treated as admin by any app following the documented
+	// caller.HasRole("admin")-via-RBAC pattern.
 	ErrCannotGrantRole = errors.New("inviter is not authorized to grant one or more of the requested roles")
 )
 
@@ -75,10 +76,12 @@ func invitationInfoFromToken(tok *models.Token) *InvitationInfo {
 // through to the created account at InvitationAccept — the caller decides
 // what it means (e.g. an org ID from a multi-tenancy layer built on top of
 // ezauth). Roles is similarly carried through, but is not opaque: inviter
-// must already hold every role requested (checked via the legacy
-// User.Roles/HasRole field), so an invitation can never grant a role its
-// creator doesn't have -- otherwise any authenticated user could self-invite
-// with roles:"admin" and escalate.
+// must already hold every role requested, checked via the RBAC roles/
+// permissions tables (UserHasRole) -- the same source of truth every admin
+// gate checks -- so an invitation can never grant a role its creator
+// doesn't have, and (unlike checking the legacy User.Roles field) a role
+// granted this way is guaranteed to actually exist in RBAC by the time
+// InvitationAccept grants it there too.
 func (a *Auth) InvitationCreate(ctx context.Context, inviter *models.User, req RequestInvitation) (*InvitationInfo, error) {
 	email := strings.ToLower(strings.TrimSpace(req.Email))
 	if err := validateEmail(email); err != nil {
@@ -90,7 +93,12 @@ func (a *Auth) InvitationCreate(ctx context.Context, inviter *models.User, req R
 		if role == "" {
 			continue
 		}
-		if !inviter.HasRole(role) {
+		has, err := a.UserHasRole(ctx, inviter.ID, role)
+		if err != nil {
+			xlog.Error("failed to check inviter's role", "inviter_id", inviter.ID, "role", role, "err", err)
+			return nil, err
+		}
+		if !has {
 			return nil, ErrCannotGrantRole
 		}
 	}
@@ -171,8 +179,10 @@ func (a *Auth) getValidInvitationToken(ctx context.Context, tokenValue string) (
 }
 
 // InvitationAccept completes registration for an invitation: it creates the
-// invitee's account with a pre-verified email and the roles/data the
-// invitation carries, consumes the invitation, and logs the new user in.
+// invitee's account with a pre-verified email and the data the invitation
+// carries, grants the invitation's roles via RBAC (UserRoleGrant, attributed
+// to the original inviter) rather than writing the legacy User.Roles column,
+// consumes the invitation, and logs the new user in.
 func (a *Auth) InvitationAccept(ctx context.Context, req RequestInvitationAccept) (*models.User, *TokenResponse, error) {
 	tok, err := a.getValidInvitationToken(ctx, req.Token)
 	if err != nil {
@@ -181,6 +191,7 @@ func (a *Auth) InvitationAccept(ctx context.Context, req RequestInvitationAccept
 
 	email, _ := tok.Metadata["email"].(string)
 	roles, _ := tok.Metadata["roles"].(string)
+	inviterID, _ := tok.Metadata["inviter_id"].(string)
 	data, _ := tok.Metadata["data"].(map[string]any)
 
 	if _, err := a.Repo.UserGetByEmail(ctx, email); err == nil {
@@ -212,13 +223,23 @@ func (a *Auth) InvitationAccept(ctx context.Context, req RequestInvitationAccept
 		LastName:        strings.TrimSpace(req.LastName),
 		Locale:          req.Locale,
 		Timezone:        req.Timezone,
-		Roles:           roles,
 		UserMetadata:    data,
 	}
 	created, err := a.Repo.UserCreate(ctx, user)
 	if err != nil {
 		xlog.Error("failed to create user from invitation", "invitation_id", tok.ID, "err", err)
 		return nil, nil, err
+	}
+
+	for _, role := range strings.Split(roles, ",") {
+		role = strings.TrimSpace(role)
+		if role == "" {
+			continue
+		}
+		if err := a.UserRoleGrant(ctx, inviterID, created.ID, role); err != nil {
+			xlog.Error("failed to grant invitation role", "invitation_id", tok.ID, "user_id", created.ID, "role", role, "err", err)
+			return nil, nil, err
+		}
 	}
 
 	if err := a.Repo.TokenRevoke(ctx, tok.ID); err != nil {
