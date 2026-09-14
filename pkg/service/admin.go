@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
+	"github.com/josuebrunel/gopkg/xlog"
 )
 
 const (
@@ -91,11 +92,23 @@ func (a *Auth) UsersList(ctx context.Context, opts ListUsersOptions) (*ListUsers
 
 // UserSuspend deactivates a user's account (clearing IsActive with no
 // LockedUntil expiry, so it does not auto-recover the way a brute-force
-// lockout does — see UserAuthenticate/ErrAccountDisabled). ezauth performs no
-// authorization check here; the caller is responsible for verifying the
-// requester may suspend accounts.
+// lockout does — see UserAuthenticate/ErrAccountDisabled) and revokes every
+// outstanding token so the suspension takes effect immediately, rather than
+// only once a pre-suspension refresh token is next used (tokenCreateForActor
+// checks IsActive on every mint, including refresh, but that's a mint-time
+// backstop, not a substitute for actually invalidating what's already
+// issued). ezauth performs no authorization check here; the caller is
+// responsible for verifying the requester may suspend accounts.
 func (a *Auth) UserSuspend(ctx context.Context, userID string) (*models.User, error) {
-	return a.Repo.UserSetLockoutState(ctx, userID, 0, nil, false)
+	user, err := a.Repo.UserSetLockoutState(ctx, userID, 0, nil, false)
+	if err != nil {
+		return nil, err
+	}
+	if err := a.Repo.TokenRevokeAllByUserID(ctx, userID); err != nil {
+		xlog.Error("failed to revoke all tokens after suspending user", "user_id", userID, "err", err)
+		return nil, err
+	}
+	return user, nil
 }
 
 // UserReactivate re-enables a suspended or locked-out account, also clearing

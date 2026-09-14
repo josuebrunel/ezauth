@@ -226,6 +226,120 @@ func TestAdminSuspendReactivate(t *testing.T) {
 	})
 }
 
+// TestUserSuspend_RevokesTokensAndBlocksTokenMinting proves suspension takes
+// effect immediately (a pre-suspension refresh token is revoked right away,
+// not only once it's next used) and that tokenCreateForActor -- the single
+// choke point every session-minting flow funnels through (TokenCreate,
+// TokenRefresh, Impersonate) -- refuses to mint for a suspended account
+// regardless of which flow reaches it. Before #205, IsActive was only
+// checked by the password-login path.
+func TestUserSuspend_RevokesTokensAndBlocksTokenMinting(t *testing.T) {
+	auth := setupTestDB(t)
+	ctx := context.Background()
+
+	email := util.UniqueEmail("suspendtokens")
+	user, err := auth.UserCreate(ctx, &RequestBasicAuth{Email: email, Password: "securepass123"})
+	if err != nil {
+		t.Fatalf("UserCreate failed: %v", err)
+	}
+
+	preSuspension, err := auth.TokenCreate(ctx, user)
+	if err != nil {
+		t.Fatalf("TokenCreate failed: %v", err)
+	}
+
+	if _, err := auth.UserSuspend(ctx, user.ID); err != nil {
+		t.Fatalf("UserSuspend failed: %v", err)
+	}
+
+	t.Run("pre-suspension refresh token is revoked immediately, not at next use", func(t *testing.T) {
+		row, err := auth.Repo.TokenGetByToken(ctx, util.HashToken(preSuspension.RefreshToken))
+		if err != nil {
+			t.Fatalf("TokenGetByToken failed: %v", err)
+		}
+		if !row.Revoked {
+			t.Error("expected the pre-suspension refresh token to be revoked immediately on suspend")
+		}
+	})
+
+	t.Run("TokenRefresh rejects the suspended user's pre-suspension refresh token", func(t *testing.T) {
+		if _, err := auth.TokenRefresh(ctx, preSuspension.RefreshToken); err == nil {
+			t.Error("expected TokenRefresh to fail for a suspended user's refresh token")
+		}
+	})
+
+	t.Run("tokenCreateForActor refuses to mint for a suspended user even with a freshly-fetched row", func(t *testing.T) {
+		fresh, err := auth.Repo.UserGetByID(ctx, user.ID)
+		if err != nil {
+			t.Fatalf("UserGetByID failed: %v", err)
+		}
+		if fresh.IsActive {
+			t.Fatal("expected the freshly-fetched user to reflect the suspension")
+		}
+		if _, err := auth.TokenCreate(ctx, fresh); err != ErrAccountDisabled {
+			t.Fatalf("expected ErrAccountDisabled minting a token for a suspended user, got %v", err)
+		}
+	})
+}
+
+// TestPasswordlessLogin_RefusesSuspendedAccount proves a magic link
+// requested before suspension no longer mints a session once used after --
+// one of #205's originally-named gaps (PasswordlessLogin never checked
+// IsActive at all). The account is deactivated directly via the repository
+// rather than through UserSuspend, so the pending magic-link token is NOT
+// also revoked (UserSuspend's own immediate-revocation fix would otherwise
+// reject this login one step earlier, before ever reaching the
+// checkAccountActive gate this test targets) -- isolating the
+// tokenCreateForActor choke point's own defense-in-depth from UserSuspend's.
+func TestPasswordlessLogin_RefusesSuspendedAccount(t *testing.T) {
+	auth := setupTestDB(t)
+	ctx := context.Background()
+
+	email := util.UniqueEmail("suspendmagic")
+	user, err := auth.UserCreate(ctx, &RequestBasicAuth{Email: email, Password: "securepass123"})
+	if err != nil {
+		t.Fatalf("UserCreate failed: %v", err)
+	}
+
+	if err := auth.PasswordlessRequest(ctx, RequestPasswordless{Email: email}); err != nil {
+		t.Fatalf("PasswordlessRequest failed: %v", err)
+	}
+	mockMailer := auth.Mailer.(*MockMailer)
+	sentBody := mockMailer.SentEmails[len(mockMailer.SentEmails)-1]["body"]
+	tokenValue := sentBody[len(sentBody)-64:]
+
+	if _, err := auth.Repo.UserSetLockoutState(ctx, user.ID, 0, nil, false); err != nil {
+		t.Fatalf("UserSetLockoutState failed: %v", err)
+	}
+
+	if _, err := auth.PasswordlessLogin(ctx, tokenValue); err != ErrAccountDisabled {
+		t.Fatalf("expected ErrAccountDisabled for a suspended account's magic link, got %v", err)
+	}
+}
+
+// TestImpersonate_RefusesSuspendedTarget proves an admin can't mint an
+// impersonation session for an already-suspended target account.
+func TestImpersonate_RefusesSuspendedTarget(t *testing.T) {
+	auth := setupTestDB(t)
+	ctx := context.Background()
+
+	admin, err := auth.UserCreate(ctx, &RequestBasicAuth{Email: util.UniqueEmail("impadmin"), Password: "securepass123"})
+	if err != nil {
+		t.Fatalf("UserCreate(admin) failed: %v", err)
+	}
+	target, err := auth.UserCreate(ctx, &RequestBasicAuth{Email: util.UniqueEmail("imptarget"), Password: "securepass123"})
+	if err != nil {
+		t.Fatalf("UserCreate(target) failed: %v", err)
+	}
+	if _, err := auth.UserSuspend(ctx, target.ID); err != nil {
+		t.Fatalf("UserSuspend failed: %v", err)
+	}
+
+	if _, err := auth.Impersonate(ctx, admin, target.ID); err != ErrAccountDisabled {
+		t.Fatalf("expected ErrAccountDisabled impersonating a suspended target, got %v", err)
+	}
+}
+
 func TestAdminUserAuthHistory(t *testing.T) {
 	auth := setupTestDB(t)
 	ctx := context.Background()

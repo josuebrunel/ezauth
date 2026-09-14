@@ -355,7 +355,7 @@ func (a *Auth) UsersList(ctx context.Context, opts ListUsersOptions) (*ListUsers
 
 ### `UserSuspend` / `UserReactivate`
 
-Suspend deactivates a user's account with no auto-expiry (distinct from a brute-force lockout); reactivate re-enables a suspended or locked-out account.
+Suspend deactivates a user's account with no auto-expiry (distinct from a brute-force lockout) and revokes every outstanding token, so the effect is immediate rather than waiting for a pre-suspension token to next be used; reactivate re-enables a suspended or locked-out account. See [Account Lockout](../guides/account-security.md#account-lockout) for where `IsActive` is enforced.
 
 ```go
 func (a *Auth) UserSuspend(ctx context.Context, userID string) (*models.User, error)

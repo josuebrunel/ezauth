@@ -803,7 +803,22 @@ func (a *Auth) TokenCreate(ctx context.Context, user *models.User) (*TokenRespon
 // forward across a rotation (see TokenRefresh). It's persisted in Metadata so a replay
 // of an already-rotated-out token can be traced back to, and used to revoke, the rest
 // of its family.
+//
+// This is the single choke point every session-minting flow funnels through
+// (TokenCreate -- and so PasswordlessLogin, OAuth2Authenticate,
+// WebauthnLoginFinish, MFA/SMS-OTP verification -- plus TokenRefresh and
+// Impersonate directly), so checkAccountActive is enforced here
+// unconditionally rather than at each entry point individually: before this,
+// IsActive was only checked by the password-login path, and every other way
+// to obtain a session (a pre-suspension refresh token, a fresh magic link,
+// OAuth2, a passkey) kept working against a suspended/disabled account.
 func (a *Auth) tokenCreateForActor(ctx context.Context, user *models.User, actorID, familyID string) (*TokenResponse, error) {
+	user, err := a.checkAccountActive(ctx, user)
+	if err != nil {
+		xlog.Warn("token mint refused: account not active", "user_id", user.ID, "actor_id", actorID, "err", err)
+		return nil, err
+	}
+
 	xlog.Debug("creating tokens", "user_id", user.ID, "actor_id", actorID)
 	accessToken, exp, err := a.generateAccessToken(user, actorID)
 	if err != nil {

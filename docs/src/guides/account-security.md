@@ -85,6 +85,8 @@ The built-in `Login`/`FormLogin` handlers don't surface this distinction to the 
 
 Set `EZAUTH_ACCOUNT_LOCKOUT_ENABLED=false` to stop counting/locking on failed attempts while still enforcing `IsActive` for accounts disabled some other way; `MAX_ATTEMPTS`/`DURATION` keep their normal defaults regardless, so this alone is enough. `config.LoadConfig()` fails at startup if `ENABLED`/`MAX_ATTEMPTS`/`DURATION` *all* resolve to zero, since that combination can only come from a misconfigured deployment, never a deliberate choice to disable lockout.
 
+`IsActive` is enforced at `tokenCreateForActor`, the single choke point every session-minting flow funnels through -- password login, passwordless/magic-link, OAuth2, passkey (WebAuthn), MFA/SMS-OTP verification, `TokenRefresh`, and `Impersonate` all refuse to mint for an inactive account, not just the password path. `UserSuspend` also revokes every outstanding token immediately, so suspension takes effect right away instead of only once a pre-suspension refresh token is next used.
+
 ## Guarded Email Change
 
 Changing the account email is a distinct, security-sensitive operation, handled the same way password reset already is: the current password is required to initiate, the new address must be verified via an emailed link before the change takes effect (the old address stays active until then), and the old address gets a notice of the pending change. Confirming revokes every other session.
