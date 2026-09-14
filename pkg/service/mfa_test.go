@@ -208,6 +208,48 @@ func TestMFALoginStepUp(t *testing.T) {
 	})
 }
 
+// TestMFALoginVerify_RejectsReplayedTOTPCode proves a captured TOTP code
+// can't be replayed into a second session while it's still within its
+// normal ~30s (+skew) validity window: RFC 6238 §5.2 requires rejecting a
+// timestep that already succeeded once.
+func TestMFALoginVerify_RejectsReplayedTOTPCode(t *testing.T) {
+	auth := setupMFATestDB(t)
+	ctx := context.Background()
+	user := mfaTestUser(t, auth, ctx)
+
+	enrollResp, err := auth.MFAEnroll(ctx, user)
+	if err != nil {
+		t.Fatalf("MFAEnroll failed: %v", err)
+	}
+	code, err := totp.GenerateCode(enrollResp.Secret, time.Now())
+	if err != nil {
+		t.Fatalf("failed to generate totp code: %v", err)
+	}
+	if _, err := auth.MFAConfirm(ctx, user, code); err != nil {
+		t.Fatalf("MFAConfirm failed: %v", err)
+	}
+
+	resp, err := auth.CompleteBasicLogin(ctx, user, "")
+	if err != nil {
+		t.Fatalf("CompleteBasicLogin failed: %v", err)
+	}
+	validCode, err := totp.GenerateCode(*user.MfaSecret, time.Now())
+	if err != nil {
+		t.Fatalf("failed to generate totp code: %v", err)
+	}
+	if _, _, _, err := auth.MFALoginVerify(ctx, resp.MFAToken, validCode, false); err != nil {
+		t.Fatalf("first MFALoginVerify with a fresh code failed: %v", err)
+	}
+
+	resp2, err := auth.CompleteBasicLogin(ctx, user, "")
+	if err != nil {
+		t.Fatalf("CompleteBasicLogin failed: %v", err)
+	}
+	if _, _, _, err := auth.MFALoginVerify(ctx, resp2.MFAToken, validCode, false); err != ErrInvalidMFACode {
+		t.Fatalf("expected ErrInvalidMFACode for a replayed totp code on a second pre-auth token, got %v", err)
+	}
+}
+
 // TestMFALoginVerify_BruteForceLockout proves repeated wrong TOTP codes
 // against a still-valid pre-auth token lock the account, instead of being
 // limited only by the (optional, off by default) global rate limiter.

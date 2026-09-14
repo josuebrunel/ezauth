@@ -66,6 +66,7 @@ type User struct {
 	Roles               string     `db:"roles" json:"roles"`
 	MfaSecret           *string    `db:"mfa_secret" json:"-"`
 	MfaEnabled          bool       `db:"mfa_enabled" json:"mfa_enabled"`
+	MFALastTOTPCounter  *int64     `db:"mfa_last_totp_counter" json:"-"`
 	FailedLoginAttempts int        `db:"failed_login_attempts" json:"-"`
 	LockedUntil         *time.Time `db:"locked_until" json:"-"`
 	CreatedAt           time.Time  `db:"created_at" json:"created_at"`

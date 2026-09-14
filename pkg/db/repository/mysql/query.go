@@ -213,6 +213,10 @@ func (q *MysqlQuerier) QueryUserUpdate(ctx context.Context, user *models.User) b
 		qm = append(qm, um.SetCol(models.ColumnMfaSecret).ToArg(user.MfaSecret))
 	}
 
+	if user.MFALastTOTPCounter != nil {
+		qm = append(qm, um.SetCol(models.ColumnMFALastTOTPCounter).ToArg(user.MFALastTOTPCounter))
+	}
+
 	qm = append(qm, um.SetCol(models.ColumnMfaEnabled).ToArg(user.MfaEnabled))
 
 	return mysql.Update(qm...)

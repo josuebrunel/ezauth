@@ -8,11 +8,14 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
 	"github.com/josuebrunel/ezauth/pkg/util"
 	"github.com/josuebrunel/gopkg/xlog"
+	"github.com/pquerna/otp"
+	"github.com/pquerna/otp/hotp"
 	"github.com/pquerna/otp/totp"
 )
 
@@ -291,11 +294,54 @@ func (a *Auth) MFALoginVerify(ctx context.Context, mfaToken, code string, rememb
 }
 
 // mfaValidateAnyCode accepts either a live TOTP code or an unused recovery code.
+//
+// A recovery code is single-use by construction (mfaConsumeRecoveryCode
+// deletes its token on success), but a bare totp.Validate call has no such
+// protection: a valid code stays usable for the rest of its ~30s window
+// (plus the ±1 step skew) and can be replayed into a second,
+// attacker-controlled session if captured (phishing, shoulder-surfing).
+// totpValidateWithReplayProtection closes that window per RFC 6238 §5.2 by
+// requiring each accepted code to use a strictly later timestep than the
+// last one that succeeded.
 func (a *Auth) mfaValidateAnyCode(ctx context.Context, user *models.User, code string) bool {
-	if user.MfaSecret != nil && *user.MfaSecret != "" && totp.Validate(code, *user.MfaSecret) {
-		return true
+	if user.MfaSecret != nil && *user.MfaSecret != "" {
+		if ok, counter := totpValidateWithReplayProtection(code, *user.MfaSecret, user.MFALastTOTPCounter, time.Now()); ok {
+			user.MFALastTOTPCounter = &counter
+			if _, err := a.Repo.UserUpdate(ctx, user); err != nil {
+				// Best-effort: the current login/step-up still succeeds, but
+				// without this the same code could be replayed once more --
+				// logged so it's visible, not silently swallowed.
+				xlog.Warn("failed to persist mfa last-accepted totp counter", "user_id", user.ID, "err", err)
+			}
+			return true
+		}
 	}
 	return a.mfaConsumeRecoveryCode(ctx, user, code)
+}
+
+// totpValidateWithReplayProtection re-implements totp.Validate's matching
+// logic (30s period, ±1 step skew, compatible with Google Authenticator and
+// most clients) instead of calling it directly, because totp.Validate only
+// returns a bool -- it doesn't say which timestep matched, and that's
+// exactly what's needed to reject a timestep that already succeeded once.
+// lastCounter is the previously accepted counter (nil if none yet); on a
+// match it returns the counter that matched, which the caller must persist
+// as the new lastCounter.
+func totpValidateWithReplayProtection(code, secret string, lastCounter *int64, now time.Time) (bool, int64) {
+	current := int64(math.Floor(float64(now.Unix()) / 30))
+	for _, counter := range []int64{current, current + 1, current - 1} {
+		if counter < 0 || (lastCounter != nil && counter <= *lastCounter) {
+			continue
+		}
+		ok, err := hotp.ValidateCustom(code, uint64(counter), secret, hotp.ValidateOpts{
+			Digits:    otp.DigitsSix,
+			Algorithm: otp.AlgorithmSHA1,
+		})
+		if err == nil && ok {
+			return true, counter
+		}
+	}
+	return false, 0
 }
 
 func mfaHashRecoveryCode(userID, code string) string {

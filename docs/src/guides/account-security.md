@@ -29,6 +29,8 @@ err = auth.MFADisable(ctx, user, code)
 
 For cookie-based (form) clients, `auth.GetMFAEnrollment(ctx)` reads back the pending secret/QR URL stashed in the session by `POST /auth/mfa/enroll`, and `Pages.MFAVerify` (`EZAUTH_MFA_VERIFY_PAGE_URL`) is where `FormLogin` redirects when a step-up is required. `EZAUTH_MFA_ISSUER` sets the issuer name shown in authenticator apps.
 
+`MFALoginVerify` and `MFADisable` reject a TOTP code that already succeeded once, even if it's still within its ~30s validity window (plus clock-skew allowance) — per RFC 6238 §5.2, this closes the window a code captured via phishing or shoulder-surfing would otherwise stay usable in for a second, attacker-controlled session.
+
 ### Remember This Device (Trusted Devices)
 
 Passing `rememberDevice=true` to `MFALoginVerify` also issues a trusted-device token; presenting it to `CompleteBasicLogin` on a later login skips MFA step-up entirely until it expires (`EZAUTH_TRUSTED_DEVICE_TTL`, default 30 days).

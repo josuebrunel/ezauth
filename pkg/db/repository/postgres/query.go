@@ -206,6 +206,10 @@ func (q *PSQLQuerier) QueryUserUpdate(ctx context.Context, user *models.User) bo
 		qm = append(qm, um.SetCol(models.ColumnMfaSecret).ToArg(user.MfaSecret))
 	}
 
+	if user.MFALastTOTPCounter != nil {
+		qm = append(qm, um.SetCol(models.ColumnMFALastTOTPCounter).ToArg(user.MFALastTOTPCounter))
+	}
+
 	qm = append(qm, um.SetCol(models.ColumnMfaEnabled).ToArg(user.MfaEnabled))
 
 	qm = append(qm, um.Returning("*"))

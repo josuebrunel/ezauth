@@ -35,6 +35,7 @@ const (
 	ColumnRoles               = "roles"
 	ColumnMfaSecret           = "mfa_secret"
 	ColumnMfaEnabled          = "mfa_enabled"
+	ColumnMFALastTOTPCounter  = "mfa_last_totp_counter"
 	ColumnFailedLoginAttempts = "failed_login_attempts"
 	ColumnLockedUntil         = "locked_until"
 	ColumnCreatedAt           = "created_at"
