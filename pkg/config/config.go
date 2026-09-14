@@ -190,12 +190,26 @@ type WebAuthn struct {
 	RPOrigins     string `json:"rp_origins" env:"WEBAUTHN_RP_ORIGINS"`
 }
 
-// RateLimit defines the rate limiting configuration.
+// RateLimit defines the rate limiting configuration. Two independent
+// limiters are mounted (see handler.New): Requests/Window bound every route
+// (a coarse abuse/DoS guard), while SensitiveRequests/SensitiveWindow bound
+// only the unauthenticated endpoints that create or verify a short-lived
+// credential -- login, password reset, passwordless, SMS OTP, MFA
+// verification (see handler.go's sensitiveRoutes). Splitting them keeps a
+// client's ordinary browsing/API usage from exhausting the tight budget
+// meant to slow down credential stuffing, and vice versa: previously both
+// concerns shared the single Requests/Window budget mounted once at the
+// router root, so the default of 10 req/min -- sized to slow brute-forcing
+// -- also throttled every other request the same client made.
 type RateLimit struct {
 	Enabled    bool          `json:"enabled" env:"RATE_LIMIT_ENABLED" default:"true"`
-	Requests   int           `json:"requests" env:"RATE_LIMIT_REQUESTS" default:"10"`
+	Requests   int           `json:"requests" env:"RATE_LIMIT_REQUESTS" default:"300"`
 	Window     time.Duration `json:"window" env:"RATE_LIMIT_WINDOW" default:"1m"`
 	ByClientIP bool          `json:"by_client_ip" env:"RATE_LIMIT_BY_CLIENT_IP" default:"true"`
+
+	SensitiveEnabled  bool          `json:"sensitive_enabled" env:"RATE_LIMIT_SENSITIVE_ENABLED" default:"true"`
+	SensitiveRequests int           `json:"sensitive_requests" env:"RATE_LIMIT_SENSITIVE_REQUESTS" default:"10"`
+	SensitiveWindow   time.Duration `json:"sensitive_window" env:"RATE_LIMIT_SENSITIVE_WINDOW" default:"1m"`
 }
 
 // TrustedDevice defines the "remember this device" settings for skipping MFA

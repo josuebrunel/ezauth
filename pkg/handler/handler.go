@@ -263,6 +263,15 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 		h.adminAuthz = ezmiddleware.RequireRole(h.svc, h.svc.Cfg.AdminRole)
 	}
 
+	// sensitiveRateLimit gates the unauthenticated endpoints that create or
+	// verify a short-lived credential (login, password reset, passwordless,
+	// SMS OTP, MFA verification -- see sensitiveRateLimit's call sites
+	// below), with its own budget independent of the general per-route
+	// limiter mounted just below. Left a no-op when the router is
+	// custom-built (matching the rest of this default middleware chain) so
+	// WithRouter callers aren't handed rate limiting they didn't ask for.
+	sensitiveRateLimit := func(next http.Handler) http.Handler { return next }
+
 	// Default middlewares if router was newly created
 	if !h.customRouter {
 		h.r.Use(middleware.Logger)
@@ -285,6 +294,17 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 		}).Middleware)
 		h.r.Use(middleware.Recoverer)
 		h.r.Use(h.Session.LoadAndSave)
+
+		// One shared limiter instance, not one per transport: a caller
+		// spreading login/OTP attempts across the Form and JSON API
+		// versions of the same endpoint should still exhaust a single
+		// budget, not get a fresh one per transport.
+		sensitiveRateLimit = ezmiddleware.NewRateLimiter(ezmiddleware.RateLimitConfig{
+			Enabled:    h.svc.Cfg.RateLimit.SensitiveEnabled,
+			Requests:   h.svc.Cfg.RateLimit.SensitiveRequests,
+			Window:     h.svc.Cfg.RateLimit.SensitiveWindow,
+			ByClientIP: h.svc.Cfg.RateLimit.ByClientIP,
+		}).Middleware
 	}
 
 	h.r.Get("/ping", h.Ping)
@@ -332,21 +352,21 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 			r.Get("/login", func(w http.ResponseWriter, r *http.Request) {
 				http.Redirect(w, r, h.svc.Cfg.Pages.Login, http.StatusFound)
 			})
-			r.Post("/login", h.FormLogin)
+			r.With(sensitiveRateLimit).Post("/login", h.FormLogin)
 			r.Post("/logout", h.FormLogout)
-			r.Post("/password-reset/request", h.FormPasswordResetRequest)
-			r.Post("/password-reset/confirm", h.FormPasswordResetConfirm)
+			r.With(sensitiveRateLimit).Post("/password-reset/request", h.FormPasswordResetRequest)
+			r.With(sensitiveRateLimit).Post("/password-reset/confirm", h.FormPasswordResetConfirm)
 			r.Post("/email-change/request", h.FormEmailChangeRequest)
 			r.Get("/email-change/confirm", h.FormEmailChangeConfirm)
-			r.Post("/passwordless/request", h.FormPasswordlessRequest)
-			r.Get("/passwordless/login", h.FormPasswordlessLogin)
-			r.Post("/sms-otp/request", h.FormSMSOTPRequest)
-			r.Post("/sms-otp/verify", h.FormSMSOTPVerify)
+			r.With(sensitiveRateLimit).Post("/passwordless/request", h.FormPasswordlessRequest)
+			r.With(sensitiveRateLimit).Get("/passwordless/login", h.FormPasswordlessLogin)
+			r.With(sensitiveRateLimit).Post("/sms-otp/request", h.FormSMSOTPRequest)
+			r.With(sensitiveRateLimit).Post("/sms-otp/verify", h.FormSMSOTPVerify)
 			r.Get("/oauth2/{provider}/login", h.OAuth2Login)
 			r.Get("/mfa/verify", func(w http.ResponseWriter, r *http.Request) {
 				http.Redirect(w, r, h.svc.Cfg.Pages.MFAVerify, http.StatusFound)
 			})
-			r.Post("/mfa/login/verify", h.FormMFALoginVerify)
+			r.With(sensitiveRateLimit).Post("/mfa/login/verify", h.FormMFALoginVerify)
 			r.Post("/mfa/enroll", h.FormMFAEnroll)
 			r.Post("/mfa/confirm", h.FormMFAConfirm)
 			r.Post("/mfa/disable", h.FormMFADisable)
@@ -438,16 +458,16 @@ func New(svc *service.Auth, path string, options ...HandlerOption) *Handler {
 			// API Handlers (JSON)
 			r.Route("/api", func(r chi.Router) {
 				r.Post("/register", h.Register)
-				r.Post("/login", h.Login)
+				r.With(sensitiveRateLimit).Post("/login", h.Login)
 				r.Post("/token/refresh", h.RefreshToken)
-				r.Post("/password-reset/request", h.PasswordResetRequest)
-				r.Post("/password-reset/confirm", h.PasswordResetConfirm)
+				r.With(sensitiveRateLimit).Post("/password-reset/request", h.PasswordResetRequest)
+				r.With(sensitiveRateLimit).Post("/password-reset/confirm", h.PasswordResetConfirm)
 				r.Get("/email-change/confirm", h.EmailChangeConfirm)
-				r.Post("/passwordless/request", h.PasswordlessRequest)
-				r.Get("/passwordless/login", h.PasswordlessLogin)
-				r.Post("/sms-otp/request", h.SMSOTPRequest)
-				r.Post("/sms-otp/verify", h.SMSOTPVerify)
-				r.Post("/mfa/login/verify", h.MFALoginVerify)
+				r.With(sensitiveRateLimit).Post("/passwordless/request", h.PasswordlessRequest)
+				r.With(sensitiveRateLimit).Get("/passwordless/login", h.PasswordlessLogin)
+				r.With(sensitiveRateLimit).Post("/sms-otp/request", h.SMSOTPRequest)
+				r.With(sensitiveRateLimit).Post("/sms-otp/verify", h.SMSOTPVerify)
+				r.With(sensitiveRateLimit).Post("/mfa/login/verify", h.MFALoginVerify)
 				r.Post("/webauthn/login/begin", h.WebauthnLoginBegin)
 				r.Post("/webauthn/login/finish", h.WebauthnLoginFinish)
 				r.Post("/invitations/accept", h.InvitationAccept)

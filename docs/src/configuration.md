@@ -55,12 +55,25 @@ WebAuthn support is disabled unless both `EZAUTH_WEBAUTHN_RP_ID` and `EZAUTH_WEB
 
 ## Rate Limit Settings
 
-| Variable                         | Description                                              | Default  |
-| -------------------------------- | -------------------------------------------------------- | -------- |
-| `EZAUTH_RATE_LIMIT_ENABLED`      | Enable rate limiting on authentication endpoints.        | `true`  |
-| `EZAUTH_RATE_LIMIT_REQUESTS`     | Maximum requests allowed per window.                     | `10`     |
-| `EZAUTH_RATE_LIMIT_WINDOW`       | Rate limit window duration (e.g., `1m`, `30s`).          | `1m`     |
-| `EZAUTH_RATE_LIMIT_BY_CLIENT_IP` | Apply rate limiting per client IP address.               | `true`   |
+Two independent limiters are mounted (see [Middleware](references/middleware.md)):
+`RATE_LIMIT_REQUESTS`/`RATE_LIMIT_WINDOW` bound every route as a coarse
+abuse/DoS guard, while `RATE_LIMIT_SENSITIVE_REQUESTS`/`RATE_LIMIT_SENSITIVE_WINDOW`
+bound only the unauthenticated endpoints that create or verify a short-lived
+credential -- login, password reset, passwordless, SMS OTP, and MFA
+verification, on both the Form and JSON API transports (they share one
+budget). Splitting them keeps a client's ordinary browsing/API usage from
+exhausting the tight budget meant to slow down credential stuffing, and vice
+versa.
+
+| Variable                              | Description                                                          | Default |
+| -------------------------------------- | --------------------------------------------------------------------- | ------- |
+| `EZAUTH_RATE_LIMIT_ENABLED`            | Enable the general, site-wide rate limiter.                           | `true`  |
+| `EZAUTH_RATE_LIMIT_REQUESTS`           | Maximum requests allowed per window, site-wide.                       | `300`   |
+| `EZAUTH_RATE_LIMIT_WINDOW`             | General rate limit window duration (e.g., `1m`, `30s`).               | `1m`    |
+| `EZAUTH_RATE_LIMIT_BY_CLIENT_IP`       | Apply both rate limiters per client IP address.                       | `true`  |
+| `EZAUTH_RATE_LIMIT_SENSITIVE_ENABLED`  | Enable the stricter limiter on login/password-reset/OTP endpoints.    | `true`  |
+| `EZAUTH_RATE_LIMIT_SENSITIVE_REQUESTS` | Maximum sensitive-endpoint requests allowed per window.               | `10`    |
+| `EZAUTH_RATE_LIMIT_SENSITIVE_WINDOW`   | Sensitive-endpoint rate limit window duration.                        | `1m`    |
 
 ## Database Settings
 

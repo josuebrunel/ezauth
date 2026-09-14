@@ -137,8 +137,12 @@ func Chain(middlewares ...func(http.Handler) http.Handler) func(http.Handler) ht
 `OrgObjectContextKey`.
 
 **Rate limiting** — the `EZAUTH_RATE_LIMIT_*` settings (see
-[Configuration](../configuration.md#rate-limit-settings)) configure the
-`RateLimiter` ezauth mounts internally, but you can also run one standalone:
+[Configuration](../configuration.md#rate-limit-settings)) configure two
+`RateLimiter` instances ezauth mounts internally from this same config
+struct: a general one at the router root, and a stricter one applied only to
+login/password-reset/passwordless/SMS-OTP/MFA-verification routes (Form and
+JSON API versions of each share one budget). You can also run `RateLimiter`
+standalone:
 
 ```go
 type RateLimitConfig struct {

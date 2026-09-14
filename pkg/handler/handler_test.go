@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync"
 	"syscall"
@@ -1140,4 +1141,97 @@ func TestHandler_RateLimiterProxyHeaderTrust(t *testing.T) {
 			t.Fatalf("expected both requests to succeed as distinct clients, got %d and %d", code1, code2)
 		}
 	})
+}
+
+// newSensitiveRateLimitTestHandler builds a Handler with only the sensitive
+// route limiter enabled (the general per-route limiter is left disabled),
+// isolating which budget a request in these tests is actually exercising.
+// See #201: before this ticket, login/password-reset/OTP endpoints shared
+// one budget with every other route in the service.
+func newSensitiveRateLimitTestHandler(t *testing.T, requests int) *Handler {
+	dialect, dsn := util.GetTestDBConfig("handler_sensitive_ratelimit_test")
+	cfg := &config.Config{
+		DB:        config.Database{Dialect: dialect, DSN: dsn},
+		JWTSecret: "test-secret-0123456789-0123456789",
+		Hashing:   config.Hashing{BcryptCost: 4},
+		Addr:      ":8080",
+		ApiKey:    "test-api-key",
+		RateLimit: config.RateLimit{
+			SensitiveEnabled:  true,
+			SensitiveRequests: requests,
+			SensitiveWindow:   time.Minute,
+			ByClientIP:        true,
+		},
+	}
+	authSvc, err := service.NewFromConfig(cfg, "auth")
+	if err != nil {
+		t.Fatalf("failed to create auth service: %v", err)
+	}
+	if err := ensureMigrated(authSvc.Repo.DB(), dialect, dsn); err != nil {
+		t.Fatalf("failed to run migrations: %v", err)
+	}
+	return New(authSvc, "auth")
+}
+
+func sensitiveRateLimitTestFormLoginRequest() *http.Request {
+	form := url.Values{"email": {"nobody@example.com"}, "password": {"wrong"}}
+	req := httptest.NewRequest(http.MethodPost, "/auth/login", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	return req
+}
+
+func sensitiveRateLimitTestAPILoginRequest() *http.Request {
+	body, _ := json.Marshal(map[string]string{"email": "nobody@example.com", "password": "wrong"})
+	req := httptest.NewRequest(http.MethodPost, "/auth/api/login", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-api-key")
+	return req
+}
+
+// TestHandler_SensitiveRateLimit_SharedAcrossFormAndAPI proves the Form and
+// JSON API versions of a sensitive endpoint (here, /login) draw from the
+// same limiter instance rather than each getting their own fresh budget --
+// otherwise a caller could double an attack's effective rate simply by
+// alternating transports.
+func TestHandler_SensitiveRateLimit_SharedAcrossFormAndAPI(t *testing.T) {
+	h := newSensitiveRateLimitTestHandler(t, 2)
+
+	w1 := httptest.NewRecorder()
+	h.ServeHTTP(w1, sensitiveRateLimitTestFormLoginRequest())
+	if w1.Code == http.StatusTooManyRequests {
+		t.Fatalf("expected request 1 of 2 to not be rate-limited, got 429")
+	}
+
+	w2 := httptest.NewRecorder()
+	h.ServeHTTP(w2, sensitiveRateLimitTestAPILoginRequest())
+	if w2.Code == http.StatusTooManyRequests {
+		t.Fatalf("expected request 2 of 2 (different transport) to not be rate-limited, got 429")
+	}
+
+	w3 := httptest.NewRecorder()
+	h.ServeHTTP(w3, sensitiveRateLimitTestFormLoginRequest())
+	if w3.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected the 3rd login attempt to be rate-limited (Form and API login share one budget), got %d", w3.Code)
+	}
+}
+
+// TestHandler_SensitiveRateLimit_DoesNotThrottleOtherRoutes proves an
+// exhausted sensitive-route budget doesn't affect unrelated routes -- before
+// #201, every route (including /ping) shared the single limiter sized for
+// slowing down credential stuffing.
+func TestHandler_SensitiveRateLimit_DoesNotThrottleOtherRoutes(t *testing.T) {
+	h := newSensitiveRateLimitTestHandler(t, 1)
+
+	h.ServeHTTP(httptest.NewRecorder(), sensitiveRateLimitTestFormLoginRequest())
+	wBlocked := httptest.NewRecorder()
+	h.ServeHTTP(wBlocked, sensitiveRateLimitTestFormLoginRequest())
+	if wBlocked.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected the sensitive budget to already be exhausted, got %d", wBlocked.Code)
+	}
+
+	wPing := httptest.NewRecorder()
+	h.ServeHTTP(wPing, httptest.NewRequest(http.MethodGet, "/ping", nil))
+	if wPing.Code != http.StatusOK {
+		t.Fatalf("expected /ping to be unaffected by the exhausted sensitive-route budget, got %d", wPing.Code)
+	}
 }
