@@ -99,9 +99,9 @@ func (q *MysqlQuerier) QueryUserGetByUsername(ctx context.Context, username stri
 }
 
 // mysqlPhoneUniqueKeyColumn is the generated VIRTUAL column
-// (NULLIF(phone, '')) the phone unique index is actually built on -- see
+// (NULLIF(phone, ”)) the phone unique index is actually built on -- see
 // 20260830140000_add_phone_unique_index.sql. MySQL has no partial/filtered
-// index (unlike postgres/sqlite's "WHERE phone <> ''"), so this generated
+// index (unlike postgres/sqlite's "WHERE phone <> ”"), so this generated
 // column is the workaround. Predicating on it instead of the raw phone
 // column lets the query use that index instead of a full table scan.
 const mysqlPhoneUniqueKeyColumn = "phone_unique_key"
