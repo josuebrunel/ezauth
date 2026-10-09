@@ -28,8 +28,13 @@ func JSONUserInfo(url string, idField, emailField string) func(ctx context.Conte
 			return nil, fmt.Errorf("userinfo request returned status %s", resp.Status)
 		}
 
+		// Decode numbers as json.Number, not float64: a float64 id printed with
+		// %v turns 1620640 into "1.62064e+06" (anything from a million up), and
+		// ids beyond 2^53 would lose digits.
 		var data map[string]any
-		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		dec := json.NewDecoder(resp.Body)
+		dec.UseNumber()
+		if err := dec.Decode(&data); err != nil {
 			return nil, fmt.Errorf("failed to decode userinfo response: %w", err)
 		}
 
@@ -55,6 +60,8 @@ func JSONUserInfo(url string, idField, emailField string) func(ctx context.Conte
 				emailVerified = v
 			case string:
 				emailVerified = v == "true" || v == "1"
+			case json.Number:
+				emailVerified = v.String() != "0"
 			case float64:
 				emailVerified = v != 0
 			}

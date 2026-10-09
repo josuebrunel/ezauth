@@ -57,6 +57,55 @@ func TestJSONUserInfo_NumericID(t *testing.T) {
 	}
 }
 
+// Numeric ids from a million up used to come out in scientific notation
+// ("1.62064e+06"), so a user stored as "1620640" could no longer sign in
+// after upgrading, and a second account with the same email was attempted.
+func TestJSONUserInfo_LargeNumericIDsStayExact(t *testing.T) {
+	for _, tc := range []struct{ body, want string }{
+		{`{"id": 1620640, "email": "a@test.com"}`, "1620640"},                   // a GitHub id
+		{`{"id": 123456789, "email": "a@test.com"}`, "123456789"},               // nine digits
+		{`{"id": 1000000, "email": "a@test.com"}`, "1000000"},                   // the first affected value
+		{`{"id": 9007199254740993, "email": "a@test.com"}`, "9007199254740993"}, // beyond float64's exact range
+	} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(tc.body))
+		}))
+		info, err := JSONUserInfo(server.URL, "id", "email")(context.Background(), &oauth2.Token{AccessToken: "t"})
+		server.Close()
+		if err != nil {
+			t.Fatalf("%s: %v", tc.body, err)
+		}
+		if info.ID != tc.want {
+			t.Errorf("%s: want id %q, got %q", tc.body, tc.want, info.ID)
+		}
+	}
+}
+
+func TestJSONUserInfo_NumericEmailVerified(t *testing.T) {
+	for _, tc := range []struct {
+		body string
+		want bool
+	}{
+		{`{"id": 1, "email": "a@test.com", "email_verified": 1}`, true},
+		{`{"id": 1, "email": "a@test.com", "email_verified": 0}`, false},
+		{`{"id": 1, "email": "a@test.com", "email_verified": true}`, true},
+		{`{"id": 1, "email": "a@test.com", "email_verified": "true"}`, true},
+	} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, _ = w.Write([]byte(tc.body))
+		}))
+		info, err := JSONUserInfo(server.URL, "id", "email")(context.Background(), &oauth2.Token{AccessToken: "t"})
+		server.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if info.EmailVerified != tc.want {
+			t.Errorf("%s: want verified=%v, got %v", tc.body, tc.want, info.EmailVerified)
+		}
+	}
+}
+
 func TestJSONUserInfo_MissingID(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
