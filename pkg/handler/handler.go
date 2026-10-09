@@ -84,7 +84,17 @@ func (h *Handler) formRequireAdminRole(next http.Handler) http.Handler {
 			h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrUnauthorized.Error())
 			return
 		}
-		has, err := h.svc.UserHasRole(r.Context(), user.ID, h.svc.Cfg.AdminRole)
+		// While a session is impersonated, the session user is the target, who
+		// is normally not an admin: the role that matters is the acting admin's.
+		// Checking the target would make /impersonate/stop unreachable, leaving
+		// the admin inside the target's session until it expires. Only an
+		// impersonation started by an admin can carry this marker (it lives in
+		// server-side session data set by setImpersonationCookies).
+		actorID := user.ID
+		if adminID, impersonating := h.IsImpersonating(r.Context()); impersonating {
+			actorID = adminID
+		}
+		has, err := h.svc.UserHasRole(r.Context(), actorID, h.svc.Cfg.AdminRole)
 		if err != nil || !has {
 			h.redirectWithError(w, r, h.svc.Cfg.Redirects.AfterLogin, ezmiddleware.ErrForbidden.Error())
 			return

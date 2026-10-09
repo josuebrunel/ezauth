@@ -419,6 +419,79 @@ func TestFormHandler_ImpersonationSwapBack(t *testing.T) {
 	})
 }
 
+// TestFormHandler_StopImpersonation_NonAdminTarget covers the normal case the
+// swap-back test above deliberately avoids: the impersonated user is NOT an
+// admin. Stopping must still work (the gate checks the acting admin, not the
+// target), the AfterImpersonationEnded hook must fire, and a non-admin who is
+// not acting for an admin must still be refused on both routes (#215).
+func TestFormHandler_StopImpersonation_NonAdminTarget(t *testing.T) {
+	h := setupFormTestHandler(t)
+	hook := &testHook{}
+	h.svc.Hook = hook
+	password := "password123"
+
+	adminEmail := util.UniqueEmail("stop-admin")
+	targetEmail := util.UniqueEmail("stop-target")
+	formRegister(t, h, adminEmail, password)
+	formRegister(t, h, targetEmail, password)
+
+	ctx := context.Background()
+	admin, err := h.svc.Repo.UserGetByEmail(ctx, adminEmail)
+	if err != nil {
+		t.Fatal(err)
+	}
+	target, err := h.svc.Repo.UserGetByEmail(ctx, targetEmail)
+	if err != nil {
+		t.Fatal(err)
+	}
+	grantAdminRole(t, h, admin.ID) // the target is deliberately NOT an admin
+
+	post := func(path string, cookie *http.Cookie, form url.Values) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		if cookie != nil {
+			req.AddCookie(cookie)
+		}
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		return w
+	}
+
+	adminCookie := formLogin(t, h, adminEmail, password)
+	w := post("/auth/impersonate", adminCookie, url.Values{"target_user_id": {target.ID}})
+	if w.Code != http.StatusFound || len(w.Result().Cookies()) == 0 {
+		t.Fatalf("impersonate: %d", w.Code)
+	}
+	impersonated := w.Result().Cookies()[0]
+	if got := formSessionUser(t, h, impersonated); got.ID != target.ID {
+		t.Fatalf("expected the target's session, got %s", got.Email)
+	}
+
+	w = post("/auth/impersonate/stop", impersonated, url.Values{})
+	if w.Code != http.StatusFound || len(w.Result().Cookies()) == 0 {
+		t.Fatalf("stop: %d", w.Code)
+	}
+	restored := w.Result().Cookies()[0]
+	if got := formSessionUser(t, h, restored); got.ID != admin.ID {
+		t.Fatalf("stopping as a non-admin target should restore the admin, got %s", got.Email)
+	}
+	if !containsHookCall(hook.calls, "AfterImpersonationEnded") {
+		t.Errorf("expected AfterImpersonationEnded to fire, got %v", hook.calls)
+	}
+
+	// A plain non-admin, not impersonating, is refused on both routes.
+	plain := formLogin(t, h, targetEmail, password)
+	for _, path := range []string{"/auth/impersonate", "/auth/impersonate/stop"} {
+		w := post(path, plain, url.Values{"target_user_id": {admin.ID}})
+		if w.Code != http.StatusFound {
+			t.Fatalf("%s: expected a redirect, got %d", path, w.Code)
+		}
+		if got := formSessionUser(t, h, plain); got.ID != target.ID {
+			t.Errorf("%s: a non-admin's session changed to %s", path, got.Email)
+		}
+	}
+}
+
 // TestFormPasswordlessLogin_CallsAfterUserSignedInHook proves the Form
 // passwordless login path fires the same AfterUserSignedIn hook every other
 // login path (password, OAuth2, WebAuthn, SMS OTP, and the JSON API's own
