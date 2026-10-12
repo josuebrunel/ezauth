@@ -937,3 +937,18 @@ func (q *SqliteQuerier) QueryOrganizationsByUserID(ctx context.Context, userID s
 		sm.Where(sqlite.Quote(models.TableOrgMember, models.ColumnUserID).EQ(sqlite.Arg(userID))),
 	)
 }
+
+// QueryUserUpdateProfile writes exactly the given columns (empty values
+// included), independent of QueryUserUpdate's skip-empty semantics.
+func (q *SqliteQuerier) QueryUserUpdateProfile(ctx context.Context, userID string, cols []models.ColumnValue) bob.Query {
+	qm := []bob.Mod[*dialect.UpdateQuery]{
+		um.Table(models.TableUser),
+		um.SetCol(models.ColumnUpdatedAt).ToArg(time.Now().UTC()),
+		um.Where(sqlite.Quote("id").EQ(sqlite.Arg(userID))),
+		um.Returning("*"),
+	}
+	for _, c := range cols {
+		qm = append(qm, um.SetCol(c.Column).ToArg(c.Value))
+	}
+	return sqlite.Update(qm...)
+}

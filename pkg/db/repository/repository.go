@@ -40,6 +40,7 @@ type UserQuerier interface {
 	QueryUserGetByID(ctx context.Context, id string) bob.Query
 	QueryUserGetByProvider(ctx context.Context, provider, providerID string) bob.Query
 	QueryUserUpdate(ctx context.Context, user *models.User) bob.Query
+	QueryUserUpdateProfile(ctx context.Context, userID string, cols []models.ColumnValue) bob.Query
 	QueryUserSetLockoutState(ctx context.Context, userID string, attempts int, lockedUntil *time.Time, isActive bool) bob.Query
 	QueryUserSetEmailVerified(ctx context.Context, userID string, verified bool) bob.Query
 	QueryUserSetPhoneVerified(ctx context.Context, userID string, verified bool) bob.Query
@@ -363,6 +364,37 @@ func (r Repository) UserUpdate(ctx context.Context, user *models.User) (*models.
 		return nil, err
 	}
 	return updatedUser, nil
+}
+
+// UserUpdateProfile writes exactly the given profile columns, including empty
+// values, and bumps updated_at. UserUpdate can't do this: it skips any empty
+// field, so it can never clear one. Only the columns in models.ProfileColumns
+// are accepted. With no columns it returns the user unchanged.
+func (r Repository) UserUpdateProfile(ctx context.Context, userID string, cols []models.ColumnValue) (*models.User, error) {
+	if len(cols) == 0 {
+		return r.UserGetByID(ctx, userID)
+	}
+	for _, c := range cols {
+		if !models.ProfileColumns[c.Column] {
+			return nil, fmt.Errorf("column %q is not a profile column", c.Column)
+		}
+	}
+	query := r.QueryUserUpdateProfile(ctx, userID, cols)
+
+	if r.Opts.Dialect == DialectMysql {
+		if _, err := bob.Exec(ctx, r.bdb, query); err != nil {
+			xlog.Error("Failed to update user profile", "error", err, "id", userID)
+			return nil, err
+		}
+		return r.UserGetByID(ctx, userID)
+	}
+
+	updated, err := bob.One(ctx, r.bdb, query, scan.StructMapper[*models.User]())
+	if err != nil {
+		xlog.Error("Failed to update user profile", "error", err, "id", userID)
+		return nil, err
+	}
+	return updated, nil
 }
 
 // UserSetLockoutState sets a user's brute-force lockout bookkeeping (failed
