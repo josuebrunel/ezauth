@@ -19,15 +19,23 @@ const (
 // (failed logins, account lockout). Failures are logged, not returned —
 // audit persistence must never block the security event it's recording.
 func (a *Auth) recordAuditEvent(ctx context.Context, userID, eventType string, metadata models.JSONMap) {
+	a.insertAuditEvent(ctx, &userID, eventType, metadata)
+}
+
+// insertAuditEvent is recordAuditEvent for events that may have no user row
+// to point at. A nil userID stores a NULL user_id: use it when the account no
+// longer exists (see auditHook.AfterUserDeleted), because a row that names a
+// deleted user id is rejected by the foreign key.
+func (a *Auth) insertAuditEvent(ctx context.Context, userID *string, eventType string, metadata models.JSONMap) {
 	if !a.Cfg.AuditLog.Enabled {
 		return
 	}
 	if _, err := a.Repo.AuditLogCreate(ctx, &models.AuditLog{
-		UserID:    &userID,
+		UserID:    userID,
 		EventType: eventType,
 		Metadata:  metadata,
 	}); err != nil {
-		xlog.Error("failed to record audit event", "user_id", userID, "event_type", eventType, "err", err)
+		xlog.Error("failed to record audit event", "event_type", eventType, "err", err)
 	}
 }
 

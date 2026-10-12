@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -153,6 +154,65 @@ func TestAuditLog(t *testing.T) {
 		}
 		if len(result.Events) != 1 {
 			t.Fatalf("expected audit logging to still run alongside the custom hook, got %d events", len(result.Events))
+		}
+	})
+
+	// The user.deleted event used to be recorded with the deleted user's id,
+	// which the foreign key rejects once the row is gone, so it was never
+	// stored. It must be stored with a NULL user_id and the identity in its
+	// metadata. See #217.
+	t.Run("Hook.AfterUserDeleted stores a user.deleted event with a NULL user_id", func(t *testing.T) {
+		auth := setupAuditTestDB(t, 5, time.Minute)
+		user := auditTestUser(t, auth, ctx)
+
+		// Mirrors the handlers: delete the row, then run the after-hook.
+		if err := auth.Repo.UserDelete(ctx, user.ID); err != nil {
+			t.Fatalf("UserDelete failed: %v", err)
+		}
+		if err := auth.Hook.AfterUserDeleted(ctx, user); err != nil {
+			t.Fatalf("AfterUserDeleted failed: %v", err)
+		}
+
+		// A persistent test database keeps other tests' rows, so find ours by
+		// the email in the metadata. Metadata comes back as text or JSON bytes
+		// depending on the dialect, hence the generic scan.
+		rows, err := auth.Repo.DB().QueryContext(ctx, "SELECT user_id, metadata FROM ezauth_audit_logs WHERE event_type = 'user.deleted'")
+		if err != nil {
+			t.Fatalf("query failed: %v", err)
+		}
+		defer func() { _ = rows.Close() }()
+
+		matches := 0
+		for rows.Next() {
+			var userID sql.NullString
+			var raw any
+			if err := rows.Scan(&userID, &raw); err != nil {
+				t.Fatalf("scan failed: %v", err)
+			}
+			var text string
+			switch v := raw.(type) {
+			case []byte:
+				text = string(v)
+			case string:
+				text = v
+			}
+			var meta map[string]any
+			if err := json.Unmarshal([]byte(text), &meta); err != nil || meta["email"] != user.Email {
+				continue
+			}
+			matches++
+			if userID.Valid {
+				t.Errorf("expected a NULL user_id, got %q", userID.String)
+			}
+			if meta["user_id"] != user.ID {
+				t.Errorf("expected metadata user_id %q, got %v", user.ID, meta["user_id"])
+			}
+		}
+		if err := rows.Err(); err != nil {
+			t.Fatalf("rows failed: %v", err)
+		}
+		if matches != 1 {
+			t.Fatalf("expected exactly 1 user.deleted event for %s, got %d", user.Email, matches)
 		}
 	})
 
