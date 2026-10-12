@@ -932,3 +932,17 @@ func (q *MysqlQuerier) QueryOrganizationsByUserID(ctx context.Context, userID st
 		sm.Where(mysql.Quote(models.TableOrgMember, models.ColumnUserID).EQ(mysql.Arg(userID))),
 	)
 }
+
+// QueryUserUpdateProfile writes exactly the given columns (empty values
+// included), independent of QueryUserUpdate's skip-empty semantics.
+func (q *MysqlQuerier) QueryUserUpdateProfile(ctx context.Context, userID string, cols []models.ColumnValue) bob.Query {
+	qm := []bob.Mod[*dialect.UpdateQuery]{
+		um.Table(models.TableUser),
+		um.SetCol(models.ColumnUpdatedAt).ToArg(time.Now().UTC()),
+		um.Where(mysql.Quote("id").EQ(mysql.Arg(userID))),
+	}
+	for _, c := range cols {
+		qm = append(qm, um.SetCol(c.Column).ToArg(c.Value))
+	}
+	return mysql.Update(qm...)
+}

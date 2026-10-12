@@ -937,3 +937,18 @@ func (q *PSQLQuerier) QueryOrganizationsByUserID(ctx context.Context, userID str
 		sm.Where(psql.Quote(models.TableOrgMember, models.ColumnUserID).EQ(psql.Arg(userID))),
 	)
 }
+
+// QueryUserUpdateProfile writes exactly the given columns (empty values
+// included), independent of QueryUserUpdate's skip-empty semantics.
+func (q *PSQLQuerier) QueryUserUpdateProfile(ctx context.Context, userID string, cols []models.ColumnValue) bob.Query {
+	qm := []bob.Mod[*dialect.UpdateQuery]{
+		um.Table(psql.Quote(models.TableUser)),
+		um.SetCol(models.ColumnUpdatedAt).ToArg(time.Now().UTC()),
+		um.Where(psql.Quote("id").EQ(psql.Arg(userID))),
+		um.Returning("*"),
+	}
+	for _, c := range cols {
+		qm = append(qm, um.SetCol(c.Column).ToArg(c.Value))
+	}
+	return psql.Update(qm...)
+}
