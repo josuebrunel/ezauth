@@ -128,8 +128,8 @@ func (a *Auth) SMSOTPRequest(ctx context.Context, req RequestSMSOTP) error {
 		UserID:    user.ID,
 		Token:     util.HashToken(tokenValue),
 		TokenType: models.TokenTypeSMSOTP,
-		ExpiresAt: time.Now().Add(smsOTPTTL),
-		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().UTC().Add(smsOTPTTL),
+		CreatedAt: time.Now().UTC(),
 		Metadata:  models.JSONMap{"code_hash": codeHash},
 	}
 	if _, err := a.Repo.TokenCreate(ctx, token); err != nil {
@@ -192,7 +192,7 @@ func (a *Auth) SMSOTPVerify(ctx context.Context, req RequestSMSOTPVerify) (*Toke
 
 	var token *models.Token
 	for _, candidate := range tokens {
-		if time.Now().After(candidate.ExpiresAt) {
+		if time.Now().UTC().After(candidate.ExpiresAt) {
 			continue
 		}
 		codeHash, _ := candidate.Metadata["code_hash"].(string)

@@ -239,7 +239,7 @@ var ErrAccountDisabled = errors.New("account is disabled")
 // across repeated lockout cycles instead of restarting fresh every time a
 // lockout expires -- only an actual successful login resets it.
 func (a *Auth) autoUnlockIfExpired(ctx context.Context, user *models.User) *models.User {
-	if user.IsActive || user.LockedUntil == nil || !time.Now().After(*user.LockedUntil) {
+	if user.IsActive || user.LockedUntil == nil || !time.Now().UTC().After(*user.LockedUntil) {
 		return user
 	}
 	unlocked, err := a.Repo.UserSetLockoutState(ctx, user.ID, user.FailedLoginAttempts, nil, true)
@@ -355,7 +355,7 @@ func (a *Auth) recordFailedLogin(ctx context.Context, user *models.User) {
 	if duration <= 0 || duration > maxLockoutDuration {
 		duration = maxLockoutDuration
 	}
-	until := time.Now().Add(duration)
+	until := time.Now().UTC().Add(duration)
 
 	xlog.Warn("account locked after too many failed login attempts", "user_id", user.ID, "attempts", updated.FailedLoginAttempts, "lockout_duration", duration)
 	if _, err := a.Repo.UserSetLockoutState(ctx, user.ID, updated.FailedLoginAttempts, &until, false); err != nil {
@@ -415,7 +415,7 @@ func (a *Auth) checkResendCooldown(ctx context.Context, userID, tokenType string
 		return err
 	}
 	for _, tok := range existing {
-		if time.Now().After(tok.ExpiresAt) {
+		if time.Now().UTC().After(tok.ExpiresAt) {
 			continue
 		}
 		// elapsed is clamped to 0 rather than compared directly: MySQL's
@@ -484,8 +484,8 @@ func (a *Auth) PasswordResetRequest(ctx context.Context, req RequestPasswordRese
 		UserID:    user.ID,
 		Token:     util.HashToken(tokenValue),
 		TokenType: models.TokenTypePasswordReset,
-		ExpiresAt: time.Now().Add(1 * time.Hour),
-		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().UTC().Add(1 * time.Hour),
+		CreatedAt: time.Now().UTC(),
 		Revoked:   false,
 		Metadata:  models.JSONMap{},
 	}
@@ -526,7 +526,7 @@ func (a *Auth) PasswordResetConfirm(ctx context.Context, req RequestPasswordRese
 		return errors.New("invalid token type")
 	}
 
-	if time.Now().After(token.ExpiresAt) {
+	if time.Now().UTC().After(token.ExpiresAt) {
 		return errors.New("token expired")
 	}
 
@@ -599,8 +599,8 @@ func (a *Auth) PasswordlessRequest(ctx context.Context, req RequestPasswordless)
 		UserID:    user.ID,
 		Token:     util.HashToken(tokenValue),
 		TokenType: models.TokenTypePasswordless,
-		ExpiresAt: time.Now().Add(15 * time.Minute),
-		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().UTC().Add(15 * time.Minute),
+		CreatedAt: time.Now().UTC(),
 	}
 
 	if _, err := a.Repo.TokenCreate(ctx, token); err != nil {
@@ -652,7 +652,7 @@ func (a *Auth) PasswordlessLogin(ctx context.Context, tokenValue string) (*Token
 		return nil, errors.New("invalid token type")
 	}
 
-	if time.Now().After(token.ExpiresAt) {
+	if time.Now().UTC().After(token.ExpiresAt) {
 		xlog.Debug("passwordless token expired", "token_id", token.ID)
 		return nil, errors.New("magic link expired")
 	}
@@ -872,7 +872,7 @@ func (a *Auth) tokenCreateForActor(ctx context.Context, user *models.User, actor
 		refreshTokenTTL = impersonationRefreshTokenTTL
 	}
 
-	now := time.Now()
+	now := time.Now().UTC()
 	token := &models.Token{
 		UserID:    user.ID,
 		Token:     util.HashToken(refreshToken),
@@ -888,7 +888,7 @@ func (a *Auth) tokenCreateForActor(ctx context.Context, user *models.User, actor
 		return nil, err
 	}
 
-	nowActive := time.Now()
+	nowActive := time.Now().UTC()
 	user.LastActiveAt = &nowActive
 	if _, err := a.Repo.UserUpdate(ctx, user); err != nil {
 		xlog.Error("failed to update user last_active_at", "user_id", user.ID, "err", err)
@@ -967,7 +967,7 @@ func (a *Auth) TokenRefresh(ctx context.Context, refreshToken string) (*TokenRes
 		return nil, errors.New("invalid refresh token")
 	}
 
-	if time.Now().After(token.ExpiresAt) {
+	if time.Now().UTC().After(token.ExpiresAt) {
 		xlog.Debug("refresh token expired", "token_id", token.ID, "user_id", token.UserID)
 		return nil, errors.New("token expired")
 	}
@@ -1046,7 +1046,7 @@ func (a *Auth) generateAccessToken(user *models.User, actorID string) (string, t
 	if ttl <= 0 {
 		ttl = defaultAccessTokenTTL
 	}
-	exp := time.Now().Add(ttl)
+	exp := time.Now().UTC().Add(ttl)
 	claims := jwt.MapClaims{
 		"sub":   user.ID,
 		"email": user.Email,
@@ -1056,7 +1056,7 @@ func (a *Auth) generateAccessToken(user *models.User, actorID string) (string, t
 		// stamping a value nothing will ever check.
 		"jti": util.NewIDStripped(),
 		"exp": jwt.NewNumericDate(exp),
-		"iat": jwt.NewNumericDate(time.Now()),
+		"iat": jwt.NewNumericDate(time.Now().UTC()),
 	}
 	if a.Cfg.JWT.Issuer != "" {
 		claims["iss"] = a.Cfg.JWT.Issuer

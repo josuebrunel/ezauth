@@ -91,8 +91,8 @@ func (a *Auth) webauthnStoreSession(ctx context.Context, challengeType, userID s
 		ChallengeType: challengeType,
 		UserID:        userID,
 		Data:          data,
-		ExpiresAt:     time.Now().Add(webauthnChallengeTTL),
-		CreatedAt:     time.Now(),
+		ExpiresAt:     time.Now().UTC().Add(webauthnChallengeTTL),
+		CreatedAt:     time.Now().UTC(),
 	}
 	if _, err := a.Repo.WebauthnChallengeCreate(ctx, challenge); err != nil {
 		return "", err
@@ -105,7 +105,7 @@ func (a *Auth) webauthnLoadSession(ctx context.Context, challengeType, sessionKe
 	if err != nil || ch.ChallengeType != challengeType {
 		return nil, nil, ErrInvalidOrExpiredWebauthnSession
 	}
-	if time.Now().After(ch.ExpiresAt) {
+	if time.Now().UTC().After(ch.ExpiresAt) {
 		return nil, nil, ErrInvalidOrExpiredWebauthnSession
 	}
 
@@ -276,7 +276,7 @@ func (a *Auth) WebauthnFinishLogin(ctx context.Context, sessionKey string, r *ht
 	if rec, err := a.Repo.WebauthnCredentialGetByCredentialID(ctx, webauthnCredentialID(cred.ID)); err == nil {
 		dataMap, err := webauthnCredentialToJSONMap(cred)
 		if err == nil {
-			now := time.Now()
+			now := time.Now().UTC()
 			rec.Data = dataMap
 			rec.SignCount = cred.Authenticator.SignCount
 			rec.LastUsedAt = &now

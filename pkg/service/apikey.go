@@ -53,7 +53,7 @@ func (a *Auth) APIKeyCreate(ctx context.Context, userID string, scopes []string,
 		UserID:    userID,
 		Token:     util.HashToken(key),
 		TokenType: models.TokenTypeApiKey,
-		ExpiresAt: time.Now().Add(ttl),
+		ExpiresAt: time.Now().UTC().Add(ttl),
 		Revoked:   false,
 		Metadata:  metadata,
 	}
