@@ -14,7 +14,7 @@
         <link rel="prev" href="../account-security/">
       
       
-        <link rel="next" href="../../api-endpoints/">
+        <link rel="next" href="../admin-panel/">
       
       
         
@@ -445,6 +445,8 @@
       
         
       
+        
+      
     
     
     
@@ -811,6 +813,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../admin-panel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Admin Panel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1314,6 +1344,8 @@
 <h1 id="admin-and-operations">Admin and Operations</h1>
 <p>Admin-facing features: impersonation, invitation-based onboarding, user management, the persisted audit log, and the hook system.</p>
 <blockquote>
+<p>[!TIP]
+Don't want to build the screens for these yourself? <a href="../admin-panel/">ezauth-admin</a> is a ready-made admin panel you mount in your app.</p>
 <p>[!WARNING]
 The <code>service.Auth</code> methods on this page (<code>Impersonate</code>, <code>UsersList</code>, etc.) enforce no role checks themselves — if you call them directly, your application must verify the caller is allowed (e.g. <code>caller.HasRole("admin")</code>) first. If you're using <code>Handler</code>'s built-in HTTP routes instead, that layer <em>does</em> gate this subtree by default (<code>Cfg.AdminRole</code>, defaulting to <code>"admin"</code>, checked via the RBAC tables) — see <a href="../../references/handler/#handleroptions"><code>WithAdminAuthz</code></a> to customize or disable it.</p>
 </blockquote>
