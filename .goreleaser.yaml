@@ -22,7 +22,7 @@ builds:
     binary: ezauthapi
 
 archives:
-  - format: tar.gz
+  - formats: [tar.gz]
     # this name template makes the OS and Arch compatible with the results of uname.
     name_template: >-
       {{ .ProjectName }}_
@@ -34,89 +34,17 @@ archives:
     # use zip for windows archives
     format_overrides:
     - goos: windows
-      format: zip
+      formats: [zip]
 
-release:
-  header: |
-    ## Highlights
-
-    This release closes out the full security audit: 66 tickets across
-    three tiers of severity, on top of the sixteen already closed in
-    v0.24.0/v0.25.0. Five changes are breaking; everything else is a
-    backward-compatible fix or hardening. The full commit-by-commit list
-    is below this summary.
-
-    ### Breaking changes
-
-    - **Bearer/API-key auth now re-validates the owning user on every
-      request, not just at token-issue time.** `AuthMiddleware`/
-      `APIKeyMiddleware` previously trusted a valid signature/DB lookup
-      and never checked `IsActive` again, so a suspended or deleted
-      account kept working until the access token's natural expiry (up
-      to an hour) or the API key was manually revoked. Both standalone
-      middleware functions gain a `UserActiveGetter` parameter
-      (`Repository` already satisfies it) — a direct caller of
-      `middleware.AuthMiddleware`/`APIKeyMiddleware` outside of `Handler`
-      needs a one-line update. See #203.
-    - **Access tokens default to a 15-minute TTL (was 1 hour) and gain
-      `jti`/`iss`/`aud` claims.** New `Cfg.JWT.AccessTokenTTL`,
-      `Cfg.JWT.Issuer`, `Cfg.JWT.Audience` — issuer/audience are only
-      enforced if you set them, so upgrading is a no-op unless you opt
-      in. `middleware.AuthMiddleware` gains a variadic
-      `extraOpts ...jwt.ParserOption` parameter (existing callers can
-      omit it). See #207.
-    - **`Auth.APIKeyCreate` takes a `ttl time.Duration` parameter, and
-      `middleware.APIKeyMiddleware` takes a `previousApiKey string`
-      parameter** (for master-key rotation, mirroring the existing JWT
-      key-rotation pattern). Pass `0`/`""` to keep prior behavior. New
-      `EZAUTH_API_KEY_DEFAULT_TTL` and `EZAUTH_PREVIOUS_API_KEY`. See
-      #210.
-    - **`models.AuditLog.UserID` is now `*string`, not `string`.**
-      Audit-log rows used to cascade-delete with their user, erasing the
-      trail of what happened right when it mattered most; the row now
-      survives with `UserID` set to `nil` instead. See #212.
-    - **Rate limiting is enabled by default** (`RATE_LIMIT_ENABLED`,
-      10 req/min per client IP) — previously off by default, so an
-      out-of-the-box deployment had no IP-based brute-force throttle at
-      all, only the per-account lockout counter. See #182.
-
-    ### Selected security fixes
-
-    - Suspended/disabled accounts could still mint a session via refresh,
-      magic link, OAuth2, WebAuthn, and impersonation — every path but
-      password login skipped the `IsActive` check. Closed at the single
-      choke point all of them share, and `UserSuspend` now revokes every
-      outstanding token immediately. See #205.
-    - Single-use tokens (refresh, password-reset, passwordless,
-      email-change, invitation-accept, MFA/SMS-OTP) were redeemable more
-      than once under concurrent requests (TOCTOU across 8 call sites) —
-      redemption is now one atomic conditional `UPDATE`. See #206.
-    - Any authenticated user could grant themselves the global admin role
-      through an unrelated organization's membership endpoint, with no
-      per-org membership checks anywhere in that subsystem. See #204.
-    - `RequireAPIKeyScope` waved through any request where
-      `APIKeyMiddleware` never ran at all (e.g. a custom router missing
-      it), not just legitimately-unscoped keys. Now fails closed. See
-      #184.
-    - MFA recovery codes went from 40 to 128 bits of entropy (#161); SMS
-      OTP codes now resist offline brute force and are revoked on resend
-      (#195); replayed TOTP codes within their validity window are
-      rejected (#189).
-    - CSRF protection (`filippo.io/csrf`) had zero test coverage — added,
-      along with `EZAUTH_CSRF_TRUSTED_ORIGINS` for frontends served from a
-      different origin than the API. See #213.
-
-    Also: idempotent MySQL migrations, a username uniqueness index,
-    connection-pool defaults applied consistently, SMTP/SMS client
-    timeouts, structured logging instead of leaking PII/raw DB errors,
-    and a long tail of smaller hardening fixes and documentation
-    corrections. See the full list below.
+# The release summary isn't set here. It lives in .github/release-notes/<tag>.md
+# and the release workflow passes it with --release-header, so every release
+# gets its own text and a missing file fails loudly. See that folder's README.
 
 checksum:
   name_template: 'checksums.txt'
 
 snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+  version_template: "{{ incpatch .Version }}-next"
 
 changelog:
   sort: asc

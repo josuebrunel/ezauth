@@ -62,12 +62,21 @@ jobs:
         with:
           go-version-file: "go.mod"
 
+      - name: Check the release notes exist
+        if: github.event_name != 'workflow_dispatch'
+        run: |
+          notes=".github/release-notes/${GITHUB_REF_NAME}.md"
+          if [ ! -f "$notes" ]; then
+            echo "::error::Add $notes before tagging, so this release has its own summary instead of an old one."
+            exit 1
+          fi
+
       - name: Run GoReleaser
         if: github.event_name != 'workflow_dispatch'
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --clean
+          args: release --clean --release-header .github/release-notes/${{ github.ref_name }}.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
