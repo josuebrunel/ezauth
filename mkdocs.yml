@@ -36,6 +36,7 @@ nav:
       - Sign-in Methods: guides/sign-in-methods.md
       - Account Security: guides/account-security.md
       - Admin and Operations: guides/admin-operations.md
+      - Admin Panel: guides/admin-panel.md
   - Reference:
       - API Endpoints: api-endpoints.md
       - Handler: references/handler.md

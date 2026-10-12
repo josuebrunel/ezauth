@@ -2,6 +2,9 @@
 
 Admin-facing features: impersonation, invitation-based onboarding, user management, the persisted audit log, and the hook system.
 
+> [!TIP]
+> Don't want to build the screens for these yourself? [ezauth-admin](admin-panel.md) is a ready-made admin panel you mount in your app.
+
 > [!WARNING]
 > The `service.Auth` methods on this page (`Impersonate`, `UsersList`, etc.) enforce no role checks themselves — if you call them directly, your application must verify the caller is allowed (e.g. `caller.HasRole("admin")`) first. If you're using `Handler`'s built-in HTTP routes instead, that layer *does* gate this subtree by default (`Cfg.AdminRole`, defaulting to `"admin"`, checked via the RBAC tables) — see [`WithAdminAuthz`](../references/handler.md#handleroptions) to customize or disable it.
 
