@@ -28,8 +28,8 @@ func (a *Auth) TrustDevice(ctx context.Context, user *models.User, name string) 
 		UserID:    user.ID,
 		Token:     util.HashToken(deviceToken),
 		TokenType: models.TokenTypeTrustedDevice,
-		ExpiresAt: time.Now().Add(a.Cfg.TrustedDevice.TTL),
-		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().UTC().Add(a.Cfg.TrustedDevice.TTL),
+		CreatedAt: time.Now().UTC(),
 		Metadata:  models.JSONMap{"name": name},
 	}
 	if _, err := a.Repo.TokenCreate(ctx, token); err != nil {
@@ -53,7 +53,7 @@ func (a *Auth) IsTrustedDevice(ctx context.Context, user *models.User, deviceTok
 	if tok.TokenType != models.TokenTypeTrustedDevice || tok.UserID != user.ID {
 		return false
 	}
-	if tok.Revoked || time.Now().After(tok.ExpiresAt) {
+	if tok.Revoked || time.Now().UTC().After(tok.ExpiresAt) {
 		return false
 	}
 	return true

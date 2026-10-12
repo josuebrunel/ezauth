@@ -121,7 +121,7 @@ func (a *Auth) InvitationCreate(ctx context.Context, inviter *models.User, req R
 		metadata["data"] = req.Data
 	}
 
-	now := time.Now()
+	now := time.Now().UTC()
 	token := &models.Token{
 		UserID:    inviter.ID,
 		Token:     util.HashToken(tokenValue),
@@ -172,7 +172,7 @@ func (a *Auth) getValidInvitationToken(ctx context.Context, tokenValue string) (
 	if err != nil || tok.TokenType != models.TokenTypeInvitation {
 		return nil, ErrInvalidOrExpiredInvitation
 	}
-	if tok.Revoked || time.Now().After(tok.ExpiresAt) {
+	if tok.Revoked || time.Now().UTC().After(tok.ExpiresAt) {
 		return nil, ErrInvalidOrExpiredInvitation
 	}
 	return tok, nil
@@ -228,7 +228,7 @@ func (a *Auth) InvitationAccept(ctx context.Context, req RequestInvitationAccept
 		return nil, nil, err
 	}
 
-	now := time.Now()
+	now := time.Now().UTC()
 	user := &models.User{
 		Email:           email,
 		Username:        username,

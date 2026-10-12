@@ -81,8 +81,8 @@ func (a *Auth) mfaIssuePreAuthToken(ctx context.Context, user *models.User) (str
 		UserID:    user.ID,
 		Token:     util.HashToken(tokenValue),
 		TokenType: models.TokenTypeMFAPreAuth,
-		ExpiresAt: time.Now().Add(mfaPreAuthTokenTTL),
-		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().UTC().Add(mfaPreAuthTokenTTL),
+		CreatedAt: time.Now().UTC(),
 		Metadata:  models.JSONMap{},
 	}
 
@@ -249,7 +249,7 @@ func (a *Auth) MFALoginVerify(ctx context.Context, mfaToken, code string, rememb
 		return nil, nil, "", ErrInvalidOrExpiredMFAToken
 	}
 
-	if token.Revoked || time.Now().After(token.ExpiresAt) {
+	if token.Revoked || time.Now().UTC().After(token.ExpiresAt) {
 		xlog.Debug("mfa login verify failed: token expired or revoked", "token_id", token.ID)
 		return nil, nil, "", ErrInvalidOrExpiredMFAToken
 	}
@@ -328,7 +328,7 @@ func (a *Auth) MFALoginVerify(ctx context.Context, mfaToken, code string, rememb
 // last one that succeeded.
 func (a *Auth) mfaValidateAnyCode(ctx context.Context, user *models.User, code string) bool {
 	if user.MfaSecret != nil && *user.MfaSecret != "" {
-		if ok, counter := totpValidateWithReplayProtection(code, *user.MfaSecret, user.MFALastTOTPCounter, time.Now()); ok {
+		if ok, counter := totpValidateWithReplayProtection(code, *user.MfaSecret, user.MFALastTOTPCounter, time.Now().UTC()); ok {
 			user.MFALastTOTPCounter = &counter
 			if _, err := a.Repo.UserUpdate(ctx, user); err != nil {
 				// Best-effort: the current login/step-up still succeeds, but
@@ -394,8 +394,8 @@ func (a *Auth) mfaGenerateRecoveryCodes(ctx context.Context, user *models.User) 
 			UserID:    user.ID,
 			Token:     mfaHashRecoveryCode(user.ID, code),
 			TokenType: models.TokenTypeMFARecovery,
-			ExpiresAt: time.Now().AddDate(10, 0, 0),
-			CreatedAt: time.Now(),
+			ExpiresAt: time.Now().UTC().AddDate(10, 0, 0),
+			CreatedAt: time.Now().UTC(),
 			Metadata:  models.JSONMap{},
 		})
 	}

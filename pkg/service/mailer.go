@@ -60,7 +60,7 @@ func (m *SMTPMailer) Send(to string, subject string, body string) error {
 		return err
 	}
 	defer conn.Close()
-	if err := conn.SetDeadline(time.Now().Add(smtpTimeout)); err != nil {
+	if err := conn.SetDeadline(time.Now().UTC().Add(smtpTimeout)); err != nil {
 		xlog.Error("failed to set SMTP connection deadline", "error", err)
 		return err
 	}

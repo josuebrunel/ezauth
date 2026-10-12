@@ -58,8 +58,8 @@ func (a *Auth) EmailChangeRequest(ctx context.Context, user *models.User, req Re
 		UserID:    user.ID,
 		Token:     util.HashToken(tokenValue),
 		TokenType: models.TokenTypeEmailChange,
-		ExpiresAt: time.Now().Add(emailChangeTokenTTL),
-		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().UTC().Add(emailChangeTokenTTL),
+		CreatedAt: time.Now().UTC(),
 		Metadata:  models.JSONMap{"new_email": newEmail},
 	}
 	if _, err := a.Repo.TokenCreate(ctx, token); err != nil {
@@ -107,7 +107,7 @@ func (a *Auth) EmailChangeConfirm(ctx context.Context, tokenValue string) (*mode
 		xlog.Debug("email change confirm failed: token not found or wrong type", "err", err)
 		return nil, ErrInvalidOrExpiredEmailChangeToken
 	}
-	if time.Now().After(tok.ExpiresAt) {
+	if time.Now().UTC().After(tok.ExpiresAt) {
 		xlog.Debug("email change confirm failed: token expired", "token_id", tok.ID)
 		return nil, ErrInvalidOrExpiredEmailChangeToken
 	}
