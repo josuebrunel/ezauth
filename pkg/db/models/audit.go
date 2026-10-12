@@ -48,3 +48,15 @@ type AuditLogFilter struct {
 	Since *time.Time
 	Until *time.Time
 }
+
+// AuditLogEntry is an audit-log row joined with the email of the user it is
+// about, for listing events across users. UserID and UserEmail are nil once
+// the account has been deleted.
+type AuditLogEntry struct {
+	ID        string    `db:"id" json:"id"`
+	UserID    *string   `db:"user_id" json:"user_id"`
+	UserEmail *string   `db:"user_email" json:"user_email,omitempty"`
+	EventType string    `db:"event_type" json:"event_type"`
+	Metadata  JSONMap   `db:"metadata" json:"metadata,omitempty"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+}

@@ -952,3 +952,66 @@ func (q *SqliteQuerier) QueryUserUpdateProfile(ctx context.Context, userID strin
 	}
 	return sqlite.Update(qm...)
 }
+
+// QueryAuditLogList lists audit events across all users, newest first, with
+// the email of the user each is about (NULL once the user is deleted).
+func (q *SqliteQuerier) QueryAuditLogList(ctx context.Context, filter models.AuditLogFilter, limit, offset int) bob.Query {
+	mods := []bob.Mod[*dialect.SelectQuery]{
+		sm.Columns(
+			sqlite.Quote("a", "id"),
+			sqlite.Quote("a", models.ColumnUserID),
+			sqlite.Quote("u", models.ColumnEmail).As("user_email"),
+			sqlite.Quote("a", models.ColumnEventType),
+			sqlite.Quote("a", models.ColumnMetadata),
+			sqlite.Quote("a", models.ColumnCreatedAt),
+		),
+		sm.From(models.TableAuditLog).As("a"),
+		sm.LeftJoin(models.TableUser).As("u").OnEQ(sqlite.Quote("u", "id"), sqlite.Quote("a", models.ColumnUserID)),
+		sm.OrderBy(sqlite.Quote("a", models.ColumnCreatedAt)).Desc(),
+		sm.OrderBy(sqlite.Quote("a", "id")).Desc(),
+		sm.Limit(limit),
+		sm.Offset(offset),
+	}
+
+	if filter.EventType != "" {
+		mods = append(mods, sm.Where(sqlite.Quote("a", models.ColumnEventType).EQ(sqlite.Arg(filter.EventType))))
+	}
+	if filter.Since != nil {
+		mods = append(mods, sm.Where(sqlite.Quote("a", models.ColumnCreatedAt).GTE(sqlite.Arg(*filter.Since))))
+	}
+	if filter.Until != nil {
+		mods = append(mods, sm.Where(sqlite.Quote("a", models.ColumnCreatedAt).LTE(sqlite.Arg(*filter.Until))))
+	}
+
+	return sqlite.Select(mods...)
+}
+
+// QueryUserStats counts users in one pass. COUNT over a CASE that yields NULL
+// for rows to skip works the same on all three databases.
+func (q *SqliteQuerier) QueryUserStats(ctx context.Context, since time.Time) bob.Query {
+	return sqlite.Select(
+		sm.Columns(
+			sqlite.Raw("COUNT(*) AS total"),
+			sqlite.Raw("COUNT(CASE WHEN "+models.ColumnCreatedAt+" >= ? THEN 1 END) AS created_since", since),
+			sqlite.Raw("COUNT(CASE WHEN "+models.ColumnLastActiveAt+" >= ? THEN 1 END) AS active_since", since),
+			sqlite.Raw("COUNT(CASE WHEN "+models.ColumnIsActive+" THEN NULL ELSE 1 END) AS inactive"),
+		),
+		sm.From(models.TableUser),
+	)
+}
+
+// QueryUserSignupsByDay counts sign-ups per UTC day since the cutoff. The day
+// is the first 10 characters (YYYY-MM-DD) of created_at rather than date(...):
+// the driver stores Go times as text like "2026-10-12 11:35:30 +0000 UTC",
+// which date() can't parse and turns into NULL, while rows written by the
+// column default are plain "YYYY-MM-DD HH:MM:SS". Both start with the day.
+func (q *SqliteQuerier) QueryUserSignupsByDay(ctx context.Context, since time.Time) bob.Query {
+	day := "substr(" + models.ColumnCreatedAt + ", 1, 10)"
+	return sqlite.Select(
+		sm.Columns(sqlite.Raw(day+" AS day"), sqlite.Raw("COUNT(*) AS n")),
+		sm.From(models.TableUser),
+		sm.Where(sqlite.Quote(models.ColumnCreatedAt).GTE(sqlite.Arg(since))),
+		sm.GroupBy(sqlite.Raw(day)),
+		sm.OrderBy(sqlite.Raw(day)),
+	)
+}

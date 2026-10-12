@@ -952,3 +952,63 @@ func (q *PSQLQuerier) QueryUserUpdateProfile(ctx context.Context, userID string,
 	}
 	return psql.Update(qm...)
 }
+
+// QueryAuditLogList lists audit events across all users, newest first, with
+// the email of the user each is about (NULL once the user is deleted).
+func (q *PSQLQuerier) QueryAuditLogList(ctx context.Context, filter models.AuditLogFilter, limit, offset int) bob.Query {
+	mods := []bob.Mod[*dialect.SelectQuery]{
+		sm.Columns(
+			psql.Quote("a", "id"),
+			psql.Quote("a", models.ColumnUserID),
+			psql.Quote("u", models.ColumnEmail).As("user_email"),
+			psql.Quote("a", models.ColumnEventType),
+			psql.Quote("a", models.ColumnMetadata),
+			psql.Quote("a", models.ColumnCreatedAt),
+		),
+		sm.From(psql.Quote(models.TableAuditLog)).As("a"),
+		sm.LeftJoin(psql.Quote(models.TableUser)).As("u").OnEQ(psql.Quote("u", "id"), psql.Quote("a", models.ColumnUserID)),
+		sm.OrderBy(psql.Quote("a", models.ColumnCreatedAt)).Desc(),
+		sm.OrderBy(psql.Quote("a", "id")).Desc(),
+		sm.Limit(limit),
+		sm.Offset(offset),
+	}
+
+	if filter.EventType != "" {
+		mods = append(mods, sm.Where(psql.Quote("a", models.ColumnEventType).EQ(psql.Arg(filter.EventType))))
+	}
+	if filter.Since != nil {
+		mods = append(mods, sm.Where(psql.Quote("a", models.ColumnCreatedAt).GTE(psql.Arg(*filter.Since))))
+	}
+	if filter.Until != nil {
+		mods = append(mods, sm.Where(psql.Quote("a", models.ColumnCreatedAt).LTE(psql.Arg(*filter.Until))))
+	}
+
+	return psql.Select(mods...)
+}
+
+// QueryUserStats counts users in one pass. COUNT over a CASE that yields NULL
+// for rows to skip works the same on all three databases.
+func (q *PSQLQuerier) QueryUserStats(ctx context.Context, since time.Time) bob.Query {
+	return psql.Select(
+		sm.Columns(
+			psql.Raw("COUNT(*) AS total"),
+			psql.Raw("COUNT(CASE WHEN "+models.ColumnCreatedAt+" >= ? THEN 1 END) AS created_since", since),
+			psql.Raw("COUNT(CASE WHEN "+models.ColumnLastActiveAt+" >= ? THEN 1 END) AS active_since", since),
+			psql.Raw("COUNT(CASE WHEN "+models.ColumnIsActive+" THEN NULL ELSE 1 END) AS inactive"),
+		),
+		sm.From(psql.Quote(models.TableUser)),
+	)
+}
+
+// QueryUserSignupsByDay counts sign-ups per UTC day since the cutoff. The day
+// is formatted as text in SQL so every database returns the same thing.
+func (q *PSQLQuerier) QueryUserSignupsByDay(ctx context.Context, since time.Time) bob.Query {
+	day := "to_char(" + models.ColumnCreatedAt + " AT TIME ZONE 'UTC', 'YYYY-MM-DD')"
+	return psql.Select(
+		sm.Columns(psql.Raw(day+" AS day"), psql.Raw("COUNT(*) AS n")),
+		sm.From(psql.Quote(models.TableUser)),
+		sm.Where(psql.Quote(models.ColumnCreatedAt).GTE(psql.Arg(since))),
+		sm.GroupBy(psql.Raw(day)),
+		sm.OrderBy(psql.Raw(day)),
+	)
+}
