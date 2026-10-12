@@ -453,7 +453,10 @@ func (a *Auth) UserUpdate(ctx context.Context, user *models.User) (*models.User,
 	return a.Repo.UserUpdate(ctx, user)
 }
 
-// UserDelete deletes a user by ID.
+// UserDelete deletes a user by ID. It is a bare repository delete: the
+// BeforeUserDeleted and AfterUserDeleted hooks (and so the user.deleted audit
+// event) are run by the HTTP handlers around it, so a caller that wants them
+// must run them too, in that order.
 func (a *Auth) UserDelete(ctx context.Context, id string) error {
 	return a.Repo.UserDelete(ctx, id)
 }

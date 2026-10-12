@@ -149,7 +149,13 @@ func (h *auditHook) BeforeUserDeleted(ctx context.Context, user *models.User) er
 }
 
 func (h *auditHook) AfterUserDeleted(ctx context.Context, user *models.User) error {
-	h.auth.recordAuditEvent(ctx, user.ID, models.AuditEventUserDeleted, nil)
+	// The user row is already gone, and a row that names a deleted user id
+	// breaks the foreign key and is lost. Store it with a NULL user_id and
+	// keep who it was about in the metadata instead.
+	h.auth.insertAuditEvent(ctx, nil, models.AuditEventUserDeleted, models.JSONMap{
+		"user_id": user.ID,
+		"email":   user.Email,
+	})
 	return h.next.AfterUserDeleted(ctx, user)
 }
 
