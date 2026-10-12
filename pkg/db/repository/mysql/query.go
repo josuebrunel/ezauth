@@ -946,3 +946,63 @@ func (q *MysqlQuerier) QueryUserUpdateProfile(ctx context.Context, userID string
 	}
 	return mysql.Update(qm...)
 }
+
+// QueryAuditLogList lists audit events across all users, newest first, with
+// the email of the user each is about (NULL once the user is deleted).
+func (q *MysqlQuerier) QueryAuditLogList(ctx context.Context, filter models.AuditLogFilter, limit, offset int) bob.Query {
+	mods := []bob.Mod[*dialect.SelectQuery]{
+		sm.Columns(
+			mysql.Quote("a", "id"),
+			mysql.Quote("a", models.ColumnUserID),
+			mysql.Quote("u", models.ColumnEmail).As("user_email"),
+			mysql.Quote("a", models.ColumnEventType),
+			mysql.Quote("a", models.ColumnMetadata),
+			mysql.Quote("a", models.ColumnCreatedAt),
+		),
+		sm.From(models.TableAuditLog).As("a"),
+		sm.LeftJoin(models.TableUser).As("u").OnEQ(mysql.Quote("u", "id"), mysql.Quote("a", models.ColumnUserID)),
+		sm.OrderBy(mysql.Quote("a", models.ColumnCreatedAt)).Desc(),
+		sm.OrderBy(mysql.Quote("a", "id")).Desc(),
+		sm.Limit(int64(limit)),
+		sm.Offset(int64(offset)),
+	}
+
+	if filter.EventType != "" {
+		mods = append(mods, sm.Where(mysql.Quote("a", models.ColumnEventType).EQ(mysql.Arg(filter.EventType))))
+	}
+	if filter.Since != nil {
+		mods = append(mods, sm.Where(mysql.Quote("a", models.ColumnCreatedAt).GTE(mysql.Arg(*filter.Since))))
+	}
+	if filter.Until != nil {
+		mods = append(mods, sm.Where(mysql.Quote("a", models.ColumnCreatedAt).LTE(mysql.Arg(*filter.Until))))
+	}
+
+	return mysql.Select(mods...)
+}
+
+// QueryUserStats counts users in one pass. COUNT over a CASE that yields NULL
+// for rows to skip works the same on all three databases.
+func (q *MysqlQuerier) QueryUserStats(ctx context.Context, since time.Time) bob.Query {
+	return mysql.Select(
+		sm.Columns(
+			mysql.Raw("COUNT(*) AS total"),
+			mysql.Raw("COUNT(CASE WHEN "+models.ColumnCreatedAt+" >= ? THEN 1 END) AS created_since", since),
+			mysql.Raw("COUNT(CASE WHEN "+models.ColumnLastActiveAt+" >= ? THEN 1 END) AS active_since", since),
+			mysql.Raw("COUNT(CASE WHEN "+models.ColumnIsActive+" THEN NULL ELSE 1 END) AS inactive"),
+		),
+		sm.From(models.TableUser),
+	)
+}
+
+// QueryUserSignupsByDay counts sign-ups per UTC day since the cutoff. The day
+// is formatted as text in SQL so every database returns the same thing.
+func (q *MysqlQuerier) QueryUserSignupsByDay(ctx context.Context, since time.Time) bob.Query {
+	day := "DATE_FORMAT(" + models.ColumnCreatedAt + ", '%Y-%m-%d')"
+	return mysql.Select(
+		sm.Columns(mysql.Raw(day+" AS day"), mysql.Raw("COUNT(*) AS n")),
+		sm.From(models.TableUser),
+		sm.Where(mysql.Quote(models.ColumnCreatedAt).GTE(mysql.Arg(since))),
+		sm.GroupBy(mysql.Raw(day)),
+		sm.OrderBy(mysql.Raw(day)),
+	)
+}

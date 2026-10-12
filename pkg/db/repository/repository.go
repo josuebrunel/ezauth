@@ -48,6 +48,8 @@ type UserQuerier interface {
 	QueryUserIncrementFailedLoginAttempts(ctx context.Context, userID string) bob.Query
 	QueryUserDelete(ctx context.Context, id string) bob.Query
 	QueryUsersList(ctx context.Context, filter models.UserListFilter, limit, offset int) bob.Query
+	QueryUserStats(ctx context.Context, since time.Time) bob.Query
+	QueryUserSignupsByDay(ctx context.Context, since time.Time) bob.Query
 }
 
 type TokenQuerier interface {
@@ -85,6 +87,7 @@ type WebauthnChallengeQuerier interface {
 type AuditLogQuerier interface {
 	QueryAuditLogInsert(ctx context.Context, log *models.AuditLog) bob.Query
 	QueryAuditLogListByUserID(ctx context.Context, userID string, filter models.AuditLogFilter, limit, offset int) bob.Query
+	QueryAuditLogList(ctx context.Context, filter models.AuditLogFilter, limit, offset int) bob.Query
 }
 
 type RoleQuerier interface {
@@ -897,6 +900,44 @@ func (r Repository) AuditLogListByUserID(ctx context.Context, userID string, fil
 		return logs[:limit], true, nil
 	}
 	return logs, false, nil
+}
+
+// AuditLogList lists audit events across all users, newest first, with the
+// email of the user each one is about (see models.AuditLogEntry). It filters
+// like AuditLogListByUserID. hasMore is computed by fetching one extra row.
+func (r Repository) AuditLogList(ctx context.Context, filter models.AuditLogFilter, limit, offset int) (entries []*models.AuditLogEntry, hasMore bool, err error) {
+	query := r.QueryAuditLogList(ctx, filter, limit+1, offset)
+	entries, err = bob.All(ctx, r.bdb, query, scan.StructMapper[*models.AuditLogEntry]())
+	if err != nil {
+		xlog.Error("Failed to list audit logs", "error", err)
+		return nil, false, err
+	}
+	if len(entries) > limit {
+		return entries[:limit], true, nil
+	}
+	return entries, false, nil
+}
+
+// UserStats counts users: all of them, those who joined or were last active at
+// or after since, and those who can't sign in.
+func (r Repository) UserStats(ctx context.Context, since time.Time) (*models.UserStats, error) {
+	stats, err := bob.One(ctx, r.bdb, r.QueryUserStats(ctx, since), scan.StructMapper[*models.UserStats]())
+	if err != nil {
+		xlog.Error("Failed to count users", "error", err)
+		return nil, err
+	}
+	return stats, nil
+}
+
+// UserSignupsByDay counts the users who joined at or after since, per UTC day,
+// oldest day first. Days with no sign-ups are omitted.
+func (r Repository) UserSignupsByDay(ctx context.Context, since time.Time) ([]models.DayCount, error) {
+	days, err := bob.All(ctx, r.bdb, r.QueryUserSignupsByDay(ctx, since), scan.StructMapper[models.DayCount]())
+	if err != nil {
+		xlog.Error("Failed to count signups", "error", err)
+		return nil, err
+	}
+	return days, nil
 }
 
 // RoleCreate creates a new RBAC role.

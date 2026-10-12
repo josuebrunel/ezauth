@@ -84,3 +84,32 @@ func (a *Auth) AuditLogs(ctx context.Context, userID string, opts ListAuditLogsO
 	}
 	return &ListAuditLogsResult{Events: events, HasMore: hasMore}, nil
 }
+
+// ListAuditLogsAllResult is a page of audit events across all users.
+type ListAuditLogsAllResult struct {
+	Events  []*models.AuditLogEntry `json:"events"`
+	HasMore bool                    `json:"has_more"`
+}
+
+// AuditLogsAll lists audit events across all users, most recent first, each
+// with the email of the user it is about (nil once that account is deleted).
+// It filters and pages like AuditLogs. ezauth performs no authorization check
+// here — same stance as AuditLogs — the caller is responsible for verifying
+// the requester may read the whole audit log.
+func (a *Auth) AuditLogsAll(ctx context.Context, opts ListAuditLogsOptions) (*ListAuditLogsAllResult, error) {
+	limit := opts.Limit
+	if limit <= 0 || limit > maxAuditLogsListLimit {
+		limit = defaultAuditLogsListLimit
+	}
+	offset := opts.Offset
+	if offset < 0 {
+		offset = 0
+	}
+
+	filter := models.AuditLogFilter{EventType: opts.EventType, Since: opts.Since, Until: opts.Until}
+	entries, hasMore, err := a.Repo.AuditLogList(ctx, filter, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	return &ListAuditLogsAllResult{Events: entries, HasMore: hasMore}, nil
+}
