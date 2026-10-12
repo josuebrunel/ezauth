@@ -32,6 +32,7 @@ Simple and easy to use authentication library for Golang.
   - [Scoped API Keys](#scoped-api-keys)
   - [Guarded Email Change](#guarded-email-change)
 - [Admin and Operations](#admin-and-operations)
+  - [Admin Panel](#admin-panel)
   - [Admin Authorization](#admin-authorization)
   - [Impersonation](#impersonation)
   - [Roles & Permissions (RBAC)](#roles--permissions-rbac)
@@ -840,6 +841,36 @@ Set `EZAUTH_EMAIL_CHANGE_SUBJECT`/`EZAUTH_EMAIL_CHANGE_BODY` to customize the ve
 ## Admin and Operations
 
 Admin-facing features: impersonation, RBAC, organizations, invitation-based onboarding, user management, the audit log, and hooks. The `service.Auth` *methods* behind these (`Impersonate`, `UsersList`, `RoleCreate`, etc.) enforce no role checks themselves — calling them directly, your application is responsible for checking the caller is allowed (e.g. `caller.HasRole("admin")`) first. In standalone-service mode, `Handler`'s built-in HTTP routes are different: see below.
+
+### Admin Panel
+
+You don't have to build your own admin screens. [ezauth-admin](https://github.com/josuebrunel/ezauth-admin) is a separate project: an admin panel you mount in your own app, on top of your existing EzAuth instance. No extra service, no extra deployment, no migrations of its own.
+
+It gives you a dashboard, user management (search, edit, suspend, delete, impersonate), roles and permissions, and the [audit log](#audit-log). It needs EzAuth v0.31.0 or newer.
+
+Install it:
+
+```sh
+go get github.com/josuebrunel/ezauth-admin
+```
+
+Mount it next to EzAuth. The panel needs `auth.SessionMiddleware` on the router, which you need for login anyway:
+
+```go
+import "github.com/josuebrunel/ezauth-admin/admin"
+
+auth, _ := ezauth.New(&cfg, "") // "" because Mount adds the /auth prefix
+panel, _ := admin.New(auth, admin.WithAppName("Acme"))
+
+r := chi.NewRouter()
+r.Use(auth.SessionMiddleware)
+r.Mount("/auth", auth.Handler)
+r.Mount("/admin", panel.Handler())
+```
+
+Then give someone the admin role (`ezauthapi create-admin -email=you@example.com -password=...`), sign in, and open `/admin/`. Everything is closed by default: signed-out visitors go to your login page, and signed-in users without the admin role get a `403`.
+
+It's a plain `http.Handler`, so it works with the standard library too. See the [Admin Panel guide](https://josuebrunel.github.io/ezauth/guides/admin-panel/) for the options, other routers and troubleshooting, and the [ezauth-admin README](https://github.com/josuebrunel/ezauth-admin#try-it) for a Docker demo you can run in one command.
 
 ### Admin Authorization
 
