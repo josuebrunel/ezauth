@@ -827,6 +827,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#invitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Invitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#troubleshooting" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1311,6 +1322,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#invitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Invitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#troubleshooting" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1347,13 +1369,14 @@
 <ul>
 <li><strong>Dashboard:</strong> user counts, a 14-day sign-ups chart and the latest activity.</li>
 <li><strong>Users:</strong> search, filter by status, edit a profile, suspend and reactivate, delete, impersonate, and keep admin-only notes.</li>
+<li><strong>Invitations:</strong> invite someone by email with the roles you pick, see who hasn't accepted yet, and resend or revoke. The invitee follows the link to an accept page in your app (see <a href="../admin-operations/#invitation-based-onboarding">Invitation-Based Onboarding</a>), and the panel shows the link too, for when email isn't set up.</li>
 <li><strong>Roles and permissions:</strong> create and delete them, give permissions to roles, give roles to users.</li>
 <li><strong>Audit log:</strong> sign-ins, role changes, impersonation and deletions across all users, filterable and paged.</li>
 </ul>
 <p>It is server-rendered (Templ and HTMX), styled with DaisyUI, supports light and dark themes, and embeds all of its assets, so it makes no requests to third-party servers.</p>
 <h2 id="requirements">Requirements</h2>
 <ul>
-<li>EzAuth <strong>v0.31.0</strong> or newer. The panel uses <code>AuditLogsAll</code>, <code>UserStats</code>, <code>UserSignups</code> and <code>UserProfileUpdate</code>, which arrived in that release.</li>
+<li>EzAuth <strong>v0.32.0</strong> or newer. The panel uses <code>AuditLogsAll</code>, <code>UserStats</code>, <code>UserSignups</code> and <code>UserProfileUpdate</code> (v0.31.0), and <code>InvitationIssue</code>, <code>InvitationsAll</code> and <code>InvitationRevokeByID</code> (v0.32.0).</li>
 <li>Go 1.25.4 or newer.</li>
 <li><code>auth.SessionMiddleware</code> on the router the panel is mounted on.</li>
 </ul>
@@ -1435,6 +1458,8 @@ http.ListenAndServe(&quot;:8080&quot;, auth.SessionMiddleware(mux))
 <li>The panel calls <code>service.Auth</code> methods, which do no authorization of their own, so it does the checking itself, on every route.</li>
 <li>An admin can't suspend, delete or impersonate their own account, or revoke their own admin role, so there is always an admin left.</li>
 </ul>
+<h2 id="invitations">Invitations</h2>
+<p>The emailed link lands on your app, not on the panel, so your app needs an accept page: EzAuth sends the invitee to <code>EZAUTH_INVITATION_ACCEPT_PAGE_URL</code> (default <code>/invitation/accept</code>), and that page posts to <code>POST /auth/invitation/accept</code>. Set <code>EZAUTH_BASE_URL</code> to your public address, or the link will point at localhost. With no SMTP configured nothing is emailed, and the panel shows the link for you to share. The <a href="https://github.com/josuebrunel/ezauth-admin/blob/main/docs/mounting.md#invitations">panel's mounting guide</a> has the details and a working example page.</p>
 <h2 id="troubleshooting">Troubleshooting</h2>
 <p><strong>Signing in returns a 404.</strong> <code>ezauth.New</code> was given the path <code>"auth"</code> but your router already strips <code>/auth</code>. Pass <code>""</code> when you mount at <code>/auth</code>.</p>
 <p><strong>Every panel page returns a 500.</strong> The router doesn't run <code>auth.SessionMiddleware</code>. Add it. The panel stays closed in the meantime, and the log says what to do.</p>
