@@ -1104,6 +1104,29 @@ invitations, err := auth.Service.Invitations(ctx, inviter.ID)
 err = auth.Service.InvitationRevoke(ctx, inviter, invitations[0].ID)
 ```
 
+#### For an admin screen
+
+`Invitations` and `InvitationRevoke` only see the invitations one inviter sent, and `InvitationCreate` only emails the link. An admin view needs more, so there are three more methods. None of them checks authorization, so check the caller yourself.
+
+```go
+// Issue an invitation and get the link back. If the email can't be sent, the
+// invitation still exists and issued.EmailErr says why, so you can show the
+// link or share it another way. (InvitationCreate, by contrast, revokes the
+// invitation and returns the error when the email fails.)
+issued, err := auth.Service.InvitationIssue(ctx, admin, service.RequestInvitation{Email: "newperson@example.com"})
+// issued.Link, issued.EmailErr
+
+// Every inviter's open invitations, newest first, with paging. Expired ones
+// are included (see ExpiresAt), accepted and revoked ones are not.
+page, err := auth.Service.InvitationsAll(ctx, service.ListInvitationsOptions{Limit: 20})
+// page.Invitations[i].InviterID, page.HasMore
+
+// Revoke any invitation, whoever sent it.
+err = auth.Service.InvitationRevokeByID(ctx, page.Invitations[0].ID)
+```
+
+The link isn't JSON-encoded, so it can't end up in an API response by accident: whoever holds it can accept the invitation.
+
 #### Standalone-service Mode
 
 ```bash
