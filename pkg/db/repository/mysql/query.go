@@ -1006,3 +1006,19 @@ func (q *MysqlQuerier) QueryUserSignupsByDay(ctx context.Context, since time.Tim
 		sm.OrderBy(mysql.Raw(day)),
 	)
 }
+
+// QueryTokenListByType lists the open (not revoked) tokens of one type across
+// all users, newest first.
+func (q *MysqlQuerier) QueryTokenListByType(ctx context.Context, tokenType string, limit, offset int) bob.Query {
+	return mysql.Select(
+		sm.From(models.TableToken),
+		sm.Where(
+			mysql.Quote(models.ColumnTokenType).EQ(mysql.Arg(tokenType)).
+				And(mysql.Quote(models.ColumnRevoked).EQ(mysql.Arg(false))),
+		),
+		sm.OrderBy(mysql.Quote(models.ColumnCreatedAt)).Desc(),
+		sm.OrderBy(mysql.Quote("id")).Desc(),
+		sm.Limit(int64(limit)),
+		sm.Offset(int64(offset)),
+	)
+}

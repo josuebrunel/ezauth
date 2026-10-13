@@ -1015,3 +1015,19 @@ func (q *SqliteQuerier) QueryUserSignupsByDay(ctx context.Context, since time.Ti
 		sm.OrderBy(sqlite.Raw(day)),
 	)
 }
+
+// QueryTokenListByType lists the open (not revoked) tokens of one type across
+// all users, newest first.
+func (q *SqliteQuerier) QueryTokenListByType(ctx context.Context, tokenType string, limit, offset int) bob.Query {
+	return sqlite.Select(
+		sm.From(models.TableToken),
+		sm.Where(
+			sqlite.Quote(models.ColumnTokenType).EQ(sqlite.Arg(tokenType)).
+				And(sqlite.Quote(models.ColumnRevoked).EQ(sqlite.Arg(false))),
+		),
+		sm.OrderBy(sqlite.Quote(models.ColumnCreatedAt)).Desc(),
+		sm.OrderBy(sqlite.Quote("id")).Desc(),
+		sm.Limit(limit),
+		sm.Offset(offset),
+	)
+}
