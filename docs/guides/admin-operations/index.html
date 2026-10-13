@@ -735,6 +735,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Invitation-Based Onboarding">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#for-an-admin-screen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        For an admin screen
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1247,6 +1264,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Invitation-Based Onboarding">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#for-an-admin-screen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        For an admin screen
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1453,6 +1487,24 @@ user, tokens, err := auth.Service.InvitationAccept(ctx, service.RequestInvitatio
 invitations, err := auth.Service.Invitations(ctx, inviter.ID)
 err = auth.Service.InvitationRevoke(ctx, inviter, invitations[0].ID)
 </code></pre>
+<h3 id="for-an-admin-screen">For an admin screen</h3>
+<p><code>Invitations</code> and <code>InvitationRevoke</code> only see the invitations one inviter sent, and <code>InvitationCreate</code> only emails the link. An admin view needs more, so there are three more methods. None of them checks authorization, so check the caller yourself.</p>
+<pre><code class="language-go">// Issue an invitation and get the link back. If the email can't be sent, the
+// invitation still exists and issued.EmailErr says why, so you can show the
+// link or share it another way. (InvitationCreate, by contrast, revokes the
+// invitation and returns the error when the email fails.)
+issued, err := auth.Service.InvitationIssue(ctx, admin, service.RequestInvitation{Email: &quot;newperson@example.com&quot;})
+// issued.Link, issued.EmailErr
+
+// Every inviter's open invitations, newest first, with paging. Expired ones
+// are included (see ExpiresAt), accepted and revoked ones are not.
+page, err := auth.Service.InvitationsAll(ctx, service.ListInvitationsOptions{Limit: 20})
+// page.Invitations[i].InviterID, page.HasMore
+
+// Revoke any invitation, whoever sent it.
+err = auth.Service.InvitationRevokeByID(ctx, page.Invitations[0].ID)
+</code></pre>
+<p>The link isn't JSON-encoded, so it can't end up in an API response by accident: whoever holds it can accept the invitation.</p>
 <p><code>EZAUTH_INVITATION_TTL</code> (default 7 days) controls how long an invitation stays valid. <code>EZAUTH_INVITATION_ACCEPT_PAGE_URL</code> (<code>Pages.InvitationAccept</code>) is where <code>GET /auth/invitation/accept?token=...</code> redirects, with the token preserved as a query param.</p>
 <h2 id="admin-user-management">Admin User Management</h2>
 <p>Beyond impersonation, <code>ezauth</code> exposes admin-facing methods to list/search/filter users, suspend/reactivate an account, and view a user's auth history. These <em>service methods</em> enforce no authorization on who may call them (same stance as <code>Impersonate</code> above) — check that yourself before calling them directly. <code>Handler</code>'s built-in HTTP routes gate this subtree by default instead (<code>Cfg.AdminRole</code>), customizable/disable-able via <code>WithAdminAuthz</code>.</p>
