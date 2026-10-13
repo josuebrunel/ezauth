@@ -6,6 +6,7 @@
 
 - **Dashboard:** user counts, a 14-day sign-ups chart and the latest activity.
 - **Users:** search, filter by status, edit a profile, suspend and reactivate, delete, impersonate, and keep admin-only notes.
+- **Invitations:** invite someone by email with the roles you pick, see who hasn't accepted yet, and resend or revoke. The invitee follows the link to an accept page in your app (see [Invitation-Based Onboarding](admin-operations.md#invitation-based-onboarding)), and the panel shows the link too, for when email isn't set up.
 - **Roles and permissions:** create and delete them, give permissions to roles, give roles to users.
 - **Audit log:** sign-ins, role changes, impersonation and deletions across all users, filterable and paged.
 
@@ -13,7 +14,7 @@ It is server-rendered (Templ and HTMX), styled with DaisyUI, supports light and 
 
 ## Requirements
 
-- EzAuth **v0.31.0** or newer. The panel uses `AuditLogsAll`, `UserStats`, `UserSignups` and `UserProfileUpdate`, which arrived in that release.
+- EzAuth **v0.32.0** or newer. The panel uses `AuditLogsAll`, `UserStats`, `UserSignups` and `UserProfileUpdate` (v0.31.0), and `InvitationIssue`, `InvitationsAll` and `InvitationRevokeByID` (v0.32.0).
 - Go 1.25.4 or newer.
 - `auth.SessionMiddleware` on the router the panel is mounted on.
 
@@ -88,6 +89,10 @@ The panel closes everything by default.
 - State-changing requests are checked for same-origin (CSRF) with the browser's Fetch Metadata headers. There is no token to add.
 - The panel calls `service.Auth` methods, which do no authorization of their own, so it does the checking itself, on every route.
 - An admin can't suspend, delete or impersonate their own account, or revoke their own admin role, so there is always an admin left.
+
+## Invitations
+
+The emailed link lands on your app, not on the panel, so your app needs an accept page: EzAuth sends the invitee to `EZAUTH_INVITATION_ACCEPT_PAGE_URL` (default `/invitation/accept`), and that page posts to `POST /auth/invitation/accept`. Set `EZAUTH_BASE_URL` to your public address, or the link will point at localhost. With no SMTP configured nothing is emailed, and the panel shows the link for you to share. The [panel's mounting guide](https://github.com/josuebrunel/ezauth-admin/blob/main/docs/mounting.md#invitations) has the details and a working example page.
 
 ## Troubleshooting
 

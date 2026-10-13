@@ -846,7 +846,7 @@ Admin-facing features: impersonation, RBAC, organizations, invitation-based onbo
 
 You don't have to build your own admin screens. [ezauth-admin](https://github.com/josuebrunel/ezauth-admin) is a separate project: an admin panel you mount in your own app, on top of your existing EzAuth instance. No extra service, no extra deployment, no migrations of its own.
 
-It gives you a dashboard, user management (search, edit, suspend, delete, impersonate), roles and permissions, and the [audit log](#audit-log). It needs EzAuth v0.31.0 or newer.
+It gives you a dashboard, user management (search, edit, suspend, delete, impersonate), [invitations](#invitation-based-onboarding), roles and permissions, and the [audit log](#audit-log). It needs EzAuth v0.32.0 or newer.
 
 Install it:
 
