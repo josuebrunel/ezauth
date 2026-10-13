@@ -1012,3 +1012,19 @@ func (q *PSQLQuerier) QueryUserSignupsByDay(ctx context.Context, since time.Time
 		sm.OrderBy(psql.Raw(day)),
 	)
 }
+
+// QueryTokenListByType lists the open (not revoked) tokens of one type across
+// all users, newest first.
+func (q *PSQLQuerier) QueryTokenListByType(ctx context.Context, tokenType string, limit, offset int) bob.Query {
+	return psql.Select(
+		sm.From(psql.Quote(models.TableToken)),
+		sm.Where(
+			psql.Quote(models.ColumnTokenType).EQ(psql.Arg(tokenType)).
+				And(psql.Quote(models.ColumnRevoked).EQ(psql.Arg(false))),
+		),
+		sm.OrderBy(psql.Quote(models.ColumnCreatedAt)).Desc(),
+		sm.OrderBy(psql.Quote("id")).Desc(),
+		sm.Limit(limit),
+		sm.Offset(offset),
+	)
+}

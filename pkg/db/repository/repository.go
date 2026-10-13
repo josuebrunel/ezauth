@@ -58,6 +58,7 @@ type TokenQuerier interface {
 	QueryTokenGetByID(ctx context.Context, id string) bob.Query
 	QueryTokenGetByToken(ctx context.Context, token string) bob.Query
 	QueryTokenListByUserIDAndType(ctx context.Context, userID, tokenType string) bob.Query
+	QueryTokenListByType(ctx context.Context, tokenType string, limit, offset int) bob.Query
 	QueryTokenListByUserID(ctx context.Context, userID string, limit int) bob.Query
 	QueryTokenRevoke(ctx context.Context, id string) bob.Query
 	QueryTokenConsume(ctx context.Context, id string) bob.Query
@@ -608,6 +609,23 @@ func (r Repository) TokenListByUserIDAndType(ctx context.Context, userID, tokenT
 		return nil, err
 	}
 	return tokens, nil
+}
+
+// TokenListByType lists the open (not revoked) tokens of one type across all
+// users, newest first, e.g. every pending invitation for an admin view. It
+// does not filter on expiry, so expired tokens are included. hasMore reports
+// whether more exist beyond this page, computed by fetching one extra row.
+func (r Repository) TokenListByType(ctx context.Context, tokenType string, limit, offset int) (tokens []*models.Token, hasMore bool, err error) {
+	query := r.QueryTokenListByType(ctx, tokenType, limit+1, offset)
+	tokens, err = bob.All(ctx, r.bdb, query, scan.StructMapper[*models.Token]())
+	if err != nil {
+		xlog.Error("Failed to list tokens by type", "error", err, "token_type", tokenType)
+		return nil, false, err
+	}
+	if len(tokens) > limit {
+		return tokens[:limit], true, nil
+	}
+	return tokens, false, nil
 }
 
 // TokenListByUserID lists the most recent tokens of any type for a user

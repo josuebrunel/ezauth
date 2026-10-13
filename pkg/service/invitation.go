@@ -50,6 +50,7 @@ type RequestInvitationAccept struct {
 // InvitationInfo describes an invitation without exposing its raw token value.
 type InvitationInfo struct {
 	ID        string         `json:"id"`
+	InviterID string         `json:"inviter_id,omitempty"`
 	Email     string         `json:"email"`
 	Roles     string         `json:"roles"`
 	Data      map[string]any `json:"data,omitempty"`
@@ -63,6 +64,7 @@ func invitationInfoFromToken(tok *models.Token) *InvitationInfo {
 	data, _ := tok.Metadata["data"].(map[string]any)
 	return &InvitationInfo{
 		ID:        tok.ID,
+		InviterID: tok.UserID,
 		Email:     email,
 		Roles:     roles,
 		Data:      data,
@@ -71,8 +73,22 @@ func invitationInfoFromToken(tok *models.Token) *InvitationInfo {
 	}
 }
 
-// InvitationCreate issues a new invitation on behalf of inviter, emailing
-// invitee a link to accept it. Data is opaque to ezauth beyond being carried
+// IssuedInvitation is a new invitation and the link its invitee uses to accept
+// it. Link is not JSON-encoded, so it can't end up in an API response by
+// accident: whoever holds it can accept the invitation.
+type IssuedInvitation struct {
+	InvitationInfo
+	Link     string `json:"-"`
+	EmailErr error  `json:"-"` // non-nil if the invitation email couldn't be sent
+}
+
+// InvitationIssue issues a new invitation on behalf of inviter and tries to
+// email invitee a link to accept it. Unlike InvitationCreate it hands the link
+// back, and a mail failure is reported in EmailErr instead of failing the call:
+// the invitation exists either way, so a caller can still show or share the
+// link when mail isn't delivered (no SMTP configured, an outage). Everything
+// else, including the role rules below, is as for InvitationCreate.
+// Data is opaque to ezauth beyond being carried
 // through to the created account at InvitationAccept — the caller decides
 // what it means (e.g. an org ID from a multi-tenancy layer built on top of
 // ezauth). Roles is similarly carried through, but is not opaque: inviter
@@ -82,7 +98,7 @@ func invitationInfoFromToken(tok *models.Token) *InvitationInfo {
 // doesn't have, and (unlike checking the legacy User.Roles field) a role
 // granted this way is guaranteed to actually exist in RBAC by the time
 // InvitationAccept grants it there too.
-func (a *Auth) InvitationCreate(ctx context.Context, inviter *models.User, req RequestInvitation) (*InvitationInfo, error) {
+func (a *Auth) InvitationIssue(ctx context.Context, inviter *models.User, req RequestInvitation) (*IssuedInvitation, error) {
 	email := strings.ToLower(strings.TrimSpace(req.Email))
 	if err := validateEmail(email); err != nil {
 		return nil, err
@@ -148,13 +164,33 @@ func (a *Auth) InvitationCreate(ctx context.Context, inviter *models.User, req R
 	data := EmailTemplateData{Link: link, Token: tokenValue, Email: email}
 	subject := RenderTemplate(a.Cfg.EmailTemplates.InvitationSubject, data)
 	body := RenderTemplate(a.Cfg.EmailTemplates.InvitationBody, data)
+	issued := &IssuedInvitation{InvitationInfo: *invitationInfoFromToken(created), Link: link}
 	if err := a.Mailer.Send(email, subject, body); err != nil {
-		xlog.Error("failed to send invitation email", "inviter_id", inviter.ID, "err", err)
-		return nil, err
+		xlog.Error("failed to send invitation email", "inviter_id", inviter.ID, "invitation_id", created.ID, "err", err)
+		issued.EmailErr = err
 	}
 
 	xlog.Info("invitation created", "inviter_id", inviter.ID, "invitation_id", created.ID)
-	return invitationInfoFromToken(created), nil
+	return issued, nil
+}
+
+// InvitationCreate issues a new invitation on behalf of inviter, emailing
+// invitee a link to accept it. If the email can't be sent the invitation is
+// revoked again and the error returned, so a failed send doesn't leave an open
+// invitation whose link nobody has. Use InvitationIssue to get the link back
+// and keep the invitation when mail fails.
+func (a *Auth) InvitationCreate(ctx context.Context, inviter *models.User, req RequestInvitation) (*InvitationInfo, error) {
+	issued, err := a.InvitationIssue(ctx, inviter, req)
+	if err != nil {
+		return nil, err
+	}
+	if issued.EmailErr != nil {
+		if err := a.Repo.TokenRevoke(ctx, issued.ID); err != nil {
+			xlog.Error("failed to revoke an invitation whose email failed", "invitation_id", issued.ID, "err", err)
+		}
+		return nil, issued.EmailErr
+	}
+	return &issued.InvitationInfo, nil
 }
 
 // InvitationPreview looks up a pending invitation by its raw token value,
@@ -291,5 +327,65 @@ func (a *Auth) InvitationRevoke(ctx context.Context, inviter *models.User, invit
 		return err
 	}
 	xlog.Info("invitation revoked", "inviter_id", inviter.ID, "invitation_id", tok.ID)
+	return nil
+}
+
+const (
+	defaultInvitationsListLimit = 20
+	maxInvitationsListLimit     = 100
+)
+
+// ListInvitationsOptions pages InvitationsAll.
+type ListInvitationsOptions struct {
+	Limit  int
+	Offset int
+}
+
+// ListInvitationsResult is a page of open invitations.
+type ListInvitationsResult struct {
+	Invitations []InvitationInfo `json:"invitations"`
+	HasMore     bool             `json:"has_more"`
+}
+
+// InvitationsAll lists the open invitations of every inviter, newest first.
+// "Open" means not revoked: an accepted invitation is consumed, which revokes
+// it, so it is gone from the list. Expired invitations are still listed (see
+// InvitationInfo.ExpiresAt), so an admin can see and re-issue them. ezauth
+// performs no authorization check here, same as UsersList; the caller must
+// verify the requester may see every invitation.
+func (a *Auth) InvitationsAll(ctx context.Context, opts ListInvitationsOptions) (*ListInvitationsResult, error) {
+	limit := opts.Limit
+	if limit <= 0 || limit > maxInvitationsListLimit {
+		limit = defaultInvitationsListLimit
+	}
+	offset := max(opts.Offset, 0)
+
+	tokens, hasMore, err := a.Repo.TokenListByType(ctx, models.TokenTypeInvitation, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	infos := make([]InvitationInfo, 0, len(tokens))
+	for _, tok := range tokens {
+		infos = append(infos, *invitationInfoFromToken(tok))
+	}
+	return &ListInvitationsResult{Invitations: infos, HasMore: hasMore}, nil
+}
+
+// InvitationRevokeByID revokes any invitation, whoever sent it. Unlike
+// InvitationRevoke it checks no ownership, so an admin can cancel an
+// invitation another admin sent, or one whose sender was deleted. It returns
+// ErrInvitationNotFound for an unknown id or a token that isn't an invitation.
+// ezauth performs no authorization check here; the caller must verify the
+// requester may revoke invitations.
+func (a *Auth) InvitationRevokeByID(ctx context.Context, invitationID string) error {
+	tok, err := a.Repo.TokenGetByID(ctx, invitationID)
+	if err != nil || tok.TokenType != models.TokenTypeInvitation {
+		return ErrInvitationNotFound
+	}
+	if err := a.Repo.TokenRevoke(ctx, tok.ID); err != nil {
+		xlog.Error("failed to revoke invitation", "invitation_id", tok.ID, "err", err)
+		return err
+	}
+	xlog.Info("invitation revoked by id", "invitation_id", tok.ID)
 	return nil
 }
