@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/josuebrunel/ezauth/pkg/db/models"
@@ -20,6 +21,7 @@ const (
 	sessionMFATokenKey           = "mfa_pending_token"
 	sessionMFAEnrollSecretKey    = "mfa_enroll_secret"
 	sessionMFAEnrollURLKey       = "mfa_enroll_otpauth_url"
+	sessionNextKey               = "login_next"
 )
 
 // GetMFAEnrollment returns the TOTP secret and otpauth:// URL stashed by
@@ -299,6 +301,31 @@ const (
 	flashKeyError   = "_flash.error"
 	flashKeySuccess = "_flash.success"
 )
+
+// rememberNext stores p as the page to send the user to once they've logged
+// in. It's ignored unless p is a safe local path (see util.IsSafeRedirectPath).
+func (h *Handler) rememberNext(ctx context.Context, p string) {
+	if !util.IsSafeRedirectPath(p) {
+		return
+	}
+	h.Session.Put(ctx, sessionNextKey, p)
+}
+
+// rememberNextFromRequest stores the "next" form or query value of r, if any,
+// as the page to return to after login. An explicit value wins over the one
+// LoginRequiredMiddleware remembered.
+func (h *Handler) rememberNextFromRequest(r *http.Request) {
+	h.rememberNext(r.Context(), r.FormValue("next"))
+}
+
+// afterLoginURL returns where to send the user once they've logged in: the
+// page remembered by rememberNext, which it clears, or Redirects.AfterLogin.
+func (h *Handler) afterLoginURL(ctx context.Context) string {
+	if p := h.Session.PopString(ctx, sessionNextKey); util.IsSafeRedirectPath(p) {
+		return p
+	}
+	return h.svc.Cfg.Redirects.AfterLogin
+}
 
 // SetFlash stores a flash message in the session.
 // Flash messages are one-time messages that are cleared after being read.

@@ -856,8 +856,33 @@ func TestLoginRequiredMiddleware(t *testing.T) {
 		if w.Code != http.StatusFound {
 			t.Errorf("expected 302, got %d", w.Code)
 		}
-		if loc := w.Header().Get("Location"); loc != loginPath {
-			t.Errorf("expected redirect to %q, got %q", loginPath, loc)
+		if want := loginPath + "?next=%2Fdashboard"; w.Header().Get("Location") != want {
+			t.Errorf("expected redirect to %q, got %q", want, w.Header().Get("Location"))
+		}
+	})
+
+	t.Run("redirect keeps the query of the page asked for and of the login path", func(t *testing.T) {
+		mw := LoginRequiredMiddleware(mockAuthChecker{authenticated: false}, "/login?lang=fr")
+		req := httptest.NewRequest("GET", "/dashboard/settings?tab=billing", nil)
+		w := httptest.NewRecorder()
+		mw(next).ServeHTTP(w, req)
+		want := "/login?lang=fr&next=%2Fdashboard%2Fsettings%3Ftab%3Dbilling"
+		if loc := w.Header().Get("Location"); loc != want {
+			t.Errorf("expected redirect to %q, got %q", want, loc)
+		}
+	})
+
+	t.Run("a POST or an HTMX request redirects to login without next", func(t *testing.T) {
+		mw := LoginRequiredMiddleware(mockAuthChecker{authenticated: false}, loginPath)
+		post := httptest.NewRequest("POST", "/dashboard", nil)
+		htmx := httptest.NewRequest("GET", "/dashboard/fragment", nil)
+		htmx.Header.Set("HX-Request", "true")
+		for _, req := range []*http.Request{post, htmx} {
+			w := httptest.NewRecorder()
+			mw(next).ServeHTTP(w, req)
+			if loc := w.Header().Get("Location"); loc != loginPath {
+				t.Errorf("%s %s: expected redirect to %q, got %q", req.Method, req.URL, loginPath, loc)
+			}
 		}
 	})
 

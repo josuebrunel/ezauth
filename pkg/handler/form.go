@@ -207,6 +207,7 @@ func (h *Handler) FormLogin(w http.ResponseWriter, r *http.Request) {
 		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrInvalidRequestBody.Error())
 		return
 	}
+	h.rememberNextFromRequest(r)
 
 	req := service.RequestBasicAuth{
 		Email:    r.FormValue("email"),
@@ -247,7 +248,7 @@ func (h *Handler) FormLogin(w http.ResponseWriter, r *http.Request) {
 		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrCouldNotEstablishSession.Error())
 		return
 	}
-	http.Redirect(w, r, h.svc.Cfg.Redirects.AfterLogin, http.StatusFound)
+	http.Redirect(w, r, h.afterLoginURL(r.Context()), http.StatusFound)
 }
 
 // FormMFALoginVerify completes a step-up login started by FormLogin when MFA is
@@ -300,7 +301,7 @@ func (h *Handler) FormMFALoginVerify(w http.ResponseWriter, r *http.Request) {
 		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrCouldNotEstablishSession.Error())
 		return
 	}
-	http.Redirect(w, r, h.svc.Cfg.Redirects.AfterLogin, http.StatusFound)
+	http.Redirect(w, r, h.afterLoginURL(r.Context()), http.StatusFound)
 }
 
 // FormMFAEnroll begins TOTP MFA enrollment for the currently logged-in session user.
@@ -471,6 +472,7 @@ func (h *Handler) FormWebauthnCredentialDelete(w http.ResponseWriter, r *http.Re
 
 // FormWebauthnLoginBegin begins a discoverable WebAuthn login ceremony for cookie-based clients.
 func (h *Handler) FormWebauthnLoginBegin(w http.ResponseWriter, r *http.Request) {
+	h.rememberNext(r.Context(), r.URL.Query().Get("next"))
 	assertion, sessionKey, err := h.svc.WebauthnBeginLogin(r.Context())
 	if err != nil {
 		WriteJSONResponseError(w, http.StatusBadRequest, err)
@@ -504,7 +506,7 @@ func (h *Handler) FormWebauthnLoginFinish(w http.ResponseWriter, r *http.Request
 		WriteJSONResponseError(w, http.StatusInternalServerError, ErrCouldNotEstablishSession)
 		return
 	}
-	WriteJSONResponse(w, http.StatusOK, map[string]string{"redirect": h.svc.Cfg.Redirects.AfterLogin}, nil)
+	WriteJSONResponse(w, http.StatusOK, map[string]string{"redirect": h.afterLoginURL(r.Context())}, nil)
 }
 
 // FormLogout handles user logout via form submission or link.
@@ -536,6 +538,7 @@ func (h *Handler) FormPasswordlessRequest(w http.ResponseWriter, r *http.Request
 		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrInvalidRequestBody.Error())
 		return
 	}
+	h.rememberNextFromRequest(r)
 
 	req := service.RequestPasswordless{
 		Email: r.FormValue("email"),
@@ -589,7 +592,7 @@ func (h *Handler) FormPasswordlessLogin(w http.ResponseWriter, r *http.Request) 
 		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrCouldNotEstablishSession.Error())
 		return
 	}
-	http.Redirect(w, r, h.svc.Cfg.Redirects.AfterLogin, http.StatusFound)
+	http.Redirect(w, r, h.afterLoginURL(r.Context()), http.StatusFound)
 }
 
 // FormSMSOTPRequest handles the request for an SMS one-time login code via form.
@@ -598,6 +601,7 @@ func (h *Handler) FormSMSOTPRequest(w http.ResponseWriter, r *http.Request) {
 		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrInvalidRequestBody.Error())
 		return
 	}
+	h.rememberNextFromRequest(r)
 
 	req := service.RequestSMSOTP{
 		Phone: r.FormValue("phone"),
@@ -640,7 +644,7 @@ func (h *Handler) FormSMSOTPVerify(w http.ResponseWriter, r *http.Request) {
 		h.redirectWithError(w, r, h.svc.Cfg.Pages.Login, ErrCouldNotEstablishSession.Error())
 		return
 	}
-	http.Redirect(w, r, h.svc.Cfg.Redirects.AfterLogin, http.StatusFound)
+	http.Redirect(w, r, h.afterLoginURL(r.Context()), http.StatusFound)
 }
 
 // FormPasswordResetRequest handles the request for a password reset link via form.
@@ -783,6 +787,7 @@ func (h *Handler) OAuth2Login(w http.ResponseWriter, r *http.Request) {
 		WriteJSONResponseError(w, http.StatusBadRequest, err)
 		return
 	}
+	h.rememberNext(r.Context(), r.URL.Query().Get("next"))
 
 	state, err := util.RandomString(32)
 	if err != nil {
@@ -915,5 +920,5 @@ func (h *Handler) OAuth2Callback(w http.ResponseWriter, r *http.Request) {
 		WriteJSONResponseError(w, http.StatusInternalServerError, ErrCouldNotEstablishSession)
 		return
 	}
-	http.Redirect(w, r, h.svc.Cfg.Redirects.AfterLogin, http.StatusFound)
+	http.Redirect(w, r, h.afterLoginURL(r.Context()), http.StatusFound)
 }

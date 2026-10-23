@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/subtle"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -343,24 +344,69 @@ func LoginRequiredMiddleware(authChecker AuthChecker, loginPath string) func(htt
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if !authChecker.IsAuthenticated(r.Context()) {
-				// Distinguish an API request (JSON) from a browser request by
-				// content negotiation alone -- this middleware is exported for
-				// use on a consuming application's own routes, which may be
-				// mounted at any path, so a hardcoded URL prefix (e.g.
-				// "/auth/api", ezauth's own JSON API) can't reliably identify
-				// an API request there.
-				if strings.Contains(r.Header.Get("Accept"), "application/json") || strings.Contains(r.Header.Get("Content-Type"), "application/json") {
-					WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
-					return
-				}
-
-				// redirect to login
-				http.Redirect(w, r, loginPath, http.StatusFound)
+				RedirectToLogin(w, r, loginPath)
 				return
 			}
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// RedirectToLogin answers a request that needs a logged-in user: a 401 JSON
+// error for an API request, otherwise a redirect to loginPath carrying the
+// page that was asked for as "next", so the login flow can send the user back
+// to it (see #228).
+func RedirectToLogin(w http.ResponseWriter, r *http.Request, loginPath string) {
+	if isJSONRequest(r) {
+		WriteJSONResponseError(w, http.StatusUnauthorized, ErrUnauthorized)
+		return
+	}
+	http.Redirect(w, r, LoginRedirectURL(loginPath, ReturnPath(r)), http.StatusFound)
+}
+
+// isJSONRequest distinguishes an API request (JSON) from a browser request by
+// content negotiation alone -- LoginRequiredMiddleware is exported for use on
+// a consuming application's own routes, which may be mounted at any path, so
+// a hardcoded URL prefix (e.g. "/auth/api", ezauth's own JSON API) can't
+// reliably identify an API request there.
+func isJSONRequest(r *http.Request) bool {
+	return strings.Contains(r.Header.Get("Accept"), "application/json") || strings.Contains(r.Header.Get("Content-Type"), "application/json")
+}
+
+// ReturnPath returns the path and query of r, for sending the user back to it
+// after login, or "" when r isn't a page worth returning to: only a browser
+// GET/HEAD for a full page is, not a form POST (it can't be replayed by a
+// redirect), an API request, or an HTMX fragment request (returning to it
+// would render the fragment alone).
+func ReturnPath(r *http.Request) string {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		return ""
+	}
+	if isJSONRequest(r) || r.Header.Get("HX-Request") != "" {
+		return ""
+	}
+	p := r.URL.RequestURI()
+	if !util.IsSafeRedirectPath(p) {
+		return ""
+	}
+	return p
+}
+
+// LoginRedirectURL adds next as the "next" query parameter of loginPath,
+// keeping any query loginPath already has. It returns loginPath unchanged
+// when next is empty or loginPath can't be parsed.
+func LoginRedirectURL(loginPath, next string) string {
+	if next == "" {
+		return loginPath
+	}
+	u, err := url.Parse(loginPath)
+	if err != nil {
+		return loginPath
+	}
+	q := u.Query()
+	q.Set("next", next)
+	u.RawQuery = q.Encode()
+	return u.String()
 }
 
 // LoadUserMiddleware is a middleware that loads the authenticated user into the context.

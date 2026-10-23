@@ -64,7 +64,16 @@ func (h *Handler) RequireOrgRole(role string) func(http.Handler) http.Handler {
 
 // LoginRequiredMiddleware is a middleware that requires the request to be authenticated.
 // If the user is not authenticated, it redirects to the login page (for browser requests)
-// or returns a 401 Unauthorized error (for API requests).
+// or returns a 401 Unauthorized error (for API requests). The page that was asked for
+// is remembered in the session, and added to the login redirect as "next", so the
+// login flow sends the user back to it instead of Redirects.AfterLogin (see #228).
 func (h *Handler) LoginRequiredMiddleware(next http.Handler) http.Handler {
-	return middleware.LoginRequiredMiddleware(h, h.svc.Cfg.Pages.Login)(next)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if h.IsAuthenticated(r.Context()) {
+			next.ServeHTTP(w, r)
+			return
+		}
+		h.rememberNext(r.Context(), middleware.ReturnPath(r))
+		middleware.RedirectToLogin(w, r, h.svc.Cfg.Pages.Login)
+	})
 }
