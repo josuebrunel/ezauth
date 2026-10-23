@@ -371,8 +371,10 @@ This is the recommended middleware for most applications. It combines session ma
 **Usage**: `r.Use(auth.LoginRequiredMiddleware)`
 
 Protects routes by requiring authentication.
-- **Browser requests**: Redirects to the configured `EZAUTH_LOGIN_PAGE_URL`.
+- **Browser requests**: Redirects to the configured `EZAUTH_LOGIN_PAGE_URL`, with the page that was asked for as `?next=`. After login, the user lands back on that page instead of `EZAUTH_REDIRECT_AFTER_LOGIN`.
 - **API requests**: Returns `401 Unauthorized`.
+
+The page is remembered in the session, so this works for every sign-in method (password, MFA, magic link, SMS code, passkey, OAuth2) without changing your login page. To pick the page yourself, post a `next` field with the login form, or add `?next=/path` to `/auth/oauth2/{provider}/login`. Only local paths like `/billing` are followed, never `//evil.com` or `https://...`.
 
 #### `auth.LoadUserMiddleware`
 

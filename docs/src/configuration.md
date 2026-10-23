@@ -140,7 +140,7 @@ Used for the Form-based handlers (browser flows).
 
 | Variable                         | Description                                       | Default     |
 | -------------------------------- | ------------------------------------------------- | ----------- |
-| `EZAUTH_REDIRECT_AFTER_LOGIN`    | URL to redirect to after successful login.        | `/`         |
+| `EZAUTH_REDIRECT_AFTER_LOGIN`    | URL to redirect to after successful login, when there's no page to return to (see [Returning to the page after login](guides/sessions-middleware-helpers.md#returning-to-the-page-after-login)). | `/`         |
 | `EZAUTH_REDIRECT_AFTER_REGISTER` | URL to redirect to after successful registration. | `/`         |
 | `EZAUTH_LOGIN_PAGE_URL`          | URL of your custom Login page (for redirects).    | `/login`    |
 | `EZAUTH_REGISTER_PAGE_URL`       | URL of your custom Register page (for redirects). | `/register` |

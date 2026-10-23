@@ -100,7 +100,7 @@ r.Get("/my-custom-login", func(w http.ResponseWriter, r *http.Request) {
 | Middleware                | Description                                                                                                                               | Usage                                 |
 | :------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------ |
 | `SessionMiddleware`       | **Recommended**. Manages sessions (cookies) AND loads the authenticated user into context. Use this if you want `GetSessionUser` to work. | `r.Use(auth.SessionMiddleware)`       |
-| `LoginRequiredMiddleware` | Restricts access to authenticated users only. Redirects to login page (browser) or returns 401 (API).                                     | `r.Use(auth.LoginRequiredMiddleware)` |
+| `LoginRequiredMiddleware` | Restricts access to authenticated users only. Redirects to login page (browser), then back to the page asked for after login, or returns 401 (API). | `r.Use(auth.LoginRequiredMiddleware)` |
 | `LoadUserMiddleware`      | Loads the user into context. Use this if you are handling sessions manually or want to optimize repeated user lookups.                    | `r.Use(auth.LoadUserMiddleware)`      |
 | `AuthMiddleware`          | Protects API endpoints using JWT Bearer tokens (`Authorization: Bearer <token>`).                                                         | `r.Use(auth.AuthMiddleware)`          |
 
@@ -121,6 +121,24 @@ r.Group(func(r chi.Router) {
     })
 })
 ```
+
+### Returning to the page after login
+
+When a logged-out visitor opens a page behind `LoginRequiredMiddleware`, say `/dashboard/settings?tab=billing`, ezauth remembers it. After they log in, they land back on that page instead of `EZAUTH_REDIRECT_AFTER_LOGIN`.
+
+It works with no change to your app, because the page is kept in the session. That covers every sign-in method: the password form (including the MFA step and a failed first try), magic links opened in the same browser, SMS codes, passkeys (the `redirect` in the `/webauthn/login/finish` response) and OAuth2 in cookie mode. Once used, it's cleared, so the next login goes to `EZAUTH_REDIRECT_AFTER_LOGIN` again.
+
+The login redirect also carries the page as `?next=`, e.g. `/login?next=%2Fdashboard%2Fsettings%3Ftab%3Dbilling`, so your login page can see it. You can pass `next` yourself too, and it wins over the remembered page:
+
+- as a hidden field in the login, magic link request or SMS code request form: `<input type="hidden" name="next" value="/billing">`
+- as a query parameter when starting OAuth2 or a passkey login: `/auth/oauth2/github/login?next=/billing`, `/auth/webauthn/login/begin?next=/billing`
+
+A few things to know:
+
+- Only a local path is followed: it must start with a single `/`, with no scheme, host, backslash or control character. `//evil.com` or `https://evil.com` is ignored and the user goes to `EZAUTH_REDIRECT_AFTER_LOGIN`, so `next` can't be used for an open redirect.
+- Only full-page `GET`/`HEAD` requests are remembered. A form `POST`, a JSON request or an HTMX fragment request (`HX-Request` header) isn't, since sending the user back to it wouldn't show a page.
+- The JSON API login (`/auth/api/login`) doesn't use `next`: a single-page app knows where it was and routes there itself.
+- `LoginRequiredMiddleware` needs `SessionMiddleware` upstream, as before.
 
 ## Helper Functions
 

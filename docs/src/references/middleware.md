@@ -8,8 +8,8 @@
 
 Checks if a user is authenticated. This middleware is "content-aware":
 
--   **Browser Request**: Redirects to the configured Login Page.
--   **API Request** (`/api/*` or `Accept: application/json`): Returns `401 Unauthorized`.
+-   **Browser Request**: Redirects to the configured Login Page, with the page that was asked for as `?next=`. It's also remembered in the session, so after login the user lands back on that page instead of `EZAUTH_REDIRECT_AFTER_LOGIN`. See [Returning to the page after login](../guides/sessions-middleware-helpers.md#returning-to-the-page-after-login).
+-   **API Request** (`Accept: application/json` or `Content-Type: application/json`): Returns `401 Unauthorized`.
 
 ```go
 func (h *Handler) LoginRequiredMiddleware(next http.Handler) http.Handler
@@ -132,6 +132,13 @@ func RequirePermission(checker PermissionChecker, permission string) func(http.H
 func RequireOrgMembership(checker OrgMembershipChecker) func(http.Handler) http.Handler
 func RequireOrgRole(checker OrgMembershipChecker, role string) func(http.Handler) http.Handler
 func LoginRequiredMiddleware(authChecker AuthChecker, loginPath string) func(http.Handler) http.Handler
+// RedirectToLogin is what LoginRequiredMiddleware does for a logged-out request:
+// a 401 for JSON, else a redirect to loginPath with ?next=<ReturnPath(r)>.
+func RedirectToLogin(w http.ResponseWriter, r *http.Request, loginPath string)
+// ReturnPath is the path and query of a browser GET/HEAD page request, or ""
+// (POST, JSON or HTMX requests). LoginRedirectURL adds it to loginPath as ?next=.
+func ReturnPath(r *http.Request) string
+func LoginRedirectURL(loginPath, next string) string
 func LoadUserMiddleware(loader UserLoader) func(http.Handler) http.Handler
 func OrgLoaderMiddleware(loader OrgLoader) func(http.Handler) http.Handler
 func LoadAndSaveMiddleware(sm *scs.SessionManager) func(http.Handler) http.Handler
