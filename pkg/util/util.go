@@ -174,3 +174,31 @@ func HashToken(raw string) string {
 	sum := sha256.Sum256([]byte(raw))
 	return hex.EncodeToString(sum[:])
 }
+
+// maxRedirectPathLen caps a post-login return path, so a crafted link can't
+// stuff an arbitrarily large value into the session.
+const maxRedirectPathLen = 2048
+
+// IsSafeRedirectPath reports whether p is a local path that's safe to
+// redirect to after login (the "next" value, see #228): it must start with a
+// single "/", carry no scheme or host, and hold no backslash or control
+// character. "//evil.com" and "/\evil.com" are rejected, since browsers treat
+// both as a link to another host -- following them would be an open redirect.
+func IsSafeRedirectPath(p string) bool {
+	if p == "" || len(p) > maxRedirectPathLen || p[0] != '/' {
+		return false
+	}
+	if len(p) > 1 && (p[1] == '/' || p[1] == '\\') {
+		return false
+	}
+	for _, c := range p {
+		if c == '\\' || c < 0x20 || c == 0x7f {
+			return false
+		}
+	}
+	u, err := url.Parse(p)
+	if err != nil || u.Scheme != "" || u.Host != "" || u.User != nil {
+		return false
+	}
+	return true
+}

@@ -1,6 +1,9 @@
 package util
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestRandomString(t *testing.T) {
 	s, err := RandomString(32)
@@ -141,5 +144,35 @@ func TestPostgresDSNWithSearchPath(t *testing.T) {
 				t.Fatalf("PostgresDSNWithSearchPath(%q, %q) = %q, want %q", c.dsn, c.schema, got, c.want)
 			}
 		})
+	}
+}
+
+func TestIsSafeRedirectPath(t *testing.T) {
+	tests := []struct {
+		path string
+		want bool
+	}{
+		{"/", true},
+		{"/dashboard", true},
+		{"/dashboard/settings?tab=billing#top", true},
+		{"/a/b%2Fc", true},
+		{"", false},
+		{"dashboard", false},
+		{"//evil.com", false},
+		{"//evil.com/dashboard", false},
+		{"/\\evil.com", false},
+		{"/a\\b", false},
+		{"https://evil.com", false},
+		{"http:/evil.com", false},
+		{"javascript:alert(1)", false},
+		{"/dash\nboard", false},
+		{"/dash\rboard", false},
+		{"/dash\tboard", false},
+		{"/" + strings.Repeat("a", maxRedirectPathLen), false},
+	}
+	for _, tt := range tests {
+		if got := IsSafeRedirectPath(tt.path); got != tt.want {
+			t.Errorf("IsSafeRedirectPath(%q) = %v, want %v", tt.path, got, tt.want)
+		}
 	}
 }
