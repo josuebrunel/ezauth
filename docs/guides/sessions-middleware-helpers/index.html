@@ -688,6 +688,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#returning-to-the-page-after-login" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Returning to the page after login
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1341,6 +1352,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#returning-to-the-page-after-login" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Returning to the page after login
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1550,7 +1572,7 @@ JSON API endpoints (<code>/auth/api/*</code>) do not require CSRF tokens since t
 </tr>
 <tr>
 <td style="text-align: left;"><code>LoginRequiredMiddleware</code></td>
-<td style="text-align: left;">Restricts access to authenticated users only. Redirects to login page (browser) or returns 401 (API).</td>
+<td style="text-align: left;">Restricts access to authenticated users only. Redirects to login page (browser), then back to the page asked for after login, or returns 401 (API).</td>
 <td style="text-align: left;"><code>r.Use(auth.LoginRequiredMiddleware)</code></td>
 </tr>
 <tr>
@@ -1580,6 +1602,21 @@ r.Group(func(r chi.Router) {
     })
 })
 </code></pre>
+<h3 id="returning-to-the-page-after-login">Returning to the page after login</h3>
+<p>When a logged-out visitor opens a page behind <code>LoginRequiredMiddleware</code>, say <code>/dashboard/settings?tab=billing</code>, ezauth remembers it. After they log in, they land back on that page instead of <code>EZAUTH_REDIRECT_AFTER_LOGIN</code>.</p>
+<p>It works with no change to your app, because the page is kept in the session. That covers every sign-in method: the password form (including the MFA step and a failed first try), magic links opened in the same browser, SMS codes, passkeys (the <code>redirect</code> in the <code>/webauthn/login/finish</code> response) and OAuth2 in cookie mode. Once used, it's cleared, so the next login goes to <code>EZAUTH_REDIRECT_AFTER_LOGIN</code> again.</p>
+<p>The login redirect also carries the page as <code>?next=</code>, e.g. <code>/login?next=%2Fdashboard%2Fsettings%3Ftab%3Dbilling</code>, so your login page can see it. You can pass <code>next</code> yourself too, and it wins over the remembered page:</p>
+<ul>
+<li>as a hidden field in the login, magic link request or SMS code request form: <code>&lt;input type="hidden" name="next" value="/billing"&gt;</code></li>
+<li>as a query parameter when starting OAuth2 or a passkey login: <code>/auth/oauth2/github/login?next=/billing</code>, <code>/auth/webauthn/login/begin?next=/billing</code></li>
+</ul>
+<p>A few things to know:</p>
+<ul>
+<li>Only a local path is followed: it must start with a single <code>/</code>, with no scheme, host, backslash or control character. <code>//evil.com</code> or <code>https://evil.com</code> is ignored and the user goes to <code>EZAUTH_REDIRECT_AFTER_LOGIN</code>, so <code>next</code> can't be used for an open redirect.</li>
+<li>Only full-page <code>GET</code>/<code>HEAD</code> requests are remembered. A form <code>POST</code>, a JSON request or an HTMX fragment request (<code>HX-Request</code> header) isn't, since sending the user back to it wouldn't show a page.</li>
+<li>The JSON API login (<code>/auth/api/login</code>) doesn't use <code>next</code>: a single-page app knows where it was and routes there itself.</li>
+<li><code>LoginRequiredMiddleware</code> needs <code>SessionMiddleware</code> upstream, as before.</li>
+</ul>
 <h2 id="helper-functions">Helper Functions</h2>
 <p><code>ezauth</code> provides package-level helper functions for convenient access to authentication context. These can be used in your handlers or templates.</p>
 <blockquote>

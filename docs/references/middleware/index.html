@@ -1493,8 +1493,8 @@
 <h3 id="loginrequiredmiddleware"><code>LoginRequiredMiddleware</code></h3>
 <p>Checks if a user is authenticated. This middleware is "content-aware":</p>
 <ul>
-<li><strong>Browser Request</strong>: Redirects to the configured Login Page.</li>
-<li><strong>API Request</strong> (<code>/api/*</code> or <code>Accept: application/json</code>): Returns <code>401 Unauthorized</code>.</li>
+<li><strong>Browser Request</strong>: Redirects to the configured Login Page, with the page that was asked for as <code>?next=</code>. It's also remembered in the session, so after login the user lands back on that page instead of <code>EZAUTH_REDIRECT_AFTER_LOGIN</code>. See <a href="../../guides/sessions-middleware-helpers/#returning-to-the-page-after-login">Returning to the page after login</a>.</li>
+<li><strong>API Request</strong> (<code>Accept: application/json</code> or <code>Content-Type: application/json</code>): Returns <code>401 Unauthorized</code>.</li>
 </ul>
 <pre><code class="language-go">func (h *Handler) LoginRequiredMiddleware(next http.Handler) http.Handler
 </code></pre>
@@ -1566,6 +1566,13 @@ func RequirePermission(checker PermissionChecker, permission string) func(http.H
 func RequireOrgMembership(checker OrgMembershipChecker) func(http.Handler) http.Handler
 func RequireOrgRole(checker OrgMembershipChecker, role string) func(http.Handler) http.Handler
 func LoginRequiredMiddleware(authChecker AuthChecker, loginPath string) func(http.Handler) http.Handler
+// RedirectToLogin is what LoginRequiredMiddleware does for a logged-out request:
+// a 401 for JSON, else a redirect to loginPath with ?next=&lt;ReturnPath(r)&gt;.
+func RedirectToLogin(w http.ResponseWriter, r *http.Request, loginPath string)
+// ReturnPath is the path and query of a browser GET/HEAD page request, or &quot;&quot;
+// (POST, JSON or HTMX requests). LoginRedirectURL adds it to loginPath as ?next=.
+func ReturnPath(r *http.Request) string
+func LoginRedirectURL(loginPath, next string) string
 func LoadUserMiddleware(loader UserLoader) func(http.Handler) http.Handler
 func OrgLoaderMiddleware(loader OrgLoader) func(http.Handler) http.Handler
 func LoadAndSaveMiddleware(sm *scs.SessionManager) func(http.Handler) http.Handler
